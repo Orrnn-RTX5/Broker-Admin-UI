@@ -126,7 +126,7 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
               {activeTab === 'Reports' && "The platform can daily save the end-of-day state of accounts to a special database. That data is used for generating daily statements and various reports for managers."}
               {['News & Mail', 'Permissions'].includes(activeTab) && "Configuration of security and news distribution policies for this specific group."}
             </div>
-          </div>
+          </div> 
 
           {/* Tab Specific Views */}
           <AnimatePresence mode='wait'>
@@ -385,8 +385,8 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
                   </div>
 
                   <div className="flex flex-col gap-2 mb-4">
-                    <SelectField label="Trading Signals" options={["Enable all signals from all brokers"]} defaultValue="Enable all signals from all brokers" width="w-[430px]" />
-                    <SelectField label="Transfer of funds" options={["Disable transfer of funds between accounts"]} defaultValue="Disable transfer of funds between accounts" width="w-[430px]" />
+                    <SelectField label="Trading Signals" options={["Enable all signals from all brokers","disable","Enable signals from my servers only"]} defaultValue="Enable all signals from all brokers" width="w-[430px]" />
+                    <SelectField label="Transfer of funds" options={["Disable transfer of funds between accounts","enable between accounts with same name group and sub group","Enable between accounts with same name groups","Enable between accounts from the same name"]} defaultValue="Disable transfer of funds between accounts" width="w-[430px]" />
                   </div>
 
                   <div className="grid grid-cols-2 gap-x-4 pl-12 pt-2 mb-4">

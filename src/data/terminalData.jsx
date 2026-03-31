@@ -153,3 +153,14 @@ export const clientsAccountsTableData = [
   { id: 4, name: "Trading Accounts", description: "Manage accounts on the server: trading status, personal data, trading settings and security", iconType: 'user' },
   { id: 5, name: "Corporate links", description: "Corporate links", iconType: 'user' },
 ];
+
+export const symbolsTableData = [
+  { id: 1, symbol: "Trading", description: "", digits: "", type: "", execution: "", expiration: "", background: "" },
+  { id: 2, symbol: "TradingFL", description: "", digits: "", type: "", execution: "", expiration: "", background: "" },
+  { id: 3, symbol: "PMTrade", description: "", digits: "", type: "", execution: "", expiration: "", background: "" },
+  { id: 4, symbol: "ACH", description: "", digits: "", type: "", execution: "", expiration: "", background: "" },
+  { id: 5, symbol: "HFT", description: "", digits: "", type: "", execution: "", expiration: "", background: "" },
+  { id: 6, symbol: "Cent", description: "", digits: "", type: "", execution: "", expiration: "", background: "" },
+  { id: 7, symbol: "TradingA", description: "", digits: "", type: "", execution: "", expiration: "", background: "" },
+  { id: 8, symbol: "TradeS", description: "", digits: "", type: "", execution: "", expiration: "", background: "" },
+];

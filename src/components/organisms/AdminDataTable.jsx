@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { terminalTableData, clientsAccountsTableData } from '../../data/terminalData.jsx';
+import { terminalTableData, clientsAccountsTableData, symbolsTableData } from '../../data/terminalData.jsx';
 import { Clock, CornerUpRight, Server, Calendar } from 'lucide-react';
 import AdminContextMenu from './AdminContextMenu';
+import NetworkCluster from './NetworkCluster';
+import AllocationsView from './AllocationsView';
 
 // Custom icons for MT5 style table
 const YellowFolderIcon = (props) => (
@@ -14,6 +16,13 @@ const BlueUserIcon = (props) => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="#3B82F6" stroke="#1D4ED8" strokeWidth="1" {...props}>
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
     <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
+const OrangeSquareSIcon = (props) => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="#D97706" stroke="#B45309" strokeWidth="1" {...props}>
+    <rect x="2" y="2" width="20" height="20" rx="3" ry="3" />
+    <text x="12" y="17" fontSize="13" fontWeight="bold" fill="white" stroke="none" textAnchor="middle" style={{fontFamily: 'sans-serif'}}>S</text>
   </svg>
 );
 
@@ -30,6 +39,17 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick }) => {
       });
     }
   };
+
+  // --- NETWORK CLUSTER INJECTION ---
+  if (viewType === 'Network Cluster') {
+    return <NetworkCluster />;
+  }
+
+  // --- ALLOCATIONS INJECTION ---
+  if (viewType === 'Allocations') {
+    return <AllocationsView />;
+  }
+
   const groupColumns = [
     { label: 'Group', key: 'group', width: 'w-64' },
     { label: 'Server', key: 'server', width: 'w-48' },
@@ -47,9 +67,20 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick }) => {
     { label: 'Description', key: 'description', width: 'flex-1' },
   ];
 
+  const symbolsColumns = [
+    { label: 'Symbol', key: 'symbol', width: 'w-48' },
+    { label: 'Description', key: 'description', width: 'w-72' },
+    { label: 'Digits', key: 'digits', width: 'w-24' },
+    { label: 'Type', key: 'type', width: 'w-32' },
+    { label: 'Execution', key: 'execution', width: 'w-48' },
+    { label: 'Expiration', key: 'expiration', width: 'w-32' },
+    { label: 'Background', key: 'background', width: 'flex-1' },
+  ];
+
   let columns;
   let data;
   let isClientsViewTemp = false;
+  let isSymbolsViewTemp = false;
 
   if (viewType === 'Groups') {
     columns = groupColumns;
@@ -58,6 +89,10 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick }) => {
     columns = clientsColumns;
     data = clientsAccountsTableData;
     isClientsViewTemp = true;
+  } else if (viewType === 'Symbols') {
+    columns = symbolsColumns;
+    data = symbolsTableData;
+    isSymbolsViewTemp = true;
   } else {
     // Check if the viewType matches a specific sub-group name inside the terminalTableData
     const matchingSubGroupData = terminalTableData.filter(item => item.group === viewType);
@@ -77,6 +112,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick }) => {
   }
 
   const isClientsView = isClientsViewTemp;
+  const isSymbolsView = isSymbolsViewTemp;
 
   // --- TIME VIEW SPECIFIC LOGIC ---
   if (viewType === 'Time') {
@@ -162,6 +198,19 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick }) => {
                 </div>
                 <div className="flex-1 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 truncate">{row.description}</div>
               </>
+            ) : isSymbolsView ? (
+              <>
+                <div className="w-48 px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10 shrink-0">
+                  <OrangeSquareSIcon />
+                  <span className="text-[#e1e1e1] truncate font-normal">{row.symbol}</span>
+                </div>
+                <div className="w-72 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.description}</div>
+                <div className="w-24 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.digits}</div>
+                <div className="w-32 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.type}</div>
+                <div className="w-48 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.execution}</div>
+                <div className="w-32 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.expiration}</div>
+                <div className="flex-1 border-b border-white/5 bg-transparent"></div>
+              </>
             ) : (
               <>
                 <div className="w-64 px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10 shrink-0">
@@ -176,7 +225,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick }) => {
                 <div className="w-32 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0">{row.margin}</div>
                 <div className="w-56 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0">{row.leverage}</div>
                 <div className="w-24 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0">{row.currency}</div>
-                <div className={`flex-1 border-b border-white/5 ${idx % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'} group-hover:bg-blue-600/20`}></div>
+                <div className={`flex-1 border-b border-white/5 ${idx % 2 === 0 ? 'bg-transparent' : 'bg-transparent'} group-hover:bg-blue-600/20`}></div>
               </>
             )}
           </div>
