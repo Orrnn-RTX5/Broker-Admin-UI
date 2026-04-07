@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronRight, ChevronDown, Folder, File, Server, Cpu } from 'lucide-react';
 
-const TreeItem = ({ item, level = 0, isLast = false, onSelect, selectedLabel }) => {
+const TreeItem = ({ item, level = 0, isLast = false, onSelect, onDoubleClick, selectedLabel }) => {
   const [isOpen, setIsOpen] = useState(item.initiallyExpanded);
   const hasChildren = item.children && item.children.length > 0;
   const isActive = selectedLabel === item.label;
@@ -22,10 +22,17 @@ const TreeItem = ({ item, level = 0, isLast = false, onSelect, selectedLabel }) 
     }
   };
 
+  const handleNodeDoubleClick = () => {
+    if (onDoubleClick) {
+      onDoubleClick(item);
+    }
+  };
+
   return (
     <div className="relative">
       <div 
         onClick={handleNodeClick}
+        onDoubleClick={handleNodeDoubleClick}
         className={`flex items-center gap-1 py-[2px] px-1 cursor-default group transition-none select-none relative
           ${isActive ? 'bg-[#3e3e42] text-white shadow-sm ring-1 ring-blue-500/30' : 'hover:bg-[#2b2b2b] text-[#cccccc]'}
         `}
@@ -62,6 +69,7 @@ const TreeItem = ({ item, level = 0, isLast = false, onSelect, selectedLabel }) 
               level={level + 1} 
               isLast={index === item.children.length - 1} 
               onSelect={onSelect}
+              onDoubleClick={onDoubleClick}
               selectedLabel={selectedLabel}
             />
           ))}

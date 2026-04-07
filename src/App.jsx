@@ -4,13 +4,22 @@ import ActionToolBar from './components/organisms/ActionToolBar';
 import SidebarNavTree from './components/organisms/SidebarNavTree';
 import AdminDataTable from './components/organisms/AdminDataTable';
 import GroupPropertiesPopup from './components/RIGHTCLICKJPOPUPS/GroupPropertiesPopup';
+import ManagerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ManagerPropertiesPopup';
+import ServerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ServerPropertiesPopup';
+import LoginOverlay from './components/organisms/LoginOverlay';
+import { useAuthStore } from './store/authStore';
 import { Network, Activity, Globe } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 
 const App = () => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [selectedGroup, setSelectedGroup] = React.useState(null);
   const [isPopupOpen, setIsPopupOpen] = React.useState(false);
-  const [activeNode, setActiveNode] = React.useState('Groups');
+  const [serverPopupData, setServerPopupData] = React.useState(null);
+  const [history, setHistory] = React.useState(['Groups']);
+  const [currentIndex, setCurrentIndex] = React.useState(0);
+  const activeNode = history[currentIndex];
+  
   const [globalTheme, setGlobalTheme] = React.useState('dark');
   const [isLightMode, setIsLightMode] = React.useState(false);
 
@@ -31,13 +40,56 @@ const App = () => {
   }, [globalTheme]);
 
   const handleRowDoubleClick = (group) => {
+    // If double-clicking a row inside the Payments directory, navigate to that page instead of opening a popup
+    if (activeNode === 'Payments' || activeNode === 'Clients & Accounts' || activeNode === 'Orders & Deals') {
+      if (group.name) {
+        handleNodeSelect(group.name);
+      }
+      return;
+    }
+    
     setSelectedGroup(group);
     setIsPopupOpen(true);
   };
 
+  const [serverTargetTab, setServerTargetTab] = React.useState(null);
+
   const handleNodeSelect = (nodeOrLabel) => {
-    const label = typeof nodeOrLabel === 'string' ? nodeOrLabel : nodeOrLabel.label;
-    setActiveNode(label);
+    let label = typeof nodeOrLabel === 'string' ? nodeOrLabel : nodeOrLabel.label;
+    
+    if (label === 'Local Main Status Server' || label === 'Local Main Backup Server') {
+      label = 'Main Trade Server';
+      setServerTargetTab('Status');
+    } else {
+      setServerTargetTab(null);
+    }
+
+    if (label === activeNode) return;
+    
+    // Create new history array, clipping any "forward" paths if we've undone beforehand
+    const newHistory = history.slice(0, currentIndex + 1);
+    newHistory.push(label);
+    setHistory(newHistory);
+    setCurrentIndex(newHistory.length - 1);
+  };
+
+  const handleNodeDoubleClick = (node) => {
+    const label = typeof node === 'string' ? node : node.label;
+    if (['Main Trade Server', 'History Server', 'MainTrade Backup Server', 'Local Main Status Server', 'Local Main Backup Server', 'TradeProcessor SQL_E', 'History Backup Server', 'Access Server'].includes(label)) {
+      setServerPopupData({
+        isOpen: true,
+        target: label,
+        id: Math.floor(Math.random() * 10) + 1
+      });
+    }
+  };
+
+  const handleUndo = () => {
+    if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
+  };
+
+  const handleRedo = () => {
+    if (currentIndex < history.length - 1) setCurrentIndex(currentIndex + 1);
   };
 
   const handleAddClick = () => {
@@ -68,12 +120,19 @@ const App = () => {
           .bg-\\[\\#007acc\\] { background-color: #007acc !important; color: #ffffff !important; }
         `}</style>
       )}
+      {!isAuthenticated && <LoginOverlay />}
       <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#1e1e1e] text-[#d1d1d1] selection:bg-blue-500/30">
         {/* Top Menu Bar */}
         <MenuBar onMenuSelect={handleNodeSelect} activeNode={activeNode} onThemeSelect={setGlobalTheme} />
 
       {/* Main Action Toolbar */}
-      <ActionToolBar onAddClick={handleAddClick} />
+      <ActionToolBar 
+        onAddClick={handleAddClick} 
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={currentIndex > 0}
+        canRedo={currentIndex < history.length - 1}
+      />
 
       {/* Main Content Area: Sidebar + Data Workspace */}
       <div className="flex flex-1 overflow-hidden">
@@ -81,6 +140,7 @@ const App = () => {
         {/* Navigation Sidebar (LEFT SIDE) */}
         <SidebarNavTree 
           onNodeSelect={handleNodeSelect} 
+          onNodeDoubleClick={handleNodeDoubleClick}
           selectedNodeLabel={activeNode}
         />
 
@@ -103,16 +163,31 @@ const App = () => {
             onRowDoubleClick={handleRowDoubleClick} 
             viewType={activeNode}
             onAddClick={handleAddClick}
+            initialServerTab={serverTargetTab}
           />
         </div>
       </div>
 
       {/* Popups Overlay */}
       <AnimatePresence>
-        {isPopupOpen && (
+        {isPopupOpen && activeNode === 'Managers' && (
+          <ManagerPropertiesPopup 
+            manager={selectedGroup} 
+            onClose={() => setIsPopupOpen(false)} 
+          />
+        )}
+        {isPopupOpen && activeNode !== 'Managers' && (
           <GroupPropertiesPopup 
             group={selectedGroup} 
             onClose={() => setIsPopupOpen(false)} 
+          />
+        )}
+        {serverPopupData && (
+          <ServerPropertiesPopup 
+            isOpen={serverPopupData.isOpen} 
+            onClose={() => setServerPopupData(null)} 
+            serverName={serverPopupData.target} 
+            serverId={serverPopupData.id} 
           />
         )}
       </AnimatePresence>

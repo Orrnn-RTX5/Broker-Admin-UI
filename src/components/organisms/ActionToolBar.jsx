@@ -28,7 +28,7 @@ const ToolButton = ({ icon: Icon, label, disabled, color = 'text-[#d1d1d1]', onC
   </button>
 );
 
-const ActionToolBar = ({ onAddClick }) => {
+const ActionToolBar = ({ onAddClick, onUndo, onRedo, canUndo, canRedo }) => {
   return (
     <div className="h-9 bg-[#3c3f41] flex items-center px-2 gap-0.5 border-b border-black/40 overflow-x-auto no-scrollbar shadow-inner">
       <ToolButton icon={XOctagon} label="Disconnect" color="text-red-500" />
@@ -38,8 +38,8 @@ const ActionToolBar = ({ onAddClick }) => {
       <ToolButton icon={RotateCw} label="Restart Server" />
       <div className="w-[1px] h-6 bg-black/20 mx-1.5 shadow-[1px_0_0_0_rgba(255,255,255,0.05)]" />
 
-      <ToolButton icon={ArrowLeft} disabled />
-      <ToolButton icon={ArrowRight} disabled />
+      <ToolButton icon={ArrowLeft} disabled={!canUndo} onClick={onUndo} />
+      <ToolButton icon={ArrowRight} disabled={!canRedo} onClick={onRedo} />
       <div className="w-[1px] h-6 bg-black/20 mx-1.5 shadow-[1px_0_0_0_rgba(255,255,255,0.05)]" />
 
       <ToolButton icon={ExternalLink} label="Export" />
