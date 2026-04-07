@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { 
-  terminalTableData, 
-  clientsAccountsTableData, 
-  symbolsTableData, 
+import {
+  terminalTableData,
+  clientsAccountsTableData,
+  symbolsTableData,
   managersTableData,
   paymentsTableData,
   automationsTableData,
   securityTableData
 } from '../../data/terminalData.jsx';
-import { useUsers } from '../../hooks/useAdmin';
+import { useUsers, useGroups } from '../../hooks/useAdmin';
 import { usePositions, useDealsSummary } from '../../hooks/usePositions';
 import { useInstruments } from '../../hooks/useInstruments';
 import { useAccounts } from '../../hooks/useAccounts';
+import { ManagerService } from '../../services/manager.service';
 import { Clock, CornerUpRight, Server, Calendar, Search, ChevronDown } from 'lucide-react';
 
 import AdminContextMenu from './AdminContextMenu';
@@ -21,9 +22,13 @@ import PaymentsView from './PaymentsView';
 import GatewaysView from './GatewaysView';
 import ServerStatusPanel from './ServerStatusPanel';
 import ServerPropertiesPopup from '../RIGHTCLICKJPOPUPS/ServerPropertiesPopup';
+import CreateGroupPopup from '../RIGHTCLICKJPOPUPS/CreateGroupPopup';
+
 import IntegrationsView from './IntegrationsView';
 import AntiDDoSView from './AntiDDoSView';
 import SupportCenterView from './SupportCenterView';
+import ManagersView from './ManagersView';
+import SwapFreeGroupsView from './SwapFreeGroupsView';
 
 // Custom icons for MT5 style table
 const YellowFolderIcon = (props) => (
@@ -42,11 +47,11 @@ const BlueUserIcon = (props) => (
 const OrangeSquareSIcon = (props) => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="#D97706" stroke="#B45309" strokeWidth="1" {...props}>
     <rect x="2" y="2" width="20" height="20" rx="3" ry="3" />
-    <text x="12" y="17" fontSize="13" fontWeight="bold" fill="white" stroke="none" textAnchor="middle" style={{fontFamily: 'sans-serif'}}>S</text>
+    <text x="12" y="17" fontSize="13" fontWeight="bold" fill="white" stroke="none" textAnchor="middle" style={{ fontFamily: 'sans-serif' }}>S</text>
   </svg>
 );
 
-const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerTab }) => {
+const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerTab, refreshTrigger }) => {
   const [contextMenu, setContextMenu] = useState({ x: 0, y: 0, visible: false });
   const [serverPopupData, setServerPopupData] = useState(null);
 
@@ -54,7 +59,15 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   const { data: accountsResponse, loading: accountsLoading } = useAccounts(1, 100, '', '', '', viewType === 'Trading Accounts');
   const { data: symbolsResponse, loading: symbolsLoading } = useInstruments(1, 100, '', '', viewType === 'Symbols');
   const { data: positionsResponse, loading: positionsLoading } = usePositions({ page: 1, limit: 100 }, true, 2000, viewType === 'Positions');
-  
+
+  const { data: groupsResponse, loading: groupsLoading, refetch: refetchGroups } = useGroups(viewType === 'Groups');
+
+  React.useEffect(() => {
+    if (viewType === 'Groups' && refreshTrigger) {
+      refetchGroups();
+    }
+  }, [refreshTrigger, viewType]);
+
   const [dealDateRange] = useState({
     from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
     to: new Date().toISOString()
@@ -62,16 +75,43 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   const { data: dealsResponse, loading: dealsLoading } = useDealsSummary(dealDateRange.from, dealDateRange.to, '', '', viewType === 'Deals');
 
 
-  const handleContextMenu = (e) => {
+  const [editingGroup, setEditingGroup] = useState(null);
+
+  React.useEffect(() => {
+    setContextMenu({ visible: false });
+  }, [viewType]);
+
+  const handleContextMenu = (e, rowData) => {
     if (viewType === 'Groups') {
       e.preventDefault();
       setContextMenu({
         x: e.clientX,
         y: e.clientY,
-        visible: true
+        visible: true,
+        selectedGroup: rowData
       });
     }
   };
+
+  const handleDeleteGroup = async () => {
+    if (!contextMenu.selectedGroup) return;
+    if (window.confirm(`Are you sure you want to delete group ${contextMenu.selectedGroup.name}?`)) {
+      try {
+        await ManagerService.deleteGroup(contextMenu.selectedGroup.name);
+        refetchGroups();
+      } catch (err) {
+        alert(err.message || 'Error deleting group');
+      }
+    }
+    setContextMenu({ ...contextMenu, visible: false });
+  };
+  // --- IMPORTED VIEWS ---
+  if (viewType === 'Swap-Free Configs') {
+    return <SwapFreeGroupsView />;
+  }
+  if (viewType === 'Managers') {
+    return <ManagersView />;
+  }
 
   // --- NETWORK CLUSTER INJECTION ---
   if (viewType === 'Network Cluster') {
@@ -141,32 +181,43 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     { label: 'Background', key: 'background', width: 'flex-1' },
   ];
 
-  const managersColumns = [
-    { label: 'Login', key: 'login', width: 'w-32' },
-    { label: 'Name', key: 'name', width: 'w-48' },
-    { label: 'Groups', key: 'groups', width: 'w-64' },
-    { label: 'Status', key: 'status', width: 'w-32' },
-  ];
-
   let columns = [];
   let data = [];
   let isClientsViewTemp = false;
   let isSymbolsViewTemp = false;
-  let isManagersViewTemp = false;
   let isPositionsViewTemp = false;
   let isAccountsViewTemp = false;
   let isLoading = false;
 
   if (viewType === 'Groups') {
     columns = groupColumns;
-    data = terminalTableData;
+    if (groupsResponse) {
+      const groupsList = Array.isArray(groupsResponse) ? groupsResponse : (groupsResponse.answer || []);
+      data = groupsList.map((g, idx) => ({
+        ...g,
+        id: g.name || idx,
+        group: g.name,
+        server: 'Main Trade Server',
+        company: g.description,
+        type: g.accountType,
+        auth: 'Normal',
+        risk: g.executionMode,
+        margin: `${g.marginCallLevel}% / ${g.stopOutLevel}%`,
+        leverage: `1 : ${g.leverage}`,
+        currency: g.currency,
+        iconType: 'group'
+      }));
+    } else {
+      data = terminalTableData; // Fallback to mock before loaded or if error
+    }
+    isLoading = groupsLoading;
   } else if (viewType === 'Clients & Accounts') {
     columns = clientsColumns;
     data = clientsAccountsTableData;
     isClientsViewTemp = true;
   } else if (viewType === 'Clients') {
     columns = clientsColumns;
-    data = usersResponse?.users 
+    data = usersResponse?.users
       ? usersResponse.users.filter(u => !u.is_admin && u.role !== 'manager').map(u => ({ id: u.id, iconType: 'user', name: u.name, description: u.email }))
       : [];
     isClientsViewTemp = true;
@@ -183,9 +234,9 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     ];
     data = accountsResponse?.accounts
       ? accountsResponse.accounts.map(a => ({
-          id: a.login, login: a.login, name: a.name, group: a.group, 
-          balance: a.balance, equity: a.equity, currency: a.currency, status: a.status
-        }))
+        id: a.login, login: a.login, name: a.name, group: a.group,
+        balance: a.balance, equity: a.equity, currency: a.currency, status: a.status
+      }))
       : [];
     isAccountsViewTemp = true;
     isLoading = accountsLoading;
@@ -196,51 +247,77 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
       : [];
     isSymbolsViewTemp = true;
     isLoading = symbolsLoading;
-  } else if (viewType === 'Managers') {
-    columns = managersColumns;
-    data = usersResponse?.users
-      ? usersResponse.users.filter(u => u.is_admin || u.role === 'manager').map(u => ({ id: u.id, login: u.login, name: u.name, groups: 'real\\standard', status: u.enabled ? 'Active' : 'Disabled' }))
-      : [];
-    isManagersViewTemp = true;
-    isLoading = usersLoading;
   } else if (viewType === 'Positions') {
     columns = [
       { label: 'Ticket', width: 'w-24' },
       { label: 'Login', width: 'w-24' },
+      { label: 'Time', width: 'w-40' },
       { label: 'Symbol', width: 'w-32' },
-      { label: 'Action', width: 'w-24' },
+      { label: 'Side', width: 'w-20' },
       { label: 'Volume', width: 'w-24' },
-      { label: 'Open Price', width: 'w-32' },
-      { label: 'Current Price', width: 'w-32' },
+      { label: 'Price Open', width: 'w-32' },
+      { label: 'Price Current', width: 'w-32' },
+      { label: 'S/L', width: 'w-32' },
+      { label: 'T/P', width: 'w-32' },
+      { label: 'Swap', width: 'w-24' },
       { label: 'Profit', width: 'flex-1' }
     ];
-    data = positionsResponse?.positions 
-      ? positionsResponse.positions.map(p => ({
-          id: p.ticket, ticket: p.ticket, login: p.login, symbol: p.symbol, action: p.action, volume: p.volume, open_price: p.open_price, current_price: p.current_price, profit: p.profit
-        }))
-      : [];
+    
+    // Support either array or paginated object structure
+    const dataList = Array.isArray(positionsResponse) ? positionsResponse : (positionsResponse?.data || []);
+    
+    data = dataList.map((p, idx) => ({
+      id: p.ticket || idx,
+      ticket: p.ticket,
+      login: p.login,
+      time: p.timeCreateFormatted || '',
+      symbol: p.symbol,
+      side: p.side === 'buy' ? 'Buy' : 'Sell',
+      volume: p.volume,
+      open_price: p.priceOpen,
+      current_price: p.priceCurrent,
+      sl: p.priceSl,
+      tp: p.priceTp,
+      swap: p.swap,
+      profit: p.profit
+    }));
     isPositionsViewTemp = true;
     isLoading = positionsLoading;
   } else if (viewType === 'Deals') {
     columns = [
-      { label: 'Metric', width: 'w-64' },
-      { label: 'Value', width: 'flex-1' }
+      { label: 'Ticket', width: 'w-24' },
+      { label: 'Order Ticket', width: 'w-24' },
+      { label: 'Time', width: 'w-40' },
+      { label: 'Login', width: 'w-24' },
+      { label: 'Symbol', width: 'w-32' },
+      { label: 'Action', width: 'w-24' },
+      { label: 'Entry', width: 'w-24' },
+      { label: 'Volume', width: 'w-24' },
+      { label: 'Price', width: 'w-32' },
+      { label: 'Commission', width: 'w-24' },
+      { label: 'Fee', width: 'w-24' },
+      { label: 'Profit', width: 'flex-1' }
     ];
-    if (dealsResponse) {
-       data = [
-         { id: 1, name: 'Total Deals', description: dealsResponse.total_deals?.toString(), iconType: 'group' },
-         { id: 2, name: 'Total Buy / Sell', description: `${dealsResponse.buy_deals} / ${dealsResponse.sell_deals}`, iconType: 'group' },
-         { id: 3, name: 'Win Rate', description: `${dealsResponse.win_rate}%`, iconType: 'group' },
-         { id: 4, name: 'Total Profit', description: dealsResponse.total_profit?.toString(), iconType: 'group' },
-         { id: 5, name: 'Total Volume', description: dealsResponse.total_volume?.toString(), iconType: 'group' },
-         { id: 6, name: 'Total Commission', description: dealsResponse.total_commission?.toString(), iconType: 'group' },
-         { id: 7, name: 'Total Swap', description: dealsResponse.total_swap?.toString(), iconType: 'group' },
-         { id: 8, name: 'Net Result', description: dealsResponse.net_result?.toString(), iconType: 'group' },
-       ];
-    } else {
-       data = [];
-    }
-    isClientsViewTemp = true;
+    
+    const dataList = Array.isArray(dealsResponse) ? dealsResponse : (dealsResponse?.data || []);
+    
+    data = dataList.map((d, idx) => ({
+      id: d.ticket || idx,
+      ticket: d.ticket,
+      orderTicker: d.orderTicket,
+      time: d.timeFormatted || '',
+      login: d.login,
+      symbol: d.symbol,
+      action: d.action,
+      entry: d.entry,
+      volume: d.volume,
+      price: d.price,
+      commission: d.commission,
+      fee: d.fee,
+      profit: d.profit
+    }));
+    
+    isPositionsViewTemp = true; // Use the same custom row renderer for Deals as Positions
     isLoading = dealsLoading;
   } else if (viewType === 'Payments' || viewType === 'Automations' || viewType === 'Security') {
     columns = clientsColumns; // Use generic Name/Description list UI
@@ -251,7 +328,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   } else {
     // Check if the viewType matches a specific sub-group name inside the terminalTableData
     const matchingSubGroupData = terminalTableData.filter(item => item.group === viewType);
-    
+
     if (matchingSubGroupData.length > 0) {
       columns = groupColumns;
       data = matchingSubGroupData;
@@ -268,7 +345,6 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
 
   const isClientsView = isClientsViewTemp;
   const isSymbolsView = isSymbolsViewTemp;
-  const isManagersView = isManagersViewTemp;
   const isPositionsView = isPositionsViewTemp;
   const isAccountsView = isAccountsViewTemp;
 
@@ -302,21 +378,21 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
           <div className="flex-1 px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] hover:bg-[#444444] cursor-default">Value</div>
         </div>
         <div className="flex-1 overflow-auto no-scrollbar bg-[#1e1e1e]">
-           <GroupHeader title="Common settings" />
-           <PropertyRow idx={0} icon={Clock} label="Time zone" value="GMT+01:00" />
-           <PropertyRow idx={1} icon={CornerUpRight} label="Daylight Saving time correction" value="Yes" />
-           <PropertyRow idx={2} icon={Server} label="Time synchronization with" value="time.cloudflare.com, pool.ntp.org" />
-           
-           <GroupHeader title="Day settings" />
-           {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, idx) => (
-              <PropertyRow key={day} idx={idx} icon={Calendar} label={day} value="00:00-24:00" />
-           ))}
+          <GroupHeader title="Common settings" />
+          <PropertyRow idx={0} icon={Clock} label="Time zone" value="GMT+01:00" />
+          <PropertyRow idx={1} icon={CornerUpRight} label="Daylight Saving time correction" value="Yes" />
+          <PropertyRow idx={2} icon={Server} label="Time synchronization with" value="time.cloudflare.com, pool.ntp.org" />
 
-           {/* Placeholder fill */}
-           {[...Array(25)].map((_, i) => (
+          <GroupHeader title="Day settings" />
+          {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, idx) => (
+            <PropertyRow key={day} idx={idx} icon={Calendar} label={day} value="00:00-24:00" />
+          ))}
+
+          {/* Placeholder fill */}
+          {[...Array(25)].map((_, i) => (
             <div key={i} className={`flex border-b border-black/5 opacity-40 ${i % 2 !== 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'}`}>
-               <div className="w-[320px] h-6 border-r border-black/10"></div>
-               <div className="flex-1 h-6"></div>
+              <div className="w-[320px] h-6 border-r border-black/10"></div>
+              <div className="flex-1 h-6"></div>
             </div>
           ))}
         </div>
@@ -329,11 +405,11 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   return (
     <div className="flex-1 bg-[#1e1e1e] flex flex-col overflow-hidden relative" onContextMenu={handleContextMenu}>
       {serverPopupData && (
-        <ServerPropertiesPopup 
-          isOpen={serverPopupData.isOpen} 
-          onClose={() => setServerPopupData(null)} 
-          serverName={serverPopupData.target} 
-          serverId={serverPopupData.id} 
+        <ServerPropertiesPopup
+          isOpen={serverPopupData.isOpen}
+          onClose={() => setServerPopupData(null)}
+          serverName={serverPopupData.target}
+          serverId={serverPopupData.id}
         />
       )}
       {/* Search Filters Bar for Orders, Deals, Positions */}
@@ -341,16 +417,16 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
         <div className="flex items-center px-2 py-1.5 bg-[#252526] border-b border-black/40 text-[11px] shrink-0 overflow-x-auto no-scrollbar whitespace-nowrap">
           <div className="flex border border-[#555555] bg-transparent h-[22px] items-center text-[#aaaaaa] mr-1">
             <div className="px-1.5"><Search size={10} /></div>
-            <input 
-              type="text" 
-              placeholder="Group or Accounts [1,2,..,1000] or Orders (#1,#2,..#1000)" 
-              className="bg-transparent border-none outline-none w-[280px] text-[11px] text-[#e1e1e1] placeholder:text-[#666666]" 
+            <input
+              type="text"
+              placeholder="Group or Accounts [1,2,..,1000] or Orders (#1,#2,..#1000)"
+              className="bg-transparent border-none outline-none w-[280px] text-[11px] text-[#e1e1e1] placeholder:text-[#666666]"
             />
             <div className="border-l border-[#555555] px-1 hover:bg-white/10 cursor-pointer h-full flex items-center">
               <ChevronDown size={12} />
             </div>
           </div>
-          
+
           <div className="flex border border-[#555555] bg-transparent h-[22px] items-center text-[#e1e1e1] w-[100px] mr-2">
             <select className="bg-transparent border-none outline-none w-full text-[11px] px-1 appearance-none cursor-pointer">
               <option>All Symbols</option>
@@ -400,8 +476,8 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
       {/* Table Header */}
       <div className="flex border-b border-black/40 bg-[#333333] sticky top-0 z-10 shadow-sm">
         {columns.map((col, idx) => (
-          <div 
-            key={idx} 
+          <div
+            key={idx}
             className={`${col.width} px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20 hover:bg-[#444444] cursor-default flex items-center shrink-0`}
           >
             {col.label}
@@ -414,10 +490,11 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
       {/* Table Body */}
       <div className="flex-1 overflow-auto no-scrollbar bg-[#1e1e1e]">
         {data.map((row, idx) => (
-          <div 
-            key={row.id} 
+          <div
+            key={row.id}
             onDoubleClick={() => onRowDoubleClick && onRowDoubleClick(row)}
-            className={`flex cursor-default group border-b border-black/10 transition-colors ${idx % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'} hover:bg-blue-600/20`}
+            onContextMenu={(e) => { e.stopPropagation(); handleContextMenu(e, row); }}
+            className={`flex cursor-pointer group border-b border-black/10 transition-colors ${idx % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'} hover:bg-blue-600/20`}
           >
             {isClientsView ? (
               <>
@@ -440,27 +517,34 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
                 <div className="w-32 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.expiration}</div>
                 <div className="flex-1 border-b border-white/5 bg-transparent"></div>
               </>
-            ) : isManagersView ? (
-              <>
-                <div className="w-32 px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10 shrink-0">
-                  <BlueUserIcon />
-                  <span className="text-[#e1e1e1] truncate font-normal">{row.login}</span>
-                </div>
-                <div className="w-48 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.name}</div>
-                <div className="w-64 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.groups}</div>
-                <div className="w-32 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.status}</div>
-                <div className="flex-1 border-b border-white/5 bg-transparent"></div>
-              </>
             ) : isPositionsView ? (
               <>
-                 <div className="w-24 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0">{row.ticket}</div>
-                 <div className="w-24 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0">{row.login}</div>
-                 <div className="w-32 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0">{row.symbol}</div>
-                 <div className="w-24 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0">{row.action}</div>
-                 <div className="w-24 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0">{row.volume}</div>
-                 <div className="w-32 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0">{row.open_price}</div>
-                 <div className="w-32 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0">{row.current_price}</div>
-                 <div className="flex-1 px-3 py-1 text-[12px] border-b border-black/10 text-green-400 shrink-0">{row.profit}</div>
+                {columns.map((col, cIdx) => {
+                  // Map column key slightly based on column label
+                  let val = '';
+                  if (col.label === 'Ticket') val = row.ticket;
+                  if (col.label === 'Order Ticket') val = row.orderTicker;
+                  if (col.label === 'Login') val = row.login;
+                  if (col.label === 'Time') val = row.time;
+                  if (col.label === 'Symbol') val = row.symbol;
+                  if (col.label === 'Side' || col.label === 'Action') val = row.side || row.action;
+                  if (col.label === 'Volume') val = row.volume;
+                  if (col.label === 'Price Open' || col.label === 'Price') val = row.open_price || row.price;
+                  if (col.label === 'Price Current') val = row.current_price;
+                  if (col.label === 'S/L') val = row.sl;
+                  if (col.label === 'T/P') val = row.tp;
+                  if (col.label === 'Swap') val = row.swap;
+                  if (col.label === 'Entry') val = row.entry;
+                  if (col.label === 'Commission') val = row.commission;
+                  if (col.label === 'Fee') val = row.fee;
+                  if (col.label === 'Profit') val = row.profit;
+
+                  return (
+                    <div key={cIdx} className={`${col.width} px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 ${col.label === 'Profit' && row.profit > 0 ? 'text-green-400' : ''} ${col.label === 'Profit' && row.profit < 0 ? 'text-red-400' : ''} truncate`}>
+                       {val !== undefined ? val : '-'}
+                    </div>
+                  );
+                })}
               </>
             ) : isAccountsView ? (
               <>
@@ -503,8 +587,8 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
         )}
         {/* Placeholder Rows to fill screen */}
         {[...Array(30)].map((_, i) => (
-          <div key={i} className={`flex border-b border-black/5 opacity-40 ${ (data.length + i) % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'}`}>
-             <div className="w-full h-6 border-r border-black/10"></div>
+          <div key={i} className={`flex border-b border-black/5 opacity-40 ${(data.length + i) % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'}`}>
+            <div className="w-full h-6 border-r border-black/10"></div>
           </div>
         ))}
       </div>
@@ -520,11 +604,21 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
       </div>
       {/* Context Menu Overlay */}
       {contextMenu.visible && viewType === 'Groups' && (
-        <AdminContextMenu 
-          x={contextMenu.x} 
-          y={contextMenu.y} 
-          onClose={() => setContextMenu({ ...contextMenu, visible: false })} 
+        <AdminContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          selectedRow={contextMenu.selectedGroup}
+          onClose={() => setContextMenu({ ...contextMenu, visible: false })}
           onAdd={onAddClick}
+          onEdit={() => { setEditingGroup(contextMenu.selectedGroup); setContextMenu({ ...contextMenu, visible: false }); }}
+          onDelete={handleDeleteGroup}
+        />
+      )}
+      {editingGroup && (
+        <CreateGroupPopup
+          initialData={editingGroup}
+          onClose={() => setEditingGroup(null)}
+          onCreated={() => { setEditingGroup(null); refetchGroups(); }}
         />
       )}
     </div>

@@ -25,8 +25,10 @@ export const useAuthStore = create(
       name: 'rtx5-auth-storage', // name of the item in the storage (must be unique)
       partialize: (state) => ({ 
         accessToken: state.accessToken, 
-        refreshToken: state.refreshToken 
-      }), // Persist only tokens, fetch user on mount
+        refreshToken: state.refreshToken,
+        user: state.user,
+        isAuthenticated: state.isAuthenticated
+      }), // Persist tokens and auth state
     }
   )
 );

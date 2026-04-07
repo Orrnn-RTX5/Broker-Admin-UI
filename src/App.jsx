@@ -6,6 +6,7 @@ import AdminDataTable from './components/organisms/AdminDataTable';
 import GroupPropertiesPopup from './components/RIGHTCLICKJPOPUPS/GroupPropertiesPopup';
 import ManagerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ManagerPropertiesPopup';
 import ServerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ServerPropertiesPopup';
+import CreateGroupPopup from './components/RIGHTCLICKJPOPUPS/CreateGroupPopup';
 import LoginOverlay from './components/organisms/LoginOverlay';
 import { useAuthStore } from './store/authStore';
 import { Network, Activity, Globe } from 'lucide-react';
@@ -19,6 +20,8 @@ const App = () => {
   const [history, setHistory] = React.useState(['Groups']);
   const [currentIndex, setCurrentIndex] = React.useState(0);
   const activeNode = history[currentIndex];
+  const [isCreatingGroup, setIsCreatingGroup] = React.useState(false);
+  const [refreshKey, setRefreshKey] = React.useState(0);
   
   const [globalTheme, setGlobalTheme] = React.useState('dark');
   const [isLightMode, setIsLightMode] = React.useState(false);
@@ -93,6 +96,10 @@ const App = () => {
   };
 
   const handleAddClick = () => {
+    if (activeNode === 'Groups') {
+      setIsCreatingGroup(true);
+      return;
+    }
     setSelectedGroup({ group: 'New Group\\Demo' });
     setIsPopupOpen(true);
   };
@@ -164,6 +171,7 @@ const App = () => {
             viewType={activeNode}
             onAddClick={handleAddClick}
             initialServerTab={serverTargetTab}
+            refreshTrigger={refreshKey}
           />
         </div>
       </div>
@@ -180,6 +188,13 @@ const App = () => {
           <GroupPropertiesPopup 
             group={selectedGroup} 
             onClose={() => setIsPopupOpen(false)} 
+            refreshGroups={() => setRefreshKey(prev => prev + 1)}
+          />
+        )}
+        {isCreatingGroup && (
+          <CreateGroupPopup 
+            onClose={() => setIsCreatingGroup(false)} 
+            onCreated={() => setRefreshKey(prev => prev + 1)}
           />
         )}
         {serverPopupData && (

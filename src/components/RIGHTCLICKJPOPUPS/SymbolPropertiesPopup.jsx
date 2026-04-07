@@ -1,9 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { X, HelpCircle, DollarSign, FileText } from 'lucide-react';
+import { ManagerService } from '../../services/manager.service';
 
-const SymbolPropertiesPopup = ({ symbol, onClose }) => {
+const SymbolPropertiesPopup = ({ symbol, groupName, onClose }) => {
   const [activeTab, setActiveTab] = useState('Common');
+  const [fullSymbolData, setFullSymbolData] = useState(symbol);
+
+  useEffect(() => {
+    if (groupName) {
+      ManagerService.getSymbolList(groupName).then(res => {
+        const found = res?.symbols?.find(s => s.symbol?.toLowerCase() === symbol?.symbol?.toLowerCase());
+        if (found) {
+          // Merge found (global symbol properties) FIRST, then overwrite with symbol (group-specific overrides) LAST.
+          setFullSymbolData({ ...found, ...symbol });
+        }
+      }).catch(err => console.error(err));
+    }
+  }, [groupName, symbol?.symbol]);
   const dragControls = useDragControls();
 
   const tabs = [
@@ -40,9 +54,9 @@ const SymbolPropertiesPopup = ({ symbol, onClose }) => {
     </div>
   );
 
-  const CheckboxField = ({ label, checked = false, ml = "ml-36", disabled = false }) => (
+  const CheckboxField = ({ label, checked = false, ml = "ml-36", disabled = false, onChange }) => (
     <div className={`flex items-start gap-2 mb-1.5 ${ml} ${disabled ? 'opacity-40' : ''}`}>
-      <input type="checkbox" defaultChecked={checked} disabled={disabled} className="mt-0.5 w-3.5 h-3.5 accent-blue-500 rounded-sm border-[#3e3e42]" />
+      <input type="checkbox" defaultChecked={checked} onChange={onChange} disabled={disabled} className="mt-0.5 w-3.5 h-3.5 accent-blue-500 rounded-sm border-[#3e3e42]" />
       <label className="text-[11px] text-[#e1e1e1] leading-tight select-none">{label}</label>
     </div>
   );
@@ -71,6 +85,23 @@ const SymbolPropertiesPopup = ({ symbol, onClose }) => {
     </div>
   );
 
+  const handleToggleEnable = async (e) => {
+    const isChecked = e.target.checked;
+    const originalState = fullSymbolData?.enabled;
+    
+    // Optmistic UI update
+    setFullSymbolData(prev => ({ ...prev, enabled: isChecked }));
+    
+    try {
+      await ManagerService.toggleGroupSymbol(groupName, fullSymbolData?.symbol, isChecked);
+    } catch (err) {
+      console.error("Failed to toggle symbol status", err);
+      // Revert on failure
+      setFullSymbolData(prev => ({ ...prev, enabled: originalState }));
+      alert('Failed to toggle symbol status. Details: ' + (err.response?.data?.message || err.message));
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-[1px]">
       <motion.div 
@@ -89,7 +120,7 @@ const SymbolPropertiesPopup = ({ symbol, onClose }) => {
           className="h-8 bg-[#323233] flex items-center px-3 justify-between select-none cursor-move"
         >
           <div className="flex items-center gap-2">
-            <span className="text-[12px] font-medium text-[#cccccc]">Symbol: {symbol?.s || 'Trading\\CFD-Energy-Spot\\*'}</span>
+            <span className="text-[12px] font-medium text-[#cccccc]">Symbol: {fullSymbolData?.symbol || 'Trading\\CFD-Energy-Spot\\*'}</span>
           </div>
           <div className="flex items-center gap-1 h-full">
             <button className="px-2 hover:bg-white/10 rounded-sm text-[#808080] hover:text-white transition-colors text-[14px]">?</button>
@@ -125,7 +156,7 @@ const SymbolPropertiesPopup = ({ symbol, onClose }) => {
               {activeTab === 'Margin' && "Please specify margin requirements for the symbols group."}
               {activeTab === 'Margin Rates' && "Please specify margin rates for different types of trade operations."}
               {activeTab === 'Swaps' && "Please set up parameters of charging swaps by symbols for the group."}
-              {['Common', 'Trade', 'Execution'].includes(activeTab) && "Configure core execution parameters for " + (symbol?.s || 'this symbol group') + "."}
+              {['Common', 'Trade', 'Execution'].includes(activeTab) && "Configure core execution parameters for " + (fullSymbolData?.symbol || 'this symbol group') + "."}
             </div>
           </div>
 
@@ -150,7 +181,7 @@ const SymbolPropertiesPopup = ({ symbol, onClose }) => {
                   <div className="flex items-center gap-2 mt-4 ml-[-1rem]">
                     <Label width="w-[140px]">Additional margin checks:</Label>
                     <select disabled className="w-[300px] opacity-50 bg-[#1e1e1e] border border-[#3e3e42] rounded-sm px-1 py-0.5 text-[11px] text-[#e1e1e1] appearance-none" style={{ backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23808080\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.5rem center', backgroundSize: '0.75rem' }}>
-                      <option>None</option>
+                      <option>0</option>
                     </select>
                   </div>
                 </div>
@@ -160,8 +191,8 @@ const SymbolPropertiesPopup = ({ symbol, onClose }) => {
               {activeTab === 'Margin Rates' && (
                 <div className="space-y-4">
                   <div className="pl-2">
-                    <SelectField label="Liquidity margin rate" options={["Default", "Custom"]} defaultValue="Default" width="w-32" labelWidth="w-[130px]" />
-                    <SelectField label="Currency margin rate" options={["Default", "Custom"]} defaultValue="Default" width="w-32" labelWidth="w-[130px]" />
+                    <SelectField label="Liquidity margin rate" options={["0"]} defaultValue="0" width="w-32" labelWidth="w-[130px]" />
+                    <SelectField label="Currency margin rate" options={["0"]} defaultValue="0" width="w-32" labelWidth="w-[130px]" />
                   </div>
 
                   <div className="border border-[#3e3e42] bg-[#1e1e1e] rounded-sm mt-4">
@@ -177,22 +208,22 @@ const SymbolPropertiesPopup = ({ symbol, onClose }) => {
                     <div className="px-3 py-1 font-bold text-white text-[11px] border-b border-black/10">Initial margin</div>
                     <div className="grid grid-cols-[110px_1fr_1fr_1fr_1fr] border-b border-black/10 text-[11px] text-[#e1e1e1]">
                       <TableCell isFirst><BlueDocIcon /> Buy</TableCell>
-                      <TableCell>Default</TableCell><TableCell>Default</TableCell><TableCell>Default</TableCell><TableCell>Default</TableCell>
+                      <TableCell>0</TableCell><TableCell>0</TableCell><TableCell>0</TableCell><TableCell>0</TableCell>
                     </div>
                     <div className="grid grid-cols-[110px_1fr_1fr_1fr_1fr] border-b border-[#3e3e42] text-[11px] text-[#e1e1e1]">
                       <TableCell isFirst><RedDocIcon /> Sell</TableCell>
-                      <TableCell>Default</TableCell><TableCell>Default</TableCell><TableCell>Default</TableCell><TableCell>Default</TableCell>
+                      <TableCell>0</TableCell><TableCell>0</TableCell><TableCell>0</TableCell><TableCell>0</TableCell>
                     </div>
 
                     {/* Maintenance Margin Group */}
                     <div className="px-3 py-1 font-bold text-white text-[11px] border-b border-black/10">Maintenance margin</div>
                     <div className="grid grid-cols-[110px_1fr_1fr_1fr_1fr] border-b border-black/10 text-[11px] text-[#e1e1e1]">
                       <TableCell isFirst><BlueDocIcon /> Buy</TableCell>
-                      <TableCell>Default</TableCell><TableCell>Default</TableCell><TableCell>Default</TableCell><TableCell>Default</TableCell>
+                      <TableCell>0</TableCell><TableCell>0</TableCell><TableCell>0</TableCell><TableCell>0</TableCell>
                     </div>
                     <div className="grid grid-cols-[110px_1fr_1fr_1fr_1fr] text-[11px] text-[#e1e1e1]">
                       <TableCell isFirst><RedDocIcon /> Sell</TableCell>
-                      <TableCell>Default</TableCell><TableCell>Default</TableCell><TableCell>Default</TableCell><TableCell>Default</TableCell>
+                      <TableCell>0</TableCell><TableCell>0</TableCell><TableCell>0</TableCell><TableCell>0</TableCell>
                     </div>
                   </div>
 
@@ -205,19 +236,19 @@ const SymbolPropertiesPopup = ({ symbol, onClose }) => {
               {/* --- SWAPS TAB --- */}
               {activeTab === 'Swaps' && (
                 <div className="pl-4 relative">
-                  <SelectField label="Type" options={["Default", "In Points", "In Margin Currency"]} defaultValue="Default" width="w-[490px]" labelWidth="w-24" />
+                  <SelectField label="Type" options={["0"]} defaultValue="0" width="w-[490px]" labelWidth="w-24" />
                   
                   <div className="grid grid-cols-[300px_300px] mb-2 mt-2">
                     <div className="flex items-center gap-2">
                       <Label width="w-24">Long positions</Label>
                       <select className="w-[124px] bg-[#1e1e1e] border border-[#3e3e42] rounded-sm px-1 py-0.5 text-[11px] text-blue-400 outline-none">
-                        <option>Default</option>
+                        <option>0</option>
                       </select>
                     </div>
                     <div className="flex items-center gap-2">
                       <Label width="w-[110px]">Short positions</Label>
                       <select className="w-[124px] bg-[#1e1e1e] border border-[#3e3e42] rounded-sm px-1 py-0.5 text-[11px] text-blue-400 outline-none">
-                        <option>Default</option>
+                        <option>0</option>
                       </select>
                     </div>
                   </div>
@@ -226,13 +257,13 @@ const SymbolPropertiesPopup = ({ symbol, onClose }) => {
                     <div className="flex items-center gap-2">
                       <Label width="w-24">Days in year</Label>
                       <select className="w-[124px] bg-[#1e1e1e] border border-[#3e3e42] rounded-sm px-1 py-0.5 text-[11px] text-blue-400 outline-none">
-                        <option>Default</option>
+                        <option>0</option>
                       </select>
                     </div>
                     <div className="flex items-center gap-2">
                       <Label width="w-[110px]">Consider holidays</Label>
                       <select className="w-[124px] bg-[#1e1e1e] border border-[#3e3e42] rounded-sm px-1 py-0.5 text-[11px] text-white outline-none">
-                        <option>Default</option>
+                        <option>0</option>
                       </select>
                     </div>
                   </div>
@@ -248,19 +279,19 @@ const SymbolPropertiesPopup = ({ symbol, onClose }) => {
                         {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, idx) => (
                           <div key={day} className={`grid grid-cols-2 border-b border-black/10 last:border-0 ${idx === 0 ? 'bg-[#1a334d]' : 'hover:bg-white/5 cursor-default'}`}>
                             <div className={`px-2 py-1 border-r border-black/10 ${idx === 0 ? 'text-white' : 'text-[#e1e1e1]'}`}>{day}</div>
-                            <div className="px-2 py-1 text-center text-blue-400">Default</div>
+                            <div className="px-2 py-1 text-center text-blue-400">0</div>
                           </div>
                         ))}
                       </div>
                     </div>
                     
                     <div className="flex flex-col gap-3 mt-1">
-                      <button className="w-24 py-1 bg-[#1e1e1e] hover:bg-[#333] border border-[#3e3e42] rounded-sm text-[11px] text-white transition-colors">Default</button>
-                      <button className="w-24 py-1 bg-[#1e1e1e] hover:bg-[#333] border border-[#3e3e42] rounded-sm text-[11px] text-white transition-colors">Forex</button>
-                      <button className="w-24 py-1 bg-[#1e1e1e] hover:bg-[#333] border border-[#3e3e42] rounded-sm text-[11px] text-white transition-colors">All week</button>
-                      <button className="w-24 py-1 bg-[#1e1e1e] hover:bg-[#333] border border-[#3e3e42] rounded-sm text-[11px] text-white transition-colors">From symbol</button>
+                      <button className="w-24 py-1 bg-[#1e1e1e] hover:bg-[#333] border border-[#3e3e42] rounded-sm text-[11px] text-white transition-colors">0</button>
+                      <button className="w-24 py-1 bg-[#1e1e1e] hover:bg-[#333] border border-[#3e3e42] rounded-sm text-[11px] text-white transition-colors">0</button>
+                      <button className="w-24 py-1 bg-[#1e1e1e] hover:bg-[#333] border border-[#3e3e42] rounded-sm text-[11px] text-white transition-colors">0</button>
+                      <button className="w-24 py-1 bg-[#1e1e1e] hover:bg-[#333] border border-[#3e3e42] rounded-sm text-[11px] text-white transition-colors">0</button>
                       <select className="w-[240px] mt-[-2px] bg-[#1e1e1e] border border-[#3e3e42] rounded-sm px-1 py-0.5 text-[11px] text-white outline-none">
-                        <option>GASOIL.c, Gas Oil</option>
+                        <option>0</option>
                       </select>
                     </div>
                   </div>
@@ -274,19 +305,30 @@ const SymbolPropertiesPopup = ({ symbol, onClose }) => {
               {/* --- COMMON TAB --- */}
               {activeTab === 'Common' && (
                 <div className="pl-4 pr-10 space-y-3 pb-8">
-                  <SelectField label="Symbol" options={["Trading\\CFD-FX\\*"]} defaultValue="Trading\\CFD-FX\\*" labelWidth="w-28" />
+                  <div className="flex items-center gap-6">
+                    <SelectField label="Symbol" options={[fullSymbolData?.symbol || "0"]} defaultValue={fullSymbolData?.symbol || "0"} labelWidth="w-28" width="w-48" disabled />
+                    <CheckboxField label="Enabled" checked={fullSymbolData?.enabled ?? true} onChange={handleToggleEnable} ml="ml-0" />
+                  </div>
                   
-                  <div className="flex items-center justify-between ml-[120px]">
-                    <CheckboxField label="Enable market depth" checked={true} ml="ml-0 mb-0" />
-                    <div className="flex items-center gap-2">
-                      <Label width="w-auto">Market depth limit</Label>
-                      <select className="w-24 bg-[#1e1e1e] border border-[#3e3e42] rounded-sm px-1 py-0.5 text-[11px] text-[#e1e1e1] outline-none">
-                        <option>unlimited</option>
-                      </select>
-                    </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 ml-4 pt-2 pb-2">
+                    <InputField label="Digits" value={fullSymbolData?.digits ?? 5} width="w-20" labelWidth="w-[100px]" />
+                    <InputField label="Spread" value={fullSymbolData?.spread ?? 10} width="w-20" labelWidth="w-[100px]" />
+                    
+                    <InputField label="Contract size" value={fullSymbolData?.contract_size ?? 100000} width="w-24" labelWidth="w-[100px]" />
+                    <InputField label="Tick size" value={fullSymbolData?.tick_size ?? 0.00001} width="w-24" labelWidth="w-[100px]" />
+                    
+                    <InputField label="Tick value" value={fullSymbolData?.tick_value ?? 1} width="w-24" labelWidth="w-[100px]" />
+                    <InputField label="Spread markup" value={fullSymbolData?.spread_markup ?? 0} width="w-20" labelWidth="w-[100px]" />
+                    
+                    <InputField label="Commission" value={fullSymbolData?.commission_rate ?? 0} width="w-20" labelWidth="w-[100px]" />
+                    <InputField label="Swap mult." value={fullSymbolData?.swap_multiplier ?? 1} width="w-20" labelWidth="w-[100px]" />
                   </div>
 
-                  <CheckboxField label="Use default spread" checked={true} ml="ml-[120px]" />
+                  <div className="flex items-center ml-[120px] pt-2 pb-1 border-t border-white/5">
+                    <CheckboxField label="Enable market depth" checked={fullSymbolData?.trade_allowed ?? true} ml="ml-0 mb-0" />
+                  </div>
+
+                  <CheckboxField label="Use default spread" checked={false} ml="ml-[120px]" />
                   
                   <div className="flex items-center ml-4 gap-4 pb-2">
                     <div className="flex items-center gap-2 opacity-50">
@@ -311,15 +353,15 @@ const SymbolPropertiesPopup = ({ symbol, onClose }) => {
                     <div className="flex items-center gap-4 ml-8 pb-3">
                       <div className="flex items-center gap-2 opacity-50">
                         <Label width="w-16">Minimum</Label>
-                        <select disabled className="w-16 bg-[#1e1e1e] border border-[#3e3e42] rounded-sm px-1 py-0.5 text-[11px] text-[#e1e1e1] outline-none"><option>0.01</option></select>
+                        <select disabled className="w-16 bg-[#1e1e1e] border border-[#3e3e42] rounded-sm px-1 py-0.5 text-[11px] text-[#e1e1e1] outline-none"><option>0</option></select>
                       </div>
                       <div className="flex items-center gap-2 opacity-50">
                         <Label width="w-10">Step</Label>
-                        <select disabled className="w-16 bg-[#1e1e1e] border border-[#3e3e42] rounded-sm px-1 py-0.5 text-[11px] text-[#e1e1e1] outline-none"><option>0.01</option></select>
+                        <select disabled className="w-16 bg-[#1e1e1e] border border-[#3e3e42] rounded-sm px-1 py-0.5 text-[11px] text-[#e1e1e1] outline-none"><option>0</option></select>
                       </div>
                       <div className="flex items-center gap-2 opacity-50">
                         <Label width="w-16">Maximum</Label>
-                        <select disabled className="w-16 bg-[#1e1e1e] border border-[#3e3e42] rounded-sm px-1 py-0.5 text-[11px] text-[#e1e1e1] outline-none"><option>100</option></select>
+                        <select disabled className="w-16 bg-[#1e1e1e] border border-[#3e3e42] rounded-sm px-1 py-0.5 text-[11px] text-[#e1e1e1] outline-none"><option>0</option></select>
                       </div>
                     </div>
 
@@ -340,10 +382,10 @@ const SymbolPropertiesPopup = ({ symbol, onClose }) => {
                   <CheckboxField label="Use default trade settings" checked={true} ml="ml-[100px]" />
                   
                   <div className="space-y-2 pr-[200px]">
-                    <SelectField label="Trade" options={["Full access"]} defaultValue="Full access" labelWidth="w-[90px]" disabled />
-                    <SelectField label="Filling" options={["Fill or Kill, Immediate or Cancel"]} defaultValue="Fill or Kill, Immediate or Cancel" labelWidth="w-[90px]" disabled />
-                    <SelectField label="Expiration" options={["All"]} defaultValue="All" labelWidth="w-[90px]" disabled />
-                    <SelectField label="Orders" options={["All"]} defaultValue="All" labelWidth="w-[90px]" disabled />
+                    <SelectField label="Trade" options={["0"]} defaultValue="0" labelWidth="w-[90px]" disabled />
+                    <SelectField label="Filling" options={["0"]} defaultValue="0" labelWidth="w-[90px]" disabled />
+                    <SelectField label="Expiration" options={["0"]} defaultValue="0" labelWidth="w-[90px]" disabled />
+                    <SelectField label="Orders" options={["0"]} defaultValue="0" labelWidth="w-[90px]" disabled />
                   </div>
 
                   <div className="pt-4 space-y-3">
@@ -370,7 +412,7 @@ const SymbolPropertiesPopup = ({ symbol, onClose }) => {
                 <div className="pl-6 space-y-4 pt-2">
                   <CheckboxField label="Use default execution settings" checked={true} ml="ml-24" />
                   <div className="pr-[200px]">
-                    <SelectField label="Execution" options={["Market"]} defaultValue="Market" labelWidth="w-24" disabled />
+                    <SelectField label="Execution" options={["0"]} defaultValue="0" labelWidth="w-24" disabled />
                   </div>
                 </div>
               )}

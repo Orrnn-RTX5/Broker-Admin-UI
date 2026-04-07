@@ -220,6 +220,7 @@ export const sidebarData = [
               { label: "Time", icon: Clock },
               { label: "Holidays", icon: Calendar },
               { label: "Leverages", icon: Hash },
+              { label: "Swap-Free Configs", icon: Settings },
               { 
                 label: "Groups", 
                 count: 127, 

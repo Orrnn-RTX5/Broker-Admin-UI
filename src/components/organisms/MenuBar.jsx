@@ -7,6 +7,7 @@ import {
   Plus, X, Settings, ArrowRightFromLine, XOctagon, Lock, 
   Upload, Download, FolderOpen, Printer, FileSearch, FileCog, LogOut
 } from 'lucide-react';
+import { AuthService } from '../../services/auth.service';
 
 const MenuBar = ({ onMenuSelect, activeNode, onThemeSelect }) => {
   const [openMenu, setOpenMenu] = useState(null);
@@ -54,6 +55,7 @@ const MenuBar = ({ onMenuSelect, activeNode, onThemeSelect }) => {
        case 'Open Data Folder': alert(`Opening local directory:\nC:\\Users\\Administrator\\AppData\\Roaming\\MetaQuotes\\Terminal\\`); break;
        case 'Print Preview': alert('Generating print preview presentation...'); break;
        case 'Print Setup': alert('Opening local printer dialog configurations...'); break;
+       case 'Logout': AuthService.logout(); break;
        case 'Exit': alert('Application exit initiated.'); window.close(); break;
     }
   };
@@ -131,6 +133,7 @@ const MenuBar = ({ onMenuSelect, activeNode, onThemeSelect }) => {
               <MenuItem icon={FileSearch} iconColor="text-[#3B82F6]" label="Print Preview" onClick={() => handleFileAction('Print Preview')} />
               <MenuItem icon={FileCog} iconColor="text-[#3B82F6]" label="Print Setup" onClick={() => handleFileAction('Print Setup')} />
               <MenuItem separator />
+              <MenuItem icon={LogOut} iconColor="text-yellow-500" label="Logout" onClick={() => handleFileAction('Logout')} />
               <MenuItem icon={LogOut} iconColor="text-red-500" label="Exit" onClick={() => handleFileAction('Exit')} />
             </div>
           )}

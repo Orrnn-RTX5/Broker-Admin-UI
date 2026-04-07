@@ -11,12 +11,17 @@ export default defineConfig({
   server: {
     proxy: {
       '/api/v2': {
-        target: 'http://localhost:8091',
+        target: 'http://69.197.178.27:80',
         changeOrigin: true,
         secure: false,
       },
       '/manager': {
-        target: 'http://69.197.178.27',
+        target: 'http://69.197.178.27:80',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/Manager': {
+        target: 'http://69.197.178.27:80',
         changeOrigin: true,
         secure: false,
       }

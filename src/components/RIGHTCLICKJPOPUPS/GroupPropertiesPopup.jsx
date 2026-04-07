@@ -1,18 +1,85 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
-import { X, Minus, Square, HelpCircle, Users, ChevronUp, ChevronDown, Plus, Pencil, Trash2 } from 'lucide-react';
+import { X, Minus, Square, HelpCircle, Users, ChevronUp, ChevronDown, Plus, Pencil, Trash2, Save } from 'lucide-react';
 import SymbolPropertiesPopup from './SymbolPropertiesPopup';
+import { ManagerService } from '../../services/manager.service';
 
 const GroupPropertiesPopup = ({ group, onClose }) => {
   const [activeTab, setActiveTab] = useState('Common');
   const [selectedSymbol, setSelectedSymbol] = useState(null);
+  const [showAddCommission, setShowAddCommission] = useState(false);
+  const [isCreatingCommission, setIsCreatingCommission] = useState(false);
+  const [commissionsList, setCommissionsList] = useState([]);
+  const [selectedCommission, setSelectedCommission] = useState(null);
+  const currentGroupName = group?.group || group?.name || '';
+
+  const [commissionFormData, setCommissionFormData] = useState({
+    commission_type: "per_lot",
+    group_name: currentGroupName,
+    max_volume: 100,
+    min_volume: 0.01,
+    name: "EURUSD Standard",
+    symbol: "EURUSD",
+    time_from: "00:00",
+    time_to: "23:59",
+    value: 7
+  });
+
   const [reportData, setReportData] = useState('End of Month only');
   const [genStatements, setGenStatements] = useState(false);
   const [sendEmail, setSendEmail] = useState(false);
   const dragControls = useDragControls();
 
+  const [stats, setStats] = useState(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
+
+  const [groupSymbols, setGroupSymbols] = useState([]);
+  const [isLoadingSymbols, setIsLoadingSymbols] = useState(false);
+  const [hasFetchedSymbols, setHasFetchedSymbols] = useState(false);
+
+  React.useEffect(() => {
+    if (activeTab === 'Statistics' && !stats) {
+      const fetchStats = async () => {
+        setIsLoadingStats(true);
+        try {
+          const res = await ManagerService.getGroupStats(currentGroupName);
+          if (res) {
+            setStats(res);
+          }
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setIsLoadingStats(false);
+        }
+      };
+      fetchStats();
+    }
+  }, [activeTab, group]);
+
+  React.useEffect(() => {
+    if (activeTab === 'Symbols' && !hasFetchedSymbols) {
+      const fetchSymbols = async () => {
+        setIsLoadingSymbols(true);
+        try {
+          const res = await ManagerService.getGroupSymbols(currentGroupName);
+          if (Array.isArray(res)) {
+            setGroupSymbols(res);
+          } else if (res?.symbols) {
+            setGroupSymbols(res.symbols);
+          }
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setIsLoadingSymbols(false);
+          setHasFetchedSymbols(true);
+        }
+      };
+      fetchSymbols();
+    }
+  }, [activeTab, group, hasFetchedSymbols]);
+
   const tabs = [
-    'Common', 'Company', 'News & Mail', 'Permissions', 'Margin', 'Symbols', 'Commissions', 'Reports'
+    'Common', 'Statistics', 'Company', 'News & Mail', 'Permissions', 'Margin', 'Symbols', 'Commissions', 'Reports'
   ];
 
   // --- Helper Components ---
@@ -58,12 +125,81 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
     </div>
   );
 
-  const SideButton = ({ icon: Icon, label }) => (
-    <button className="flex flex-col items-center justify-center w-20 py-1.5 bg-[#404040] hover:bg-[#4a4a4a] border border-black/40 rounded-sm mb-1.5 group transition-colors">
+  const SideButton = ({ icon: Icon, label, onClick }) => (
+    <button onClick={onClick} className="flex flex-col items-center justify-center w-20 py-1.5 bg-[#404040] hover:bg-[#4a4a4a] border border-black/40 rounded-sm mb-1.5 group transition-colors">
       {Icon && <Icon size={14} className="text-[#a0a0a0] group-hover:text-white" />}
       {label && <span className="text-[10px] text-[#cccccc] font-medium uppercase mt-0.5">{label}</span>}
     </button>
   );
+
+  React.useEffect(() => {
+    if (activeTab === 'Commissions') {
+      fetchCommissions();
+    }
+  }, [activeTab]);
+
+  const fetchCommissions = async () => {
+    try {
+      const res = await ManagerService.getCommissionScheduleList();
+      const list = Array.isArray(res) ? res : (res?.answer || []);
+      setCommissionsList(list);
+    } catch (error) {
+      console.error("Failed to fetch commissions", error);
+    }
+  };
+
+  const handleDeleteCommission = async () => {
+    if (!selectedCommission) return alert('Select a commission to delete');
+    const deleteId = selectedCommission.schedule_id ?? selectedCommission.id ?? selectedCommission.Id;
+    if (deleteId === undefined) {
+      console.log('Commission object:', selectedCommission);
+      return alert('Could not find schedule_id for this item. Check console.');
+    }
+    
+    try {
+      await ManagerService.deleteCommissionSchedule(deleteId);
+      fetchCommissions();
+      setSelectedCommission(null);
+    } catch(e) {
+      console.error("Failed to delete commission", e);
+      alert('Failed to delete commission');
+    }
+  };
+
+  const handleCreateCommission = async () => {
+    setIsCreatingCommission(true);
+    try {
+      const payload = {
+        ...commissionFormData,
+        max_volume: Number(commissionFormData.max_volume),
+        min_volume: Number(commissionFormData.min_volume),
+        value: Number(commissionFormData.value)
+      };
+      await ManagerService.createCommissionSchedule(payload);
+      alert('Commission created successfully');
+      setShowAddCommission(false);
+      fetchCommissions();
+    } catch (error) {
+      console.error('Failed to create commission', error);
+      alert('Failed to create commission');
+    } finally {
+      setIsCreatingCommission(false);
+    }
+  };
+
+  const handleAddSymbol = async () => {
+    const symbolStr = window.prompt(`Enter symbol to add to ${currentGroupName} (e.g. xauusd):`);
+    if (!symbolStr) return;
+    
+    try {
+      await ManagerService.getSymbolSet(currentGroupName, symbolStr);
+      alert(`Symbol ${symbolStr} added successfully to ${currentGroupName}!`);
+      setHasFetchedSymbols(false);
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Error adding symbol');
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-[1px]">
@@ -84,7 +220,7 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
         >
           <div className="flex items-center gap-2">
             <Users size={14} className="text-emerald-400" />
-            <span className="text-[12px] font-medium text-[#cccccc]">Group: {group?.group || 'Demo\\extra'}</span>
+            <span className="text-[12px] font-medium text-[#cccccc]">Group: {currentGroupName || 'Demo\\extra'}</span>
           </div>
           <div className="flex items-center gap-1 h-full">
             <button className="p-1.5 hover:bg-white/10 rounded-sm text-[#808080] hover:text-white transition-colors"><Minus size={14} /></button>
@@ -124,6 +260,7 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
               {activeTab === 'Symbols' && "Please set up individual parameters of symbols trade for the group."}
               {activeTab === 'Commissions' && "Please set up commissions for accounts in the group."}
               {activeTab === 'Reports' && "The platform can daily save the end-of-day state of accounts to a special database. That data is used for generating daily statements and various reports for managers."}
+              {activeTab === 'Statistics' && "Live active statistics for accounts and margins linked to this specific group. Refreshes dynamically."}
               {['News & Mail', 'Permissions'].includes(activeTab) && "Configuration of security and news distribution policies for this specific group."}
             </div>
           </div> 
@@ -137,7 +274,7 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
                 <div className="space-y-1">
                   <div className="grid grid-cols-2 gap-x-8">
                     <div>
-                      <InputField label="Name" value={group?.group || 'StarrFX\\ACH'} width="w-64" />
+                      <InputField label="Name" value={currentGroupName || 'StarrFX\\ACH'} width="w-64" />
                       <SelectField label="Trade server" options={["Main Trade Server, 1", "Backup Server"]} defaultValue="Main Trade Server, 1" />
                       <SelectField label="Authentication" options={["Normal", "LDAP", "OAuth"]} defaultValue="Normal" />
                       <SelectField label="One-time password" options={["Disabled", "Email", "SMS"]} defaultValue="Disabled" />
@@ -157,6 +294,53 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
                     <CheckboxField label="Show the risk warning window after connection" />
                     <CheckboxField label="Enforce country-specific regulatory restrictions for retail clients" />
                   </div>
+                </div>
+              )}
+
+              {/* --- STATISTICS TAB --- */}
+              {activeTab === 'Statistics' && (
+                <div className="flex-1">
+                  {isLoadingStats ? (
+                     <div className="text-[12px] text-[#aaaaaa] flex items-center justify-center p-10 mt-10">Loading statistics...</div>
+                  ) : stats ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Top metric row */}
+                      <div className="bg-[#2a2a2b] border border-[#3e3e42] p-4 rounded-sm flex flex-col items-center justify-center relative overflow-hidden group">
+                         <div className="text-[11px] font-medium text-[#aaaaaa] uppercase tracking-wider mb-1">Total Accounts</div>
+                         <div className="text-2xl text-blue-400 font-mono font-bold">{stats.accountCount?.toLocaleString() || 0}</div>
+                      </div>
+                      <div className="bg-[#2a2a2b] border border-[#3e3e42] p-4 rounded-sm flex flex-col items-center justify-center relative overflow-hidden group">
+                         <div className="text-[11px] font-medium text-[#aaaaaa] uppercase tracking-wider mb-1">Active Positions</div>
+                         <div className="text-2xl text-emerald-400 font-mono font-bold">{stats.activePositions?.toLocaleString() || 0}</div>
+                      </div>
+                      <div className="bg-[#2a2a2b] border border-[#3e3e42] p-4 rounded-sm flex flex-col items-center justify-center relative overflow-hidden group">
+                         <div className="text-[11px] font-medium text-[#aaaaaa] uppercase tracking-wider mb-1">Total Volume</div>
+                         <div className="text-2xl text-orange-400 font-mono font-bold">{stats.totalVolume?.toFixed(2) || '0.00'}</div>
+                      </div>
+                      <div className="bg-[#2a2a2b] border border-[#3e3e42] p-4 rounded-sm flex flex-col items-center justify-center relative overflow-hidden group">
+                         <div className="text-[11px] font-medium text-[#aaaaaa] uppercase tracking-wider mb-1">Net Exposure</div>
+                         <div className="text-2xl text-purple-400 font-mono font-bold">$0.00</div>
+                      </div>
+                      
+                      {/* Financials Row */}
+                      <div className="col-span-2 grid grid-cols-2 gap-4 mt-2">
+                         <div className="bg-[#2a2a2b] border border-blue-500/20 p-5 rounded-sm flex items-center gap-4">
+                            <div className="flex-1">
+                               <div className="text-[11px] font-medium text-[#aaaaaa] uppercase tracking-wider">Total Balance</div>
+                               <div className="text-[26px] text-white font-mono mt-1">${stats.totalBalance?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</div>
+                            </div>
+                         </div>
+                         <div className="bg-[#2a2a2b] border border-emerald-500/20 p-5 rounded-sm flex items-center gap-4">
+                            <div className="flex-1">
+                               <div className="text-[11px] font-medium text-[#aaaaaa] uppercase tracking-wider">Total Equity</div>
+                               <div className="text-[26px] text-[#e1e1e1] font-mono mt-1">${stats.totalEquity?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</div>
+                            </div>
+                         </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-[12px] text-[#aaaaaa] flex items-center justify-center p-10 mt-10">No statistics available.</div>
+                  )}
                 </div>
               )}
 
@@ -217,38 +401,39 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
                     <SideButton icon={ChevronUp} label="Up" />
                     <SideButton icon={ChevronDown} label="Down" />
                     <div className="h-10"></div>
-                    <SideButton icon={Plus} label="Add" />
+                    <SideButton icon={Plus} label="Add" onClick={handleAddSymbol} />
                     <SideButton icon={Pencil} label="Edit" />
                     <SideButton icon={Trash2} label="Delete" />
                   </div>
                   <div className="flex-1 border border-[#3e3e42] bg-[#1e1e1e] overflow-hidden rounded-sm min-h-[300px]">
-                    <div className="grid grid-cols-[1fr_120px_100px] border-b border-[#3e3e42] bg-[#2d2d2d] text-[11px] font-medium text-[#aaaaaa]">
+                    <div className="grid grid-cols-[1fr_80px_80px_80px] border-b border-[#3e3e42] bg-[#2d2d2d] text-[11px] font-medium text-[#aaaaaa]">
                       <div className="px-3 py-1.5 border-r border-[#3e3e42]">Symbol</div>
-                      <div className="px-3 py-1.5 border-r border-[#3e3e42] text-center">Spread</div>
-                      <div className="px-3 py-1.5 text-center">Trade</div>
+                      <div className="px-3 py-1.5 border-r border-[#3e3e42] text-center">Spread Mku</div>
+                      <div className="px-3 py-1.5 border-r border-[#3e3e42] text-center">Comm</div>
+                      <div className="px-3 py-1.5 text-center">Swap M.</div>
                     </div>
                     <div className="text-[11px] tabular-nums">
-                      {[
-                        { s: 'TradingA\\CFD-FX\\*', sp: '+20', t: 'Default', a: true },
-                        { s: 'TradingA\\CFD-Bullion-Futures\\*', sp: 'Default', t: 'Default' },
-                        { s: 'TradingA\\CFD-Indices\\*', sp: '+30', t: 'Default' },
-                        { s: 'TradingA\\CFD-Metals\\*', sp: '+25', t: 'Default' },
-                        { s: 'TradingA\\CFD-Energy-Spot\\*', sp: '+30', t: 'Default' },
-                        { s: 'TradingA\\Crypto\\*', sp: '+10', t: 'Default' },
-                      ].map((sym, i) => (
-                        <div 
-                          key={i} 
-                          onDoubleClick={() => setSelectedSymbol(sym)}
-                          className={`grid grid-cols-[1fr_120px_100px] border-b border-black/10 items-center overflow-hidden transition-colors ${sym.a ? 'bg-[#1a334d]' : 'hover:bg-white/5 cursor-default'}`}
-                        >
-                          <div className="px-3 py-1 border-r border-black/10 truncate font-mono text-[#e1e1e1] flex items-center gap-2">
-                            <span className="text-orange-400">$</span> {sym.s}
+                      {isLoadingSymbols ? (
+                        <div className="p-4 text-center text-[#aaaaaa]">Loading symbols...</div>
+                      ) : groupSymbols.length > 0 ? (
+                        groupSymbols.map((sym, i) => (
+                          <div 
+                            key={i} 
+                            onDoubleClick={() => setSelectedSymbol(sym)}
+                            className={`grid grid-cols-[1fr_80px_80px_80px] border-b border-black/10 items-center overflow-hidden transition-colors hover:bg-white/5 cursor-pointer`}
+                          >
+                            <div className="px-3 py-1 border-r border-black/10 truncate font-mono text-[#e1e1e1] flex items-center gap-2">
+                              <span className={`text-[14px] font-bold text-orange-400`}>$</span> {sym.symbol}
+                            </div>
+                            <div className="px-3 py-1 border-r border-black/10 text-center text-blue-400">{sym.spread_markup ? `+${sym.spread_markup}` : '0'}</div>
+                            <div className="px-3 py-1 border-r border-black/10 text-center text-red-400">{sym.commission_rate || '0'}</div>
+                            <div className="px-3 py-1 text-center text-[#aaaaaa]">{sym.swap_multiplier || '1.0'}</div>
                           </div>
-                          <div className="px-3 py-1 border-r border-black/10 text-center text-blue-400">{sym.sp}</div>
-                          <div className="px-3 py-1 text-center text-[#aaaaaa]">{sym.t}</div>
-                        </div>
-                      ))}
-                      <div className="px-3 py-2 text-[#00a86b] font-medium cursor-pointer hover:bg-white/5 transition-colors">+ click to add...</div>
+                        ))
+                      ) : (
+                        <div className="p-4 text-center text-[#aaaaaa]">No symbols found for this group.</div>
+                      )}
+                      <div onClick={handleAddSymbol} className="px-3 py-2 text-[#00a86b] font-medium cursor-pointer hover:bg-white/5 transition-colors">+ click to add...</div>
                     </div>
                   </div>
                 </div>
@@ -261,9 +446,9 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
                     <SideButton icon={ChevronUp} label="Up" />
                     <SideButton icon={ChevronDown} label="Down" />
                     <div className="h-10"></div>
-                    <SideButton icon={Plus} label="Add" />
+                    <SideButton icon={Plus} label="Add" onClick={() => setShowAddCommission(true)} />
                     <SideButton icon={Pencil} label="Edit" />
-                    <SideButton icon={Trash2} label="Delete" />
+                    <SideButton icon={Trash2} label="Delete" onClick={handleDeleteCommission} />
                   </div>
                   <div className="flex-1 border border-[#3e3e42] bg-[#1e1e1e] overflow-hidden rounded-sm min-h-[300px]">
                     <div className="flex border-b border-[#3e3e42] bg-[#2d2d2d] text-[11px] font-medium text-[#aaaaaa] shrink-0">
@@ -275,17 +460,29 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
                       <div className="flex-1 px-3 py-1.5">Value</div>
                     </div>
                     <div className="text-[11px] tabular-nums">
-                        <div className="flex bg-[#1a334d] border-b border-black/10 shrink-0 text-white font-mono">
-                          <div className="w-32 px-2 py-1.5 border-r border-black/10 flex items-center gap-1.5">
-                            <span className="text-[#00a3ff] font-bold">%</span> Future
+                        {commissionsList.length > 0 ? commissionsList.map((comm, index) => (
+                          <div 
+                            key={comm.schedule_id || comm.id || index} 
+                            onClick={() => setSelectedCommission(comm)}
+                            className={`flex border-b border-black/10 shrink-0 font-mono transition-colors cursor-pointer ${
+                              selectedCommission === comm ? 'bg-blue-600/30 text-white' : 'text-[#e1e1e1] hover:bg-white/5'
+                            }`}
+                          >
+                            <div className="w-32 px-2 py-1.5 border-r border-black/10 flex items-center gap-1.5">
+                              <span className="text-[#00a3ff] font-bold">%</span> {comm.name}
+                            </div>
+                            <div className="w-40 px-2 py-1.5 border-r border-black/10 truncate">{comm.symbol}</div>
+                            <div className="w-24 px-2 py-1.5 border-r border-black/10">{comm.commission_type}</div>
+                            <div className="w-24 px-2 py-1.5 border-r border-black/10">volume</div>
+                            <div className="w-24 px-2 py-1.5 border-r border-black/10">instant</div>
+                            <div className="flex-1 px-2 py-1.5 truncate">{comm.min_volume}-{comm.max_volume} - {comm.value}</div>
                           </div>
-                          <div className="w-40 px-2 py-1.5 border-r border-black/10 truncate">Trading\CFD-Fut...</div>
-                          <div className="w-24 px-2 py-1.5 border-r border-black/10">standard</div>
-                          <div className="w-24 px-2 py-1.5 border-r border-black/10">volume</div>
-                          <div className="w-24 px-2 py-1.5 border-r border-black/10">instant</div>
-                          <div className="flex-1 px-2 py-1.5 truncate">0.01-1 000 - 5.00 - dep...</div>
-                        </div>
-                        <div className="px-3 py-2 text-[#00a86b] font-medium cursor-pointer flex items-center gap-1.5 hover:bg-white/5 transition-colors">
+                        )) : (
+                          <div className="flex bg-[#1a334d] border-b border-black/10 shrink-0 text-white font-mono opacity-50">
+                             <div className="px-3 py-1.5 w-full text-center text-[#aaaaaa]">No commissions found</div>
+                          </div>
+                        )}
+                        <div onClick={() => setShowAddCommission(true)} className="px-3 py-2 text-[#00a86b] font-medium cursor-pointer flex items-center gap-1.5 hover:bg-white/5 transition-colors">
                           <span className="text-[14px]">+</span> click to add...
                         </div>
                     </div>
@@ -456,6 +653,88 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
           />
         )}
       </AnimatePresence>
+
+      {/* Add Commission Popup Overlay */}
+      <AnimatePresence>
+        {showAddCommission && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-[450px] bg-[#252526] rounded-md shadow-2xl shadow-black/80 border border-[#3e3e42] overflow-hidden"
+            >
+              <div className="h-8 bg-[#323233] flex items-center px-3 justify-between select-none">
+                <span className="text-[12px] font-medium text-[#cccccc]">Create Commission Schedule</span>
+                <button onClick={() => setShowAddCommission(false)} className="p-1 hover:bg-[#c42b1c] rounded-sm text-[#808080] hover:text-white transition-colors">
+                  <X size={14} />
+                </button>
+              </div>
+              <div className="p-5 bg-[#1e1e1e]">
+                <div className="space-y-3">
+                  <div className="grid grid-cols-[100px_1fr] items-center gap-3">
+                    <label className="text-[11px] text-[#aaaaaa] text-right">Name:</label>
+                    <input type="text" value={commissionFormData.name} onChange={(e) => setCommissionFormData({...commissionFormData, name: e.target.value})} className="w-full bg-[#2d2d2d] border border-[#3e3e42] rounded-sm px-2 py-1 text-[11px] text-[#e1e1e1] outline-none focus:border-blue-500/50" />
+                  </div>
+                  <div className="grid grid-cols-[100px_1fr] items-center gap-3">
+                    <label className="text-[11px] text-[#aaaaaa] text-right">Group Name:</label>
+                    <input type="text" value={commissionFormData.group_name} onChange={(e) => setCommissionFormData({...commissionFormData, group_name: e.target.value})} className="w-full bg-[#2d2d2d] border border-[#3e3e42] rounded-sm px-2 py-1 text-[11px] text-[#e1e1e1] outline-none focus:border-blue-500/50" />
+                  </div>
+                  <div className="grid grid-cols-[100px_1fr] items-center gap-3">
+                    <label className="text-[11px] text-[#aaaaaa] text-right">Symbol:</label>
+                    <input type="text" value={commissionFormData.symbol} onChange={(e) => setCommissionFormData({...commissionFormData, symbol: e.target.value})} className="w-full bg-[#2d2d2d] border border-[#3e3e42] rounded-sm px-2 py-1 text-[11px] text-[#e1e1e1] outline-none focus:border-blue-500/50" />
+                  </div>
+                  <div className="grid grid-cols-[100px_1fr] items-center gap-3">
+                    <label className="text-[11px] text-[#aaaaaa] text-right">Comm Type:</label>
+                    <select value={commissionFormData.commission_type} onChange={(e) => setCommissionFormData({...commissionFormData, commission_type: e.target.value})} className="w-full bg-[#2d2d2d] border border-[#3e3e42] rounded-sm px-2 py-1 text-[11px] text-[#e1e1e1] outline-none focus:border-blue-500/50">
+                      <option value="per_lot">per_lot</option>
+                      <option value="standard">standard</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-[100px_1fr] items-center gap-3">
+                    <label className="text-[11px] text-[#aaaaaa] text-right">Value:</label>
+                    <input type="number" step="1" value={commissionFormData.value} onChange={(e) => setCommissionFormData({...commissionFormData, value: e.target.value})} className="w-full bg-[#2d2d2d] border border-[#3e3e42] rounded-sm px-2 py-1 text-[11px] text-[#e1e1e1] outline-none focus:border-blue-500/50" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-[100px_1fr] items-center gap-3">
+                      <label className="text-[11px] text-[#aaaaaa] text-right">Min Volume:</label>
+                      <input type="number" step="0.01" value={commissionFormData.min_volume} onChange={(e) => setCommissionFormData({...commissionFormData, min_volume: e.target.value})} className="w-full bg-[#2d2d2d] border border-[#3e3e42] rounded-sm px-2 py-1 text-[11px] text-[#e1e1e1] outline-none focus:border-blue-500/50" />
+                    </div>
+                    <div className="grid grid-cols-[60px_1fr] items-center gap-3">
+                      <label className="text-[11px] text-[#aaaaaa] text-right">Max Vol:</label>
+                      <input type="number" step="1" value={commissionFormData.max_volume} onChange={(e) => setCommissionFormData({...commissionFormData, max_volume: e.target.value})} className="w-full bg-[#2d2d2d] border border-[#3e3e42] rounded-sm px-2 py-1 text-[11px] text-[#e1e1e1] outline-none focus:border-blue-500/50" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-[100px_1fr] items-center gap-3">
+                      <label className="text-[11px] text-[#aaaaaa] text-right">Time From:</label>
+                      <input type="time" value={commissionFormData.time_from} onChange={(e) => setCommissionFormData({...commissionFormData, time_from: e.target.value})} className="w-full bg-[#2d2d2d] border border-[#3e3e42] rounded-sm px-2 py-1 text-[11px] text-[#e1e1e1] outline-none focus:border-blue-500/50" />
+                    </div>
+                    <div className="grid grid-cols-[60px_1fr] items-center gap-3">
+                      <label className="text-[11px] text-[#aaaaaa] text-right">Time To:</label>
+                      <input type="time" value={commissionFormData.time_to} onChange={(e) => setCommissionFormData({...commissionFormData, time_to: e.target.value})} className="w-full bg-[#2d2d2d] border border-[#3e3e42] rounded-sm px-2 py-1 text-[11px] text-[#e1e1e1] outline-none focus:border-blue-500/50" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="h-12 bg-[#2b2b2b] border-t border-black/40 flex items-center justify-end px-4 gap-2">
+                 <button onClick={() => setShowAddCommission(false)} className="px-4 py-1.5 bg-[#404040] hover:bg-[#505050] text-[11px] text-white border border-black/60 rounded-sm">Cancel</button>
+                 <button onClick={handleCreateCommission} disabled={isCreatingCommission} className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-[11px] text-white border border-blue-800 rounded-sm">
+                   {isCreatingCommission ? "Saving..." : <><Save size={12}/> Save</>}
+                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {selectedSymbol && (
+        <SymbolPropertiesPopup 
+          symbol={selectedSymbol} 
+          groupName={currentGroupName}
+          onClose={() => setSelectedSymbol(null)} 
+        />
+      )}
     </div>
   );
 };

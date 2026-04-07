@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, Check } from 'lucide-react';
+import { ManagerService } from '../../services/manager.service';
+import { useRoles } from '../../hooks/useManager';
 
 const BlueUserLargeIcon = () => (
   <svg width="48" height="48" viewBox="0 0 24 24" fill="#1D4ED8" stroke="#1E3A8A" strokeWidth="1">
@@ -29,6 +31,27 @@ const CheckboxIcon = ({ checked, indeterminate, isRedCross }) => {
 
 const ManagerPropertiesPopup = ({ manager, onClose }) => {
   const [activeTab, setActiveTab] = useState('Common');
+  const [roleId, setRoleId] = useState('');
+  
+  const { data: rolesResponse } = useRoles();
+  const roles = rolesResponse?.roles || [];
+
+  useEffect(() => {
+    if (manager?.role_id) {
+      setRoleId(manager.role_id);
+    }
+  }, [manager]);
+
+  const handleSave = async () => {
+    try {
+      if (roleId && roleId !== manager?.role_id) {
+        await ManagerService.updateManagerRole(manager.login, roleId);
+      }
+      onClose();
+    } catch (err) {
+      alert("Failed to update manager settings: " + err.message);
+    }
+  };
   
   const tabs = ['Common', 'Permissions', 'Reports', 'IP Access List'];
 
@@ -109,8 +132,15 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
                 </div>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-[12px] w-8">Role:</span>
-                  <select className="bg-transparent border border-[#555555] text-[12px] px-1 py-0.5 text-white w-48 outline-none shrink-0">
-                    <option>Dealer</option>
+                  <select 
+                    value={roleId}
+                    onChange={(e) => setRoleId(e.target.value)}
+                    className="bg-transparent border border-[#555555] text-[12px] px-1 py-0.5 text-white w-48 outline-none shrink-0"
+                  >
+                    <option value="">Select Role...</option>
+                    {roles.map(r => (
+                      <option key={r.id} value={r.id}>{r.role_name}</option>
+                    ))}
                   </select>
                   <div className="ml-auto flex gap-2 w-full justify-end">
                     <button className="px-3 h-[22px] bg-[#333333] border border-[#555555] rounded text-[11px] text-white hover:bg-[#444444] whitespace-nowrap">Save As</button>
@@ -336,7 +366,7 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
         {/* Bottom Action Bar */}
         <div className="px-3 pb-3 pt-2 bg-[#1e1e1e] flex justify-end gap-2 shrink-0 border-t border-white/5">
           <button 
-            onClick={onClose}
+            onClick={handleSave}
             className="px-6 h-[24px] bg-transparent border border-[#555555] rounded text-[12px] text-white hover:bg-white/10 hover:border-[#777777] transition-all focus:outline-none focus:border-blue-500 focus:bg-[#333333]"
           >
             OK

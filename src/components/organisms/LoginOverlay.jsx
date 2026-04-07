@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { AuthService } from '../../services/auth.service';
 
 export default function LoginOverlay({ onLoginSuccess }) {
-  const [user, setUser] = useState('9003');
+  const [user, setUser] = useState('10007');
   const [password, setPassword] = useState('Manager@123');
   const [server, setServer] = useState('69.197.178.27');
   const [error, setError] = useState('');

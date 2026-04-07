@@ -4,7 +4,7 @@ import {
   Copy, Upload, Download, Search, Check, ChevronRight
 } from 'lucide-react';
 
-const ContextMenu = ({ x, y, onClose, onAdd }) => {
+const ContextMenu = ({ x, y, onClose, onAdd, onEdit, onDelete, selectedRow }) => {
   const menuRef = useRef(null);
 
   // Close menu if clicked outside
@@ -31,17 +31,18 @@ const ContextMenu = ({ x, y, onClose, onAdd }) => {
       return <div className="h-[1px] bg-[#3e3e42] my-1 ml-6 mr-1"></div>;
     }
 
-    const handleClick = () => {
+    const handleClick = (e) => {
+      e.stopPropagation();
       if (onClick) {
         onClick();
-        onClose();
       }
+      onClose();
     };
 
     return (
       <div 
         onClick={handleClick}
-        className="flex items-center w-full py-[3px] hover:bg-[#3e3e42] cursor-default text-[11.5px] text-[#cccccc] hover:text-white transition-none group px-1"
+        className="flex items-center w-full py-[3px] hover:bg-[#3e3e42] text-[11.5px] text-[#cccccc] hover:text-white transition-none group px-1"
       >
         <div className="w-6 flex items-center justify-center shrink-0">
           {checked && <Check size={12} className="text-[#e1e1e1]" />}
@@ -61,15 +62,15 @@ const ContextMenu = ({ x, y, onClose, onAdd }) => {
   return (
     <div 
       ref={menuRef}
-      className="fixed z-[9999] w-[240px] bg-[#1e1e1e] border border-[#3e3e42] shadow-[4px_4px_10px_rgba(0,0,0,0.5)] py-1"
+      className="fixed z-[9999] w-[240px] bg-[#1e1e1e] border border-[#3e3e42] shadow-[4px_4px_10px_rgba(0,0,0,0.5)] py-1 select-none"
       style={style}
       onContextMenu={(e) => e.preventDefault()}
     >
       <MenuItem label="Servers" rightArrow />
       <MenuItem separator />
       <MenuItem icon={Plus} iconColor="text-emerald-500" label="Add" shortcut="Ctrl+N" onClick={onAdd} />
-      <MenuItem icon={Settings} iconColor="text-blue-500" label="Edit" shortcut="Ctrl+U" />
-      <MenuItem icon={X} iconColor="text-red-500" label="Delete" shortcut="Ctrl+D" />
+      <MenuItem icon={Settings} iconColor="text-blue-500" label="Edit" shortcut="Ctrl+U" onClick={selectedRow ? onEdit : null} />
+      <MenuItem icon={X} iconColor="text-red-500" label="Delete" shortcut="Ctrl+D" onClick={selectedRow ? onDelete : null} />
       <MenuItem separator />
       <MenuItem icon={ArrowUp} iconColor="text-[#808080]" label="Move Up" />
       <MenuItem icon={ArrowDown} iconColor="text-[#808080]" label="Move Down" />
