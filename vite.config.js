@@ -24,7 +24,15 @@ export default defineConfig({
         target: 'http://69.197.178.27:80',
         changeOrigin: true,
         secure: false,
-      }
+      },
+      // Port 8091 APIs: MarketDepth, SessionOverride, SpreadSchedule
+      '/ext-api': {
+        target: 'http://69.197.178.27:8091',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/ext-api/, ''),
+      },
     }
   }
 })
+

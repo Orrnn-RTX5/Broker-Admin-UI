@@ -40,7 +40,7 @@ export const ManagerService = {
   addSymbol: async (symbolData) => {
     const token = useAuthStore.getState().accessToken;
     const res = await api.get(`/manager/SymbolAdd`, {
-      params: { id: token, ...symbolData }   
+      params: { id: token, ...symbolData }
     });
     return res.data;
   },
@@ -74,7 +74,7 @@ export const ManagerService = {
     const token = useAuthStore.getState().accessToken;
     const res = await api.get(`/manager/GroupSymbolSet`, { params: { id: token, group: groupName, symbol } });
     return res.data;
-  },    
+  },
 
   setSymbolSession: async (symbol, sessions) => {
     const token = useAuthStore.getState().accessToken;
@@ -90,8 +90,8 @@ export const ManagerService = {
 
   toggleGroupSymbol: async (group, symbol, enabled) => {
     const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/GroupSymbolToggle`, { 
-      params: { id: token, group, symbol, enabled } 
+    const res = await api.get(`/manager/GroupSymbolToggle`, {
+      params: { id: token, group, symbol, enabled }
     });
     return res.data;
   },
@@ -166,8 +166,102 @@ export const ManagerService = {
     return res.data;
   },
 
+  // --- DYNAMIC LEVERAGE ---
+  createDynamicLeverage: async (data) => {
+    const token = useAuthStore.getState().accessToken;
+    const res = await api.post(`/manager/DynamicLeverageCreate?id=${token}`, data);
+    return res.data;
+  },
+
+  getDynamicLeverageList: async () => {
+    const token = useAuthStore.getState().accessToken;
+    // As instructed: same endpoint as create, but GET with id
+    const res = await api.get(`/manager/DynamicLeverageCreate?id=${token}`);
+    return res.data;
+  },
+
+  deleteDynamicLeverage: async (ruleId) => {
+    const token = useAuthStore.getState().accessToken;
+    const res = await api.get(`/manager/DynamicLeverageDelete`, {
+      params: { id: token, rule_id: ruleId }
+    });
+    return res.data;
+  },
+
+  // --- HOLIDAYS ---
+  createHoliday: async (data) => {
+    const token = useAuthStore.getState().accessToken;
+    const res = await api.post(`/manager/HolidayCreate?id=${token}`, data);
+    return res.data;
+  },
+
+  getHolidayList: async () => {
+    const token = useAuthStore.getState().accessToken;
+    const res = await api.get(`/manager/HolidayListExt?id=${token}`);
+    return res.data;
+  },
+
+  deleteHoliday: async (holidayId) => {
+    const token = useAuthStore.getState().accessToken;
+    const res = await api.get(`/manager/HolidayDelete`, {
+      params: { id: token, holiday_id: holidayId }
+    });
+    return res.data;
+  },
+
+  // --- MARKET DEPTH (port 8091, no /manager prefix) ---
+  getMarketDepthConfig: async (symbol) => {
+    const res = await api.get(`/ext-api/MarketDepthConfigGet`, { params: { symbol } });
+    return res.data;
+  },
+
+  setMarketDepthConfig: async (data) => {
+    const res = await api.post(`/ext-api/MarketDepthConfigSet`, data);
+    return res.data;
+  },
+
+  // --- SESSION OVERRIDES (port 8091, no /manager prefix) ---
+  getSessionOverrideList: async (symbol, group) => {
+    const params = { symbol };
+    if (group) params.group = group;
+    const res = await api.get(`/ext-api/SessionOverrideList`, { params });
+    return res.data;
+  },
+
+  setSessionOverrides: async (symbol, group, overrides) => {
+    const res = await api.post(`/ext-api/SessionOverrideSet`, overrides, {
+      params: { symbol, group }
+    });
+    return res.data;
+  },
+
+  deleteSessionOverride: async (overrideId) => {
+    const res = await api.get(`/ext-api/SessionOverrideDelete`, {
+      params: { override_id: overrideId }
+    });
+    return res.data;
+  },
+
+  // --- SPREAD SCHEDULES (port 8091, no /manager prefix) ---
+  getSpreadScheduleList: async (symbol) => {
+    const res = await api.get(`/ext-api/SpreadScheduleList`, { params: { symbol } });
+    return res.data;
+  },
+
+  createSpreadSchedule: async (data) => {
+    const res = await api.post(`/ext-api/SpreadScheduleCreate`, data);
+    return res.data;
+  },
+
+  deleteSpreadSchedule: async (scheduleId) => {
+    const res = await api.get(`/ext-api/SpreadScheduleDelete`, {
+      params: { schedule_id: scheduleId }
+    });
+    return res.data;
+  },
+
   // --- TRADING / EXECUTION ---
-  
+
   getPositionsAll: async (page = 1, limit = 50) => {
     const token = useAuthStore.getState().accessToken;
     const res = await api.get(`/manager/PositionsAll`, {
@@ -183,7 +277,7 @@ export const ManagerService = {
     params.append('page', page);
     params.append('limit', limit);
     logins.forEach(l => params.append('logins[]', l));
-    
+
     const res = await api.get(`/manager/Positions?${params.toString()}`);
     return res.data;
   },
@@ -201,7 +295,7 @@ export const ManagerService = {
     const params = new URLSearchParams();
     params.append('id', token);
     logins.forEach(l => params.append('logins[]', l));
-    
+
     const res = await api.get(`/manager/Orders?${params.toString()}`);
     return res.data;
   },
@@ -211,7 +305,7 @@ export const ManagerService = {
     const params = { id: token, login };
     if (from) params.from = from;
     if (to) params.to = to;
-    
+
     const res = await api.get(`/manager/OrderHistory`, { params });
     return res.data;
   },
@@ -221,7 +315,7 @@ export const ManagerService = {
     const params = { id: token, login };
     if (from) params.from = from;
     if (to) params.to = to;
-    
+
     const res = await api.get(`/manager/PendingOrderHistory`, { params });
     return res.data;
   },
@@ -232,5 +326,74 @@ export const ManagerService = {
       params: { id: token, page, limit }
     });
     return res.data;
-  }
+  },
+
+  // --- RBAC: ROLES (port 8091) ---
+  getRoleList: async () => {
+    const res = await api.get(`/ext-api/ManagerRoleList`);
+    return res.data;
+  },
+
+  createRole: async (data) => {
+    const res = await api.post(`/ext-api/ManagerRoleCreate`, data);
+    return res.data;
+  },
+
+  updateRole: async (roleId, data) => {
+    const res = await api.post(`/ext-api/ManagerRoleUpdate`, data, {
+      params: { role_id: roleId }
+    });
+    return res.data;
+  },
+
+  deleteRole: async (roleId) => {
+    const res = await api.delete(`/ext-api/ManagerRoleDelete`, {
+      params: { role_id: roleId }
+    });
+    return res.data;
+  },
+
+  // --- RBAC: MANAGER ACCOUNTS (port 8091) ---
+  getManagerList: async () => {
+    const res = await api.get(`/ext-api/ManagerList`);
+    return res.data;
+  },
+
+  getManagerDetail: async (login) => {
+    const res = await api.get(`/ext-api/ManagerGet`, { params: { manager_login: login } });
+    return res.data;
+  },
+
+  createManager: async (data) => {
+    const res = await api.post(`/ext-api/ManagerCreate`, data);
+    return res.data;
+  },
+
+  updateManager: async (login, params) => {
+    const res = await api.get(`/ext-api/ManagerUpdate`, {
+      params: { manager_login: login, ...params }
+    });
+    return res.data;
+  },
+
+  deleteManager: async (login) => {
+    const res = await api.get(`/ext-api/ManagerDelete`, {
+      params: { manager_login: login }
+    });
+    return res.data;
+  },
+
+  getManagerActivityLog: async (login, from, to) => {
+    const params = { manager_login: login };
+    if (from) params.from = from;
+    if (to) params.to = to;
+    const res = await api.get(`/ext-api/ManagerActivityLog`, { params });
+    return res.data;
+  },
+
+  getManagerOnline: async () => {
+    const res = await api.get(`/ext-api/ManagerOnline`);
+    return res.data;
+  },
 };
+

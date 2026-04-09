@@ -219,6 +219,7 @@ export const sidebarData = [
               },
               { label: "Time", icon: Clock },
               { label: "Holidays", icon: Calendar },
+              { label: "Session Overrides", icon: Clock },
               { label: "Leverages", icon: Hash },
               { label: "Swap-Free Configs", icon: Settings },
               { 
@@ -300,6 +301,7 @@ export const sidebarData = [
                 ]
               },
               { label: "Symbols", count: 696, icon: Hash },
+              { label: "Market Depth", icon: Database },
               { label: "Spreads", icon: Activity },
               { label: "Charts & Ticks", icon: LineChart },
               { label: "Subscriptions", icon: Bell },

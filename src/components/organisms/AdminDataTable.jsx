@@ -29,6 +29,11 @@ import AntiDDoSView from './AntiDDoSView';
 import SupportCenterView from './SupportCenterView';
 import ManagersView from './ManagersView';
 import SwapFreeGroupsView from './SwapFreeGroupsView';
+import LeveragesView from './LeveragesView';
+import HolidaysView from './HolidaysView';
+import MarketDepthView from './MarketDepthView';
+import SpreadsView from './SpreadsView';
+import SessionOverridesView from './SessionOverridesView';
 
 // Custom icons for MT5 style table
 const YellowFolderIcon = (props) => (
@@ -108,6 +113,21 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   // --- IMPORTED VIEWS ---
   if (viewType === 'Swap-Free Configs') {
     return <SwapFreeGroupsView />;
+  }
+  if (viewType === 'Leverages') {
+    return <LeveragesView />;
+  }
+  if (viewType === 'Market Depth') {
+    return <MarketDepthView />;
+  }
+  if (viewType === 'Holidays') {
+    return <HolidaysView />;
+  }
+  if (viewType === 'Session Overrides') {
+    return <SessionOverridesView />;
+  }
+  if (viewType === 'Spreads') {
+    return <SpreadsView />;
   }
   if (viewType === 'Managers') {
     return <ManagersView />;

@@ -13,7 +13,7 @@ export const AuthService = {
       // Handle the session token parsing depending on backend response format
       // It might be { session_token: ... }, { token: ... }, or just a raw string
       const access_token = response.data.session_token || response.data.token || response.data.access_token || (typeof response.data === 'string' ? response.data : null);
-      const refresh_token = response.data.refresh_token || access_token; // Fallback to same token if no refresh token
+      const refresh_token = response.data.refresh_token || access_token; //Fallback to same token if no refresh token
       
       // Update store and parse user info directly from the Connect response
       if (access_token) {

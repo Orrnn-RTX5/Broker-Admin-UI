@@ -204,7 +204,6 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
                         </div>
                       </div>
                     </div>
-
                   </div>
                 </div>
               </div>
