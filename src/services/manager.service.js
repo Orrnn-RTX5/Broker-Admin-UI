@@ -175,8 +175,7 @@ export const ManagerService = {
 
   getDynamicLeverageList: async () => {
     const token = useAuthStore.getState().accessToken;
-    // As instructed: same endpoint as create, but GET with id
-    const res = await api.get(`/manager/DynamicLeverageCreate?id=${token}`);
+    const res = await api.get(`/manager/DynamicLeverageList`, { params: { id: token } });
     return res.data;
   },
 
@@ -185,6 +184,11 @@ export const ManagerService = {
     const res = await api.get(`/manager/DynamicLeverageDelete`, {
       params: { id: token, rule_id: ruleId }
     });
+    return res.data;
+  },
+
+  getLeverageScheduleList: async (id) => {
+    const res = await api.get(`/manager/LeverageScheduleList`, { params: { id } });
     return res.data;
   },
 
@@ -238,6 +242,26 @@ export const ManagerService = {
   deleteSessionOverride: async (overrideId) => {
     const res = await api.get(`/ext-api/SessionOverrideDelete`, {
       params: { override_id: overrideId }
+    });
+    return res.data;
+  },
+
+  // --- LEVERAGE SCHEDULES (port 8091, no /manager prefix) ---
+  getLeverageScheduleList: async (group) => {
+    const params = {};
+    if (group) params.group = group;
+    const res = await api.get(`/ext-api/LeverageScheduleList`, { params });
+    return res.data;
+  },
+
+  createLeverageSchedule: async (data) => {
+    const res = await api.post(`/ext-api/LeverageScheduleCreate`, data);
+    return res.data;
+  },
+
+  deleteLeverageSchedule: async (scheduleId) => {
+    const res = await api.get(`/ext-api/LeverageScheduleDelete`, {
+      params: { schedule_id: scheduleId }
     });
     return res.data;
   },

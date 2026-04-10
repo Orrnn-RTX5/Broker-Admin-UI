@@ -30,10 +30,35 @@ import SupportCenterView from './SupportCenterView';
 import ManagersView from './ManagersView';
 import SwapFreeGroupsView from './SwapFreeGroupsView';
 import LeveragesView from './LeveragesView';
+import LeverageScheduleView from './LeverageScheduleView';
 import HolidaysView from './HolidaysView';
 import MarketDepthView from './MarketDepthView';
 import SpreadsView from './SpreadsView';
 import SessionOverridesView from './SessionOverridesView';
+import CustomFieldsView from './CustomFieldsView';
+import FeatureFlagsView from './FeatureFlagsView';
+import SymbolVisibilityView from './SymbolVisibilityView';
+import TradingTerminalConfigView from './TradingTerminalConfigView';
+import ExposureView from './ExposureView';
+import RiskEventsView from './RiskEventsView';
+import RiskLimitsView from './RiskLimitsView';
+import SuspiciousActivityView from './SuspiciousActivityView';
+import RiskReportsView from './RiskReportsView';
+import AnalyticsClientView from './AnalyticsClientView';
+import AnalyticsTradingView from './AnalyticsTradingView';
+import AnalyticsTradersView from './AnalyticsTradersView';
+import AnalyticsRevenueView from './AnalyticsRevenueView';
+import DataExportsView from './DataExportsView';
+import RegulatoryReportsView from './RegulatoryReportsView';
+import ComplaintsView from './ComplaintsView';
+import ServerConfigView from './ServerConfigView';
+import PaymentMethodsView from './PaymentMethodsView';
+import DepositsView from './DepositsView';
+import WithdrawalsView from './WithdrawalsView';
+import TransactionHistoryView from './TransactionHistoryView';
+import PaymentGatewayView from './PaymentGatewayView';
+import PaymentReconciliationView from './PaymentReconciliationView';
+import ChargebacksView from './ChargebacksView';
 
 // Custom icons for MT5 style table
 const YellowFolderIcon = (props) => (
@@ -117,6 +142,9 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   if (viewType === 'Leverages') {
     return <LeveragesView />;
   }
+  if (viewType === 'Leverage Schedules') {
+    return <LeverageScheduleView />;
+  }
   if (viewType === 'Market Depth') {
     return <MarketDepthView />;
   }
@@ -128,6 +156,57 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   }
   if (viewType === 'Spreads') {
     return <SpreadsView />;
+  }
+  if (viewType === 'Custom Fields') {
+    return <CustomFieldsView />;
+  }
+  if (viewType === 'Feature Flags') {
+    return <FeatureFlagsView />;
+  }
+  if (viewType === 'Symbol Visibility') {
+    return <SymbolVisibilityView />;
+  }
+  if (viewType === 'Trading Terminal Config') {
+    return <TradingTerminalConfigView />;
+  }
+  if (viewType === 'Exposure') {
+    return <ExposureView />;
+  }
+  if (viewType === 'Risk Events') {
+    return <RiskEventsView />;
+  }
+  if (viewType === 'Risk Limits') {
+    return <RiskLimitsView />;
+  }
+  if (viewType === 'Suspicious Activity') {
+    return <SuspiciousActivityView />;
+  }
+  if (viewType === 'Risk Reports') {
+    return <RiskReportsView />;
+  }
+  if (viewType === 'Client Analytics') {
+    return <AnalyticsClientView />;
+  }
+  if (viewType === 'Trading Analytics') {
+    return <AnalyticsTradingView />;
+  }
+  if (viewType === 'Trader Rankings') {
+    return <AnalyticsTradersView />;
+  }
+  if (viewType === 'Revenue Forecast') {
+    return <AnalyticsRevenueView />;
+  }
+  if (viewType === 'Data Exports') {
+    return <DataExportsView />;
+  }
+  if (viewType === 'Regulatory Reports') {
+    return <RegulatoryReportsView />;
+  }
+  if (viewType === 'Complaints') {
+    return <ComplaintsView />;
+  }
+  if (viewType === 'Server Config') {
+    return <ServerConfigView />;
   }
   if (viewType === 'Managers') {
     return <ManagersView />;
@@ -162,6 +241,27 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   // --- PAYMENTS INJECTION ---
   if (viewType === 'Providers') {
     return <PaymentsView />;
+  }
+  if (viewType === 'Payment Methods') {
+    return <PaymentMethodsView />;
+  }
+  if (viewType === 'Deposits') {
+    return <DepositsView />;
+  }
+  if (viewType === 'Withdrawals') {
+    return <WithdrawalsView />;
+  }
+  if (viewType === 'Transaction History') {
+    return <TransactionHistoryView />;
+  }
+  if (viewType === 'Payment Gateways') {
+    return <PaymentGatewayView />;
+  }
+  if (viewType === 'Reconciliation') {
+    return <PaymentReconciliationView />;
+  }
+  if (viewType === 'Chargebacks') {
+    return <ChargebacksView />;
   }
 
   // --- GATEWAYS INJECTION ---

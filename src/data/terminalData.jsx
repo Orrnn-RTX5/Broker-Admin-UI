@@ -35,7 +35,11 @@ import {
   Monitor,
   Award,
   Headset,
-  Search
+  Search,
+  BarChart2,
+  PieChart,
+  TrendingDown,
+  Download
 } from 'lucide-react';
 
 const BlueBookRedBookmarkIcon = (props) => (
@@ -152,17 +156,62 @@ const GreenLockIcon = (props) => (
 
 export const sidebarData = [
   {
+    label: "Servers",
+    icon: Server,
+    initiallyExpanded: true,
+    children: [
+      {
+        label: "MetaTrader Server",
+        icon: Cpu,
+        initiallyExpanded: true,
+        active: true,
+        children: [
+          {
+            label: "Network Cluster",
+            icon: GreenHexagonIcon,
+            initiallyExpanded: true,
+            children: [
+               {
+                 label: "Main Trade Server",
+                 icon: GreenServerIcon,
+                 initiallyExpanded: true,
+                 children: [
+                   { label: "MainTrade Backup Server", icon: GreenDatabaseIcon },
+                   { label: "Local Main Status Server", icon: GreenDatabaseIcon },
+                   { label: "TradeProcessor SQL_E", icon: RedDatabaseIcon },
+                 ]
+               },
+               {
+                 label: "History Server",
+                 icon: GreenCandlesIcon,
+                 initiallyExpanded: true,
+                 children: [
+                   { label: "History Backup Server", icon: GreenDatabaseIcon }
+                 ]
+               },
+               { label: "Access Server", icon: GreenShieldIcon },
+               { label: "Access Server", icon: GreenShieldIcon }
+            ]
+          }
+        ]
+      },
+      {
+        label: "Server Configuration",
+        icon: Settings,
+        initiallyExpanded: false,
+        children: [
+          { label: "Server Config", icon: Activity },
+        ]
+      },
+    ]
+  },
+  {
     label: "Administrator",
     icon: UserCheck,
     initiallyExpanded: true,
     children: [
       {
-        label: "Servers",
-        icon: Server,
-        initiallyExpanded: true,
-        children: [
-          {
-            label: "MetaTrader Server",
+        label: "MetaTrader Server",
             icon: Cpu,
             initiallyExpanded: true,
             active: true,
@@ -217,10 +266,22 @@ export const sidebarData = [
                   { label: "Anti DDoS Protection", icon: GreenShieldOutlineIcon }
                 ]
               },
+              {
+                label: "Platform Config",
+                icon: Settings,
+                initiallyExpanded: false,
+                children: [
+                  { label: "Custom Fields", icon: FileText },
+                  { label: "Feature Flags", icon: Zap },
+                  { label: "Symbol Visibility", icon: Monitor },
+                  { label: "Trading Terminal Config", icon: Activity },
+                ]
+              },
               { label: "Time", icon: Clock },
               { label: "Holidays", icon: Calendar },
               { label: "Session Overrides", icon: Clock },
               { label: "Leverages", icon: Hash },
+              { label: "Leverage Schedules", icon: Hash },
               { label: "Swap-Free Configs", icon: Settings },
               { 
                 label: "Groups", 
@@ -250,8 +311,8 @@ export const sidebarData = [
                    { label: "Corporate links", icon: BlueUserIcon },
                 ]
               },
-              { 
-                label: "Orders & Deals", 
+              {
+                label: "Orders & Deals",
                 icon: Layout,
                 initiallyExpanded: true,
                 children: [
@@ -260,17 +321,44 @@ export const sidebarData = [
                    { label: "Deals", icon: BlueUserIcon },
                 ]
               },
-              { 
-                label: "Payments", 
+              {
+                label: "Risk Management",
+                icon: ShieldCheck,
+                initiallyExpanded: false,
+                children: [
+                  { label: "Exposure", icon: Activity },
+                  { label: "Risk Events", icon: Bell },
+                  { label: "Risk Limits", icon: TrendingUp },
+                  { label: "Suspicious Activity", icon: Search },
+                  { label: "Risk Reports", icon: BarChart },
+                ]
+              },
+              {
+                label: "Analytics",
+                icon: BarChart2,
+                initiallyExpanded: false,
+                children: [
+                  { label: "Client Analytics", icon: PieChart },
+                  { label: "Trading Analytics", icon: Activity },
+                  { label: "Trader Rankings", icon: TrendingDown },
+                  { label: "Revenue Forecast", icon: TrendingUp },
+                  { label: "Data Exports", icon: Download },
+                  { label: "Regulatory Reports", icon: FileText },
+                  { label: "Complaints", icon: MessageSquare },
+                ]
+              },
+              {
+                label: "Payments",
                 icon: CreditCard,
                 children: [
                   { label: "Providers", icon: Globe },
-                  { label: "Active", icon: CreditCard },
-                  { label: "History", icon: Activity },
-                  { label: "Accounts", icon: Link },
-                  { label: "Wallets", icon: HardDrive },
-                  { label: "Deposit Rules", icon: TrendingUp },
-                  { label: "Withdrawal Rules", icon: TrendingUp },
+                  { label: "Payment Methods", icon: CreditCard },
+                  { label: "Deposits", icon: TrendingUp },
+                  { label: "Withdrawals", icon: TrendingDown },
+                  { label: "Transaction History", icon: Activity },
+                  { label: "Payment Gateways", icon: Link },
+                  { label: "Reconciliation", icon: RotateCcw },
+                  { label: "Chargebacks", icon: Shield },
                 ]
               },
               { label: "Gateways", icon: Link },
@@ -311,8 +399,6 @@ export const sidebarData = [
           }
         ]
       }
-    ]
-  }
 ];
 
 export const terminalTableData = [

@@ -1,0 +1,214 @@
+import React, { useState, useEffect } from 'react';
+import { PaymentService } from '../../services/payment.service';
+import { Plus, RefreshCw, X, Settings, Edit2, Check } from 'lucide-react';
+
+const fmt = (v) => (v == null ? '—' : v);
+const fmtTs = (v) => { if (!v) return '—'; try { return new Date(v * 1000).toLocaleDateString(); } catch { return v; } };
+
+const STATUS_COLORS = { true: 'text-[#4ec9b0]', false: 'text-[#f48771]' };
+const TYPE_COLORS = { wire: '#9cdcfe', card: '#4ec9b0', crypto: '#f4c96e', ewallet: '#ce9178' };
+
+// ── Add / Edit Popup ───────────────────────────────────────────────────────
+const MethodPopup = ({ initial, onClose, onSaved }) => {
+  const editing = !!initial;
+  const [form, setForm] = useState(initial ? {
+    id: initial.id, name: initial.name, method_type: initial.method_type,
+    currency: initial.currency, min_amount: initial.min_amount ?? '',
+    max_amount: initial.max_amount ?? '', fee_fixed: initial.fee_fixed ?? '',
+    fee_percent: initial.fee_percent ?? '', processing_time: initial.processing_time ?? '',
+    enabled: initial.enabled,
+  } : { name: '', method_type: 'wire', currency: 'USD', min_amount: '', max_amount: '', fee_fixed: '', fee_percent: '', processing_time: '' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.name.trim()) { setError('Name is required.'); return; }
+    if (!form.method_type) { setError('Method type is required.'); return; }
+    setLoading(true); setError('');
+    try {
+      const payload = { ...form };
+      ['min_amount','max_amount','fee_fixed','fee_percent'].forEach(k => { if (payload[k] !== '') payload[k] = parseFloat(payload[k]); else delete payload[k]; });
+      if (!editing) { delete payload.id; delete payload.enabled; }
+      if (editing) await PaymentService.updateMethod(payload);
+      else await PaymentService.createMethod(payload);
+      onSaved(); onClose();
+    } catch (err) { setError(err.response?.data?.message || err.message); }
+    finally { setLoading(false); }
+  };
+
+  const inp = "w-full bg-[#3c3c3c] border border-[#555] text-[#e1e1e1] text-[12px] px-2 py-1 rounded-[2px] focus:outline-none focus:border-[#007acc]";
+  const Lbl = ({ t, req, children }) => (
+    <div className="flex flex-col gap-0.5">
+      <label className="text-[10px] text-[#888] uppercase tracking-wider">{t}{req && <span className="text-[#f48771] ml-0.5">*</span>}</label>
+      {children}
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" onClick={onClose}>
+      <div className="bg-[#252526] border border-[#3e3e42] rounded-[3px] shadow-2xl w-[460px]" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center h-9 px-4 border-b border-black/40 bg-[#2d2d30]">
+          <span className="text-[12px] font-semibold text-[#e1e1e1] flex-1">{editing ? 'Edit Payment Method' : 'Add Payment Method'}</span>
+          <button onClick={onClose} className="text-[#555] hover:text-[#ccc]"><X size={14} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Lbl t="Name" req><input className={inp} value={form.name} onChange={e => set('name', e.target.value)} placeholder="Bank Wire" /></Lbl>
+            <Lbl t="Method Type" req>
+              <select className={inp} value={form.method_type} onChange={e => set('method_type', e.target.value)}>
+                {['wire','card','crypto','ewallet'].map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </Lbl>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <Lbl t="Currency"><input className={inp} value={form.currency} onChange={e => set('currency', e.target.value)} placeholder="USD" /></Lbl>
+            <Lbl t="Min Amount"><input className={inp} type="number" step="0.01" value={form.min_amount} onChange={e => set('min_amount', e.target.value)} placeholder="0" /></Lbl>
+            <Lbl t="Max Amount"><input className={inp} type="number" step="0.01" value={form.max_amount} onChange={e => set('max_amount', e.target.value)} placeholder="0=unlimited" /></Lbl>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <Lbl t="Fee Fixed"><input className={inp} type="number" step="0.01" value={form.fee_fixed} onChange={e => set('fee_fixed', e.target.value)} placeholder="0" /></Lbl>
+            <Lbl t="Fee %"><input className={inp} type="number" step="0.01" value={form.fee_percent} onChange={e => set('fee_percent', e.target.value)} placeholder="0" /></Lbl>
+            <Lbl t="Processing Time"><input className={inp} value={form.processing_time} onChange={e => set('processing_time', e.target.value)} placeholder="instant" /></Lbl>
+          </div>
+          {editing && (
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="enabled" checked={!!form.enabled} onChange={e => set('enabled', e.target.checked)} className="accent-[#007acc]" />
+              <label htmlFor="enabled" className="text-[11px] text-[#ccc]">Enabled</label>
+            </div>
+          )}
+          {error && <div className="text-[11px] text-[#f48771] bg-[#3e1e1e] px-3 py-1.5 rounded-[2px]">{error}</div>}
+          <div className="flex justify-end gap-2 pt-1">
+            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[#3c3c3c] hover:bg-[#505050] text-[#ccc] rounded-[2px]">Cancel</button>
+            <button type="submit" disabled={loading} className="h-[26px] px-4 text-[11px] bg-[#007acc] hover:bg-[#0098ff] disabled:opacity-50 text-white rounded-[2px]">{loading ? 'Saving…' : editing ? 'Update' : 'Create'}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// ── Main View ──────────────────────────────────────────────────────────────
+const PaymentMethodsView = () => {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filterEnabled, setFilterEnabled] = useState('');
+  const [filterCurrency, setFilterCurrency] = useState('');
+  const [popup, setPopup] = useState(null); // null | 'add' | row (edit)
+  const [contextMenu, setContextMenu] = useState({ visible: false });
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const params = {};
+      if (filterEnabled !== '') params.enabled = filterEnabled === 'true';
+      if (filterCurrency) params.currency = filterCurrency;
+      const res = await PaymentService.getMethodList(params);
+      setData(Array.isArray(res) ? res : res?.data ?? []);
+    } catch (err) { console.error(err); setData([]); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  const handleDelete = async () => {
+    const row = contextMenu.row;
+    if (!row || !window.confirm(`Disable method "${row.name}" (ID: ${row.id})?`)) return;
+    try { await PaymentService.deleteMethod(row.id); fetchData(); }
+    catch (err) { alert(err.response?.data?.message || err.message); }
+    setContextMenu({ visible: false });
+  };
+
+  const cols = [
+    { label: 'ID', w: 'w-[60px]' }, { label: 'Name', w: 'w-[160px]' },
+    { label: 'Type', w: 'w-[90px]' }, { label: 'Currency', w: 'w-[90px]' },
+    { label: 'Min', w: 'w-[90px]' }, { label: 'Max', w: 'w-[90px]' },
+    { label: 'Fee Fixed', w: 'w-[90px]' }, { label: 'Fee %', w: 'w-[80px]' },
+    { label: 'Processing', w: 'w-[120px]' }, { label: 'Enabled', w: 'w-[80px]' },
+    { label: 'Created', w: 'flex-1' },
+  ];
+
+  return (
+    <div className="flex-1 bg-[#1e1e1e] flex flex-col overflow-hidden relative"
+      onClick={() => setContextMenu({ visible: false })} onContextMenu={e => e.preventDefault()}>
+      {/* Action Bar */}
+      <div className="flex items-center gap-2 px-2 py-1.5 bg-[#252526] border-b border-black/40 shrink-0 select-none">
+        <button onClick={() => setPopup('add')}
+          className="flex items-center gap-1.5 h-[24px] px-3 bg-[#007acc] hover:bg-[#0098ff] text-white text-[11px] rounded-[2px] transition-colors">
+          <Plus size={12} /> Add Method
+        </button>
+        <div className="flex items-center gap-1.5 ml-3">
+          <select value={filterEnabled} onChange={e => setFilterEnabled(e.target.value)}
+            className="h-[22px] bg-[#3c3c3c] border border-[#555] text-[#ccc] text-[11px] px-2 rounded-[2px] focus:outline-none focus:border-[#007acc]">
+            <option value="">All status</option>
+            <option value="true">Enabled</option>
+            <option value="false">Disabled</option>
+          </select>
+          <input value={filterCurrency} onChange={e => setFilterCurrency(e.target.value)}
+            placeholder="currency…" onKeyDown={e => e.key === 'Enter' && fetchData()}
+            className="h-[22px] w-[100px] bg-[#3c3c3c] border border-[#555] text-[#e1e1e1] text-[11px] px-2 rounded-[2px] focus:outline-none focus:border-[#007acc]" />
+          <button onClick={fetchData} className="h-[22px] px-2.5 bg-[#3c3c3c] hover:bg-[#505050] text-[#ccc] text-[11px] rounded-[2px] border border-[#555]">Filter</button>
+        </div>
+        <div className="ml-auto flex items-center gap-2 pr-2">
+          <button onClick={fetchData} title="Refresh" className="text-[#999] hover:text-white"><RefreshCw size={13} /></button>
+          <Settings size={14} className="text-[#999] hover:text-white cursor-pointer" />
+        </div>
+      </div>
+      {/* Header */}
+      <div className="flex bg-[#333333] border-b border-black/40 sticky top-0 z-10 select-none shrink-0">
+        {cols.map(c => <div key={c.label} className={`${c.w} px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20 shrink-0`}>{c.label}</div>)}
+      </div>
+      {/* Body */}
+      <div className="flex-1 overflow-auto no-scrollbar">
+        {data.map((row, idx) => (
+          <div key={row.id || idx} onContextMenu={e => { e.preventDefault(); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, row }); }}
+            className={`flex border-b border-black/10 hover:bg-blue-600/20 transition-colors cursor-default ${idx % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'}`}>
+            <div className="w-[60px] px-3 py-1 text-[12px] text-[#9cdcfe] font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.id)}</div>
+            <div className="w-[160px] px-3 py-1 text-[12px] text-[#e1e1e1] border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.name)}</div>
+            <div className="w-[90px] px-3 py-1 text-[12px] border-r border-black/10 shrink-0 flex items-center">
+              <span className="font-mono text-[11px] px-1.5 py-0.5 rounded-[2px] bg-black/30" style={{ color: TYPE_COLORS[row.method_type] || '#ccc' }}>{fmt(row.method_type)}</span>
+            </div>
+            <div className="w-[90px] px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 flex items-center">{fmt(row.currency)}</div>
+            <div className="w-[90px] px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 flex items-center">{fmt(row.min_amount)}</div>
+            <div className="w-[90px] px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 flex items-center">{row.max_amount === 0 ? '∞' : fmt(row.max_amount)}</div>
+            <div className="w-[90px] px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 flex items-center">{fmt(row.fee_fixed)}</div>
+            <div className="w-[80px] px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 flex items-center">{row.fee_percent != null ? `${row.fee_percent}%` : '—'}</div>
+            <div className="w-[120px] px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.processing_time)}</div>
+            <div className="w-[80px] px-3 py-1 text-[12px] border-r border-black/10 shrink-0 flex items-center">
+              <span className={`text-[11px] font-semibold ${STATUS_COLORS[String(row.enabled)]}`}>{row.enabled ? 'Yes' : 'No'}</span>
+            </div>
+            <div className="flex-1 px-3 py-1 text-[11px] text-[#666] font-mono flex items-center gap-2">
+              {fmtTs(row.created_at)}
+              <button onClick={e => { e.stopPropagation(); setPopup(row); }} title="Edit"
+                className="ml-auto text-[#555] hover:text-[#007acc] opacity-0 group-hover:opacity-100 transition-colors">
+                <Edit2 size={11} />
+              </button>
+            </div>
+          </div>
+        ))}
+        {loading && <div className="p-4 text-[#aaaaaa] text-[12px] italic">Loading…</div>}
+        {!loading && data.length === 0 && <div className="p-4 text-[#aaaaaa] text-[12px] italic">No payment methods found.</div>}
+        {[...Array(15)].map((_, i) => <div key={i} className={`flex border-b border-black/5 opacity-30 h-6 ${i%2===0?'bg-[#1e1e1e]':'bg-[#252526]'}`}></div>)}
+      </div>
+
+      {/* Context Menu */}
+      {contextMenu.visible && (
+        <div className="fixed z-[9999] bg-[#2d2d30] border border-[#3e3e42] shadow-2xl py-1 min-w-[180px] text-[12px] text-[#cccccc] rounded-[2px]"
+          style={{ top: contextMenu.y, left: contextMenu.x }} onClick={e => e.stopPropagation()}>
+          <div className="px-4 py-1 hover:bg-[#007acc] hover:text-white cursor-pointer" onClick={() => { setPopup(contextMenu.row); setContextMenu({ visible: false }); }}>Edit</div>
+          <div className="px-4 py-1 hover:bg-[#007acc] hover:text-white cursor-pointer" onClick={() => { setPopup('add'); setContextMenu({ visible: false }); }}>Add Method</div>
+          <div className="h-px bg-[#3e3e42] my-1 mx-2"></div>
+          <div className="px-4 py-1 hover:bg-[#e51400] hover:text-white cursor-pointer text-red-400" onClick={handleDelete}>Disable / Delete</div>
+        </div>
+      )}
+
+      {popup && <MethodPopup initial={popup === 'add' ? null : popup} onClose={() => setPopup(null)} onSaved={fetchData} />}
+
+      <div className="h-6 bg-[#007acc] text-white flex items-center px-4 text-[11px] select-none shrink-0 border-t border-[#005a9e]">
+        <span>Total Methods: {data.length}</span>
+      </div>
+    </div>
+  );
+};
+export default PaymentMethodsView;
