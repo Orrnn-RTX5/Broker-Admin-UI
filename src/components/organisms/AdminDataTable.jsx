@@ -59,6 +59,8 @@ import TransactionHistoryView from './TransactionHistoryView';
 import PaymentGatewayView from './PaymentGatewayView';
 import PaymentReconciliationView from './PaymentReconciliationView';
 import ChargebacksView from './ChargebacksView';
+import CommunicationsView from './CommunicationsView';
+import SecurityAccessView from './SecurityAccessView';
 
 // Custom icons for MT5 style table
 const YellowFolderIcon = (props) => (
@@ -264,6 +266,18 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     return <ChargebacksView />;
   }
 
+  // --- COMMUNICATIONS INJECTION ---
+  const communicationsViews = ['Communications', 'Auto Notification Rules', 'Email Campaigns', 'Message Center', 'Push Notifications', 'SMS'];
+  if (communicationsViews.includes(viewType)) {
+    return <CommunicationsView />;
+  }
+
+  // --- SECURITY & ACCESS INJECTION ---
+  const securityAccessViews = ['IP Restrictions', 'Connection Throttle', 'Log Management', 'Backup Schedules', 'Plugin Management'];
+  if (securityAccessViews.includes(viewType)) {
+    return <SecurityAccessView initialTab={viewType} />;
+  }
+
   // --- GATEWAYS INJECTION ---
   if (viewType === 'Gateways') {
     return <GatewaysView />;
@@ -285,7 +299,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     { label: 'Floating Leverage Profile', key: 'leverage', width: 'w-56' },
     { label: 'Currency', key: 'currency', width: 'w-24' },
   ];
-
+ 
   const clientsColumns = [
     { label: 'Name', key: 'name', width: 'w-64' },
     { label: 'Description', key: 'description', width: 'flex-1' },

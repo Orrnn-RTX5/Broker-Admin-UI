@@ -1,18 +1,63 @@
 {
   "name": "rtx5-admin",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "dist": "vite build --mode electron && electron-builder --win --x64",
+    "dist:publish": "vite build --mode electron && electron-builder --win --x64 --publish always"
+  },
+  "build": {
+    "appId": "com.rtx5.admin",
+    "productName": "RTX5 Admin",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/main.js",
+      "electron/preload.cjs"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "YoForex005",
+        "repo": "RTX-5-Admin-"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "RTX5 Admin",
+      "artifactName": "RTX5-Admin-Setup-${version}.exe"
+    }
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
     "axios": "^1.14.0",
     "d3-scale": "^4.0.2",
+    "electron-updater": "^6.8.3",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.7.0",
     "prop-types": "^15.8.1",
@@ -27,12 +72,17 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.27",
+    "concurrently": "^9.2.1",
+    "electron": "^41.2.0",
+    "electron-builder": "^26.8.1",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
     "postcss": "^8.5.8",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4.2.2",
-    "vite": "^8.0.1"
+    "vite": "^8.0.1",
+    "wait-on": "^9.0.5"
   }
 }

@@ -42,20 +42,34 @@ const PermBadges = ({ permissions }) => {
 };
 
 // ─── Create Role Modal ───────────────────────────────────────────────────────
+const PERMISSIONS = [
+  { key: 'manage_accounts', label: 'Manage Accounts' },
+  { key: 'manage_groups',   label: 'Manage Groups'   },
+  { key: 'execute_deals',   label: 'Execute Deals'   },
+  { key: 'view_reports',    label: 'View Reports'    },
+];
+
 const CreateRoleModal = ({ onClose, onCreated }) => {
-  const [form, setForm] = useState({ role_name: '', description: '', permissions: '' });
+  const [form, setForm] = useState({
+    role_name: '',
+    description: '',
+    permissions: { manage_accounts: false, manage_groups: false, execute_deals: false, view_reports: false },
+  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+
+  const togglePerm = (key) =>
+    setForm(p => ({ ...p, permissions: { ...p.permissions, [key]: !p.permissions[key] } }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true); setError(null);
     try {
-      let perms = {};
-      if (form.permissions.trim()) {
-        try { perms = JSON.parse(form.permissions); } catch { throw new Error('Permissions must be valid JSON'); }
-      }
-      await ManagerService.createRole({ role_name: form.role_name, description: form.description, permissions: perms });
+      await ManagerService.createRole({
+        role_name: form.role_name,
+        description: form.description,
+        permissions: form.permissions,
+      });
       onCreated(); onClose();
     } catch (err) {
       setError(err.response?.data?.error || err.message);
@@ -71,12 +85,28 @@ const CreateRoleModal = ({ onClose, onCreated }) => {
         </div>
         <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3 bg-[#1e1e1e]">
           {error && <div className="flex items-center gap-2 text-red-400 bg-red-500/10 border border-red-500/30 p-2 rounded"><AlertCircle size={13}/>{error}</div>}
-          <div className="flex flex-col gap-1"><label className="text-[#ccc]">Role Name *</label>
-            <input required value={form.role_name} onChange={e => setForm(p=>({...p,role_name:e.target.value}))} className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[#007acc] outline-none"/></div>
-          <div className="flex flex-col gap-1"><label className="text-[#ccc]">Description</label>
-            <input value={form.description} onChange={e => setForm(p=>({...p,description:e.target.value}))} className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[#007acc] outline-none"/></div>
-          <div className="flex flex-col gap-1"><label className="text-[#ccc]">Permissions (JSON)</label>
-            <textarea rows={3} value={form.permissions} onChange={e => setForm(p=>({...p,permissions:e.target.value}))} placeholder='{"view_accounts": true, "manage_orders": false}' className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[#007acc] outline-none resize-none font-mono text-[11px]"/></div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[#ccc]">Role Name *</label>
+            <input required value={form.role_name} onChange={e => setForm(p => ({ ...p, role_name: e.target.value }))}
+              placeholder="e.g. Dealer" className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[#007acc] outline-none" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[#ccc]">Description</label>
+            <input value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+              placeholder="Optional description" className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[#007acc] outline-none" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-[#ccc]">Permissions</label>
+            <div className="bg-[#2a2a2a] border border-[#3e3e42] rounded-sm p-3 grid grid-cols-2 gap-2">
+              {PERMISSIONS.map(({ key, label }) => (
+                <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
+                  <input type="checkbox" checked={form.permissions[key]} onChange={() => togglePerm(key)}
+                    className="accent-[#007acc] w-3 h-3 cursor-pointer" />
+                  <span className="text-[11px] text-[#ccc]">{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
           <div className="flex justify-end gap-2 pt-3 border-t border-[#3e3e42]">
             <button type="button" onClick={onClose} className="px-4 py-1.5 bg-[#444] hover:bg-[#555] text-white rounded-[2px]">Cancel</button>
             <button type="submit" disabled={submitting} className="px-4 py-1.5 bg-[#007acc] hover:bg-[#0098ff] text-white rounded-[2px] disabled:opacity-50 min-w-[60px] flex justify-center">
@@ -157,6 +187,88 @@ const CreateManagerModal = ({ roles, onClose, onCreated }) => {
   );
 };
 
+// ─── Edit Role Modal ─────────────────────────────────────────────────────────
+const EditRoleModal = ({ role, onClose, onSaved }) => {
+  const [form, setForm] = useState({
+    role_name:   role.role_name   || '',
+    description: role.description || '',
+    permissions: {
+      manage_accounts: role.permissions?.manage_accounts ?? false,
+      manage_groups:   role.permissions?.manage_groups   ?? false,
+      execute_deals:   role.permissions?.execute_deals   ?? false,
+      view_reports:    role.permissions?.view_reports    ?? false,
+    },
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
+  const togglePerm = (key) =>
+    setForm(p => ({ ...p, permissions: { ...p.permissions, [key]: !p.permissions[key] } }));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true); setError(null);
+    try {
+      await ManagerService.updateRole(role.id, {
+        role_name:   form.role_name,
+        description: form.description,
+        permissions: form.permissions,
+      });
+      onSaved(); onClose();
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    } finally { setSubmitting(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
+      <div className="w-[420px] bg-[#252526] border border-[#3e3e42] rounded-md shadow-2xl text-[12px]">
+        <div className="flex items-center justify-between px-4 py-3 bg-[#2d2d30] border-b border-[#3e3e42]">
+          <div className="flex items-center gap-2 text-white text-[13px] font-medium">
+            <Edit2 size={15} className="text-blue-400" />Edit Role — <span className="text-[#9cdcfe]">{role.role_name}</span>
+          </div>
+          <button onClick={onClose} className="text-[#999] hover:text-white p-1"><X size={14}/></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3 bg-[#1e1e1e]">
+          {error && <div className="flex items-center gap-2 text-red-400 bg-red-500/10 border border-red-500/30 p-2 rounded"><AlertCircle size={13}/>{error}</div>}
+          <div className="flex flex-col gap-1">
+            <label className="text-[#ccc]">Role Name *</label>
+            <input required value={form.role_name}
+              onChange={e => setForm(p => ({ ...p, role_name: e.target.value }))}
+              className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[#007acc] outline-none" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[#ccc]">Description</label>
+            <input value={form.description}
+              onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+              placeholder="Optional description"
+              className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[#007acc] outline-none" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-[#ccc]">Permissions</label>
+            <div className="bg-[#2a2a2a] border border-[#3e3e42] rounded-sm p-3 grid grid-cols-2 gap-2">
+              {PERMISSIONS.map(({ key, label }) => (
+                <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
+                  <input type="checkbox" checked={form.permissions[key]} onChange={() => togglePerm(key)}
+                    className="accent-[#007acc] w-3 h-3 cursor-pointer" />
+                  <span className="text-[11px] text-[#ccc]">{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-3 border-t border-[#3e3e42]">
+            <button type="button" onClick={onClose} className="px-4 py-1.5 bg-[#444] hover:bg-[#555] text-white rounded-[2px]">Cancel</button>
+            <button type="submit" disabled={submitting}
+              className="px-4 py-1.5 bg-[#007acc] hover:bg-[#0098ff] text-white rounded-[2px] disabled:opacity-50 min-w-[60px] flex justify-center">
+              {submitting ? '...' : 'Save'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 // ─── Activity Log Modal ──────────────────────────────────────────────────────
 const ActivityLogModal = ({ manager, onClose }) => {
   const [logs, setLogs] = useState([]);
@@ -213,6 +325,7 @@ const ManagersView = () => {
 
   const [isCreateRoleOpen, setIsCreateRoleOpen] = useState(false);
   const [isCreateManagerOpen, setIsCreateManagerOpen] = useState(false);
+  const [editingRole, setEditingRole] = useState(null);
   const [activityTarget, setActivityTarget] = useState(null);
   const [contextMenu, setContextMenu] = useState({ visible: false });
 
@@ -351,7 +464,7 @@ const ManagersView = () => {
             <div className="w-[200px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20">Description</div>
             <div className="w-[260px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20">Permissions</div>
             <div className="w-[150px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20">Created</div>
-            <div className="flex-1"></div>
+            <div className="w-[60px]  px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1]">Actions</div>
           </div>
           <div className="flex-1 overflow-auto bg-[#1e1e1e]">
             {loading && <div className="p-4 text-[#888] italic text-[12px]">Loading...</div>}
@@ -364,7 +477,12 @@ const ManagersView = () => {
                 <div className="w-[200px] px-3 py-1 text-[12px] text-[#aaa] border-r border-black/10 truncate">{row.description || '—'}</div>
                 <div className="w-[260px] px-3 py-1 border-r border-black/10"><PermBadges permissions={row.permissions}/></div>
                 <div className="w-[150px] px-3 py-1 text-[11px] text-[#aaa] border-r border-black/10">{fmtTime(row.created_at)}</div>
-                <div className="flex-1"></div>
+                <div className="w-[60px] px-3 py-1 flex items-center">
+                  <button onClick={() => setEditingRole(row)} title="Edit Role"
+                    className="p-1 text-[#555] hover:text-[#007acc] hover:bg-[#007acc]/10 rounded-[2px] transition-colors">
+                    <Edit2 size={12}/>
+                  </button>
+                </div>
               </div>
             ))}
             {[...Array(20)].map((_,i) => <div key={i} className={`flex h-6 border-b border-black/5 ${i%2!==0?'bg-[#1e1e1e]':'bg-[#252526]'} opacity-30`}></div>)}
@@ -440,7 +558,7 @@ const ManagersView = () => {
           {contextMenu.type === 'role' && (
             <>
               <div className="px-5 py-1.5 hover:bg-[#007acc] hover:text-white cursor-pointer select-none"
-                onClick={() => setContextMenu({ visible: false })}>
+                onClick={() => { setEditingRole(contextMenu.record); setContextMenu({ visible: false }); }}>
                 <span className="flex items-center gap-2"><Edit2 size={12}/>Edit Role</span>
               </div>
               <div className="h-[1px] bg-[#3e3e42] my-1 mx-2"></div>
@@ -453,9 +571,10 @@ const ManagersView = () => {
         </div>
       )}
 
-      {isCreateRoleOpen && <CreateRoleModal onClose={() => setIsCreateRoleOpen(false)} onCreated={fetchRoles} />}
+      {isCreateRoleOpen    && <CreateRoleModal    onClose={() => setIsCreateRoleOpen(false)}    onCreated={fetchRoles}    />}
       {isCreateManagerOpen && <CreateManagerModal roles={roles} onClose={() => setIsCreateManagerOpen(false)} onCreated={fetchManagers} />}
-      {activityTarget && <ActivityLogModal manager={activityTarget} onClose={() => setActivityTarget(null)} />}
+      {editingRole         && <EditRoleModal      role={editingRole} onClose={() => setEditingRole(null)} onSaved={fetchRoles} />}
+      {activityTarget      && <ActivityLogModal   manager={activityTarget} onClose={() => setActivityTarget(null)} />}
     </div>
   );
 };

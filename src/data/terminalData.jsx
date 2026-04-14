@@ -256,14 +256,19 @@ export const sidebarData = [
                   { label: "Configuration", icon: GrayFolderIcon }
                 ]
               },
-              { 
-                label: "Security", 
+              {
+                label: "Security",
                 icon: GreenShieldOutlineIcon,
                 initiallyExpanded: true,
                 children: [
                   { label: "Certificates", icon: GreenLockIcon },
                   { label: "Firewall", icon: GreenShieldSolidIcon },
-                  { label: "Anti DDoS Protection", icon: GreenShieldOutlineIcon }
+                  { label: "Anti DDoS Protection", icon: GreenShieldOutlineIcon },
+                  { label: "IP Restrictions", icon: GreenShieldSolidIcon },
+                  { label: "Connection Throttle", icon: GreenShieldOutlineIcon },
+                  { label: "Log Management", icon: GreenLockIcon },
+                  { label: "Backup Schedules", icon: GreenLockIcon },
+                  { label: "Plugin Management", icon: GreenShieldOutlineIcon },
                 ]
               },
               {
@@ -345,6 +350,18 @@ export const sidebarData = [
                   { label: "Data Exports", icon: Download },
                   { label: "Regulatory Reports", icon: FileText },
                   { label: "Complaints", icon: MessageSquare },
+                ]
+              },
+              {
+                label: "Communications",
+                icon: MessageSquare,
+                initiallyExpanded: false,
+                children: [
+                  { label: "Auto Notification Rules", icon: Bell },
+                  { label: "Email Campaigns", icon: Mail },
+                  { label: "Message Center", icon: MessageSquare },
+                  { label: "Push Notifications", icon: Bell },
+                  { label: "SMS", icon: Zap },
                 ]
               },
               {

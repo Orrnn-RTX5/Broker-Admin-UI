@@ -352,71 +352,66 @@ export const ManagerService = {
     return res.data;
   },
 
-  // --- RBAC: ROLES (port 8091) ---
-  getRoleList: async () => {
-    const res = await api.get(`/ext-api/ManagerRoleList`);
-    return res.data;
-  },
-
-  createRole: async (data) => {
-    const res = await api.post(`/ext-api/ManagerRoleCreate`, data);
-    return res.data;
-  },
-
+  // --- RBAC: ROLES ---
   updateRole: async (roleId, data) => {
-    const res = await api.post(`/ext-api/ManagerRoleUpdate`, data, {
+    const token = useAuthStore.getState().accessToken;
+    const res = await api.post(`/manager/ManagerRoleUpdate?id=${token}`, data, {
       params: { role_id: roleId }
     });
     return res.data;
   },
 
   deleteRole: async (roleId) => {
-    const res = await api.delete(`/ext-api/ManagerRoleDelete`, {
-      params: { role_id: roleId }
+    const token = useAuthStore.getState().accessToken;
+    const res = await api.get(`/manager/ManagerRoleDelete`, {
+      params: { id: token, role_id: roleId }
     });
     return res.data;
   },
 
-  // --- RBAC: MANAGER ACCOUNTS (port 8091) ---
+  // --- MANAGER ACCOUNTS ---
   getManagerList: async () => {
-    const res = await api.get(`/ext-api/ManagerList`);
+    const token = useAuthStore.getState().accessToken;
+    const res = await api.get(`/manager/ManagerList?id=${token}`);
     return res.data;
   },
 
   getManagerDetail: async (login) => {
-    const res = await api.get(`/ext-api/ManagerGet`, { params: { manager_login: login } });
-    return res.data;
-  },
-
-  createManager: async (data) => {
-    const res = await api.post(`/ext-api/ManagerCreate`, data);
+    const token = useAuthStore.getState().accessToken;
+    const res = await api.get(`/manager/ManagerGet`, {
+      params: { id: token, manager_login: login }
+    });
     return res.data;
   },
 
   updateManager: async (login, params) => {
-    const res = await api.get(`/ext-api/ManagerUpdate`, {
-      params: { manager_login: login, ...params }
+    const token = useAuthStore.getState().accessToken;
+    const res = await api.get(`/manager/ManagerUpdate`, {
+      params: { id: token, manager_login: login, ...params }
     });
     return res.data;
   },
 
   deleteManager: async (login) => {
-    const res = await api.get(`/ext-api/ManagerDelete`, {
-      params: { manager_login: login }
+    const token = useAuthStore.getState().accessToken;
+    const res = await api.get(`/manager/ManagerDelete`, {
+      params: { id: token, manager_login: login }
     });
     return res.data;
   },
 
   getManagerActivityLog: async (login, from, to) => {
-    const params = { manager_login: login };
+    const token = useAuthStore.getState().accessToken;
+    const params = { id: token, manager_login: login };
     if (from) params.from = from;
     if (to) params.to = to;
-    const res = await api.get(`/ext-api/ManagerActivityLog`, { params });
+    const res = await api.get(`/manager/ManagerActivityLog`, { params });
     return res.data;
   },
 
   getManagerOnline: async () => {
-    const res = await api.get(`/ext-api/ManagerOnline`);
+    const token = useAuthStore.getState().accessToken;
+    const res = await api.get(`/manager/ManagerOnline?id=${token}`);
     return res.data;
   },
 };
