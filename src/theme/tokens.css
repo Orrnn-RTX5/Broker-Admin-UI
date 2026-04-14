@@ -60,28 +60,45 @@
   color-scheme: light;
 }
 
+/* ============================================================
+   Density — compact (default) vs cozy. Applied via data-density on <html>.
+   ============================================================ */
+[data-density="cozy"] {
+  --row-py: 6px;
+  --row-h:  32px;
+}
+[data-density="compact"],
+:root {
+  --row-py: 2px;
+  --row-h:  24px;
+}
+[data-density="cozy"] table td,
+[data-density="cozy"] table th { padding-top: 6px !important; padding-bottom: 6px !important; }
+
 [data-theme="dark"] {
-  --bg-app: #0a0a0a;
-  --bg-surface-1: #111111;
-  --bg-surface-2: #161616;
-  --bg-surface-3: #1c1c1c;
-  --bg-overlay: rgba(0, 0, 0, 0.65);
+  /* Match the original MT5 terminal palette — warm neutral gray, not pure black. */
+  --bg-app: #1e1e1e;
+  --bg-surface-1: #252526;
+  --bg-surface-2: #333333;
+  --bg-surface-3: #3e3e42;
+  --bg-overlay: rgba(0, 0, 0, 0.6);
 
-  --border-subtle: #1f1f1f;
-  --border-default: #2a2a2a;
-  --border-strong: #3a3a3a;
+  --border-subtle: #2b2b2b;
+  --border-default: #3e3e42;
+  --border-strong: #555555;
 
-  --text-primary: #f4f4f5;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
-  --text-inverse: #0a0a0a;
+  --text-primary: #d1d1d1;
+  --text-secondary: #a0a0a0;
+  --text-muted: #808080;
+  --text-inverse: #1e1e1e;
 
-  --accent-50: #1c1c1c;
-  --accent-100: #262626;
-  --accent-500: #fafafa;
-  --accent-600: #e4e4e7;
-  --accent-700: #d4d4d8;
-  --accent-contrast: #0a0a0a;
+  /* MT5 chrome blue as accent (the original status bar color). */
+  --accent-50:  #0f2240;
+  --accent-100: #1e3a8a;
+  --accent-500: #007acc;
+  --accent-600: #0088e0;
+  --accent-700: #1a8ad4;
+  --accent-contrast: #ffffff;
 
   --success-500: #22c55e;
   --warning-500: #f59e0b;

@@ -83,28 +83,57 @@ const OrangeSquareSIcon = (props) => (
   </svg>
 );
 
-const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerTab, refreshTrigger }) => {
+const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerTab, refreshTrigger, searchQuery = '', onCountChange }) => {
   const [contextMenu, setContextMenu] = useState({ x: 0, y: 0, visible: false });
   const [serverPopupData, setServerPopupData] = useState(null);
 
-  const { data: usersResponse, loading: usersLoading } = useUsers(1, 100, '', '', viewType === 'Clients' || viewType === 'Managers');
-  const { data: accountsResponse, loading: accountsLoading } = useAccounts(1, 100, '', '', '', viewType === 'Trading Accounts');
-  const { data: symbolsResponse, loading: symbolsLoading } = useInstruments(1, 100, '', '', viewType === 'Symbols');
-  const { data: positionsResponse, loading: positionsLoading } = usePositions({ page: 1, limit: 100 }, true, 2000, viewType === 'Positions');
+  // Row count reporting. Hooks must run unconditionally, so we declare a ref
+  // at the top and a single post-render effect. The render body below writes
+  // counts into the ref right before the branch that returns JSX; the effect
+  // then forwards them to the parent only when they change.
+  const countsRef = React.useRef({ total: 0, filtered: 0 });
+  const lastSentRef = React.useRef({ total: -1, filtered: -1 });
+  React.useEffect(() => {
+    const c = countsRef.current;
+    if (c.total !== lastSentRef.current.total || c.filtered !== lastSentRef.current.filtered) {
+      lastSentRef.current = { ...c };
+      onCountChange?.(c);
+    }
+  });
 
-  const { data: groupsResponse, loading: groupsLoading, refetch: refetchGroups } = useGroups(viewType === 'Groups');
+  // When a delegated view renders (early return below) it has no row count to
+  // report, so reset the ref so the parent breadcrumb clears its counter.
+  countsRef.current = { total: 0, filtered: 0 };
+
+  const { data: usersResponse, loading: usersLoading, mutate: refetchUsers } = useUsers(1, 100, '', '', viewType === 'Clients' || viewType === 'Managers');
+  const { data: accountsResponse, loading: accountsLoading, mutate: refetchAccounts } = useAccounts(1, 100, '', '', '', viewType === 'Trading Accounts');
+  const { data: symbolsResponse, loading: symbolsLoading, mutate: refetchSymbols } = useInstruments(1, 100, '', '', viewType === 'Symbols');
+  const { data: positionsResponse, loading: positionsLoading, mutate: refetchPositions } = usePositions({ page: 1, limit: 100 }, true, 2000, viewType === 'Positions');
+
+  const { data: groupsResponse, loading: groupsLoading, mutate: refetchGroups } = useGroups(viewType === 'Groups');
 
   React.useEffect(() => {
-    if (viewType === 'Groups' && refreshTrigger) {
-      refetchGroups();
-    }
-  }, [refreshTrigger, viewType]);
+    if (!refreshTrigger) return;
+    const map = {
+      'Groups': refetchGroups,
+      'Clients': refetchUsers,
+      'Managers': refetchUsers,
+      'Trading Accounts': refetchAccounts,
+      'Symbols': refetchSymbols,
+      'Positions': refetchPositions,
+    };
+    map[viewType]?.();
+  }, [refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [dealDateRange] = useState({
     from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
     to: new Date().toISOString()
   });
-  const { data: dealsResponse, loading: dealsLoading } = useDealsSummary(dealDateRange.from, dealDateRange.to, '', '', viewType === 'Deals');
+  const { data: dealsResponse, loading: dealsLoading, mutate: refetchDeals } = useDealsSummary(dealDateRange.from, dealDateRange.to, '', '', viewType === 'Deals');
+
+  React.useEffect(() => {
+    if (refreshTrigger && viewType === 'Deals') refetchDeals?.();
+  }, [refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   const [editingGroup, setEditingGroup] = useState(null);
@@ -137,6 +166,37 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     }
     setContextMenu({ ...contextMenu, visible: false });
   };
+
+  // --- COMING SOON: sidebar views that have no backend yet ---
+  // Renders a lightweight empty state so clicking these items doesn't show
+  // a blank table. Remove an entry once that view gets wired to an API.
+  const COMING_SOON = new Set([
+    'Orders', 'Ultency Matching Engine', 'Data Feeds', 'FCN', 'Routing',
+    'Funds & ETF', 'Plugins', 'Subscriptions', 'Charts & Ticks',
+    'Live Update', 'Mailbox',
+  ]);
+  if (COMING_SOON.has(viewType)) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-[color:var(--bg-app)] select-none">
+        <div className="flex flex-col items-center gap-3 max-w-md text-center px-6">
+          <div className="w-12 h-12 rounded-full bg-[color:var(--bg-surface-2)] border border-[color:var(--border-default)] flex items-center justify-center">
+            <Clock size={20} className="text-[color:var(--text-muted)]" />
+          </div>
+          <div className="text-[14px] font-semibold text-[color:var(--text-primary)]">
+            {viewType}
+          </div>
+          <div className="text-[12px] text-[color:var(--text-secondary)] leading-relaxed">
+            Coming soon. This module isn't wired to a backend yet — when the API is
+            ready, data will appear here automatically.
+          </div>
+          <span className="mt-2 inline-flex items-center h-5 px-2 rounded-[var(--radius-sm)] border border-[color:var(--border-default)] text-[10px] font-mono uppercase tracking-wider text-[color:var(--text-muted)]">
+            No backend
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   // --- IMPORTED VIEWS ---
   if (viewType === 'Swap-Free Configs') {
     return <SwapFreeGroupsView />;
@@ -482,7 +542,21 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   const isPositionsView = isPositionsViewTemp;
   const isAccountsView = isAccountsViewTemp;
 
-  // --- TIME VIEW SPECIFIC LOGIC ---
+  // Client-side filter: matches the search query against any string/number field
+  // on each row. Empty query → no filtering.
+  const totalCount = Array.isArray(data) ? data.length : 0;
+  if (searchQuery && Array.isArray(data) && data.length) {
+    const q = searchQuery.toLowerCase();
+    data = data.filter((row) =>
+      Object.values(row).some((v) => v != null && String(v).toLowerCase().includes(q))
+    );
+  }
+  const filteredCount = Array.isArray(data) ? data.length : 0;
+
+  // Update ref; the top-level effect forwards to parent post-commit.
+  countsRef.current = { total: totalCount, filtered: filteredCount };
+
+ 
   if (viewType === 'Time') {
     const PropertyRow = ({ idx, icon: Icon, label, value }) => (
       <div className={`flex items-center text-[12px] border-b border-black/20 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-blue-600/20 cursor-default`}>
@@ -547,6 +621,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
         />
       )}
       {/* Search Filters Bar for Orders, Deals, Positions */}
+
       {showSearchFilters && (
         <div className="flex items-center px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 text-[11px] shrink-0 overflow-x-auto no-scrollbar whitespace-nowrap">
           <div className="flex border border-[color:var(--border-strong)] bg-transparent h-[22px] items-center text-[color:var(--text-muted)] mr-1">

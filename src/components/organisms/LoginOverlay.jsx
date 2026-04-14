@@ -30,7 +30,13 @@ export default function LoginOverlay({ onLoginSuccess }) {
       <div className="w-[350px] bg-[color:var(--bg-surface-1)] border border-black/50 shadow-2xl rounded-[3px] overflow-hidden">
         {/* Header */}
         <div className="h-8 bg-[color:var(--bg-surface-2)] border-b border-black/40 flex items-center px-3">
-          <span className="text-[12px] font-medium text-[color:var(--text-primary)]">RTX5 Manager Login</span>
+    <div className="flex items-center justify-center">
+<div className="flex items-center justify-center">
+  <span className="text-[12px] font-medium tracking-[0.08em] text-[color:var(--text-primary)]">
+    RTX 5 Admin Terminal
+  </span>
+</div>
+</div>
         </div>
         
         {/* Body */}
@@ -79,7 +85,7 @@ export default function LoginOverlay({ onLoginSuccess }) {
             <button 
               type="submit" 
               disabled={isLoading}
-              className="mt-4 h-8 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[12px] font-medium rounded-[2px] transition-colors disabled:opacity-50"
+              className="mt-4 h-8 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-black text-[12px] font-medium rounded-[2px] transition-colors disabled:opacity-50"
             >
               {isLoading ? 'Connecting...' : 'Connect'}
             </button>

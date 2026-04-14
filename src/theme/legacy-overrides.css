@@ -52,13 +52,46 @@
   .bg-\[\#555\], .bg-\[\#555555\],
   .bg-\[\#666\]                       { background-color: var(--bg-surface-2) !important; }
 
-  /* -------- Dark text (originally bright-on-dark) → dark-on-light -------- */
+  /* -------- Dark text (originally bright-on-dark) → dark-on-light --------
+     CAUTION: .text-white must NOT be in this global list. A bare flip
+     breaks blue/accent buttons (white-on-blue is correct and readable).
+     .text-white is only flipped below, chained with dark-chrome bg classes. */
   .text-\[\#fff\], .text-\[\#ffffff\],
   .text-\[\#dddddd\], .text-\[\#dedede\],
   .text-\[\#d1d1d1\], .text-\[\#e1e1e1\],
   .text-\[\#e0e0e0\], .text-\[\#cccccc\],
-  .text-\[\#ccc\], .text-\[\#ddd\], .text-\[\#eee\],
-  .text-white                         { color: var(--text-primary) !important; }
+  .text-\[\#ccc\], .text-\[\#ddd\], .text-\[\#eee\] { color: var(--text-primary) !important; }
+
+  /* Flip text-white ONLY when it sits on a dark-chrome bg class. Blue accent
+     buttons (bg-[#2563eb], bg-[color:var(--accent-500)], etc.) keep white. */
+  .bg-\[\#1e1e1e\].text-white,
+  .bg-\[\#111\].text-white, .bg-\[\#111111\].text-white,
+  .bg-\[\#121212\].text-white,
+  .bg-\[\#252526\].text-white,
+  .bg-\[\#2a2a2b\].text-white,
+  .bg-\[\#2a2d2e\].text-white,
+  .bg-\[\#2a2d3e\].text-white,
+  .bg-\[\#2b2b2b\].text-white,
+  .bg-\[\#323233\].text-white,
+  .bg-\[\#333\].text-white, .bg-\[\#333333\].text-white,
+  .bg-\[\#3c3f41\].text-white,
+  .bg-\[\#3e3e3e\].text-white,
+  .bg-\[\#3e3e42\].text-white,
+  .bg-\[\#404040\].text-white,
+  .bg-\[\#444\].text-white, .bg-\[\#444444\].text-white,
+  .bg-\[\#4a4a4a\].text-white,
+  .bg-\[\#555\].text-white, .bg-\[\#555555\].text-white,
+  .bg-\[\#666\].text-white,
+  .bg-\[\#222\].text-white, .bg-\[\#222222\].text-white,
+  /* Tokenized surfaces — these CSS vars resolve light in light mode, so
+     text-white on them is invisible. Flip to primary text. */
+  .bg-\[color\:var\(--bg-app\)\].text-white,
+  .bg-\[color\:var\(--bg-surface-1\)\].text-white,
+  .bg-\[color\:var\(--bg-surface-2\)\].text-white,
+  .bg-\[color\:var\(--bg-surface-3\)\].text-white,
+  /* Transparent + border-only buttons/inputs with text-white read as white on
+     light bg. Same flip. */
+  .bg-transparent.text-white           { color: var(--text-primary) !important; }
 
   .text-\[\#aaa\], .text-\[\#aaaaaa\],
   .text-\[\#bbb\],
@@ -112,7 +145,8 @@
 
   .hover\:bg-white\/5:hover,
   .hover\:bg-white\/10:hover          { background-color: var(--bg-surface-2) !important; }
-  .hover\:text-white:hover            { color: var(--text-primary) !important; }
+  /* hover:text-white intentionally NOT globally flipped — same reason as text-white.
+     If a specific chrome spot needs it, add a chained .bg-...hover\:text-white:hover rule. */
 
   /* -------- MT5 accent blues (chrome, status bar) — already handled by accent token -------- */
   .bg-\[\#007acc\]\/20                { background-color: color-mix(in srgb, var(--accent-500) 12%, transparent) !important; }

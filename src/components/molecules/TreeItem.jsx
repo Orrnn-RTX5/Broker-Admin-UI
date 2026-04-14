@@ -1,73 +1,70 @@
 import React, { useState } from 'react';
-import { ChevronRight, ChevronDown, Folder, File, Server, Cpu } from 'lucide-react';
+import { ChevronRight, Folder, File } from 'lucide-react';
+import { cn } from '../../lib/cn';
 
-const TreeItem = ({ item, level = 0, isLast = false, onSelect, onDoubleClick, selectedLabel }) => {
+const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, selectedLabel }) => {
   const [isOpen, setIsOpen] = useState(item.initiallyExpanded);
   const hasChildren = item.children && item.children.length > 0;
   const isActive = selectedLabel === item.label;
-
-  // Use the icon from item, or default to Folder/File
   const Icon = item.icon || (hasChildren ? Folder : File);
 
   const handleArrowClick = (e) => {
     e.stopPropagation();
-    if (hasChildren) {
-      setIsOpen(!isOpen);
-    }
-  };
-
-  const handleNodeClick = () => {
-    if (onSelect) {
-      onSelect(item);
-    }
-  };
-
-  const handleNodeDoubleClick = () => {
-    if (onDoubleClick) {
-      onDoubleClick(item);
-    }
+    if (hasChildren) setIsOpen(!isOpen);
   };
 
   return (
-    <div className="relative">
-      <div 
-        onClick={handleNodeClick}
-        onDoubleClick={handleNodeDoubleClick}
-        className={`flex items-center gap-1 py-[2px] px-1 cursor-default group transition-none select-none relative
-          ${isActive ? 'bg-[#3e3e42] text-white shadow-sm ring-1 ring-blue-500/30' : 'hover:bg-[#2b2b2b] text-[#cccccc]'}
-        `}
-        style={{ paddingLeft: `${level * 14 + 4}px` }}
+    <div>
+      <div
+        onClick={() => onSelect && onSelect(item)}
+        onDoubleClick={() => onDoubleClick && onDoubleClick(item)}
+        className={cn(
+          'flex items-center h-7 pr-2 cursor-default select-none text-[12px]',
+          'transition-colors duration-100',
+          isActive
+            ? 'bg-[color:var(--bg-surface-3)] text-[color:var(--text-primary)] font-medium'
+            : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-surface-2)]'
+        )}
+        style={{ paddingLeft: `${level * 14 + 6}px` }}
       >
-        {/* Expand/Collapse Arrow */}
-        <div 
+        <button
+          type="button"
           onClick={handleArrowClick}
-          className="w-4 h-4 flex items-center justify-center shrink-0 hover:bg-white/10 rounded-sm"
+          className="w-4 h-4 flex items-center justify-center shrink-0 rounded-sm hover:bg-[color:var(--bg-surface-3)] focus:outline-none"
+          tabIndex={-1}
         >
-          {hasChildren ? (
-            isOpen ? <ChevronDown size={11} className="text-[#808080]" /> : <ChevronRight size={11} className="text-[#808080]" />
-          ) : null}
+          {hasChildren && (
+            <ChevronRight
+              size={11}
+              className={cn(
+                'text-[color:var(--text-muted)] transition-transform duration-150',
+                isOpen && 'rotate-90'
+              )}
+            />
+          )}
+        </button>
+
+        <div className="w-4 h-4 flex items-center justify-center shrink-0 text-[color:var(--text-muted)]">
+          <Icon size={12} />
         </div>
-        
-        {/* Icon */}
-        <div className={`w-4 h-4 flex items-center justify-center shrink-0`}>
-          <Icon size={13} className={`${!item.icon ? 'text-[#d1d1d1]' : ''}`} />
-        </div>
-        
-        {/* Label */}
-        <span className={`text-[11px] whitespace-nowrap overflow-hidden text-ellipsis leading-tight flex-1 ml-0.5 ${isActive ? 'font-medium' : ''}`}>
+
+        <span className="ml-1.5 whitespace-nowrap overflow-hidden text-ellipsis leading-tight flex-1">
           {item.label}
-          {item.count !== undefined && <span className="ml-1 text-[10px] text-[#808080]">({item.count})</span>}
+          {item.count !== undefined && (
+            <span className="ml-1.5 text-[10px] font-mono text-[color:var(--text-muted)]">
+              {item.count}
+            </span>
+          )}
         </span>
       </div>
 
       {hasChildren && isOpen && (
-        <div className="mt-0">
+        <div>
           {item.children.map((child, index) => (
-            <TreeItem 
-              key={`${child.label}-${index}`} 
-              item={child} 
-              level={level + 1} 
-              isLast={index === item.children.length - 1} 
+            <TreeItem
+              key={`${child.label}-${index}`}
+              item={child}
+              level={level + 1}
               onSelect={onSelect}
               onDoubleClick={onDoubleClick}
               selectedLabel={selectedLabel}

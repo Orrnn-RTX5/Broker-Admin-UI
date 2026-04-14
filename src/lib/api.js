@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
+import { useConnectionStore } from '../store/connectionStore';
 
 // Note: In development with Vite, we use the proxy set in vite.config.js
 // so we don't need the full URL if running on localhost. The /api/v2 path is retained.
@@ -23,12 +24,21 @@ api.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
-// Response Interceptor: Handle 401 & Refresh Token
+// Response Interceptor: Handle 401 & Refresh Token + connection health signal
 api.interceptors.response.use((response) => {
+  useConnectionStore.getState().markOk();
   return response;
 }, async (error) => {
   const originalRequest = error.config;
-  
+
+  // Only flag network / 5xx as connection issues; 4xx auth flows below
+  // shouldn't surface as a red connection dot.
+  if (!error.response || error.response.status >= 500) {
+    useConnectionStore.getState().markError(
+      error.response?.statusText || error.message || 'Network error'
+    );
+  }
+
   if (error.response?.status === 401 && !originalRequest._retry) {
     originalRequest._retry = true;
     

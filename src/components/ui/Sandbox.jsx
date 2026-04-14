@@ -302,7 +302,7 @@ const SandboxInner = () => {
         <div className="h-6 border-t border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-2)] flex items-center px-3 text-[11px] font-mono text-[color:var(--text-muted)] gap-4">
           <span className="inline-flex items-center gap-1.5 text-[color:var(--text-secondary)]">
             <StatusDot tone="success" />
-            HEXY-PROD-01
+            -RTX-5
           </span>
           <span>4482 / 8 KB</span>
           <span className="ml-auto tabular-nums">18:42:05</span>

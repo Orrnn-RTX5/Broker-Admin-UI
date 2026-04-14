@@ -8,225 +8,391 @@ import ManagerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ManagerProper
 import ServerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ServerPropertiesPopup';
 import CreateGroupPopup from './components/RIGHTCLICKJPOPUPS/CreateGroupPopup';
 import LoginOverlay from './components/organisms/LoginOverlay';
+import { TabBar } from './components/organisms/TabBar';
+import { HelpModal } from './components/organisms/HelpModal';
 import { useAuthStore } from './store/authStore';
-import { Network, Activity, Globe } from 'lucide-react';
+import { useConnectionStore } from './store/connectionStore';
+import { useLocalStorage } from './lib/useLocalStorage';
+import { useKbStatus } from './lib/useKbStatus';
+import { Network, Globe } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
+import { TooltipProvider } from './components/ui/Tooltip';
+import { ToastProvider, ToastViewport, useToast } from './components/ui/Toast';
+import { StatusDot } from './components/ui/Badge';
 
-const App = () => {
+const formatTime = (d) =>
+  `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+
+const AppInner = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const connStatus = useConnectionStore((s) => s.status);
+  const connError  = useConnectionStore((s) => s.lastError);
+  const { notify } = useToast();
+  const kb = useKbStatus();
+
   const [selectedGroup, setSelectedGroup] = React.useState(null);
   const [isPopupOpen, setIsPopupOpen] = React.useState(false);
   const [serverPopupData, setServerPopupData] = React.useState(null);
-  const [history, setHistory] = React.useState(['Groups']);
-  const [currentIndex, setCurrentIndex] = React.useState(0);
-  const activeNode = history[currentIndex];
   const [isCreatingGroup, setIsCreatingGroup] = React.useState(false);
   const [refreshKey, setRefreshKey] = React.useState(0);
-  
-  const [globalTheme, setGlobalTheme] = React.useState('dark');
-  const [isLightMode, setIsLightMode] = React.useState(false);
+  const [serverTargetTab, setServerTargetTab] = React.useState(null);
+  const [helpOpen, setHelpOpen] = React.useState(false);
+  const [now, setNow] = React.useState(() => new Date());
+  const [rowCount, setRowCount] = React.useState({ total: 0, filtered: 0 });
 
+  // Persisted state
+  const [globalTheme, setGlobalTheme] = useLocalStorage('rtx5.theme', 'light');         // light|dark|system|auto-time
+  const [density, setDensity] = useLocalStorage('rtx5.density', 'compact');              // compact|cozy
+  const [savedSearches, setSavedSearches] = useLocalStorage('rtx5.searches', {});        // { [viewType]: query }
+  const [openTabs, setOpenTabs] = useLocalStorage('rtx5.tabs', ['Groups']);              // array of viewTypes
+  const [activeTab, setActiveTab] = useLocalStorage('rtx5.activeTab', 'Groups');
+
+  // History stack for navigate back/forward (independent of tabs)
+  const [history, setHistory] = React.useState([activeTab || 'Groups']);
+  const [currentIndex, setCurrentIndex] = React.useState(0);
+  const activeNode = activeTab || history[currentIndex];
+
+  const searchQuery = savedSearches[activeNode] || '';
+  const setSearchQuery = (q) =>
+    setSavedSearches((prev) => ({ ...prev, [activeNode]: q }));
+
+  const searchInputRef = React.useRef(null);
+
+  // ── Theme (light/dark/system/auto-time) ──────────────────────────────────
   React.useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
     const applyTheme = () => {
-      if (globalTheme === 'light') setIsLightMode(true);
-      else if (globalTheme === 'dark') setIsLightMode(false);
-      else setIsLightMode(!mediaQuery.matches);
+      let resolved = globalTheme;
+      if (globalTheme === 'system')    resolved = mediaQuery.matches ? 'dark' : 'light';
+      else if (globalTheme === 'auto-time') {
+        const h = new Date().getHours();
+        resolved = (h >= 6 && h < 18) ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', resolved);
     };
-
     applyTheme();
+    const mqHandler = () => { if (globalTheme === 'system') applyTheme(); };
+    mediaQuery.addEventListener('change', mqHandler);
 
-    const handler = () => { if (globalTheme === 'system') applyTheme(); };
-    mediaQuery.addEventListener('change', handler);
-    return () => mediaQuery.removeEventListener('change', handler);
+    // Re-evaluate auto-time every minute
+    let timeTick;
+    if (globalTheme === 'auto-time') {
+      timeTick = setInterval(applyTheme, 60_000);
+    }
+    return () => {
+      mediaQuery.removeEventListener('change', mqHandler);
+      if (timeTick) clearInterval(timeTick);
+    };
   }, [globalTheme]);
 
-  const handleRowDoubleClick = (group) => {
-    // If double-clicking a row inside the Payments directory, navigate to that page instead of opening a popup
-    if (activeNode === 'Payments' || activeNode === 'Clients & Accounts' || activeNode === 'Orders & Deals') {
-      if (group.name) {
-        handleNodeSelect(group.name);
-      }
-      return;
-    }
-    
-    setSelectedGroup(group);
-    setIsPopupOpen(true);
-  };
+  // ── Density on <html> ────────────────────────────────────────────────────
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-density', density);
+  }, [density]);
 
-  const [serverTargetTab, setServerTargetTab] = React.useState(null);
+  // ── Window title ─────────────────────────────────────────────────────────
+  React.useEffect(() => {
+    document.title = activeNode ? `RTX 5 Admin · ${activeNode}` : 'RTX 5 Admin';
+  }, [activeNode]);
+
+  // ── Live clock ───────────────────────────────────────────────────────────
+  React.useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // ── Tabs + navigation ────────────────────────────────────────────────────
+  const openTab = React.useCallback((label) => {
+    setOpenTabs((prev) => (prev.includes(label) ? prev : [...prev, label]));
+    setActiveTab(label);
+    setHistory((prev) => {
+      const newHistory = prev.slice(0, currentIndex + 1);
+      newHistory.push(label);
+      setCurrentIndex(newHistory.length - 1);
+      return newHistory;
+    });
+  }, [currentIndex, setOpenTabs, setActiveTab]);
+
+  const closeTab = (label) => {
+    setOpenTabs((prev) => {
+      const next = prev.filter((t) => t !== label);
+      if (next.length === 0) next.push('Groups');
+      if (label === activeTab) setActiveTab(next[next.length - 1]);
+      return next;
+    });
+  };
 
   const handleNodeSelect = (nodeOrLabel) => {
     let label = typeof nodeOrLabel === 'string' ? nodeOrLabel : nodeOrLabel.label;
-    
     if (label === 'Local Main Status Server' || label === 'Local Main Backup Server') {
       label = 'Main Trade Server';
       setServerTargetTab('Status');
     } else {
       setServerTargetTab(null);
     }
-
     if (label === activeNode) return;
-    
-    // Create new history array, clipping any "forward" paths if we've undone beforehand
-    const newHistory = history.slice(0, currentIndex + 1);
-    newHistory.push(label);
-    setHistory(newHistory);
-    setCurrentIndex(newHistory.length - 1);
+    openTab(label);
   };
 
   const handleNodeDoubleClick = (node) => {
     const label = typeof node === 'string' ? node : node.label;
     if (['Main Trade Server', 'History Server', 'MainTrade Backup Server', 'Local Main Status Server', 'Local Main Backup Server', 'TradeProcessor SQL_E', 'History Backup Server', 'Access Server'].includes(label)) {
-      setServerPopupData({
-        isOpen: true,
-        target: label,
-        id: Math.floor(Math.random() * 10) + 1
-      });
+      setServerPopupData({ isOpen: true, target: label, id: Math.floor(Math.random() * 10) + 1 });
     }
   };
 
   const handleUndo = () => {
-    if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
+    if (currentIndex > 0) {
+      const next = currentIndex - 1;
+      setCurrentIndex(next);
+      setActiveTab(history[next]);
+      setOpenTabs((prev) => (prev.includes(history[next]) ? prev : [...prev, history[next]]));
+    }
+  };
+  const handleRedo = () => {
+    if (currentIndex < history.length - 1) {
+      const next = currentIndex + 1;
+      setCurrentIndex(next);
+      setActiveTab(history[next]);
+      setOpenTabs((prev) => (prev.includes(history[next]) ? prev : [...prev, history[next]]));
+    }
   };
 
-  const handleRedo = () => {
-    if (currentIndex < history.length - 1) setCurrentIndex(currentIndex + 1);
+  const handleRowDoubleClick = (group) => {
+    if (activeNode === 'Payments' || activeNode === 'Clients & Accounts' || activeNode === 'Orders & Deals') {
+      if (group.name) handleNodeSelect(group.name);
+      return;
+    }
+    setSelectedGroup(group);
+    setIsPopupOpen(true);
   };
 
   const handleAddClick = () => {
-    if (activeNode === 'Groups') {
-      setIsCreatingGroup(true);
-      return;
-    }
+    if (activeNode === 'Groups') { setIsCreatingGroup(true); return; }
     setSelectedGroup({ group: 'New Group\\Demo' });
     setIsPopupOpen(true);
   };
 
+  const handleRefresh = React.useCallback(() => {
+    setRefreshKey((prev) => prev + 1);
+    notify({ title: 'Refreshed', description: `at ${formatTime(new Date())}`, tone: 'success' });
+  }, [notify]);
+
+  const buildPayload = () => ({ view: activeNode, exportedAt: new Date().toISOString(), source: 'RTX5 Admin' });
+
+  const handleExport = () => {
+    const href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(buildPayload(), null, 2));
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = `${(activeNode || 'view').replace(/[\s\\/]+/g, '_')}_${Date.now()}.json`;
+    a.click();
+  };
+
+  const handleExportCsv = () => {
+    const rows = [['view', 'exportedAt', 'source'], [activeNode, new Date().toISOString(), 'RTX5 Admin']];
+    const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = `${(activeNode || 'view').replace(/[\s\\/]+/g, '_')}_${Date.now()}.csv`;
+    a.click();
+  };
+
+  const handleImport = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,.csv,.txt';
+    input.onchange = (e) => {
+      const f = e.target.files?.[0];
+      if (f) notify({ title: 'Import selected', description: `${f.name} (${Math.round(f.size / 1024)} KB)`, tone: 'info' });
+    };
+    input.click();
+  };
+
+  // ── Global keyboard shortcuts ────────────────────────────────────────────
+  React.useEffect(() => {
+    const onKey = (e) => {
+      const mod = e.ctrlKey || e.metaKey;
+      const tag = e.target?.tagName;
+      const typing = tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable;
+
+      // ? opens help — only when not typing
+      if (!typing && (e.key === '?' || (e.key === '/' && mod))) {
+        e.preventDefault(); setHelpOpen(true); return;
+      }
+      if (mod && e.key.toLowerCase() === 'r') { e.preventDefault(); handleRefresh(); return; }
+      if (mod && e.shiftKey && e.key.toLowerCase() === 'e') { e.preventDefault(); handleExportCsv(); return; }
+      if (mod && e.key.toLowerCase() === 'e') { e.preventDefault(); handleExport(); return; }
+      if (mod && (e.key.toLowerCase() === 'f' || e.key.toLowerCase() === 'k')) {
+        e.preventDefault(); searchInputRef.current?.focus(); return;
+      }
+      if (e.altKey && e.key === 'ArrowLeft')  { e.preventDefault(); handleUndo(); return; }
+      if (e.altKey && e.key === 'ArrowRight') { e.preventDefault(); handleRedo(); return; }
+      if (mod && e.key.toLowerCase() === 'w') {
+        e.preventDefault();
+        if (openTabs.length > 1) closeTab(activeTab);
+        return;
+      }
+      if (mod && e.key === 'Tab') {
+        e.preventDefault();
+        const idx = openTabs.indexOf(activeTab);
+        const dir = e.shiftKey ? -1 : 1;
+        const next = openTabs[(idx + dir + openTabs.length) % openTabs.length];
+        if (next) setActiveTab(next);
+        return;
+      }
+      if (e.key === 'Escape') {
+        if (isPopupOpen) setIsPopupOpen(false);
+        else if (isCreatingGroup) setIsCreatingGroup(false);
+        else if (serverPopupData) setServerPopupData(null);
+        else if (helpOpen) setHelpOpen(false);
+        else if (searchQuery) setSearchQuery('');
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [handleRefresh, activeTab, openTabs, isPopupOpen, isCreatingGroup, serverPopupData, helpOpen, searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const connTone = connStatus === 'error' ? 'danger' : 'success';
+  const connText = connStatus === 'error' ? `Connection issue: ${connError}` : 'Connected to RTX5-PROD-01';
+
   return (
     <>
-      {isLightMode && (
-        <style>{`
-          body,
-          .bg-\\[\\#1e1e1e\\] { background-color: #ffffff !important; }
-          .bg-\\[\\#252526\\] { background-color: #f5f6f7 !important; }
-          .bg-\\[\\#333333\\] { background-color: #e1e3e5 !important; }
-          .bg-\\[\\#3c3f41\\] { background-color: #eaebec !important; }
-          .bg-\\[\\#2b2b2b\\] { background-color: #d1d5db !important; }
-          .bg-\\[\\#3e3e42\\] { background-color: #e2e8f0 !important; }
-          .bg-\\[\\#404040\\], .bg-\\[\\#444444\\], .bg-\\[\\#4a4a4a\\] { background-color: #cbd5e1 !important; }
-          
-          .text-\\[\\#d1d1d1\\], .text-\\[\\#e1e1e1\\], .text-\\[\\#cccccc\\], .text-white { color: #000000 !important; }
-          .text-\\[\\#aaaaaa\\], .text-\\[\\#808080\\], .text-\\[\\#e0e0e0\\] { color: #4b5563 !important; }
-          
-          .border-black\\/40, .border-black\\/20, .border-black\\/10, .border-\\[\\#3e3e42\\] { border-color: rgba(0,0,0,0.15) !important; }
-          .border-white\\/5 { border-color: rgba(0,0,0,0.05) !important; }
-          
-          /* Prevent override on active colored buttons */
-          .bg-\\[\\#007acc\\] { background-color: #007acc !important; color: #ffffff !important; }
-        `}</style>
-      )}
       {!isAuthenticated && <LoginOverlay />}
-      <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#1e1e1e] text-[#d1d1d1] selection:bg-blue-500/30">
-        {/* Top Menu Bar */}
-        <MenuBar onMenuSelect={handleNodeSelect} activeNode={activeNode} onThemeSelect={setGlobalTheme} />
-
-      {/* Main Action Toolbar */}
-      <ActionToolBar 
-        onAddClick={handleAddClick} 
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        canUndo={currentIndex > 0}
-        canRedo={currentIndex < history.length - 1}
-      />
-
-      {/* Main Content Area: Sidebar + Data Workspace */}
-      <div className="flex flex-1 overflow-hidden">
-        
-        {/* Navigation Sidebar (LEFT SIDE) */}
-        <SidebarNavTree 
-          onNodeSelect={handleNodeSelect} 
-          onNodeDoubleClick={handleNodeDoubleClick}
-          selectedNodeLabel={activeNode}
+      <div className="flex flex-col h-screen w-screen overflow-hidden bg-[color:var(--bg-app)] text-[color:var(--text-primary)] font-sans">
+        <MenuBar
+          onMenuSelect={handleNodeSelect}
+          activeNode={activeNode}
+          onThemeSelect={setGlobalTheme}
+          currentTheme={globalTheme}
+          density={density}
+          onDensityToggle={() => setDensity((d) => d === 'compact' ? 'cozy' : 'compact')}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          onRefresh={handleRefresh}
+          onExport={handleExport}
+          onExportCsv={handleExportCsv}
+          onImport={handleImport}
+          onHelp={() => setHelpOpen(true)}
+          canUndo={currentIndex > 0}
+          canRedo={currentIndex < history.length - 1}
         />
 
-        {/* Main Data Viewport (Center/Right) */}
-        <div className="flex-1 flex flex-col overflow-hidden border-l border-black/40">
-          {/* Breadcrumb Area (Simplified to match MT5) */}
-          <div className="h-6 bg-[#333333] border-b border-black/40 flex items-center px-2 gap-4 text-[11px] text-[#a0a0a0]">
-             <div className="flex items-center gap-1.5 text-[#e1e1e1] font-medium h-full px-2">
-                <Network size={12} />
-                <span>{activeNode === 'Groups' ? 'Groups (127)' : activeNode}</span>
-             </div>
-             <div className="flex items-center gap-1.5 hover:text-[#d1d1d1] cursor-default h-full px-2 ml-auto">
+        <ActionToolBar
+          onAddClick={handleAddClick}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          canUndo={currentIndex > 0}
+          canRedo={currentIndex < history.length - 1}
+          onRefresh={handleRefresh}
+          onExport={handleExport}
+          onImport={handleImport}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchInputRef={searchInputRef}
+        />
+
+        <div className="flex flex-1 overflow-hidden">
+          <SidebarNavTree
+            onNodeSelect={handleNodeSelect}
+            onNodeDoubleClick={handleNodeDoubleClick}
+            selectedNodeLabel={activeNode}
+          />
+
+          <div className="flex-1 flex flex-col overflow-hidden border-l border-[color:var(--border-subtle)]">
+            <TabBar
+              tabs={openTabs}
+              activeTab={activeTab}
+              onSelect={(t) => { setActiveTab(t); openTab(t); }}
+              onClose={closeTab}
+            />
+
+            {/* Breadcrumb / context bar */}
+            <div className="h-8 bg-[color:var(--bg-surface-2)] border-b border-[color:var(--border-subtle)] flex items-center px-3 gap-4 text-[11px] text-[color:var(--text-muted)]">
+              <div className="flex items-center gap-1.5 text-[color:var(--text-primary)] font-medium">
+                <Network size={12} className="text-[color:var(--text-muted)]" />
+                <span>{activeNode}</span>
+              </div>
+              {rowCount.total > 0 && (
+                <span className="font-mono tracking-tight">
+                  {searchQuery
+                    ? `Showing ${rowCount.filtered} of ${rowCount.total}`
+                    : `${rowCount.total} rows`}
+                </span>
+              )}
+              <div className="flex items-center gap-1.5 ml-auto text-[color:var(--text-secondary)]">
                 <Globe size={12} />
-                <span className="text-blue-400 font-mono tracking-tighter">4482 / 8 KB</span>
-             </div>
-          </div>
+                <span className="font-mono tracking-tight">4482 / 8 KB</span>
+              </div>
+            </div>
 
-          {/* Table Area */}
-          <AdminDataTable 
-            onRowDoubleClick={handleRowDoubleClick} 
-            viewType={activeNode}
-            onAddClick={handleAddClick}
-            initialServerTab={serverTargetTab}
-            refreshTrigger={refreshKey}
-          />
-        </div>
-      </div>
-
-      {/* Popups Overlay */}
-      <AnimatePresence>
-        {isPopupOpen && activeNode === 'Managers' && (
-          <ManagerPropertiesPopup 
-            manager={selectedGroup} 
-            onClose={() => setIsPopupOpen(false)} 
-          />
-        )}
-        {isPopupOpen && activeNode !== 'Managers' && (
-          <GroupPropertiesPopup 
-            group={selectedGroup} 
-            onClose={() => setIsPopupOpen(false)} 
-            refreshGroups={() => setRefreshKey(prev => prev + 1)}
-          />
-        )}
-        {isCreatingGroup && (
-          <CreateGroupPopup 
-            onClose={() => setIsCreatingGroup(false)} 
-            onCreated={() => setRefreshKey(prev => prev + 1)}
-          />
-        )}
-        {serverPopupData && (
-          <ServerPropertiesPopup 
-            isOpen={serverPopupData.isOpen} 
-            onClose={() => setServerPopupData(null)} 
-            serverName={serverPopupData.target} 
-            serverId={serverPopupData.id} 
-          />
-        )}
-      </AnimatePresence>
-
-      {/* System Taskbar / Footer */}
-      <footer className="h-6 bg-[#007acc] flex items-center px-3 justify-between select-none z-50">
-        <div className="flex items-center gap-3">
-          <div className="text-[11px] text-white flex items-center gap-1.5 font-medium">
-            <div className="w-2.5 h-2.5 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.7)] animate-pulse"></div>
-            <span>Connected to HEXY-PROD-01</span>
+            <AdminDataTable
+              onRowDoubleClick={handleRowDoubleClick}
+              viewType={activeNode}
+              onAddClick={handleAddClick}
+              initialServerTab={serverTargetTab}
+              refreshTrigger={refreshKey}
+              searchQuery={searchQuery}
+              onCountChange={setRowCount}
+            />
           </div>
         </div>
-        <div className="flex items-center gap-4 text-[10px] text-white/90 font-mono tracking-tight">
-          <span>CAP</span>
-          <span>NUM</span>
-          <span>SCRL</span>
-          <div className="bg-white/15 px-3 h-4 flex items-center rounded-sm font-semibold tabular-nums">
-            18:42:05
+
+        <AnimatePresence>
+          {isPopupOpen && activeNode === 'Managers' && (
+            <ManagerPropertiesPopup manager={selectedGroup} onClose={() => setIsPopupOpen(false)} />
+          )}
+          {isPopupOpen && activeNode !== 'Managers' && (
+            <GroupPropertiesPopup
+              group={selectedGroup}
+              onClose={() => setIsPopupOpen(false)}
+              refreshGroups={() => setRefreshKey((p) => p + 1)}
+            />
+          )}
+          {isCreatingGroup && (
+            <CreateGroupPopup
+              onClose={() => setIsCreatingGroup(false)}
+              onCreated={() => setRefreshKey((p) => p + 1)}
+            />
+          )}
+          {serverPopupData && (
+            <ServerPropertiesPopup
+              isOpen={serverPopupData.isOpen}
+              onClose={() => setServerPopupData(null)}
+              serverName={serverPopupData.target}
+              serverId={serverPopupData.id}
+            />
+          )}
+        </AnimatePresence>
+
+        <HelpModal open={helpOpen} onOpenChange={setHelpOpen} />
+
+        {/* Status bar */}
+        <footer className="h-7 bg-[color:var(--bg-surface-2)] border-t border-[color:var(--border-subtle)] flex items-center px-3 justify-between select-none text-[11px] text-[color:var(--text-secondary)]">
+          <div className="flex items-center gap-2" title={connText}>
+            <StatusDot tone={connTone} />
+            <span className="font-medium">{connText}</span>
           </div>
-        </div>
-      </footer>
+          <div className="flex items-center gap-4 text-[color:var(--text-muted)] font-mono tracking-tight">
+            <span className={kb.caps   ? 'text-[color:var(--text-primary)]' : ''}>CAP</span>
+            <span className={kb.num    ? 'text-[color:var(--text-primary)]' : ''}>NUM</span>
+            <span className={kb.scroll ? 'text-[color:var(--text-primary)]' : ''}>SCRL</span>
+            <span className="tabular-nums text-[color:var(--text-primary)]">{formatTime(now)}</span>
+          </div>
+        </footer>
+
+        <ToastViewport />
       </div>
     </>
   );
 };
+
+const App = () => (
+  <TooltipProvider>
+    <ToastProvider>
+      <AppInner />
+    </ToastProvider>
+  </TooltipProvider>
+);
 
 export default App;
