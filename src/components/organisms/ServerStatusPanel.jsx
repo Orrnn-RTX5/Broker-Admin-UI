@@ -7,9 +7,9 @@ const OverviewMiniGraph = ({ type }) => {
        'CPU': {
            labels: [
                { c: '#3b82f6', t: 'CPU total: 4%, 8 cores', v: '3', bg: '#b3c7f9' },
-               { c: '#4ade80', t: 'CPU process: 0%', v: '0', bg: '#e0e0e0' },
+               { c: '#4ade80', t: 'CPU process: 0%', v: '0', bg: 'var(--text-primary)' },
                { c: '#f59e0b', t: 'CPU DPC: 0', v: '0', bg: '#fcd34d' },
-               { c: '#06b6d4', t: 'CPU interrupts: 0', v: '0', bg: '#e0e0e0' }
+               { c: '#06b6d4', t: 'CPU interrupts: 0', v: '0', bg: 'var(--text-primary)' }
            ],
            unit: '%',
            lines: [{ s: 'spike-blue', c: '#3b82f6' }, { s: 'flat', c: '#4ade80' }, { s: 'flat', c: '#f59e0b' }, { s: 'flat', c: '#06b6d4' }]
@@ -25,14 +25,14 @@ const OverviewMiniGraph = ({ type }) => {
        'Packets': {
            labels: [
                { c: '#3b82f6', t: 'Packets: 64 492', v: '229 835', bg: '#b3c7f9' },
-               { c: '#4ade80', t: 'Retransmits: 28, 0.04%', v: '123\n0.05%', isMulti: true, bg: '#e0e0e0' }
+               { c: '#4ade80', t: 'Retransmits: 28, 0.04%', v: '123\n0.05%', isMulti: true, bg: 'var(--text-primary)' }
            ],
            lines: [{ s: 'flat', c: '#4ade80' }, { s: 'steady-blue', c: '#3b82f6' }]
        },
        'ReadWrite': {
            labels: [
                { c: '#3b82f6', t: 'Read: 0 MB', v: '0 MB', bg: '#b3c7f9' },
-               { c: '#4ade80', t: 'Write: 0 MB', v: '0 MB', bg: '#e0e0e0' }
+               { c: '#4ade80', t: 'Write: 0 MB', v: '0 MB', bg: 'var(--text-primary)' }
            ],
            unit: 'MB',
            lines: [{ s: 'flat', c: '#4ade80' }, { s: 'sawtooth-blue', c: '#3b82f6' }]
@@ -40,7 +40,7 @@ const OverviewMiniGraph = ({ type }) => {
        'Deals': {
            labels: [
                { c: '#3b82f6', t: 'Deals: 0', v: '0', bg: '#b3c7f9' },
-               { c: '#4ade80', t: 'Requests: 0', v: '7', bg: '#e0e0e0' }
+               { c: '#4ade80', t: 'Requests: 0', v: '7', bg: 'var(--text-primary)' }
            ],
            lines: [{ s: 'flat', c: '#3b82f6' }, { s: 'erratic-green', c: '#4ade80' }]
        },
@@ -54,7 +54,7 @@ const OverviewMiniGraph = ({ type }) => {
        'Handles': {
            labels: [
                { c: '#3b82f6', t: 'Handles total: 115 662', v: '115 411', bg: '#b3c7f9' },
-               { c: '#4ade80', t: 'Handles process: 2 960', v: '2 936', bg: '#e0e0e0' }
+               { c: '#4ade80', t: 'Handles process: 2 960', v: '2 936', bg: 'var(--text-primary)' }
            ],
            lines: [{ s: 'low-flat', c: '#3b82f6' }, { s: 'flat', c: '#4ade80' }]
        },
@@ -95,17 +95,17 @@ const OverviewMiniGraph = ({ type }) => {
     };
 
     return (
-       <div className="relative bg-[#1a1a1a] flex flex-col overflow-hidden group">
+       <div className="relative bg-[color:var(--bg-app)] flex flex-col overflow-hidden group">
           {/* Top Edge Labels */}
           <div className="absolute top-[6px] left-[8px] z-20 flex flex-col text-[10.5px] whitespace-nowrap pointer-events-none tracking-tight">
              {cfg.labels.map((l, i) => (
                 <div key={i} className="flex">
                    <div style={{color: l.c}} className="font-bold mr-1.5">-</div>
-                   <div className="text-[#a0a0a0] drop-shadow-md">{l.t}</div>
+                   <div className="text-[color:var(--text-muted)] drop-shadow-md">{l.t}</div>
                 </div>
              ))}
           </div>
-          {cfg.unit && <div className="absolute top-[6px] right-[8px] z-20 text-[10.5px] text-[#a0a0a0] font-sans">{cfg.unit}</div>}
+          {cfg.unit && <div className="absolute top-[6px] right-[8px] z-20 text-[10.5px] text-[color:var(--text-muted)] font-sans">{cfg.unit}</div>}
 
           {/* Core Paths Container */}
           <div className="flex-1 relative mt-[14px]">
@@ -134,14 +134,14 @@ const OverviewMiniGraph = ({ type }) => {
 const DeviceRow = ({ indent = 0, expanded = false, expandable = false, icon: Icon, iconColor='text-[#60a5fa]', text, statBar }) => {
     return (
        <div className="flex flex-col">
-          <div className="flex items-center gap-1.5 px-1 py-[3px] border-b border-[#2a2a2a] hover:bg-[#252526] cursor-pointer select-none">
+          <div className="flex items-center gap-1.5 px-1 py-[3px] border-b border-[color:var(--bg-surface-1)] hover:bg-[color:var(--bg-surface-1)] cursor-pointer select-none">
              {/* Indent spacer */}
              <div style={{width: `${indent * 14}px`}} className="shrink-0" />
              
              {/* Expander Icon */}
              <div className="w-[12px] flex items-center justify-center shrink-0">
                 {expandable && (
-                   expanded ? <ChevronDown size={14} className="text-[#a0a0a0]" /> : <ChevronRight size={14} className="text-[#a0a0a0]" />
+                   expanded ? <ChevronDown size={14} className="text-[color:var(--text-muted)]" /> : <ChevronRight size={14} className="text-[color:var(--text-muted)]" />
                 )}
              </div>
              
@@ -149,7 +149,7 @@ const DeviceRow = ({ indent = 0, expanded = false, expandable = false, icon: Ico
              {Icon && <Icon size={12} className={`${iconColor} shrink-0`} />}
              
              {/* Main Text */}
-             <div className="text-[11.5px] text-[#e1e1e1] flex-1 whitespace-nowrap">
+             <div className="text-[11.5px] text-[color:var(--text-primary)] flex-1 whitespace-nowrap">
                 {text}
              </div>
              
@@ -162,13 +162,13 @@ const DeviceRow = ({ indent = 0, expanded = false, expandable = false, icon: Ico
                               <div className="w-[60px] flex items-center">
                                  <div className="h-[3px] bg-[#ef4444] w-[30%]"/><div className="h-[3px] bg-[#22c55e] w-[70%] relative"><div className="absolute h-[7px] w-[2px] bg-[#4ade80] top-[-2px] shadow-[0_0_3px_#4ade80] left-[5px]"/></div>
                               </div>
-                              <span className="text-[11px] text-[#a0a0a0] w-[45px] text-left">read: 543</span>
+                              <span className="text-[11px] text-[color:var(--text-muted)] w-[45px] text-left">read: 543</span>
                            </div>
                            <div className="flex items-center gap-3">
                               <div className="w-[60px] flex items-center">
                                  <div className="h-[3px] bg-[#ef4444] w-[30%]"/><div className="h-[3px] bg-[#22c55e] w-[70%] relative"><div className="absolute h-[7px] w-[2px] bg-[#4ade80] top-[-2px] shadow-[0_0_3px_#4ade80] left-[20px]"/></div>
                               </div>
-                              <span className="text-[11px] text-[#a0a0a0] w-[30px]">write:</span>
+                              <span className="text-[11px] text-[color:var(--text-muted)] w-[30px]">write:</span>
                               <span className="text-[11.5px] text-white w-[50px] text-right">268 MB/s</span>
                            </div>
                        </div>
@@ -177,7 +177,7 @@ const DeviceRow = ({ indent = 0, expanded = false, expandable = false, icon: Ico
                           <div className="w-[60px] flex items-center">
                              <div className="h-[3px] bg-[#ef4444] w-[30%]"/><div className="h-[3px] bg-[#22c55e] w-[70%] relative"><div className="absolute h-[7px] w-[2px] bg-[#4ade80] top-[-2px] shadow-[0_0_3px_#4ade80] left-[40%]"/></div>
                           </div>
-                          <span className="text-[11px] text-[#a0a0a0] w-[60px] text-right">{statBar.label}</span>
+                          <span className="text-[11px] text-[color:var(--text-muted)] w-[60px] text-right">{statBar.label}</span>
                           <span className="text-[11.5px] text-white w-[60px] text-right">{statBar.val}</span>
                        </div>
                    )}
@@ -214,22 +214,22 @@ const StackedGraphRow = ({ isLast, isShort, cfg }) => {
     };
 
     return (
-       <div className={`relative bg-[#1a1a1a] flex flex-col group border-b border-[#333] ${isShort ? 'h-[120px] shrink-0' : 'flex-1'}`}>
+       <div className={`relative bg-[color:var(--bg-app)] flex flex-col group border-b border-[#333] ${isShort ? 'h-[120px] shrink-0' : 'flex-1'}`}>
           {/* Legend Labels */}
           <div className="absolute top-[6px] left-[8px] z-20 flex flex-col text-[10.5px] whitespace-nowrap pointer-events-none tracking-tight">
              {cfg.labels.map((l, i) => (
                 <div key={i} className="flex">
                    <div style={{color: l.c}} className="font-bold mr-1.5">-</div>
-                   <div className="text-[#a0a0a0] drop-shadow-md">{l.t}</div>
+                   <div className="text-[color:var(--text-muted)] drop-shadow-md">{l.t}</div>
                 </div>
              ))}
           </div>
 
           {/* Unit / Y-Axis Text Grid */}
-          <div className={`absolute top-0 right-0 w-[45px] z-20 border-l border-[#333] pointer-events-none select-none bg-[#1e1e1e] ${isLast ? 'bottom-[16px]' : 'bottom-[4px]'}`}>
-             {cfg.unit && <div className="text-[10px] text-[#a0a0a0] font-sans absolute right-[50px] top-[4px] whitespace-nowrap">{cfg.unit}</div>}
+          <div className={`absolute top-0 right-0 w-[45px] z-20 border-l border-[#333] pointer-events-none select-none bg-[color:var(--bg-app)] ${isLast ? 'bottom-[16px]' : 'bottom-[4px]'}`}>
+             {cfg.unit && <div className="text-[10px] text-[color:var(--text-muted)] font-sans absolute right-[50px] top-[4px] whitespace-nowrap">{cfg.unit}</div>}
              {cfg.yAxis.map((yVal, idx) => (
-                 <div key={idx} className="text-[9.5px] text-[#a0a0a0] pr-1.5 leading-none absolute right-0 font-sans tracking-tight" 
+                 <div key={idx} className="text-[9.5px] text-[color:var(--text-muted)] pr-1.5 leading-none absolute right-0 font-sans tracking-tight" 
                       style={{
                           top: `${(idx / (cfg.yAxis.length - 1)) * 100}%`, 
                           transform: idx === 0 ? 'translateY(4px)' : idx === cfg.yAxis.length - 1 ? 'translateY(-12px)' : 'translateY(-50%)'
@@ -260,7 +260,7 @@ const StackedGraphRow = ({ isLast, isShort, cfg }) => {
                 ))}
              </div>
              {isLast && (
-                 <div className="absolute top-[4px] left-[5px] right-[5px] flex justify-between text-[9px] text-[#a0a0a0] font-sans tracking-tight">
+                 <div className="absolute top-[4px] left-[5px] right-[5px] flex justify-between text-[9px] text-[color:var(--text-muted)] font-sans tracking-tight">
                      <span>2026.03.30</span><span>02:00</span><span>06:00</span><span>10:00</span><span>14:00</span><span>18:00</span><span>22:00</span>
                      <span>02:00</span><span>06:00</span><span>10:00</span><span>14:00</span><span>18:00</span><span>22:00</span><span>02:00</span><span>06:00</span><span>10:00</span>
                  </div>
@@ -297,23 +297,23 @@ const ThreadsTab = () => {
    );
 
    return (
-       <div className="flex-1 overflow-auto bg-[#1e1e1e] border-t border-[#333] no-scrollbar">
+       <div className="flex-1 overflow-auto bg-[color:var(--bg-app)] border-t border-[#333] no-scrollbar">
            <div className="flex flex-col min-w-[800px] pb-[40px]">
                {threadsData.map((row, i) => (
-                   <div key={i} className={`flex items-center text-[11px] hover:bg-[#2a2d3e] border-b border-[#2a2a2a] py-[3px] px-1 cursor-pointer ${i%2===0 ? 'bg-[#1e1e1e]' : 'bg-[#222]'} transition-colors`}>
+                   <div key={i} className={`flex items-center text-[11px] hover:bg-[#2a2d3e] border-b border-[color:var(--bg-surface-1)] py-[3px] px-1 cursor-pointer ${i%2===0 ? 'bg-[color:var(--bg-app)]' : 'bg-[#222]'} transition-colors`}>
                        <div className="w-[280px] flex items-center gap-1.5 shrink-0 border-r border-[#333] px-1">
                            <IconBox type={row.type} />
-                           <span className="text-[#e1e1e1] font-sans tracking-tight">{row.name}</span>
+                           <span className="text-[color:var(--text-primary)] font-sans tracking-tight">{row.name}</span>
                        </div>
-                       <div className="w-[60px] text-right text-[#e1e1e1] shrink-0 border-r border-[#333] pr-2">{row.p}</div>
-                       <div className="flex-1 text-right text-[#e1e1e1] shrink-0 border-r border-[#333] pr-2">{row.v1}</div>
-                       <div className="w-[120px] text-right text-[#e1e1e1] shrink-0 border-r border-[#333] pr-2">{row.v2}</div>
-                       <div className="w-[100px] text-right text-[#e1e1e1] shrink-0 border-r border-[#333] pr-2">{row.v3}</div>
-                       <div className="w-[100px] text-right text-[#e1e1e1] shrink-0 pr-2">{row.v4}</div>
+                       <div className="w-[60px] text-right text-[color:var(--text-primary)] shrink-0 border-r border-[#333] pr-2">{row.p}</div>
+                       <div className="flex-1 text-right text-[color:var(--text-primary)] shrink-0 border-r border-[#333] pr-2">{row.v1}</div>
+                       <div className="w-[120px] text-right text-[color:var(--text-primary)] shrink-0 border-r border-[#333] pr-2">{row.v2}</div>
+                       <div className="w-[100px] text-right text-[color:var(--text-primary)] shrink-0 border-r border-[#333] pr-2">{row.v3}</div>
+                       <div className="w-[100px] text-right text-[color:var(--text-primary)] shrink-0 pr-2">{row.v4}</div>
                    </div>
                ))}
                {[...Array(30)].map((_, i) => (
-                   <div key={`fill-${i}`} className={`flex border-b border-[#2a2a2a] h-[21px] ${ (i+threadsData.length)%2===0 ? 'bg-[#1e1e1e]' : 'bg-[#222]'}`}>
+                   <div key={`fill-${i}`} className={`flex border-b border-[color:var(--bg-surface-1)] h-[21px] ${ (i+threadsData.length)%2===0 ? 'bg-[color:var(--bg-app)]' : 'bg-[#222]'}`}>
                        <div className="w-[280px] border-r border-[#333]"></div>
                        <div className="w-[60px] border-r border-[#333]"></div>
                        <div className="flex-1 border-r border-[#333]"></div>
@@ -352,37 +352,37 @@ const FirewallTab = () => {
     );
 
     return (
-        <div className="flex-1 flex flex-col bg-[#1e1e1e] border-t border-[#333] overflow-hidden">
-            <div className="flex bg-[#333] border-b border-[#444] sticky top-0 z-10 text-[10.5px] text-[#d1d1d1] font-sans py-1 cursor-default shrink-0">
-                <div className="w-[280px] border-r border-[#444] px-1.5 flex items-center justify-between">Name <ChevronDown size={11} className="text-[#a0a0a0] opacity-50" /></div>
-                <div className="w-[110px] border-r border-[#444] px-1.5 flex items-center justify-between">Profiles <ChevronDown size={11} className="text-[#a0a0a0] opacity-50" /></div>
-                <div className="w-[70px] border-r border-[#444] px-1.5 flex items-center justify-between">Action <ChevronDown size={11} className="text-[#a0a0a0] opacity-50" /></div>
-                <div className="w-[180px] border-r border-[#444] px-1.5 flex items-center justify-between">Address <ChevronDown size={11} className="text-[#a0a0a0] opacity-50" /></div>
-                <div className="w-[100px] border-r border-[#444] px-1.5 flex items-center justify-between">Port <ChevronDown size={11} className="text-[#a0a0a0] opacity-50" /></div>
-                <div className="w-[70px] border-r border-[#444] px-1.5 flex items-center justify-between">Protocol <ChevronDown size={11} className="text-[#a0a0a0] opacity-50" /></div>
-                <div className="w-[70px] border-r border-[#444] px-1.5 flex items-center justify-between">Interface <ChevronDown size={11} className="text-[#a0a0a0] opacity-50" /></div>
-                <div className="flex-1 px-1.5 flex items-center justify-between">Application <ChevronDown size={11} className="text-[#a0a0a0] opacity-50" /></div>
+        <div className="flex-1 flex flex-col bg-[color:var(--bg-app)] border-t border-[#333] overflow-hidden">
+            <div className="flex bg-[#333] border-b border-[#444] sticky top-0 z-10 text-[10.5px] text-[color:var(--text-primary)] font-sans py-1 cursor-default shrink-0">
+                <div className="w-[280px] border-r border-[#444] px-1.5 flex items-center justify-between">Name <ChevronDown size={11} className="text-[color:var(--text-muted)] opacity-50" /></div>
+                <div className="w-[110px] border-r border-[#444] px-1.5 flex items-center justify-between">Profiles <ChevronDown size={11} className="text-[color:var(--text-muted)] opacity-50" /></div>
+                <div className="w-[70px] border-r border-[#444] px-1.5 flex items-center justify-between">Action <ChevronDown size={11} className="text-[color:var(--text-muted)] opacity-50" /></div>
+                <div className="w-[180px] border-r border-[#444] px-1.5 flex items-center justify-between">Address <ChevronDown size={11} className="text-[color:var(--text-muted)] opacity-50" /></div>
+                <div className="w-[100px] border-r border-[#444] px-1.5 flex items-center justify-between">Port <ChevronDown size={11} className="text-[color:var(--text-muted)] opacity-50" /></div>
+                <div className="w-[70px] border-r border-[#444] px-1.5 flex items-center justify-between">Protocol <ChevronDown size={11} className="text-[color:var(--text-muted)] opacity-50" /></div>
+                <div className="w-[70px] border-r border-[#444] px-1.5 flex items-center justify-between">Interface <ChevronDown size={11} className="text-[color:var(--text-muted)] opacity-50" /></div>
+                <div className="flex-1 px-1.5 flex items-center justify-between">Application <ChevronDown size={11} className="text-[color:var(--text-muted)] opacity-50" /></div>
             </div>
 
             <div className="flex-1 overflow-auto no-scrollbar">
                 <div className="flex flex-col min-w-[1000px] pb-[40px]">
                    {fwData.map((row, i) => (
-                       <div key={i} className={`flex items-center text-[10.5px] hover:bg-[#2a2d3e] border-b border-[#2a2a2a] py-[3px] cursor-pointer ${i%2===0 ? 'bg-[#1e1e1e]' : 'bg-[#222]'} transition-colors`}>
+                       <div key={i} className={`flex items-center text-[10.5px] hover:bg-[#2a2d3e] border-b border-[color:var(--bg-surface-1)] py-[3px] cursor-pointer ${i%2===0 ? 'bg-[color:var(--bg-app)]' : 'bg-[#222]'} transition-colors`}>
                            <div className="w-[280px] flex items-center gap-1.5 shrink-0 border-r border-[#333] px-1.5 whitespace-nowrap overflow-hidden">
                                <CheckIcon />
-                               <span className="text-[#e1e1e1] truncate">{row.n}</span>
+                               <span className="text-[color:var(--text-primary)] truncate">{row.n}</span>
                            </div>
-                           <div className="w-[110px] text-right text-[#a0a0a0] shrink-0 border-r border-[#333] px-1.5 truncate">{row.pr}</div>
-                           <div className="w-[70px] text-left text-[#e1e1e1] shrink-0 border-r border-[#333] px-1.5 truncate pl-3">{row.act}</div>
-                           <div className="w-[180px] text-right text-[#a0a0a0] shrink-0 border-r border-[#333] px-1.5 truncate">{row.addr}</div>
-                           <div className="w-[100px] text-right text-[#a0a0a0] shrink-0 border-r border-[#333] px-1.5 truncate">{row.port}</div>
-                           <div className="w-[70px] text-right text-[#a0a0a0] shrink-0 border-r border-[#333] px-1.5 truncate">{row.proto}</div>
-                           <div className="w-[70px] text-right text-[#a0a0a0] shrink-0 border-r border-[#333] px-1.5 truncate">{row.inf}</div>
-                           <div className="flex-1 text-right text-[#a0a0a0] px-1.5 truncate">{row.app}</div>
+                           <div className="w-[110px] text-right text-[color:var(--text-muted)] shrink-0 border-r border-[#333] px-1.5 truncate">{row.pr}</div>
+                           <div className="w-[70px] text-left text-[color:var(--text-primary)] shrink-0 border-r border-[#333] px-1.5 truncate pl-3">{row.act}</div>
+                           <div className="w-[180px] text-right text-[color:var(--text-muted)] shrink-0 border-r border-[#333] px-1.5 truncate">{row.addr}</div>
+                           <div className="w-[100px] text-right text-[color:var(--text-muted)] shrink-0 border-r border-[#333] px-1.5 truncate">{row.port}</div>
+                           <div className="w-[70px] text-right text-[color:var(--text-muted)] shrink-0 border-r border-[#333] px-1.5 truncate">{row.proto}</div>
+                           <div className="w-[70px] text-right text-[color:var(--text-muted)] shrink-0 border-r border-[#333] px-1.5 truncate">{row.inf}</div>
+                           <div className="flex-1 text-right text-[color:var(--text-muted)] px-1.5 truncate">{row.app}</div>
                        </div>
                    ))}
                    {[...Array(30)].map((_, i) => (
-                       <div key={`fillfw-${i}`} className={`flex border-b border-[#2a2a2a] h-[21px] ${ (i+fwData.length)%2===0 ? 'bg-[#1e1e1e]' : 'bg-[#222]'}`}>
+                       <div key={`fillfw-${i}`} className={`flex border-b border-[color:var(--bg-surface-1)] h-[21px] ${ (i+fwData.length)%2===0 ? 'bg-[color:var(--bg-app)]' : 'bg-[#222]'}`}>
                            <div className="w-[280px] border-r border-[#333]"></div>
                            <div className="w-[110px] border-r border-[#333]"></div>
                            <div className="w-[70px] border-r border-[#333]"></div>
@@ -449,7 +449,7 @@ const ServerStatusPanel = ({ serverName = "Main Trade Server", initialTab }) => 
    ];
 
    return (
-      <div className="flex-1 bg-[#1e1e1e] flex flex-col h-full font-sans text-[#e1e1e1] overflow-hidden">
+      <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col h-full font-sans text-[color:var(--text-primary)] overflow-hidden">
          
          {/* Main Content Area */}
          <div className="flex-1 flex flex-col overflow-auto no-scrollbar">
@@ -462,11 +462,11 @@ const ServerStatusPanel = ({ serverName = "Main Trade Server", initialTab }) => 
                            <h1 className="text-xl font-medium text-white">{serverName}</h1>
                            <Settings size={14} className="text-[#3b82f6] cursor-pointer hover:text-blue-400" />
                         </div>
-                        <div className="text-[11px] text-[#a0a0a0] tracking-wide">
+                        <div className="text-[11px] text-[color:var(--text-muted)] tracking-wide">
                            Version: 5.00 build 5370 (17 Oct 2025), last boot 2026.03.29 03:57
                         </div>
                      </div>
-                     <button className="flex items-center gap-2 px-3 py-1 border border-[#555] rounded-[3px] hover:bg-[#333] bg-transparent text-[11px] text-[#e1e1e1] transition-colors mt-2">
+                     <button className="flex items-center gap-2 px-3 py-1 border border-[#555] rounded-[3px] hover:bg-[#333] bg-transparent text-[11px] text-[color:var(--text-primary)] transition-colors mt-2">
                         <RefreshCw size={12} className="text-[#4ade80]" />
                         Restart server
                      </button>
@@ -477,11 +477,11 @@ const ServerStatusPanel = ({ serverName = "Main Trade Server", initialTab }) => 
                   {/* Hardware Info Row */}
                   <div className="grid grid-cols-4 gap-8 max-w-4xl mt-[-2px]">
                      <div>
-                        <div className="text-[11px] text-[#a0a0a0] mb-1">Operating system</div>
+                        <div className="text-[11px] text-[color:var(--text-muted)] mb-1">Operating system</div>
                         <div className="text-[11px] text-white">Windows Server 2022 Standard</div>
                      </div>
                      <div>
-                        <div className="text-[11px] text-[#a0a0a0] mb-1">Processor</div>
+                        <div className="text-[11px] text-[color:var(--text-muted)] mb-1">Processor</div>
                         <div className="text-[11px] text-white">8 x Intel Xeon E-2234 @ 3.60GHz</div>
                      </div>
                      <div>
@@ -496,20 +496,20 @@ const ServerStatusPanel = ({ serverName = "Main Trade Server", initialTab }) => 
 
                   {/* Databases Section */}
                   <div className="flex flex-col gap-3 mt-4">
-                     <div className="text-[13px] text-[#e1e1e1]">Databases</div>
+                     <div className="text-[13px] text-[color:var(--text-primary)]">Databases</div>
                      <div className="grid grid-cols-6 gap-4 max-w-4xl">
-                        <div><div className="text-[11px] text-[#a0a0a0] mb-1">Groups</div><div className="text-[11px] text-white">127</div></div>
-                        <div><div className="text-[11px] text-[#a0a0a0] mb-1">Accounts</div><div className="text-[11px] text-white">9 789</div></div>
-                        <div><div className="text-[11px] text-[#a0a0a0] mb-1">Real accounts</div><div className="text-[11px] text-white">8 752 / 25 000</div></div>
-                        <div><div className="text-[11px] text-[#a0a0a0] mb-1">Positions</div><div className="text-[11px] text-white">1 663</div></div>
-                        <div><div className="text-[11px] text-[#a0a0a0] mb-1">Orders</div><div className="text-[11px] text-white">103 / 2 377 099</div></div>
-                        <div><div className="text-[11px] text-[#a0a0a0] mb-1">Deals</div><div className="text-[11px] text-white">1 474 882</div></div>
+                        <div><div className="text-[11px] text-[color:var(--text-muted)] mb-1">Groups</div><div className="text-[11px] text-white">127</div></div>
+                        <div><div className="text-[11px] text-[color:var(--text-muted)] mb-1">Accounts</div><div className="text-[11px] text-white">9 789</div></div>
+                        <div><div className="text-[11px] text-[color:var(--text-muted)] mb-1">Real accounts</div><div className="text-[11px] text-white">8 752 / 25 000</div></div>
+                        <div><div className="text-[11px] text-[color:var(--text-muted)] mb-1">Positions</div><div className="text-[11px] text-white">1 663</div></div>
+                        <div><div className="text-[11px] text-[color:var(--text-muted)] mb-1">Orders</div><div className="text-[11px] text-white">103 / 2 377 099</div></div>
+                        <div><div className="text-[11px] text-[color:var(--text-muted)] mb-1">Deals</div><div className="text-[11px] text-white">1 474 882</div></div>
                      </div>
                   </div>
 
                   {/* Maximum, last 24hrs */}
                   <div className="flex flex-col gap-3 mt-4">
-                     <div className="text-[13px] text-[#e1e1e1]">Maximum, last 24hrs</div>
+                     <div className="text-[13px] text-[color:var(--text-primary)]">Maximum, last 24hrs</div>
                      <div className="grid grid-cols-6 gap-4 max-w-4xl">
                         <div><div className="text-[11px] text-[#3b82f6] mb-1 cursor-pointer hover:underline hover:text-blue-400">Connections</div><div className="text-[11px] text-white">24</div></div>
                         <div><div className="text-[11px] text-[#3b82f6] mb-1 cursor-pointer hover:underline hover:text-blue-400">Active Sockets</div><div className="text-[11px] text-white">161</div></div>
@@ -522,28 +522,28 @@ const ServerStatusPanel = ({ serverName = "Main Trade Server", initialTab }) => 
 
                   {/* Ping Section */}
                   <div className="flex flex-col gap-3 mt-4">
-                     <div className="text-[13px] text-[#e1e1e1]">Ping</div>
+                     <div className="text-[13px] text-[color:var(--text-primary)]">Ping</div>
                      <div className="flex gap-16 max-w-4xl text-[11px]">
                         <div className="flex flex-col gap-2">
-                           <div className="flex justify-between w-48"><span className="text-[#d1d1d1]">History Server</span><span className="text-[#e1e1e1]">0.01 ms</span></div>
-                           <div className="flex justify-between w-48"><span className="text-[#d1d1d1]">Access Server</span><span className="text-[#e1e1e1]">0.01 ms</span></div>
-                           <div className="flex justify-between w-48"><span className="text-[#d1d1d1]">Access Server</span><span className="text-[#e1e1e1]">5.42 ms</span></div>
+                           <div className="flex justify-between w-48"><span className="text-[color:var(--text-primary)]">History Server</span><span className="text-[color:var(--text-primary)]">0.01 ms</span></div>
+                           <div className="flex justify-between w-48"><span className="text-[color:var(--text-primary)]">Access Server</span><span className="text-[color:var(--text-primary)]">0.01 ms</span></div>
+                           <div className="flex justify-between w-48"><span className="text-[color:var(--text-primary)]">Access Server</span><span className="text-[color:var(--text-primary)]">5.42 ms</span></div>
                         </div>
                         <div className="flex flex-col gap-2">
-                           <div className="flex justify-between w-56"><span className="text-[#d1d1d1]">Local Main Status Server</span><span className="text-[#e1e1e1]">0.01 ms</span></div>
-                           <div className="flex justify-between w-56"><span className="text-[#d1d1d1]">TradeProcessor SQL_Export</span><span className="text-[#e1e1e1]">1.43 ms</span></div>
-                           <div className="flex justify-between w-56"><span className="text-[#d1d1d1]">MainTrade Backup Server</span><span className="text-[#e1e1e1]">5.43 ms</span></div>
-                           <div className="flex justify-between w-56"><span className="text-[#d1d1d1]">History Backup Server</span><span className="text-[#e1e1e1]">5.44 ms</span></div>
+                           <div className="flex justify-between w-56"><span className="text-[color:var(--text-primary)]">Local Main Status Server</span><span className="text-[color:var(--text-primary)]">0.01 ms</span></div>
+                           <div className="flex justify-between w-56"><span className="text-[color:var(--text-primary)]">TradeProcessor SQL_Export</span><span className="text-[color:var(--text-primary)]">1.43 ms</span></div>
+                           <div className="flex justify-between w-56"><span className="text-[color:var(--text-primary)]">MainTrade Backup Server</span><span className="text-[color:var(--text-primary)]">5.43 ms</span></div>
+                           <div className="flex justify-between w-56"><span className="text-[color:var(--text-primary)]">History Backup Server</span><span className="text-[color:var(--text-primary)]">5.44 ms</span></div>
                         </div>
                      </div>
                   </div>
 
                   {/* Recommendations */}
                   <div className="flex flex-col gap-3 mt-4 border-t border-[#333] pt-6 pb-4">
-                     <div className="text-[13px] text-[#e1e1e1]">Best practices and recommendations</div>
+                     <div className="text-[13px] text-[color:var(--text-primary)]">Best practices and recommendations</div>
                      <div>
-                        <div className="flex items-center gap-1.5 text-[11px] text-[#e1e1e1] mb-2 cursor-pointer w-max select-none">
-                           <ChevronDown size={14} className="text-[#a0a0a0]"/>
+                        <div className="flex items-center gap-1.5 text-[11px] text-[color:var(--text-primary)] mb-2 cursor-pointer w-max select-none">
+                           <ChevronDown size={14} className="text-[color:var(--text-muted)]"/>
                            System
                         </div>
                         <div className="text-[11px] text-[#3b82f6] ml-6 max-w-3xl leading-relaxed cursor-pointer hover:underline">
@@ -565,18 +565,18 @@ const ServerStatusPanel = ({ serverName = "Main Trade Server", initialTab }) => 
                    <OverviewMiniGraph type="Disk" />
                </div>
             ) : bottomTab === 'Devices' ? (
-                <div className="flex-1 flex flex-col overflow-auto bg-[#1e1e1e]">
+                <div className="flex-1 flex flex-col overflow-auto bg-[color:var(--bg-app)]">
                     <div className="px-3 pb-3 pt-2">
                         <div className="text-xl text-white font-medium mb-[2px]">{serverName}</div>
-                        <div className="text-[12px] text-[#e1e1e1]">Overall performance index: 32%</div>
+                        <div className="text-[12px] text-[color:var(--text-primary)]">Overall performance index: 32%</div>
                     </div>
          
                     <div className="flex flex-col py-1 overflow-x-auto no-scrollbar border-t border-[#333]">
                         <div className="flex flex-col min-w-[900px] w-full">
                             <div className="flex items-center gap-1.5 px-0.5 py-[3px] border border-[#3b82f6] bg-[#1a2d48] cursor-pointer w-max mb-1.5 ml-1">
-                               <div className="w-[10px] h-[10px] bg-transparent border border-[#a0a0a0] flex items-center justify-center text-[#a0a0a0] text-[8px] font-bold shrink-0 ml-[1px]">-</div>
+                               <div className="w-[10px] h-[10px] bg-transparent border border-[color:var(--text-muted)] flex items-center justify-center text-[color:var(--text-muted)] text-[8px] font-bold shrink-0 ml-[1px]">-</div>
                                <Monitor size={14} className="text-[#4ade80] mx-0.5" />
-                               <span className="text-[11.5px] text-[#e1e1e1] pr-2 shadow-sm font-sans">ZLD-FLX-M5LP1 / Windows Server 2022 build 20348, AVX2/CLANG, Windows license activated</span>
+                               <span className="text-[11.5px] text-[color:var(--text-primary)] pr-2 shadow-sm font-sans">ZLD-FLX-M5LP1 / Windows Server 2022 build 20348, AVX2/CLANG, Windows license activated</span>
                             </div>
          
                             {/* Children */}
@@ -611,37 +611,37 @@ const ServerStatusPanel = ({ serverName = "Main Trade Server", initialTab }) => 
                     </div>
                 </div>
             ) : bottomTab === 'CPU' ? (
-                <div className="flex-1 flex flex-col bg-[#1e1e1e] overflow-hidden">
+                <div className="flex-1 flex flex-col bg-[color:var(--bg-app)] overflow-hidden">
                    {stack_cpu.map((cfg, idx) => (
                        <StackedGraphRow key={idx} cfg={cfg} isLast={idx === stack_cpu.length - 1} isShort={cfg.isShort} />
                    ))}
                 </div>
             ) : bottomTab === 'Memory' ? (
-                <div className="flex-1 flex flex-col bg-[#1e1e1e] overflow-hidden">
+                <div className="flex-1 flex flex-col bg-[color:var(--bg-app)] overflow-hidden">
                    {stack_memory.map((cfg, idx) => (
                        <StackedGraphRow key={idx} cfg={cfg} isLast={idx === stack_memory.length - 1} isShort={cfg.isShort} />
                    ))}
                 </div>
             ) : bottomTab === 'Disk' ? (
-                <div className="flex-1 flex flex-col bg-[#1e1e1e] overflow-hidden">
+                <div className="flex-1 flex flex-col bg-[color:var(--bg-app)] overflow-hidden">
                    {stack_disk.map((cfg, idx) => (
                        <StackedGraphRow key={idx} cfg={cfg} isLast={idx === stack_disk.length - 1} isShort={cfg.isShort} />
                    ))}
                 </div>
             ) : bottomTab === 'Connections' ? (
-                <div className="flex-1 flex flex-col bg-[#1e1e1e] overflow-hidden">
+                <div className="flex-1 flex flex-col bg-[color:var(--bg-app)] overflow-hidden">
                    {stack_connections.map((cfg, idx) => (
                        <StackedGraphRow key={idx} cfg={cfg} isLast={idx === stack_connections.length - 1} isShort={cfg.isShort} />
                    ))}
                 </div>
             ) : bottomTab === 'Network' ? (
-                <div className="flex-1 flex flex-col bg-[#1e1e1e] overflow-hidden">
+                <div className="flex-1 flex flex-col bg-[color:var(--bg-app)] overflow-hidden">
                    {stack_network.map((cfg, idx) => (
                        <StackedGraphRow key={idx} cfg={cfg} isLast={idx === stack_network.length - 1} isShort={cfg.isShort} />
                    ))}
                 </div>
             ) : bottomTab === 'Trade' ? (
-                <div className="flex-1 flex flex-col bg-[#1e1e1e] overflow-hidden">
+                <div className="flex-1 flex flex-col bg-[color:var(--bg-app)] overflow-hidden">
                    {stack_trade.map((cfg, idx) => (
                        <StackedGraphRow key={idx} cfg={cfg} isLast={idx === stack_trade.length - 1} isShort={cfg.isShort} />
                    ))}
@@ -651,22 +651,22 @@ const ServerStatusPanel = ({ serverName = "Main Trade Server", initialTab }) => 
             ) : bottomTab === 'Windows Firewall' ? (
                 <FirewallTab />
             ) : (
-               <div className="flex-1 flex items-center justify-center text-[#666666] text-sm">
+               <div className="flex-1 flex items-center justify-center text-[color:var(--text-muted)] text-sm">
                   No data available for {bottomTab}
                </div>
             )}
          </div>
 
          {/* Bottom Tabs Component */}
-         <div className="h-[22px] bg-[#1e1e1e] border-t border-[#444] flex px-2 overflow-x-auto no-scrollbar shrink-0">
+         <div className="h-[22px] bg-[color:var(--bg-app)] border-t border-[#444] flex px-2 overflow-x-auto no-scrollbar shrink-0">
             {bottomTabs.map(tab => (
                <button
                   key={tab}
                   onClick={() => setBottomTab(tab)}
                   className={`px-3 flex items-center text-[10.5px] whitespace-nowrap outline-none transition-colors ${
                      bottomTab === tab 
-                     ? 'bg-[#333333] text-white border-x border-[#444] font-medium' 
-                     : 'text-[#aaaaaa] hover:bg-white/5 border-x border-transparent'
+                     ? 'bg-[color:var(--bg-surface-2)] text-white border-x border-[#444] font-medium' 
+                     : 'text-[color:var(--text-muted)] hover:bg-white/5 border-x border-transparent'
                   }`}
                >
                   {tab}

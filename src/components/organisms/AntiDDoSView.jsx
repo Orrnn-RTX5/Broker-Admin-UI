@@ -3,12 +3,12 @@ import { Settings, CheckCircle2, User, AlertTriangle, Shield, Server, ArrowRight
 
 const VendorItem = ({ logo, name, description }) => (
   <div className="flex gap-4 mb-8">
-    <div className="w-[85px] h-[85px] bg-[#1a1a1a] border border-[#333] shrink-0 flex items-center justify-center p-2">
+    <div className="w-[85px] h-[85px] bg-[color:var(--bg-app)] border border-[#333] shrink-0 flex items-center justify-center p-2">
       {logo}
     </div>
     <div className="flex flex-col items-start pt-1">
       <a href="#" className="text-[12.5px] font-semibold text-[#3b82f6] hover:underline mb-1.5">{name}</a>
-      <p className="text-[11px] text-[#a0a0a0] leading-relaxed max-w-[1100px] mb-3">
+      <p className="text-[11px] text-[color:var(--text-muted)] leading-relaxed max-w-[1100px] mb-3">
         {description}
       </p>
       <button className="bg-[#00a651] hover:bg-[#00964a] text-white px-4 py-1.5 rounded-[2px] text-[11.5px] font-medium transition-colors">
@@ -30,7 +30,7 @@ const HackerIcon = ({ size=20, color="#ef4444" }) => (
 
 const AntiDDoSView = () => {
   return (
-    <div className="flex-1 bg-[#222222] overflow-y-auto no-scrollbar py-6 px-8 rounded-tl-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] text-[#e1e1e1]">
+    <div className="flex-1 bg-[#222222] overflow-y-auto no-scrollbar py-6 px-8 rounded-tl-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] text-[color:var(--text-primary)]">
       <div className="max-w-[1300px] flex flex-col h-full">
         {/* Header */}
         <div className="flex justify-between items-start mb-6">
@@ -40,7 +40,7 @@ const AntiDDoSView = () => {
             </h1>
             <a href="#" className="text-[12px] text-[#3b82f6] hover:underline mt-[2px] block font-sans">How to set up</a>
           </div>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 border border-[#555] rounded-[2px] text-[11.5px] text-[#e0e0e0] hover:bg-[#333] transition-colors mt-1">
+          <button className="flex items-center gap-1.5 px-3 py-1.5 border border-[#555] rounded-[2px] text-[11.5px] text-[color:var(--text-primary)] hover:bg-[#333] transition-colors mt-1">
             <CheckCircle2 size={13} className="text-[#22c55e]"/>
             Add Proxy Server
           </button>
@@ -114,19 +114,19 @@ const AntiDDoSView = () => {
                   <path d="M12 11V9a3 3 0 0 1 6 0v2" stroke="#60a5fa" strokeWidth="1.5" className="absolute" />
                </div>
                
-               <div className="absolute top-[50px] -left-[10px] text-[8px] font-bold text-[#aaaaaa] text-center tracking-wide w-24">
+               <div className="absolute top-[50px] -left-[10px] text-[8px] font-bold text-[color:var(--text-muted)] text-center tracking-wide w-24">
                   ANTI-DDOS<br/>PROTECTION
                </div>
             </div>
 
             {/* Access Servers Box */}
             <div className="absolute left-[440px] top-[60px] flex flex-col items-center z-10">
-               <div className="w-[40px] h-[40px] border border-[#3b82f6] rounded-[2px] flex flex-col justify-evenly p-1 bg-[#1a1a1a]">
+               <div className="w-[40px] h-[40px] border border-[#3b82f6] rounded-[2px] flex flex-col justify-evenly p-1 bg-[color:var(--bg-app)]">
                   <div className="h-[4px] bg-[#1d4ed8] rounded-[1px] w-full relative"><div className="absolute right-1 top-0 bottom-0 w-[2px] bg-[#4ade80]"></div></div>
                   <div className="h-[4px] bg-[#1d4ed8] rounded-[1px] w-full relative"><div className="absolute right-1 top-0 bottom-0 w-[2px] bg-[#4ade80]"></div></div>
                   <div className="h-[4px] bg-[#1d4ed8] rounded-[1px] w-full relative"><div className="absolute right-1 top-0 bottom-0 w-[2px] bg-[#4ade80]"></div></div>
                </div>
-               <div className="text-[8px] font-bold text-[#aaaaaa] text-center tracking-wide mt-2 w-16">
+               <div className="text-[8px] font-bold text-[color:var(--text-muted)] text-center tracking-wide mt-2 w-16">
                   ACCESS<br/>SERVERS
                </div>
             </div>
@@ -142,7 +142,7 @@ const AntiDDoSView = () => {
 
             {/* Trade and History Servers Box */}
             <div className="absolute left-[560px] top-[60px] flex flex-col items-center z-10">
-               <div className="w-[40px] h-[40px] border border-[#3b82f6] rounded-[2px] flex flex-col justify-evenly p-1 bg-[#1a1a1a]">
+               <div className="w-[40px] h-[40px] border border-[#3b82f6] rounded-[2px] flex flex-col justify-evenly p-1 bg-[color:var(--bg-app)]">
                   <div className="h-[4px] bg-[#1d4ed8] rounded-[1px] w-full relative"><div className="absolute right-1 top-0 bottom-0 w-[2px] bg-[#4ade80]"></div></div>
                   <div className="h-[4px] bg-[#1d4ed8] rounded-[1px] w-full relative"><div className="absolute right-1 top-0 bottom-0 w-[2px] bg-[#4ade80]"></div></div>
                   <div className="h-[4px] bg-[#1d4ed8] rounded-[1px] w-full relative"><div className="absolute right-1 top-0 bottom-0 w-[2px] bg-[#4ade80]"></div></div>
@@ -154,7 +154,7 @@ const AntiDDoSView = () => {
                  </div>
                </div>
 
-               <div className="text-[8px] font-bold text-[#aaaaaa] text-center tracking-wide mt-2 w-24">
+               <div className="text-[8px] font-bold text-[color:var(--text-muted)] text-center tracking-wide mt-2 w-24">
                   TRADE AND HISTORY<br/>SERVERS
                </div>
             </div>
@@ -173,23 +173,23 @@ const AntiDDoSView = () => {
 
         {/* Text Description */}
         <div className="mb-8">
-          <p className="text-[12px] text-[#e0e0e0] leading-relaxed mb-1.5 font-sans">
+          <p className="text-[12px] text-[color:var(--text-primary)] leading-relaxed mb-1.5 font-sans">
             Protect your MetaTrader 5 access servers from DDoS attacks by applying professional solutions offered by our partners. Installation is quick and does not require any changes in your existing network infrastructure.
           </p>
-          <p className="text-[12px] text-[#e0e0e0] leading-relaxed font-sans max-w-[1250px]">
+          <p className="text-[12px] text-[color:var(--text-primary)] leading-relaxed font-sans max-w-[1250px]">
             With the Anti-DDoS proxy server component, unwanted connections are blocked on the distributed network of an external provider's servers rather than on your access servers. The network will reject unwanted connections, while legitimate connections from real clients will be forwarded to access servers.
           </p>
         </div>
 
         {/* Vendors Supported List */}
         <div className="mb-4">
-          <h2 className="text-[14px] font-normal text-[#e1e1e1] mb-5">Vendors supported:</h2>
+          <h2 className="text-[14px] font-normal text-[color:var(--text-primary)] mb-5">Vendors supported:</h2>
 
           <VendorItem 
             logo={
               <div className="flex items-center text-[#ff9900] font-bold text-[18px]">
                 <div className="text-[#06b6d4] mr-[-8px] text-[26px]">C</div>
-                <span className="z-10 bg-[#1a1a1a] pr-1 mt-1">Akamai</span>
+                <span className="z-10 bg-[color:var(--bg-app)] pr-1 mt-1">Akamai</span>
               </div>
             }
             name="Akamai"
@@ -198,7 +198,7 @@ const AntiDDoSView = () => {
 
           <VendorItem 
             logo={
-              <div className="flex items-center text-[#a0a0a0] font-normal tracking-[-0.5px] text-[15px]">
+              <div className="flex items-center text-[color:var(--text-muted)] font-normal tracking-[-0.5px] text-[15px]">
                 <span className="text-[20px] font-medium mr-[2px]">C</span><span className="text-[10px] mt-1">QRATOR LABS</span>
               </div>
             }
@@ -208,7 +208,7 @@ const AntiDDoSView = () => {
 
           <VendorItem 
             logo={
-              <div className="flex flex-col items-center justify-center font-bold text-[#e1e1e1] text-[10px] gap-1">
+              <div className="flex flex-col items-center justify-center font-bold text-[color:var(--text-primary)] text-[10px] gap-1">
                 <Cloud size={24} className="text-[#f59e0b]" fill="#f59e0b"/>
                 <span className="tracking-tight">CLOUDFLARE</span>
               </div>
@@ -219,7 +219,7 @@ const AntiDDoSView = () => {
         </div>
         
         {/* Footer Area */}
-        <div className="mt-8 pt-6 border-t border-[#333] text-[12px] text-[#a0a0a0] font-sans pb-10">
+        <div className="mt-8 pt-6 border-t border-[#333] text-[12px] text-[color:var(--text-muted)] font-sans pb-10">
           <a href="#" className="text-[#3b82f6] hover:underline">Sign in to the Support Center</a> to receive MetaTrader 5 platform user support: articles, news, documents and direct contact with the technical support team. Explore the AppStore and enhance the MetaTrader 5 platform functionality using third-party applications: liquidity solutions, news feeds, and money management tools, amongst others.
         </div>
       </div>

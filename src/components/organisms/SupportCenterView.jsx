@@ -3,7 +3,7 @@ import { Mail, Key, Send, Search, GraduationCap } from 'lucide-react';
 
 const SupportCenterView = () => {
   return (
-    <div className="flex-1 bg-[#1a1a1a] overflow-y-auto no-scrollbar py-6 px-8 rounded-tl-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] text-[#e1e1e1]">
+    <div className="flex-1 bg-[color:var(--bg-app)] overflow-y-auto no-scrollbar py-6 px-8 rounded-tl-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] text-[color:var(--text-primary)]">
       <div className="max-w-[1300px] flex flex-col h-full mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -18,30 +18,30 @@ const SupportCenterView = () => {
 
         {/* Login Area */}
         <div className="flex flex-col items-center justify-center max-w-[500px] mx-auto w-full mb-[70px]">
-          <p className="text-[13px] text-[#e0e0e0] text-center mb-4 leading-relaxed font-sans">
+          <p className="text-[13px] text-[color:var(--text-primary)] text-center mb-4 leading-relaxed font-sans">
             MetaQuotes Technical Support Center features unique information<br/>
             and provides direct access to assistance from our support team
           </p>
           
-          <p className="text-[13px] text-[#e0e0e0] text-center mb-5 font-sans">
+          <p className="text-[13px] text-[color:var(--text-primary)] text-center mb-5 font-sans">
             Only available to authorized users
           </p>
 
           <div className="w-full relative mb-3">
-            <Mail size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#808080]" />
+            <Mail size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[color:var(--text-muted)]" />
             <input 
               type="text" 
               placeholder="Your email" 
-              className="w-full bg-transparent border border-[#333] rounded-[2px] py-1.5 pl-10 pr-3 text-[13px] text-white focus:outline-none focus:border-[#555] h-[34px] placeholder-[#808080]"
+              className="w-full bg-transparent border border-[#333] rounded-[2px] py-1.5 pl-10 pr-3 text-[13px] text-white focus:outline-none focus:border-[#555] h-[34px] placeholder-[color:var(--text-muted)]"
             />
           </div>
 
           <div className="w-full relative mb-3">
-            <Key size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#808080]" />
+            <Key size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[color:var(--text-muted)]" />
             <input 
               type="password" 
               placeholder="Support Center password" 
-              className="w-full bg-transparent border border-[#333] rounded-[2px] py-1.5 pl-10 pr-3 text-[13px] text-white focus:outline-none focus:border-[#555] h-[34px] placeholder-[#808080]"
+              className="w-full bg-transparent border border-[#333] rounded-[2px] py-1.5 pl-10 pr-3 text-[13px] text-white focus:outline-none focus:border-[#555] h-[34px] placeholder-[color:var(--text-muted)]"
             />
           </div>
 
@@ -53,7 +53,7 @@ const SupportCenterView = () => {
             Enter MetaQuotes Support Center
           </button>
 
-          <div className="text-[12px] text-[#a0a0a0] mb-3 font-sans">
+          <div className="text-[12px] text-[color:var(--text-muted)] mb-3 font-sans">
             Don't have a Support Center account? <a href="#" className="text-[#3b82f6] hover:underline">Register</a>
           </div>
 
@@ -64,7 +64,7 @@ const SupportCenterView = () => {
 
         {/* Features Area */}
         <div className="flex flex-col items-center max-w-[900px] mx-auto w-full">
-          <p className="text-[13px] text-[#e1e1e1] mb-8 font-sans">Support site features:</p>
+          <p className="text-[13px] text-[color:var(--text-primary)] mb-8 font-sans">Support site features:</p>
           
           <div className="grid grid-cols-4 gap-8 w-full">
             
@@ -78,7 +78,7 @@ const SupportCenterView = () => {
               </div>
               <div className="flex flex-col">
                 <span className="text-[11.5px] font-bold text-[#fff] leading-tight mb-0.5 font-sans">Finteza</span>
-                <span className="text-[11px] text-[#a0a0a0] leading-snug font-sans w-[130px]">Use analytics for a brokerage business</span>
+                <span className="text-[11px] text-[color:var(--text-muted)] leading-snug font-sans w-[130px]">Use analytics for a brokerage business</span>
               </div>
             </div>
 
@@ -94,7 +94,7 @@ const SupportCenterView = () => {
               </div>
               <div className="flex flex-col">
                 <span className="text-[11.5px] font-bold text-[#fff] leading-tight mb-0.5 font-sans">App Store</span>
-                <span className="text-[11px] text-[#a0a0a0] leading-snug font-sans w-[130px]">Get new MetaTrader 5 features</span>
+                <span className="text-[11px] text-[color:var(--text-muted)] leading-snug font-sans w-[130px]">Get new MetaTrader 5 features</span>
               </div>
             </div>
 
@@ -110,7 +110,7 @@ const SupportCenterView = () => {
               </div>
               <div className="flex flex-col">
                 <span className="text-[11.5px] font-bold text-[#fff] leading-tight mb-0.5 font-sans">Certification</span>
-                <span className="text-[11px] text-[#a0a0a0] leading-snug font-sans w-[130px]">Confirm your platform usage skills</span>
+                <span className="text-[11px] text-[color:var(--text-muted)] leading-snug font-sans w-[130px]">Confirm your platform usage skills</span>
               </div>
             </div>
 
@@ -122,7 +122,7 @@ const SupportCenterView = () => {
               </div>
               <div className="flex flex-col">
                 <span className="text-[11.5px] font-bold text-[#fff] leading-tight mb-0.5 font-sans">Webinars</span>
-                <span className="text-[11px] text-[#a0a0a0] leading-snug font-sans w-[130px]">Find out how the platform can help you</span>
+                <span className="text-[11px] text-[color:var(--text-muted)] leading-snug font-sans w-[130px]">Find out how the platform can help you</span>
               </div>
             </div>
 

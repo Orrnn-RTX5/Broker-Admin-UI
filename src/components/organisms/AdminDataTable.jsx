@@ -485,19 +485,19 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   // --- TIME VIEW SPECIFIC LOGIC ---
   if (viewType === 'Time') {
     const PropertyRow = ({ idx, icon: Icon, label, value }) => (
-      <div className={`flex items-center text-[12px] border-b border-black/20 ${idx % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'} hover:bg-blue-600/20 cursor-default`}>
+      <div className={`flex items-center text-[12px] border-b border-black/20 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-blue-600/20 cursor-default`}>
         <div className="w-[320px] flex items-center gap-2 px-3 py-[3px] border-r border-black/20 shrink-0">
           <Icon size={13} className="text-[#3B82F6]" />
-          <span className="text-[#e1e1e1]">{label}</span>
+          <span className="text-[color:var(--text-primary)]">{label}</span>
         </div>
-        <div className="flex-1 px-3 py-[3px] text-[#e1e1e1]">
+        <div className="flex-1 px-3 py-[3px] text-[color:var(--text-primary)]">
           {value}
         </div>
       </div>
     );
 
     const GroupHeader = ({ title }) => (
-      <div className="flex border-b border-black/20 bg-[#1e1e1e] cursor-default">
+      <div className="flex border-b border-black/20 bg-[color:var(--bg-app)] cursor-default">
         <div className="w-[320px] px-3 py-1 text-[11px] font-bold text-white border-r border-black/20 shrink-0">
           {title}
         </div>
@@ -506,12 +506,12 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     );
 
     return (
-      <div className="flex-1 bg-[#1e1e1e] flex flex-col overflow-hidden relative" onContextMenu={(e) => e.preventDefault()}>
-        <div className="flex border-b border-black/40 bg-[#333333] sticky top-0 z-10 shadow-sm">
-          <div className="w-[320px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20 hover:bg-[#444444] cursor-default shrink-0">Property</div>
-          <div className="flex-1 px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] hover:bg-[#444444] cursor-default">Value</div>
+      <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative" onContextMenu={(e) => e.preventDefault()}>
+        <div className="flex border-b border-black/40 bg-[color:var(--bg-surface-2)] sticky top-0 z-10 shadow-sm">
+          <div className="w-[320px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 hover:bg-[color:var(--bg-surface-3)] cursor-default shrink-0">Property</div>
+          <div className="flex-1 px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)] cursor-default">Value</div>
         </div>
-        <div className="flex-1 overflow-auto no-scrollbar bg-[#1e1e1e]">
+        <div className="flex-1 overflow-auto no-scrollbar bg-[color:var(--bg-app)]">
           <GroupHeader title="Common settings" />
           <PropertyRow idx={0} icon={Clock} label="Time zone" value="GMT+01:00" />
           <PropertyRow idx={1} icon={CornerUpRight} label="Daylight Saving time correction" value="Yes" />
@@ -524,7 +524,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
 
           {/* Placeholder fill */}
           {[...Array(25)].map((_, i) => (
-            <div key={i} className={`flex border-b border-black/5 opacity-40 ${i % 2 !== 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'}`}>
+            <div key={i} className={`flex border-b border-black/5 opacity-40 ${i % 2 !== 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
               <div className="w-[320px] h-6 border-r border-black/10"></div>
               <div className="flex-1 h-6"></div>
             </div>
@@ -537,7 +537,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   const showSearchFilters = viewType === 'Orders' || viewType === 'Deals' || viewType === 'Positions';
 
   return (
-    <div className="flex-1 bg-[#1e1e1e] flex flex-col overflow-hidden relative" onContextMenu={handleContextMenu}>
+    <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative" onContextMenu={handleContextMenu}>
       {serverPopupData && (
         <ServerPropertiesPopup
           isOpen={serverPopupData.isOpen}
@@ -548,107 +548,107 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
       )}
       {/* Search Filters Bar for Orders, Deals, Positions */}
       {showSearchFilters && (
-        <div className="flex items-center px-2 py-1.5 bg-[#252526] border-b border-black/40 text-[11px] shrink-0 overflow-x-auto no-scrollbar whitespace-nowrap">
-          <div className="flex border border-[#555555] bg-transparent h-[22px] items-center text-[#aaaaaa] mr-1">
+        <div className="flex items-center px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 text-[11px] shrink-0 overflow-x-auto no-scrollbar whitespace-nowrap">
+          <div className="flex border border-[color:var(--border-strong)] bg-transparent h-[22px] items-center text-[color:var(--text-muted)] mr-1">
             <div className="px-1.5"><Search size={10} /></div>
             <input
               type="text"
               placeholder="Group or Accounts [1,2,..,1000] or Orders (#1,#2,..#1000)"
-              className="bg-transparent border-none outline-none w-[280px] text-[11px] text-[#e1e1e1] placeholder:text-[#666666]"
+              className="bg-transparent border-none outline-none w-[280px] text-[11px] text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)]"
             />
-            <div className="border-l border-[#555555] px-1 hover:bg-white/10 cursor-pointer h-full flex items-center">
+            <div className="border-l border-[color:var(--border-strong)] px-1 hover:bg-white/10 cursor-pointer h-full flex items-center">
               <ChevronDown size={12} />
             </div>
           </div>
 
-          <div className="flex border border-[#555555] bg-transparent h-[22px] items-center text-[#e1e1e1] w-[100px] mr-2">
+          <div className="flex border border-[color:var(--border-strong)] bg-transparent h-[22px] items-center text-[color:var(--text-primary)] w-[100px] mr-2">
             <select className="bg-transparent border-none outline-none w-full text-[11px] px-1 appearance-none cursor-pointer">
               <option>All Symbols</option>
             </select>
-            <div className="px-1 pointer-events-none text-[#aaaaaa]"><ChevronDown size={12} /></div>
+            <div className="px-1 pointer-events-none text-[color:var(--text-muted)]"><ChevronDown size={12} /></div>
           </div>
 
-          <label className="flex items-center gap-1.5 text-[#e1e1e1] cursor-pointer mr-2 border border-transparent hover:border-[#555555] px-1 h-[22px] rounded-sm">
+          <label className="flex items-center gap-1.5 text-[color:var(--text-primary)] cursor-pointer mr-2 border border-transparent hover:border-[color:var(--border-strong)] px-1 h-[22px] rounded-sm">
             <input type="checkbox" className="w-[11px] h-[11px] accent-[#3B82F6]" />
             Open only
           </label>
 
-          <div className="flex border border-[#555555] bg-transparent h-[22px] items-center text-[#e1e1e1] w-[70px] mr-1">
+          <div className="flex border border-[color:var(--border-strong)] bg-transparent h-[22px] items-center text-[color:var(--text-primary)] w-[70px] mr-1">
             <select className="bg-transparent border-none outline-none w-full text-[11px] px-1 appearance-none cursor-pointer">
               <option>Today</option>
             </select>
-            <div className="px-1 pointer-events-none text-[#aaaaaa]"><ChevronDown size={12} /></div>
+            <div className="px-1 pointer-events-none text-[color:var(--text-muted)]"><ChevronDown size={12} /></div>
           </div>
 
-          <div className="flex border border-[#555555] bg-transparent h-[22px] items-center text-[#e1e1e1] mr-1">
+          <div className="flex border border-[color:var(--border-strong)] bg-transparent h-[22px] items-center text-[color:var(--text-primary)] mr-1">
             <input type="text" defaultValue="2026.04.03 00:00" className="bg-transparent border-none outline-none w-[90px] text-[11px] pl-2" />
-            <div className="border-l border-[#555555] px-1.5 text-blue-400 hover:bg-white/10 cursor-pointer h-full flex items-center">
+            <div className="border-l border-[color:var(--border-strong)] px-1.5 text-blue-400 hover:bg-white/10 cursor-pointer h-full flex items-center">
               <Calendar size={12} />
             </div>
           </div>
 
-          <div className="flex border border-[#555555] bg-transparent h-[22px] items-center text-[#e1e1e1] mr-2">
+          <div className="flex border border-[color:var(--border-strong)] bg-transparent h-[22px] items-center text-[color:var(--text-primary)] mr-2">
             <input type="text" defaultValue="2026.04.03 23:59" className="bg-transparent border-none outline-none w-[90px] text-[11px] pl-2" />
-            <div className="border-l border-[#555555] px-1.5 text-blue-400 hover:bg-white/10 cursor-pointer h-full flex items-center">
+            <div className="border-l border-[color:var(--border-strong)] px-1.5 text-blue-400 hover:bg-white/10 cursor-pointer h-full flex items-center">
               <Calendar size={12} />
             </div>
           </div>
 
-          <div className="flex border border-[#555555] bg-transparent h-[22px] items-center text-[#e1e1e1] w-[120px] mr-1">
+          <div className="flex border border-[color:var(--border-strong)] bg-transparent h-[22px] items-center text-[color:var(--text-primary)] w-[120px] mr-1">
             <select className="bg-transparent border-none outline-none w-full text-[11px] px-1 appearance-none cursor-pointer">
               <option>Current database</option>
             </select>
-            <div className="px-1 pointer-events-none text-[#aaaaaa]"><ChevronDown size={12} /></div>
+            <div className="px-1 pointer-events-none text-[color:var(--text-muted)]"><ChevronDown size={12} /></div>
           </div>
 
-          <button className="h-[22px] px-4 bg-transparent border border-[#555555] rounded-[2px] text-[#e1e1e1] hover:bg-white/10 hover:border-[#777777] transition-all">
+          <button className="h-[22px] px-4 bg-transparent border border-[color:var(--border-strong)] rounded-[2px] text-[color:var(--text-primary)] hover:bg-white/10 hover:border-[#777777] transition-all">
             Request
           </button>
         </div>
       )}
 
       {/* Table Header */}
-      <div className="flex border-b border-black/40 bg-[#333333] sticky top-0 z-10 shadow-sm">
+      <div className="flex border-b border-black/40 bg-[color:var(--bg-surface-2)] sticky top-0 z-10 shadow-sm">
         {columns.map((col, idx) => (
           <div
             key={idx}
-            className={`${col.width} px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20 hover:bg-[#444444] cursor-default flex items-center shrink-0`}
+            className={`${col.width} px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 hover:bg-[color:var(--bg-surface-3)] cursor-default flex items-center shrink-0`}
           >
             {col.label}
           </div>
         ))}
         {/* Fill remaining space if needed */}
-        {viewType === 'Groups' && <div className="flex-1 border-b border-black/20 bg-[#333333]"></div>}
+        {viewType === 'Groups' && <div className="flex-1 border-b border-black/20 bg-[color:var(--bg-surface-2)]"></div>}
       </div>
 
       {/* Table Body */}
-      <div className="flex-1 overflow-auto no-scrollbar bg-[#1e1e1e]">
+      <div className="flex-1 overflow-auto no-scrollbar bg-[color:var(--bg-app)]">
         {data.map((row, idx) => (
           <div
             key={row.id}
             onDoubleClick={() => onRowDoubleClick && onRowDoubleClick(row)}
             onContextMenu={(e) => { e.stopPropagation(); handleContextMenu(e, row); }}
-            className={`flex cursor-pointer group border-b border-black/10 transition-colors ${idx % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'} hover:bg-blue-600/20`}
+            className={`flex cursor-pointer group border-b border-black/10 transition-colors ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-blue-600/20`}
           >
             {isClientsView ? (
               <>
                 <div className="w-64 px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10 shrink-0">
                   {row.iconType === 'group' ? <YellowFolderIcon /> : <BlueUserIcon />}
-                  <span className="text-[#e1e1e1] truncate font-normal">{row.name}</span>
+                  <span className="text-[color:var(--text-primary)] truncate font-normal">{row.name}</span>
                 </div>
-                <div className="flex-1 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 truncate">{row.description}</div>
+                <div className="flex-1 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 truncate">{row.description}</div>
               </>
             ) : isSymbolsView ? (
               <>
                 <div className="w-48 px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10 shrink-0">
                   <OrangeSquareSIcon />
-                  <span className="text-[#e1e1e1] truncate font-normal">{row.symbol}</span>
+                  <span className="text-[color:var(--text-primary)] truncate font-normal">{row.symbol}</span>
                 </div>
-                <div className="w-72 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.description}</div>
-                <div className="w-24 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.digits}</div>
-                <div className="w-32 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.type}</div>
-                <div className="w-48 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.execution}</div>
-                <div className="w-32 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.expiration}</div>
+                <div className="w-72 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.description}</div>
+                <div className="w-24 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.digits}</div>
+                <div className="w-32 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.type}</div>
+                <div className="w-48 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.execution}</div>
+                <div className="w-32 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.expiration}</div>
                 <div className="flex-1 border-b border-white/5 bg-transparent"></div>
               </>
             ) : isPositionsView ? (
@@ -674,7 +674,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
                   if (col.label === 'Profit') val = row.profit;
 
                   return (
-                    <div key={cIdx} className={`${col.width} px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 ${col.label === 'Profit' && row.profit > 0 ? 'text-green-400' : ''} ${col.label === 'Profit' && row.profit < 0 ? 'text-red-400' : ''} truncate`}>
+                    <div key={cIdx} className={`${col.width} px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 ${col.label === 'Profit' && row.profit > 0 ? 'text-green-400' : ''} ${col.label === 'Profit' && row.profit < 0 ? 'text-red-400' : ''} truncate`}>
                        {val !== undefined ? val : '-'}
                     </div>
                   );
@@ -684,55 +684,55 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
               <>
                 <div className="w-32 px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10 shrink-0">
                   <BlueUserIcon />
-                  <span className="text-[#e1e1e1] truncate font-normal">{row.login}</span>
+                  <span className="text-[color:var(--text-primary)] truncate font-normal">{row.login}</span>
                 </div>
-                <div className="w-48 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.name}</div>
-                <div className="w-48 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.group}</div>
-                <div className="w-32 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.balance}</div>
-                <div className="w-32 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.equity}</div>
-                <div className="w-24 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.currency}</div>
-                <div className="w-32 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.status}</div>
+                <div className="w-48 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.name}</div>
+                <div className="w-48 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.group}</div>
+                <div className="w-32 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.balance}</div>
+                <div className="w-32 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.equity}</div>
+                <div className="w-24 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.currency}</div>
+                <div className="w-32 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.status}</div>
                 <div className="flex-1 border-b border-white/5 bg-transparent"></div>
               </>
             ) : (
               <>
                 <div className="w-64 px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10 shrink-0">
                   {row.iconType === 'group' ? <YellowFolderIcon /> : <BlueUserIcon />}
-                  <span className="text-[#e1e1e1] truncate font-normal">{row.group}</span>
+                  <span className="text-[color:var(--text-primary)] truncate font-normal">{row.group}</span>
                 </div>
-                <div className="w-48 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.server}</div>
-                <div className="w-64 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate">{row.company}</div>
-                <div className="w-32 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0">{row.type}</div>
-                <div className="w-40 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0">{row.auth}</div>
-                <div className="w-48 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0">{row.risk}</div>
-                <div className="w-32 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0">{row.margin}</div>
-                <div className="w-56 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0">{row.leverage}</div>
-                <div className="w-24 px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0">{row.currency}</div>
+                <div className="w-48 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.server}</div>
+                <div className="w-64 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.company}</div>
+                <div className="w-32 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0">{row.type}</div>
+                <div className="w-40 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0">{row.auth}</div>
+                <div className="w-48 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0">{row.risk}</div>
+                <div className="w-32 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0">{row.margin}</div>
+                <div className="w-56 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0">{row.leverage}</div>
+                <div className="w-24 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0">{row.currency}</div>
                 <div className={`flex-1 border-b border-white/5 ${idx % 2 === 0 ? 'bg-transparent' : 'bg-transparent'} group-hover:bg-blue-600/20`}></div>
               </>
             )}
           </div>
         ))}
         {isLoading && data.length === 0 && (
-          <div className="p-4 text-[#aaaaaa] text-[12px] italic">Loading data...</div>
+          <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">Loading data...</div>
         )}
         {!isLoading && data.length === 0 && (
-          <div className="p-4 text-[#aaaaaa] text-[12px] italic">No data available</div>
+          <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">No data available</div>
         )}
         {/* Placeholder Rows to fill screen */}
         {[...Array(30)].map((_, i) => (
-          <div key={i} className={`flex border-b border-black/5 opacity-40 ${(data.length + i) % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'}`}>
+          <div key={i} className={`flex border-b border-black/5 opacity-40 ${(data.length + i) % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
             <div className="w-full h-6 border-r border-black/10"></div>
           </div>
         ))}
       </div>
 
       {/* Bottom Tab Bar (MT5 Style) */}
-      <div className="h-7 bg-[#2b2b2b] border-t border-black/40 flex items-center px-1 gap-1">
+      <div className="h-7 bg-[color:var(--bg-surface-1)] border-t border-black/40 flex items-center px-1 gap-1">
         <div className="h-[22px] px-3 bg-[#3e3e3e] text-white text-[11px] flex items-center border border-black/40 rounded-sm shadow-sm cursor-default">
           {viewType === 'Clients & Accounts' ? 'Clients & Accounts' : (viewType === 'Groups' ? 'Groups (127)' : viewType)}
         </div>
-        <div className="h-[22px] px-3 text-[#999999] hover:text-[#cccccc] text-[11px] flex items-center cursor-default transition-colors">
+        <div className="h-[22px] px-3 text-[#999999] hover:text-[color:var(--text-secondary)] text-[11px] flex items-center cursor-default transition-colors">
           All {viewType}
         </div>
       </div>

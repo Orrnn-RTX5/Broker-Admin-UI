@@ -15,7 +15,7 @@ const fmtBytes = (b) => {
 };
 const fmtDate = (v) => { if (!v) return '—'; try { return new Date(v).toLocaleString(); } catch { return v; } };
 
-const inp = "w-full bg-[#3c3c3c] border border-[#555] text-[#e1e1e1] text-[12px] px-2 py-1.5 rounded-[2px] focus:outline-none focus:border-[#007acc]";
+const inp = "w-full bg-[color:var(--bg-surface-2)] border border-[#555] text-[color:var(--text-primary)] text-[12px] px-2 py-1.5 rounded-[2px] focus:outline-none focus:border-[color:var(--accent-500)]";
 const Lbl = ({ t, req, children }) => (
   <div className="flex flex-col gap-0.5">
     <label className="text-[10px] text-[#888] uppercase tracking-wider">{t}{req && <span className="text-[#f48771] ml-0.5">*</span>}</label>
@@ -25,9 +25,9 @@ const Lbl = ({ t, req, children }) => (
 
 const Modal = ({ title, width = 420, onClose, children }) => (
   <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" onClick={onClose}>
-    <div className="bg-[#252526] border border-[#3e3e42] rounded-[3px] shadow-2xl" style={{ width }} onClick={e => e.stopPropagation()}>
-      <div className="flex items-center h-9 px-4 border-b border-black/40 bg-[#2d2d30]">
-        <span className="text-[12px] font-semibold text-[#e1e1e1] flex-1">{title}</span>
+    <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-[3px] shadow-2xl" style={{ width }} onClick={e => e.stopPropagation()}>
+      <div className="flex items-center h-9 px-4 border-b border-black/40 bg-[color:var(--bg-surface-1)]">
+        <span className="text-[12px] font-semibold text-[color:var(--text-primary)] flex-1">{title}</span>
         <button onClick={onClose} className="text-[#555] hover:text-[#ccc]"><X size={14} /></button>
       </div>
       {children}
@@ -112,8 +112,8 @@ const IpRestrictionsTab = () => {
           </Lbl>
           {error && <div className="text-[#f48771] text-[11px] bg-[#3a1c1c] px-3 py-2 rounded-[2px]">{error}</div>}
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="px-3 py-1.5 text-[11px] bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] rounded-[2px]">Cancel</button>
-            <button type="submit" disabled={saving} className="px-3 py-1.5 text-[11px] bg-[#007acc] hover:bg-[#1a8ad4] text-white rounded-[2px] disabled:opacity-50">
+            <button type="button" onClick={onClose} className="px-3 py-1.5 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] rounded-[2px]">Cancel</button>
+            <button type="submit" disabled={saving} className="px-3 py-1.5 text-[11px] bg-[color:var(--accent-500)] hover:bg-[#1a8ad4] text-white rounded-[2px] disabled:opacity-50">
               {saving ? 'Creating…' : 'Create Rule'}
             </button>
           </div>
@@ -127,15 +127,15 @@ const IpRestrictionsTab = () => {
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       {popup && <CreatePopup onClose={() => setPopup(false)} onSaved={load} />}
-      <div className="flex items-center gap-2 px-2 py-1.5 bg-[#252526] border-b border-black/40">
-        <button onClick={() => setPopup(true)} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[#007acc] hover:bg-[#1a8ad4] text-white rounded-[2px]">
+      <div className="flex items-center gap-2 px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40">
+        <button onClick={() => setPopup(true)} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--accent-500)] hover:bg-[#1a8ad4] text-white rounded-[2px]">
           <Plus size={11} /> New Rule
         </button>
-        <button onClick={load} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] rounded-[2px]">
+        <button onClick={load} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] rounded-[2px]">
           <RefreshCw size={11} /> Refresh
         </button>
       </div>
-      <div className="flex bg-[#333333] border-b border-black/40 select-none">
+      <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 select-none">
         {cols.map(([label, width]) => (
           <div key={label} className={`${width} px-3 py-1.5 text-[11px] font-medium text-[#aaa] shrink-0`}>{label}</div>
         ))}
@@ -146,7 +146,7 @@ const IpRestrictionsTab = () => {
         ) : data.length === 0 ? (
           <div className="flex items-center justify-center h-20 text-[11px] text-[#555]">No IP restrictions configured</div>
         ) : data.map((row, idx) => (
-          <div key={row.id} className={`flex items-center border-b border-black/20 hover:bg-blue-600/10 ${idx % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'}`}>
+          <div key={row.id} className={`flex items-center border-b border-black/20 hover:bg-blue-600/10 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
             <div className="w-10 px-3 py-1.5 text-[11px] text-[#555] shrink-0">{row.id}</div>
             <div className="w-24 px-3 py-1.5 shrink-0"><RuleTypeBadge type={row.rule_type} /></div>
             <div className="w-48 px-3 py-1.5 text-[11px] text-[#9cdcfe] font-mono shrink-0">{fmt(row.ip_pattern)}</div>
@@ -163,7 +163,7 @@ const IpRestrictionsTab = () => {
           </div>
         ))}
       </div>
-      <div className="h-6 bg-[#007acc] text-white flex items-center px-4 text-[11px]">Total: {data.length}</div>
+      <div className="h-6 bg-[color:var(--accent-500)] text-white flex items-center px-4 text-[11px]">Total: {data.length}</div>
     </div>
   );
 };
@@ -247,8 +247,8 @@ const ConnectionThrottleTab = () => {
           </Lbl>
           {error && <div className="text-[#f48771] text-[11px] bg-[#3a1c1c] px-3 py-2 rounded-[2px]">{error}</div>}
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="px-3 py-1.5 text-[11px] bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] rounded-[2px]">Cancel</button>
-            <button type="submit" disabled={saving} className="px-3 py-1.5 text-[11px] bg-[#007acc] hover:bg-[#1a8ad4] text-white rounded-[2px] disabled:opacity-50">
+            <button type="button" onClick={onClose} className="px-3 py-1.5 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] rounded-[2px]">Cancel</button>
+            <button type="submit" disabled={saving} className="px-3 py-1.5 text-[11px] bg-[color:var(--accent-500)] hover:bg-[#1a8ad4] text-white rounded-[2px] disabled:opacity-50">
               {saving ? 'Creating…' : 'Create Rule'}
             </button>
           </div>
@@ -262,15 +262,15 @@ const ConnectionThrottleTab = () => {
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       {popup && <CreatePopup onClose={() => setPopup(false)} onSaved={load} />}
-      <div className="flex items-center gap-2 px-2 py-1.5 bg-[#252526] border-b border-black/40">
-        <button onClick={() => setPopup(true)} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[#007acc] hover:bg-[#1a8ad4] text-white rounded-[2px]">
+      <div className="flex items-center gap-2 px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40">
+        <button onClick={() => setPopup(true)} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--accent-500)] hover:bg-[#1a8ad4] text-white rounded-[2px]">
           <Plus size={11} /> New Rule
         </button>
-        <button onClick={load} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] rounded-[2px]">
+        <button onClick={load} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] rounded-[2px]">
           <RefreshCw size={11} /> Refresh
         </button>
       </div>
-      <div className="flex bg-[#333333] border-b border-black/40 select-none">
+      <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 select-none">
         {cols.map(([label, width]) => (
           <div key={label} className={`${width} px-3 py-1.5 text-[11px] font-medium text-[#aaa] shrink-0`}>{label}</div>
         ))}
@@ -281,9 +281,9 @@ const ConnectionThrottleTab = () => {
         ) : data.length === 0 ? (
           <div className="flex items-center justify-center h-20 text-[11px] text-[#555]">No throttle rules configured</div>
         ) : data.map((row, idx) => (
-          <div key={row.id} className={`flex items-center border-b border-black/20 hover:bg-blue-600/10 ${idx % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'}`}>
+          <div key={row.id} className={`flex items-center border-b border-black/20 hover:bg-blue-600/10 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
             <div className="w-10 px-3 py-1.5 text-[11px] text-[#555] shrink-0">{row.id}</div>
-            <div className="w-44 px-3 py-1.5 text-[11px] text-[#e1e1e1] shrink-0">{fmt(row.name)}</div>
+            <div className="w-44 px-3 py-1.5 text-[11px] text-[color:var(--text-primary)] shrink-0">{fmt(row.name)}</div>
             <div className="w-20 px-3 py-1.5 text-[11px] text-[#9cdcfe] shrink-0">{fmt(row.scope)}</div>
             <div className="w-36 px-3 py-1.5 text-[11px] text-[#aaa] font-mono shrink-0">{fmt(row.scope_value)}</div>
             <div className="w-24 px-3 py-1.5 text-[11px] text-[#4ec9b0] shrink-0">{fmt(row.max_connections)}</div>
@@ -299,7 +299,7 @@ const ConnectionThrottleTab = () => {
           </div>
         ))}
       </div>
-      <div className="h-6 bg-[#007acc] text-white flex items-center px-4 text-[11px]">Total: {data.length}</div>
+      <div className="h-6 bg-[color:var(--accent-500)] text-white flex items-center px-4 text-[11px]">Total: {data.length}</div>
     </div>
   );
 };
@@ -357,7 +357,7 @@ const LogManagementTab = () => {
       <div className="flex-1 overflow-auto p-6">
         <div className="max-w-xl space-y-5">
           {/* Current Level Card */}
-          <div className="bg-[#252526] border border-[#3e3e42] rounded-[3px] p-4">
+          <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-[3px] p-4">
             <div className="text-[11px] text-[#888] uppercase tracking-wider mb-3">Current Log Level</div>
             {loading ? (
               <div className="text-[13px] text-[#555]">Loading…</div>
@@ -372,14 +372,14 @@ const LogManagementTab = () => {
           </div>
 
           {/* Set Level */}
-          <div className="bg-[#252526] border border-[#3e3e42] rounded-[3px] p-4">
+          <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-[3px] p-4">
             <div className="text-[11px] text-[#888] uppercase tracking-wider mb-3">Set Log Level</div>
             <div className="flex gap-2 flex-wrap mb-3">
               {LOG_LEVELS.map(l => (
                 <button
                   key={l}
                   onClick={() => setSelectedLevel(l)}
-                  className={`px-3 py-1.5 text-[11px] font-mono rounded-[2px] border transition-colors ${selectedLevel === l ? 'border-[#007acc] bg-[#007acc]/20' : 'border-[#3e3e42] bg-[#1e1e1e] hover:border-[#555]'}`}
+                  className={`px-3 py-1.5 text-[11px] font-mono rounded-[2px] border transition-colors ${selectedLevel === l ? 'border-[color:var(--accent-500)] bg-[color:var(--accent-500)]/20' : 'border-[color:var(--border-default)] bg-[color:var(--bg-app)] hover:border-[#555]'}`}
                   style={{ color: levelColor(l) }}
                 >
                   {l}
@@ -389,7 +389,7 @@ const LogManagementTab = () => {
             <button
               onClick={handleSetLevel}
               disabled={setting || selectedLevel === logLevel}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] bg-[#007acc] hover:bg-[#1a8ad4] text-white rounded-[2px] disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] bg-[color:var(--accent-500)] hover:bg-[#1a8ad4] text-white rounded-[2px] disabled:opacity-50"
             >
               {setting ? <RefreshCw size={11} className="animate-spin" /> : <CheckCircle size={11} />}
               {setting ? 'Applying…' : `Set to "${selectedLevel}"`}
@@ -397,7 +397,7 @@ const LogManagementTab = () => {
           </div>
 
           {/* Flush Logs */}
-          <div className="bg-[#252526] border border-[#3e3e42] rounded-[3px] p-4">
+          <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-[3px] p-4">
             <div className="text-[11px] text-[#888] uppercase tracking-wider mb-1">Flush Logs</div>
             <div className="text-[11px] text-[#666] mb-3">Immediately write all buffered log entries to disk and clear the in-memory buffer.</div>
             <div className="flex items-center gap-3">
@@ -505,13 +505,13 @@ const BackupSchedulesTab = () => {
             </Lbl>
           </div>
           <label className="flex items-center gap-2 text-[11px] text-[#ccc] cursor-pointer select-none">
-            <input type="checkbox" checked={form.compress} onChange={e => set('compress', e.target.checked)} className="accent-[#007acc]" />
+            <input type="checkbox" checked={form.compress} onChange={e => set('compress', e.target.checked)} className="accent-[color:var(--accent-500)]" />
             Compress backup archive
           </label>
           {error && <div className="text-[#f48771] text-[11px] bg-[#3a1c1c] px-3 py-2 rounded-[2px]">{error}</div>}
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="px-3 py-1.5 text-[11px] bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] rounded-[2px]">Cancel</button>
-            <button type="submit" disabled={saving} className="px-3 py-1.5 text-[11px] bg-[#007acc] hover:bg-[#1a8ad4] text-white rounded-[2px] disabled:opacity-50">
+            <button type="button" onClick={onClose} className="px-3 py-1.5 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] rounded-[2px]">Cancel</button>
+            <button type="submit" disabled={saving} className="px-3 py-1.5 text-[11px] bg-[color:var(--accent-500)] hover:bg-[#1a8ad4] text-white rounded-[2px] disabled:opacity-50">
               {saving ? 'Creating…' : 'Create Schedule'}
             </button>
           </div>
@@ -534,16 +534,16 @@ const BackupSchedulesTab = () => {
       {popup && <CreatePopup onClose={() => setPopup(false)} onSaved={loadSchedules} />}
       {/* Schedules Panel */}
       <div className="flex flex-col" style={{ height: '55%' }}>
-        <div className="flex items-center gap-2 px-2 py-1.5 bg-[#252526] border-b border-black/40">
+        <div className="flex items-center gap-2 px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40">
           <span className="text-[11px] text-[#aaa] font-medium ml-1 mr-2">Schedules</span>
-          <button onClick={() => setPopup(true)} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[#007acc] hover:bg-[#1a8ad4] text-white rounded-[2px]">
+          <button onClick={() => setPopup(true)} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--accent-500)] hover:bg-[#1a8ad4] text-white rounded-[2px]">
             <Plus size={11} /> New Schedule
           </button>
-          <button onClick={loadSchedules} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] rounded-[2px]">
+          <button onClick={loadSchedules} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] rounded-[2px]">
             <RefreshCw size={11} /> Refresh
           </button>
         </div>
-        <div className="flex bg-[#333333] border-b border-black/40 select-none shrink-0">
+        <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 select-none shrink-0">
           {sCols.map(([label, width]) => (
             <div key={label} className={`${width} px-3 py-1.5 text-[11px] font-medium text-[#aaa] shrink-0`}>{label}</div>
           ))}
@@ -557,10 +557,10 @@ const BackupSchedulesTab = () => {
             <div
               key={row.id}
               onClick={() => handleSelectSchedule(row)}
-              className={`flex items-center border-b border-black/20 cursor-pointer ${selectedSchedule?.id === row.id ? 'bg-blue-600/20' : idx % 2 === 0 ? 'bg-[#1e1e1e] hover:bg-blue-600/10' : 'bg-[#252526] hover:bg-blue-600/10'}`}
+              className={`flex items-center border-b border-black/20 cursor-pointer ${selectedSchedule?.id === row.id ? 'bg-blue-600/20' : idx % 2 === 0 ? 'bg-[color:var(--bg-app)] hover:bg-blue-600/10' : 'bg-[color:var(--bg-surface-1)] hover:bg-blue-600/10'}`}
             >
               <div className="w-10 px-3 py-1.5 text-[11px] text-[#555] shrink-0">{row.id}</div>
-              <div className="w-48 px-3 py-1.5 text-[11px] text-[#e1e1e1] shrink-0">{fmt(row.name)}</div>
+              <div className="w-48 px-3 py-1.5 text-[11px] text-[color:var(--text-primary)] shrink-0">{fmt(row.name)}</div>
               <div className="w-32 px-3 py-1.5 text-[11px] text-[#9cdcfe] font-mono shrink-0">{fmt(row.schedule_cron)}</div>
               <div className="w-28 px-3 py-1.5 text-[11px] text-[#ccc] shrink-0">{fmt(row.backup_type)}</div>
               <div className="flex-1 px-3 py-1.5 text-[11px] text-[#aaa] font-mono truncate">{fmt(row.target_path)}</div>
@@ -576,19 +576,19 @@ const BackupSchedulesTab = () => {
             </div>
           ))}
         </div>
-        <div className="h-6 bg-[#252526] border-t border-black/40 flex items-center px-4 text-[11px] text-[#888]">
+        <div className="h-6 bg-[color:var(--bg-surface-1)] border-t border-black/40 flex items-center px-4 text-[11px] text-[#888]">
           {selectedSchedule ? `Showing history for: ${selectedSchedule.name}` : 'Click a schedule to filter history'} — Total: {schedules.length}
         </div>
       </div>
       {/* History Panel */}
       <div className="flex flex-col flex-1 border-t-2 border-black/40">
-        <div className="flex items-center gap-2 px-2 py-1.5 bg-[#252526] border-b border-black/40">
+        <div className="flex items-center gap-2 px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40">
           <span className="text-[11px] text-[#aaa] font-medium ml-1 mr-2">Backup History</span>
-          <button onClick={() => loadHistory(selectedSchedule?.id)} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] rounded-[2px]">
+          <button onClick={() => loadHistory(selectedSchedule?.id)} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] rounded-[2px]">
             <RefreshCw size={11} /> Refresh
           </button>
         </div>
-        <div className="flex bg-[#333333] border-b border-black/40 select-none shrink-0">
+        <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 select-none shrink-0">
           {hCols.map(([label, width]) => (
             <div key={label} className={`${width} px-3 py-1.5 text-[11px] font-medium text-[#aaa] shrink-0`}>{label}</div>
           ))}
@@ -599,7 +599,7 @@ const BackupSchedulesTab = () => {
           ) : history.length === 0 ? (
             <div className="flex items-center justify-center h-16 text-[11px] text-[#555]">No backup history available</div>
           ) : history.map((row, idx) => (
-            <div key={row.id} className={`flex items-center border-b border-black/20 hover:bg-blue-600/10 ${idx % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'}`}>
+            <div key={row.id} className={`flex items-center border-b border-black/20 hover:bg-blue-600/10 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
               <div className="w-10 px-3 py-1.5 text-[11px] text-[#555] shrink-0">{row.id}</div>
               <div className="w-16 px-3 py-1.5 text-[11px] text-[#555] shrink-0">{fmt(row.schedule_id)}</div>
               <div className="w-24 px-3 py-1.5 text-[11px] text-[#ccc] shrink-0">{fmt(row.backup_type)}</div>
@@ -611,7 +611,7 @@ const BackupSchedulesTab = () => {
             </div>
           ))}
         </div>
-        <div className="h-6 bg-[#007acc] text-white flex items-center px-4 text-[11px]">History Records: {history.length}</div>
+        <div className="h-6 bg-[color:var(--accent-500)] text-white flex items-center px-4 text-[11px]">History Records: {history.length}</div>
       </div>
     </div>
   );
@@ -703,8 +703,8 @@ const PluginManagementTab = () => {
           </Lbl>
           {error && <div className="text-[#f48771] text-[11px] bg-[#3a1c1c] px-3 py-2 rounded-[2px]">{error}</div>}
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="px-3 py-1.5 text-[11px] bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] rounded-[2px]">Cancel</button>
-            <button type="submit" disabled={saving} className="px-3 py-1.5 text-[11px] bg-[#007acc] hover:bg-[#1a8ad4] text-white rounded-[2px] disabled:opacity-50">
+            <button type="button" onClick={onClose} className="px-3 py-1.5 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] rounded-[2px]">Cancel</button>
+            <button type="submit" disabled={saving} className="px-3 py-1.5 text-[11px] bg-[color:var(--accent-500)] hover:bg-[#1a8ad4] text-white rounded-[2px] disabled:opacity-50">
               {saving ? 'Installing…' : 'Install Plugin'}
             </button>
           </div>
@@ -723,15 +723,15 @@ const PluginManagementTab = () => {
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       {popup && <InstallPopup onClose={() => setPopup(false)} onSaved={load} />}
-      <div className="flex items-center gap-2 px-2 py-1.5 bg-[#252526] border-b border-black/40">
-        <button onClick={() => setPopup(true)} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[#007acc] hover:bg-[#1a8ad4] text-white rounded-[2px]">
+      <div className="flex items-center gap-2 px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40">
+        <button onClick={() => setPopup(true)} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--accent-500)] hover:bg-[#1a8ad4] text-white rounded-[2px]">
           <Plus size={11} /> Install Plugin
         </button>
-        <button onClick={load} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] rounded-[2px]">
+        <button onClick={load} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] rounded-[2px]">
           <RefreshCw size={11} /> Refresh
         </button>
       </div>
-      <div className="flex bg-[#333333] border-b border-black/40 select-none">
+      <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 select-none">
         {cols.map(([label, width]) => (
           <div key={label} className={`${width} px-3 py-1.5 text-[11px] font-medium text-[#aaa] shrink-0`}>{label}</div>
         ))}
@@ -742,9 +742,9 @@ const PluginManagementTab = () => {
         ) : data.length === 0 ? (
           <div className="flex items-center justify-center h-20 text-[11px] text-[#555]">No plugins installed</div>
         ) : data.map((row, idx) => (
-          <div key={row.id} className={`flex items-center border-b border-black/20 hover:bg-blue-600/10 ${idx % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'}`}>
+          <div key={row.id} className={`flex items-center border-b border-black/20 hover:bg-blue-600/10 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
             <div className="w-10 px-3 py-1.5 text-[11px] text-[#555] shrink-0">{row.id}</div>
-            <div className="w-44 px-3 py-1.5 text-[11px] text-[#e1e1e1] font-medium shrink-0">{fmt(row.name)}</div>
+            <div className="w-44 px-3 py-1.5 text-[11px] text-[color:var(--text-primary)] font-medium shrink-0">{fmt(row.name)}</div>
             <div className="w-20 px-3 py-1.5 text-[11px] text-[#888] font-mono shrink-0">{fmt(row.version)}</div>
             <div className="w-28 px-3 py-1.5 shrink-0">{typeBadge(row.plugin_type)}</div>
             <div className="flex-1 px-3 py-1.5 text-[11px] text-[#aaa] truncate">{fmt(row.description)}</div>
@@ -772,7 +772,7 @@ const PluginManagementTab = () => {
           </div>
         ))}
       </div>
-      <div className="h-6 bg-[#007acc] text-white flex items-center px-4 text-[11px]">Total: {data.length}</div>
+      <div className="h-6 bg-[color:var(--accent-500)] text-white flex items-center px-4 text-[11px]">Total: {data.length}</div>
     </div>
   );
 };
@@ -801,17 +801,17 @@ const SecurityAccessView = ({ initialTab }) => {
   }, [initialTab]);
 
   return (
-    <div className="flex-1 bg-[#1e1e1e] flex flex-col overflow-hidden">
-      <div className="flex items-center px-4 py-2 bg-[#252526] border-b border-black/40">
+    <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden">
+      <div className="flex items-center px-4 py-2 bg-[color:var(--bg-surface-1)] border-b border-black/40">
         <Shield size={13} className="text-[#21BA45] mr-2" />
         <span className="text-[11px] text-[#888]">Security &amp; Access — IP restrictions, throttle rules, log level, backup schedules, and plugin management. Requires <span className="text-[#9cdcfe]">server_admin</span> permission.</span>
       </div>
-      <div className="flex bg-[#252526] border-b border-black/40">
+      <div className="flex bg-[color:var(--bg-surface-1)] border-b border-black/40">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`flex items-center gap-1.5 px-4 h-[30px] text-[11px] border-b-2 transition-colors ${tab === id ? 'border-[#007acc] text-[#e1e1e1] bg-[#1e1e1e]' : 'border-transparent text-[#888] hover:text-[#ccc] hover:bg-[#2d2d2d]'}`}
+            className={`flex items-center gap-1.5 px-4 h-[30px] text-[11px] border-b-2 transition-colors ${tab === id ? 'border-[color:var(--accent-500)] text-[color:var(--text-primary)] bg-[color:var(--bg-app)]' : 'border-transparent text-[#888] hover:text-[#ccc] hover:bg-[color:var(--bg-surface-1)]'}`}
           >
             <Icon size={11} />
             {label}

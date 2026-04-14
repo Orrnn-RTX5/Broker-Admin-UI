@@ -51,10 +51,10 @@ const CreateHolidayPopup = ({ onClose, onCreated }) => {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="w-[400px] bg-[#252526] border border-[#3e3e42] shadow-2xl flex flex-col font-sans rounded-md overflow-hidden"
+        className="w-[400px] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] shadow-2xl flex flex-col font-sans rounded-md overflow-hidden"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-[#2d2d30] border-b border-[#3e3e42] select-none">
+        <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] select-none">
           <div className="flex items-center gap-2 text-white text-[13px] font-medium">
             <Calendar size={16} className="text-[#3b82f6]" />
             Create Holiday
@@ -68,7 +68,7 @@ const CreateHolidayPopup = ({ onClose, onCreated }) => {
         </div>
 
         {/* Content */}
-        <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-4 text-[12px] bg-[#1e1e1e]">
+        <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-4 text-[12px] bg-[color:var(--bg-app)]">
           {error && (
             <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 p-3 rounded-sm text-red-400">
               <AlertCircle size={14} className="mt-0.5 shrink-0" />
@@ -78,7 +78,7 @@ const CreateHolidayPopup = ({ onClose, onCreated }) => {
 
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[#cccccc]">Holiday Name</label>
+              <label className="text-[color:var(--text-secondary)]">Holiday Name</label>
               <input
                 type="text"
                 name="name"
@@ -86,31 +86,31 @@ const CreateHolidayPopup = ({ onClose, onCreated }) => {
                 onChange={handleChange}
                 required
                 placeholder="e.g. Christmas Day"
-                className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 focus:border-[#007acc] focus:outline-none rounded-sm transition-colors"
+                className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[#cccccc]">Date</label>
+              <label className="text-[color:var(--text-secondary)]">Date</label>
               <input
                 type="date"
                 name="date"
                 value={formData.date}
                 onChange={handleChange}
                 required
-                className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 focus:border-[#007acc] focus:outline-none rounded-sm transition-colors [color-scheme:dark]"
+                className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors [color-scheme:dark]"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[#cccccc]">Symbols (comma separated)</label>
+              <label className="text-[color:var(--text-secondary)]">Symbols (comma separated)</label>
               <input
                 type="text"
                 name="symbols"
                 value={formData.symbols}
                 onChange={handleChange}
                 placeholder="EURUSD, GBPUSD"
-                className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 focus:border-[#007acc] focus:outline-none rounded-sm transition-colors"
+                className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors"
               />
             </div>
 
@@ -121,16 +121,16 @@ const CreateHolidayPopup = ({ onClose, onCreated }) => {
                 name="trading_allowed"
                 checked={formData.trading_allowed}
                 onChange={handleChange}
-                className="w-[13px] h-[13px] accent-[#007acc]"
+                className="w-[13px] h-[13px] accent-[color:var(--accent-500)]"
               />
-              <label htmlFor="trading_allowed" className="text-[#cccccc] cursor-pointer">
+              <label htmlFor="trading_allowed" className="text-[color:var(--text-secondary)] cursor-pointer">
                 Trading Allowed
               </label>
             </div>
           </div>
 
           {/* Footer Actions */}
-          <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-[#3e3e42]">
+          <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-[color:var(--border-default)]">
             <button
               type="button"
               onClick={onClose}
@@ -142,7 +142,7 @@ const CreateHolidayPopup = ({ onClose, onCreated }) => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-1.5 bg-[#007acc] hover:bg-[#0098ff] text-white rounded-[2px] transition-colors disabled:opacity-50 min-w-[70px] flex justify-center"
+              className="px-4 py-1.5 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white rounded-[2px] transition-colors disabled:opacity-50 min-w-[70px] flex justify-center"
             >
               {isSubmitting ? '...' : 'Create'}
             </button>

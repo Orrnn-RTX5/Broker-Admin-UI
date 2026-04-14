@@ -21,7 +21,7 @@ const AddDepositPopup = ({ onClose, onSaved }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
-  const inp = "w-full bg-[#3c3c3c] border border-[#555] text-[#e1e1e1] text-[12px] px-2 py-1 rounded-[2px] focus:outline-none focus:border-[#007acc]";
+  const inp = "w-full bg-[color:var(--bg-surface-2)] border border-[#555] text-[color:var(--text-primary)] text-[12px] px-2 py-1 rounded-[2px] focus:outline-none focus:border-[color:var(--accent-500)]";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,9 +46,9 @@ const AddDepositPopup = ({ onClose, onSaved }) => {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" onClick={onClose}>
-      <div className="bg-[#252526] border border-[#3e3e42] rounded-[3px] shadow-2xl w-[400px]" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center h-9 px-4 border-b border-black/40 bg-[#2d2d30]">
-          <span className="text-[12px] font-semibold text-[#e1e1e1] flex-1">New Deposit Request</span>
+      <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-[3px] shadow-2xl w-[400px]" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center h-9 px-4 border-b border-black/40 bg-[color:var(--bg-surface-1)]">
+          <span className="text-[12px] font-semibold text-[color:var(--text-primary)] flex-1">New Deposit Request</span>
           <button onClick={onClose} className="text-[#555] hover:text-[#ccc]"><X size={14} /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3">
@@ -61,10 +61,10 @@ const AddDepositPopup = ({ onClose, onSaved }) => {
             <Lbl t="Currency"><input className={inp} value={form.currency} onChange={e => set('currency', e.target.value)} /></Lbl>
             <Lbl t="Reference"><input className={inp} value={form.reference} onChange={e => set('reference', e.target.value)} placeholder="GW-REF-001" /></Lbl>
           </div>
-          {error && <div className="text-[11px] text-[#f48771] bg-[#3e1e1e] px-3 py-1.5 rounded-[2px]">{error}</div>}
+          {error && <div className="text-[11px] text-[#f48771] bg-[color:var(--bg-surface-2)] px-3 py-1.5 rounded-[2px]">{error}</div>}
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[#3c3c3c] hover:bg-[#505050] text-[#ccc] rounded-[2px]">Cancel</button>
-            <button type="submit" disabled={loading} className="h-[26px] px-4 text-[11px] bg-[#007acc] hover:bg-[#0098ff] disabled:opacity-50 text-white rounded-[2px]">{loading ? 'Creating…' : 'Create'}</button>
+            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] rounded-[2px]">Cancel</button>
+            <button type="submit" disabled={loading} className="h-[26px] px-4 text-[11px] bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] disabled:opacity-50 text-white rounded-[2px]">{loading ? 'Creating…' : 'Create'}</button>
           </div>
         </form>
       </div>
@@ -85,20 +85,20 @@ const RejectPopup = ({ deposit, onClose, onSaved }) => {
   };
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" onClick={onClose}>
-      <div className="bg-[#252526] border border-[#3e3e42] rounded-[3px] shadow-2xl w-[360px]" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center h-9 px-4 border-b border-black/40 bg-[#2d2d30]">
-          <span className="text-[12px] font-semibold text-[#e1e1e1] flex-1">Reject Deposit #{deposit.id}</span>
+      <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-[3px] shadow-2xl w-[360px]" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center h-9 px-4 border-b border-black/40 bg-[color:var(--bg-surface-1)]">
+          <span className="text-[12px] font-semibold text-[color:var(--text-primary)] flex-1">Reject Deposit #{deposit.id}</span>
           <button onClick={onClose} className="text-[#555] hover:text-[#ccc]"><X size={14} /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3">
           <div className="flex flex-col gap-0.5">
             <label className="text-[10px] text-[#888] uppercase tracking-wider">Reason (optional)</label>
             <input value={reason} onChange={e => setReason(e.target.value)}
-              className="w-full bg-[#3c3c3c] border border-[#555] text-[#e1e1e1] text-[12px] px-2 py-1 rounded-[2px] focus:outline-none focus:border-[#007acc]"
+              className="w-full bg-[color:var(--bg-surface-2)] border border-[#555] text-[color:var(--text-primary)] text-[12px] px-2 py-1 rounded-[2px] focus:outline-none focus:border-[color:var(--accent-500)]"
               placeholder="Insufficient proof…" />
           </div>
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[#3c3c3c] hover:bg-[#505050] text-[#ccc] rounded-[2px]">Cancel</button>
+            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] rounded-[2px]">Cancel</button>
             <button type="submit" disabled={loading} className="h-[26px] px-4 text-[11px] bg-[#e51400] hover:bg-[#ff2d00] disabled:opacity-50 text-white rounded-[2px]">{loading ? 'Rejecting…' : 'Reject'}</button>
           </div>
         </form>
@@ -149,42 +149,42 @@ const DepositsView = () => {
   ];
 
   return (
-    <div className="flex-1 bg-[#1e1e1e] flex flex-col overflow-hidden relative"
+    <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative"
       onClick={() => setContextMenu({ visible: false })} onContextMenu={e => e.preventDefault()}>
       {/* Action Bar */}
-      <div className="flex items-center gap-2 px-2 py-1.5 bg-[#252526] border-b border-black/40 shrink-0 select-none">
+      <div className="flex items-center gap-2 px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0 select-none">
         <button onClick={() => setAddOpen(true)}
-          className="flex items-center gap-1.5 h-[24px] px-3 bg-[#007acc] hover:bg-[#0098ff] text-white text-[11px] rounded-[2px] transition-colors">
+          className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] transition-colors">
           <Plus size={12} /> New Deposit
         </button>
         <div className="flex items-center gap-1.5 ml-3">
           <input value={filterLogin} onChange={e => setFilterLogin(e.target.value)} onKeyDown={e => e.key === 'Enter' && fetchData()}
-            placeholder="login…" className="h-[22px] w-[90px] bg-[#3c3c3c] border border-[#555] text-[#e1e1e1] text-[11px] px-2 rounded-[2px] focus:outline-none focus:border-[#007acc]" />
+            placeholder="login…" className="h-[22px] w-[90px] bg-[color:var(--bg-surface-2)] border border-[#555] text-[color:var(--text-primary)] text-[11px] px-2 rounded-[2px] focus:outline-none focus:border-[color:var(--accent-500)]" />
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-            className="h-[22px] bg-[#3c3c3c] border border-[#555] text-[#ccc] text-[11px] px-2 rounded-[2px] focus:outline-none">
+            className="h-[22px] bg-[color:var(--bg-surface-2)] border border-[#555] text-[#ccc] text-[11px] px-2 rounded-[2px] focus:outline-none">
             <option value="">All status</option>
             {['pending','approved','rejected'].map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-          <button onClick={fetchData} className="h-[22px] px-2.5 bg-[#3c3c3c] hover:bg-[#505050] text-[#ccc] text-[11px] rounded-[2px] border border-[#555]">Filter</button>
+          <button onClick={fetchData} className="h-[22px] px-2.5 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] text-[11px] rounded-[2px] border border-[#555]">Filter</button>
         </div>
         <div className="ml-auto pr-2"><button onClick={fetchData} className="text-[#999] hover:text-white"><RefreshCw size={13} /></button></div>
       </div>
       {/* Header */}
-      <div className="flex bg-[#333333] border-b border-black/40 sticky top-0 z-10 select-none shrink-0">
-        {cols.map(c => <div key={c.label} className={`${c.w} px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20 shrink-0`}>{c.label}</div>)}
-        <div className="w-[130px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] shrink-0">Actions</div>
+      <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 sticky top-0 z-10 select-none shrink-0">
+        {cols.map(c => <div key={c.label} className={`${c.w} px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0`}>{c.label}</div>)}
+        <div className="w-[130px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] shrink-0">Actions</div>
       </div>
       {/* Body */}
       <div className="flex-1 overflow-auto no-scrollbar">
         {data.map((row, idx) => (
           <div key={row.id || idx}
             onContextMenu={e => { e.preventDefault(); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, row }); }}
-            className={`flex border-b border-black/10 hover:bg-blue-600/10 transition-colors ${idx%2===0?'bg-[#1e1e1e]':'bg-[#252526]'}`}>
+            className={`flex border-b border-black/10 hover:bg-blue-600/10 transition-colors ${idx%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}>
             <div className="w-[60px] px-3 py-1 text-[12px] text-[#9cdcfe] font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.id)}</div>
-            <div className="w-[90px] px-3 py-1 text-[12px] text-[#e1e1e1] border-r border-black/10 shrink-0 flex items-center">{fmt(row.account_login)}</div>
-            <div className="w-[80px] px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 flex items-center">{fmt(row.method_id)}</div>
+            <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-primary)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.account_login)}</div>
+            <div className="w-[80px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.method_id)}</div>
             <div className="w-[100px] px-3 py-1 text-[12px] text-[#4ec9b0] font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.amount)}</div>
-            <div className="w-[80px] px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 flex items-center">{fmt(row.currency)}</div>
+            <div className="w-[80px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.currency)}</div>
             <div className="w-[100px] px-3 py-1 border-r border-black/10 shrink-0 flex items-center"><Badge status={row.status} /></div>
             <div className="w-[140px] px-3 py-1 text-[11px] text-[#888] font-mono border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.reference)}</div>
             <div className="w-[150px] px-3 py-1 text-[11px] text-[#888] font-mono border-r border-black/10 shrink-0 flex items-center">{fmtTs(row.created_at)}</div>
@@ -203,17 +203,17 @@ const DepositsView = () => {
             </div>
           </div>
         ))}
-        {loading && <div className="p-4 text-[#aaaaaa] text-[12px] italic">Loading…</div>}
-        {!loading && data.length === 0 && <div className="p-4 text-[#aaaaaa] text-[12px] italic">No deposit requests found.</div>}
-        {[...Array(12)].map((_, i) => <div key={i} className={`flex border-b border-black/5 opacity-30 h-6 ${i%2===0?'bg-[#1e1e1e]':'bg-[#252526]'}`}></div>)}
+        {loading && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">Loading…</div>}
+        {!loading && data.length === 0 && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">No deposit requests found.</div>}
+        {[...Array(12)].map((_, i) => <div key={i} className={`flex border-b border-black/5 opacity-30 h-6 ${i%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}></div>)}
       </div>
 
       {contextMenu.visible && (
-        <div className="fixed z-[9999] bg-[#2d2d30] border border-[#3e3e42] shadow-2xl py-1 min-w-[160px] text-[12px] text-[#cccccc] rounded-[2px]"
+        <div className="fixed z-[9999] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] shadow-2xl py-1 min-w-[160px] text-[12px] text-[color:var(--text-secondary)] rounded-[2px]"
           style={{ top: contextMenu.y, left: contextMenu.x }} onClick={e => e.stopPropagation()}>
-          <div className="px-4 py-1 hover:bg-[#007acc] hover:text-white cursor-pointer" onClick={() => { setAddOpen(true); setContextMenu({ visible: false }); }}>New Deposit</div>
+          <div className="px-4 py-1 hover:bg-[color:var(--accent-500)] hover:text-white cursor-pointer" onClick={() => { setAddOpen(true); setContextMenu({ visible: false }); }}>New Deposit</div>
           {contextMenu.row?.status === 'pending' && <>
-            <div className="h-px bg-[#3e3e42] my-1 mx-2"></div>
+            <div className="h-px bg-[color:var(--border-default)] my-1 mx-2"></div>
             <div className="px-4 py-1 hover:bg-[#4ec9b0]/30 hover:text-[#4ec9b0] cursor-pointer" onClick={() => { handleApprove(contextMenu.row); setContextMenu({ visible: false }); }}>Approve</div>
             <div className="px-4 py-1 hover:bg-[#e51400] hover:text-white cursor-pointer text-red-400" onClick={() => { setRejectRow(contextMenu.row); setContextMenu({ visible: false }); }}>Reject</div>
           </>}
@@ -223,7 +223,7 @@ const DepositsView = () => {
       {addOpen && <AddDepositPopup onClose={() => setAddOpen(false)} onSaved={fetchData} />}
       {rejectRow && <RejectPopup deposit={rejectRow} onClose={() => setRejectRow(null)} onSaved={fetchData} />}
 
-      <div className="h-6 bg-[#007acc] text-white flex items-center px-4 text-[11px] select-none shrink-0 border-t border-[#005a9e]">
+      <div className="h-6 bg-[color:var(--accent-500)] text-white flex items-center px-4 text-[11px] select-none shrink-0 border-t border-[color:var(--accent-700)]">
         <span>Total: {data.length}</span>
         {filterStatus && <span className="ml-4 opacity-70">Status: {filterStatus}</span>}
       </div>

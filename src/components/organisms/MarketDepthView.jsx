@@ -93,18 +93,18 @@ const MarketDepthView = () => {
   };
 
   return (
-    <div className="flex-1 bg-[#1e1e1e] flex flex-col overflow-hidden relative">
+    <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative">
       {/* Top Action Bar */}
-      <div className="flex flex-col border-b border-black/40 bg-[#252526] shrink-0 p-4 gap-4">
+      <div className="flex flex-col border-b border-black/40 bg-[color:var(--bg-surface-1)] shrink-0 p-4 gap-4">
         
         <div className="flex items-center gap-2">
             <Database size={16} className="text-blue-400" />
-            <h2 className="text-[#e1e1e1] text-[14px] font-medium tracking-wide">Market Depth Configuration</h2>
+            <h2 className="text-[color:var(--text-primary)] text-[14px] font-medium tracking-wide">Market Depth Configuration</h2>
         </div>
 
         {/* Search Bar */}
         <form onSubmit={handleSearch} className="flex items-center gap-3">
-          <div className="flex border border-[#555555] bg-[#1e1e1e] h-[26px] items-center text-[#aaaaaa] rounded-[2px] w-[300px]">
+          <div className="flex border border-[color:var(--border-strong)] bg-[color:var(--bg-app)] h-[26px] items-center text-[color:var(--text-muted)] rounded-[2px] w-[300px]">
             <div className="px-2"><Search size={12} /></div>
             <input
               type="text"
@@ -112,13 +112,13 @@ const MarketDepthView = () => {
               value={searchSymbol}
               onChange={(e) => setSearchSymbol(e.target.value)}
               placeholder="Enter Symbol (e.g. EURUSD)"
-              className="bg-transparent border-none outline-none w-full text-[12px] text-[#e1e1e1] placeholder:text-[#666666] h-full"
+              className="bg-transparent border-none outline-none w-full text-[12px] text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] h-full"
             />
           </div>
           <button 
             type="submit"
             disabled={loading}
-            className="flex items-center justify-center h-[26px] px-4 bg-[#007acc] hover:bg-[#0098ff] text-white text-[12px] rounded-[2px] transition-colors disabled:opacity-50 min-w-[70px]"
+            className="flex items-center justify-center h-[26px] px-4 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[12px] rounded-[2px] transition-colors disabled:opacity-50 min-w-[70px]"
           >
             {loading ? '...' : 'Load'}
           </button>
@@ -140,7 +140,7 @@ const MarketDepthView = () => {
       </div>
 
       {/* Configuration Form Body */}
-      <div className="flex-1 overflow-auto bg-[#1e1e1e] p-6">
+      <div className="flex-1 overflow-auto bg-[color:var(--bg-app)] p-6">
         
         {!config && !notFound && !loading && (
           <div className="flex flex-col items-center justify-center h-full opacity-30 select-none">
@@ -153,11 +153,11 @@ const MarketDepthView = () => {
           <div className="flex flex-col items-center justify-center h-full select-none gap-4">
             <div className="flex flex-col items-center gap-2 opacity-50">
               <Database size={48} className="text-[#888]" />
-              <p className="text-[13px] text-[#aaaaaa]">No configuration found for <span className="text-white font-medium">{searchSymbol}</span></p>
+              <p className="text-[13px] text-[color:var(--text-muted)]">No configuration found for <span className="text-white font-medium">{searchSymbol}</span></p>
             </div>
             <button 
               onClick={handleCreateNew}
-              className="flex items-center gap-2 h-[28px] px-5 bg-[#007acc] hover:bg-[#0098ff] text-white text-[12px] rounded-[2px] transition-colors"
+              className="flex items-center gap-2 h-[28px] px-5 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[12px] rounded-[2px] transition-colors"
             >
               <Plus size={13} />
               Create Config for {searchSymbol}
@@ -167,57 +167,57 @@ const MarketDepthView = () => {
 
         {config && (
           <div className="max-w-[600px] flex flex-col gap-6">
-            <h3 className="text-[#cccccc] text-[13px] border-b border-[#333] pb-2 font-medium">
+            <h3 className="text-[color:var(--text-secondary)] text-[13px] border-b border-[#333] pb-2 font-medium">
               Configuring: <span className="text-white">{config.symbol}</span>
               {config.id && <span className="ml-2 text-[#666] text-[11px]">ID: {config.id}</span>}
             </h3>
             
             <div className="grid grid-cols-2 gap-x-8 gap-y-5">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[#a0a0a0] text-[11px] uppercase tracking-wider">Aggregation Type</label>
+                <label className="text-[color:var(--text-muted)] text-[11px] uppercase tracking-wider">Aggregation Type</label>
                 <input
                   type="text"
                   name="aggregation"
                   value={config.aggregation ?? ''}
                   onChange={handleChange}
                   placeholder="none"
-                  className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 text-[12px] focus:border-[#007acc] focus:outline-none rounded-sm transition-colors"
+                  className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 text-[12px] focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[#a0a0a0] text-[11px] uppercase tracking-wider">Depth Levels</label>
+                <label className="text-[color:var(--text-muted)] text-[11px] uppercase tracking-wider">Depth Levels</label>
                 <input
                   type="number"
                   name="depth_levels"
                   value={config.depth_levels ?? 5}
                   onChange={handleChange}
                   min="0"
-                  className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 text-[12px] focus:border-[#007acc] focus:outline-none rounded-sm transition-colors"
+                  className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 text-[12px] focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[#a0a0a0] text-[11px] uppercase tracking-wider">Spread Markup (pts)</label>
+                <label className="text-[color:var(--text-muted)] text-[11px] uppercase tracking-wider">Spread Markup (pts)</label>
                 <input
                   type="number"
                   name="spread_markup"
                   value={config.spread_markup ?? 0}
                   onChange={handleChange}
                   step="1"
-                  className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 text-[12px] focus:border-[#007acc] focus:outline-none rounded-sm transition-colors"
+                  className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 text-[12px] focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[#a0a0a0] text-[11px] uppercase tracking-wider">Volume Filter</label>
+                <label className="text-[color:var(--text-muted)] text-[11px] uppercase tracking-wider">Volume Filter</label>
                 <input
                   type="number"
                   name="volume_filter"
                   value={config.volume_filter ?? 0}
                   onChange={handleChange}
                   step="0.01"
-                  className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 text-[12px] focus:border-[#007acc] focus:outline-none rounded-sm transition-colors"
+                  className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 text-[12px] focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors"
                 />
               </div>
 
@@ -230,9 +230,9 @@ const MarketDepthView = () => {
                     onChange={handleChange}
                     className="sr-only peer"
                   />
-                  <div className="w-9 h-5 bg-[#444] rounded-full peer peer-checked:bg-[#007acc] peer-focus:ring-2 peer-focus:ring-blue-800 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
+                  <div className="w-9 h-5 bg-[#444] rounded-full peer peer-checked:bg-[color:var(--accent-500)] peer-focus:ring-2 peer-focus:ring-blue-800 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
                 </label>
-                <span className="text-[12px] text-[#e1e1e1] font-medium">Market Depth Enabled</span>
+                <span className="text-[12px] text-[color:var(--text-primary)] font-medium">Market Depth Enabled</span>
               </div>
             </div>
 
@@ -240,7 +240,7 @@ const MarketDepthView = () => {
               <button 
                 onClick={handleSave}
                 disabled={saving}
-                className="flex items-center justify-center gap-2 h-[28px] px-6 bg-[#007acc] hover:bg-[#0098ff] text-white text-[12px] rounded-[2px] transition-colors disabled:opacity-50"
+                className="flex items-center justify-center gap-2 h-[28px] px-6 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[12px] rounded-[2px] transition-colors disabled:opacity-50"
               >
                 <Save size={13} />
                 {saving ? 'Saving...' : 'Save Configuration'}

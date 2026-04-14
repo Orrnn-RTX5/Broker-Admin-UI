@@ -33,16 +33,16 @@ const AllocationsView = () => {
   const [selectedAllocation, setSelectedAllocation] = useState(null);
 
   return (
-    <div className="flex-1 bg-[#1e1e1e] flex flex-col overflow-hidden relative">
+    <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative">
       {/* Top Section - URLs list */}
-      <div className="flex flex-col border-b border-black/40 bg-[#1e1e1e] shrink-0">
+      <div className="flex flex-col border-b border-black/40 bg-[color:var(--bg-app)] shrink-0">
         {allocationsTopData.map((row, idx) => (
-          <div key={idx} className={`flex items-center text-[12px] border-b border-black/10 ${idx % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'} hover:bg-blue-600/20 cursor-default h-6`}>
+          <div key={idx} className={`flex items-center text-[12px] border-b border-black/10 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-blue-600/20 cursor-default h-6`}>
             <div className="w-[300px] flex items-center gap-2 px-3 border-r border-black/10 shrink-0 h-full">
               <BlueSquareXIcon />
-              <span className="text-[#e1e1e1] truncate">{row.label}</span>
+              <span className="text-[color:var(--text-primary)] truncate">{row.label}</span>
             </div>
-            <div className="flex-1 px-3 text-[#aaaaaa] truncate h-full flex items-center">
+            <div className="flex-1 px-3 text-[color:var(--text-muted)] truncate h-full flex items-center">
               {row.value}
             </div>
           </div>
@@ -50,12 +50,12 @@ const AllocationsView = () => {
       </div>
 
       {/* Resize handle or spacer */}
-      <div className="h-1 bg-[#252526] border-b border-black/40 shrink-0"></div>
+      <div className="h-1 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0"></div>
 
       {/* Bottom Section - Data Table */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-[#1e1e1e]">
+      <div className="flex-1 flex flex-col overflow-hidden bg-[color:var(--bg-app)]">
         {/* Table Header */}
-        <div className="flex border-b border-black/40 bg-[#333333] sticky top-0 z-10 shadow-sm text-[11px] font-medium text-[#d1d1d1]">
+        <div className="flex border-b border-black/40 bg-[color:var(--bg-surface-2)] sticky top-0 z-10 shadow-sm text-[11px] font-medium text-[color:var(--text-primary)]">
           <div className="w-64 px-3 py-1.5 border-r border-black/20 shrink-0">Group</div>
           <div className="w-64 px-3 py-1.5 border-r border-black/20 shrink-0">Description</div>
           <div className="w-24 px-3 py-1.5 border-r border-black/20 shrink-0">Currency</div>
@@ -69,7 +69,7 @@ const AllocationsView = () => {
         
         <div className="flex-1 overflow-auto no-scrollbar">
           {/* Sub-header "Default" */}
-          <div className="flex items-center px-3 py-1 text-[11px] font-bold text-[#e1e1e1] bg-[#1e1e1e] border-b border-black/10">
+          <div className="flex items-center px-3 py-1 text-[11px] font-bold text-[color:var(--text-primary)] bg-[color:var(--bg-app)] border-b border-black/10">
             Default
           </div>
 
@@ -78,31 +78,31 @@ const AllocationsView = () => {
             <div 
               key={idx} 
               onDoubleClick={() => setSelectedAllocation(row)}
-              className={`flex text-[12px] border-b border-black/10 cursor-default transition-colors ${idx === 0 ? 'bg-[#007acc]/80 text-white' : idx % 2 !== 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'} hover:bg-blue-600/30 h-[22px] items-center`}
+              className={`flex text-[12px] border-b border-black/10 cursor-default transition-colors ${idx === 0 ? 'bg-[color:var(--accent-500)]/80 text-white' : idx % 2 !== 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-blue-600/30 h-[22px] items-center`}
             >
               <div className="w-64 px-3 border-r border-black/10 flex items-center gap-2 shrink-0 h-full">
                 <UserGearIcon />
-                <span className={`truncate ${idx === 0 ? 'text-white' : 'text-[#e1e1e1]'}`}>{row.group}</span>
+                <span className={`truncate ${idx === 0 ? 'text-white' : 'text-[color:var(--text-primary)]'}`}>{row.group}</span>
               </div>
-              <div className={`w-64 px-3 border-r border-black/10 shrink-0 truncate h-full flex items-center ${row.descBg ? row.descBg : (idx === 0 ? 'text-white' : 'text-[#aaaaaa]')}`}>
+              <div className={`w-64 px-3 border-r border-black/10 shrink-0 truncate h-full flex items-center ${row.descBg ? row.descBg : (idx === 0 ? 'text-white' : 'text-[color:var(--text-muted)]')}`}>
                 {row.desc}
               </div>
-              <div className={`w-24 px-3 border-r border-black/10 shrink-0 truncate h-full flex items-center ${idx === 0 ? 'text-white' : 'text-[#aaaaaa]'}`}>
+              <div className={`w-24 px-3 border-r border-black/10 shrink-0 truncate h-full flex items-center ${idx === 0 ? 'text-white' : 'text-[color:var(--text-muted)]'}`}>
                 {row.currency}
               </div>
-              <div className={`w-32 px-3 border-r border-black/10 shrink-0 truncate h-full flex items-center ${idx === 0 ? 'text-white' : 'text-[#aaaaaa]'}`}>
+              <div className={`w-32 px-3 border-r border-black/10 shrink-0 truncate h-full flex items-center ${idx === 0 ? 'text-white' : 'text-[color:var(--text-muted)]'}`}>
                 {row.type}
               </div>
-              <div className={`w-48 px-3 border-r border-black/10 shrink-0 truncate h-full flex items-center ${idx === 0 ? 'text-white' : 'text-[#aaaaaa]'}`}>
+              <div className={`w-48 px-3 border-r border-black/10 shrink-0 truncate h-full flex items-center ${idx === 0 ? 'text-white' : 'text-[color:var(--text-muted)]'}`}>
                 {row.server}
               </div>
-              <div className={`w-48 px-3 border-r border-black/10 shrink-0 truncate h-full flex items-center ${idx === 0 ? 'text-white' : 'text-[#aaaaaa]'}`}>
+              <div className={`w-48 px-3 border-r border-black/10 shrink-0 truncate h-full flex items-center ${idx === 0 ? 'text-white' : 'text-[color:var(--text-muted)]'}`}>
                 {row.countries}
               </div>
-              <div className={`w-32 px-3 border-r border-black/10 shrink-0 truncate h-full flex items-center ${idx === 0 ? 'text-white' : 'text-[#aaaaaa]'}`}>
+              <div className={`w-32 px-3 border-r border-black/10 shrink-0 truncate h-full flex items-center ${idx === 0 ? 'text-white' : 'text-[color:var(--text-muted)]'}`}>
                 {row.leverages}
               </div>
-              <div className={`w-48 px-3 border-r border-black/10 shrink-0 truncate h-full flex items-center ${idx === 0 ? 'text-white' : 'text-[#aaaaaa]'}`}>
+              <div className={`w-48 px-3 border-r border-black/10 shrink-0 truncate h-full flex items-center ${idx === 0 ? 'text-white' : 'text-[color:var(--text-muted)]'}`}>
                 {row.kyc}
               </div>
               <div className="flex-1 border-b border-white/5 bg-transparent h-full"></div>
@@ -111,7 +111,7 @@ const AllocationsView = () => {
           
           {/* Fill space */}
           {[...Array(20)].map((_, i) => (
-             <div key={i} className={`flex border-b border-black/5 opacity-40 ${ (allocationsTableData.length + 1 + i) % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'} h-[22px]`}>
+             <div key={i} className={`flex border-b border-black/5 opacity-40 ${ (allocationsTableData.length + 1 + i) % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} h-[22px]`}>
                 <div className="w-full h-full border-r border-black/10"></div>
              </div>
           ))}
@@ -119,7 +119,7 @@ const AllocationsView = () => {
       </div>
       
       {/* Bottom Tab Bar (MT5 Style) */}
-      <div className="h-7 bg-[#2b2b2b] border-t border-black/40 flex items-center px-1 gap-1 shrink-0">
+      <div className="h-7 bg-[color:var(--bg-surface-1)] border-t border-black/40 flex items-center px-1 gap-1 shrink-0">
         <div className="h-[22px] px-3 bg-[#3e3e3e] text-white text-[11px] flex items-center border border-black/40 rounded-sm shadow-sm cursor-default">
           Allocations
         </div>

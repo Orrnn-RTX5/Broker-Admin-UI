@@ -56,14 +56,14 @@ const CreateSchedulePopup = ({ onClose, onCreated }) => {
     </div>
   );
 
-  const inp = "w-full bg-[#3c3c3c] border border-[#555] text-[#e1e1e1] text-[12px] px-2 py-1 rounded-[2px] focus:outline-none focus:border-[#007acc]";
+  const inp = "w-full bg-[color:var(--bg-surface-2)] border border-[#555] text-[color:var(--text-primary)] text-[12px] px-2 py-1 rounded-[2px] focus:outline-none focus:border-[color:var(--accent-500)]";
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" onClick={onClose}>
-      <div className="bg-[#252526] border border-[#3e3e42] rounded-[3px] shadow-2xl w-[480px] flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-[3px] shadow-2xl w-[480px] flex flex-col" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center h-9 px-4 border-b border-black/40 bg-[#2d2d30] shrink-0">
-          <span className="text-[12px] font-semibold text-[#e1e1e1] flex-1">Add Leverage Schedule Rule</span>
+        <div className="flex items-center h-9 px-4 border-b border-black/40 bg-[color:var(--bg-surface-1)] shrink-0">
+          <span className="text-[12px] font-semibold text-[color:var(--text-primary)] flex-1">Add Leverage Schedule Rule</span>
           <button onClick={onClose} className="text-[#555] hover:text-[#ccc]"><X size={14} /></button>
         </div>
 
@@ -95,7 +95,7 @@ const CreateSchedulePopup = ({ onClose, onCreated }) => {
             </Field>
           </div>
 
-          <div className="bg-[#1e1e1e] rounded-[2px] px-3 py-2 border border-[#3e3e42]">
+          <div className="bg-[color:var(--bg-app)] rounded-[2px] px-3 py-2 border border-[color:var(--border-default)]">
             <div className="text-[10px] text-[#888] uppercase tracking-wider mb-2">Effective Period (optional — leave blank for no restriction)</div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="From">
@@ -107,15 +107,15 @@ const CreateSchedulePopup = ({ onClose, onCreated }) => {
             </div>
           </div>
 
-          {error && <div className="text-[11px] text-[#f48771] bg-[#3e1e1e] px-3 py-1.5 rounded-[2px] border border-[#f48771]/30">{error}</div>}
+          {error && <div className="text-[11px] text-[#f48771] bg-[color:var(--bg-surface-2)] px-3 py-1.5 rounded-[2px] border border-[#f48771]/30">{error}</div>}
 
           <div className="flex justify-end gap-2 pt-1">
             <button type="button" onClick={onClose}
-              className="h-[26px] px-4 text-[11px] bg-[#3c3c3c] hover:bg-[#505050] text-[#ccc] rounded-[2px] transition-colors">
+              className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] rounded-[2px] transition-colors">
               Cancel
             </button>
             <button type="submit" disabled={loading}
-              className="h-[26px] px-4 text-[11px] bg-[#007acc] hover:bg-[#0098ff] disabled:opacity-50 text-white rounded-[2px] transition-colors">
+              className="h-[26px] px-4 text-[11px] bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] disabled:opacity-50 text-white rounded-[2px] transition-colors">
               {loading ? 'Creating…' : 'Create Schedule'}
             </button>
           </div>
@@ -195,15 +195,15 @@ const LeverageScheduleView = () => {
 
   return (
     <div
-      className="flex-1 bg-[#1e1e1e] flex flex-col overflow-hidden relative"
+      className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative"
       onClick={() => setContextMenu({ visible: false })}
       onContextMenu={e => e.preventDefault()}
     >
       {/* Action Bar */}
-      <div className="flex items-center gap-2 px-2 py-1.5 bg-[#252526] border-b border-black/40 shrink-0 select-none">
+      <div className="flex items-center gap-2 px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0 select-none">
         <button
           onClick={() => setIsAddOpen(true)}
-          className="flex items-center gap-1.5 h-[24px] px-3 bg-[#007acc] hover:bg-[#0098ff] text-white text-[11px] rounded-[2px] transition-colors"
+          className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] transition-colors"
         >
           <Plus size={12} /> Add Schedule
         </button>
@@ -216,11 +216,11 @@ const LeverageScheduleView = () => {
             onChange={e => setGroupFilter(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleApplyFilter()}
             placeholder="filter by group…"
-            className="h-[22px] w-[160px] bg-[#3c3c3c] border border-[#555] text-[#e1e1e1] text-[11px] px-2 rounded-[2px] focus:outline-none focus:border-[#007acc]"
+            className="h-[22px] w-[160px] bg-[color:var(--bg-surface-2)] border border-[#555] text-[color:var(--text-primary)] text-[11px] px-2 rounded-[2px] focus:outline-none focus:border-[color:var(--accent-500)]"
           />
           <button
             onClick={handleApplyFilter}
-            className="h-[22px] px-2.5 bg-[#3c3c3c] hover:bg-[#505050] text-[#ccc] text-[11px] rounded-[2px] border border-[#555] transition-colors"
+            className="h-[22px] px-2.5 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] text-[11px] rounded-[2px] border border-[#555] transition-colors"
           >
             Filter
           </button>
@@ -241,21 +241,21 @@ const LeverageScheduleView = () => {
 
       {/* Active filter badge */}
       {appliedFilter && (
-        <div className="px-3 py-1 bg-[#252526] border-b border-black/30 shrink-0 flex items-center gap-2">
+        <div className="px-3 py-1 bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0 flex items-center gap-2">
           <span className="text-[10px] text-[#888]">Showing group:</span>
-          <span className="text-[10px] text-[#9cdcfe] font-mono bg-[#1e1e1e] px-2 py-0.5 rounded-[2px]">{appliedFilter}</span>
+          <span className="text-[10px] text-[#9cdcfe] font-mono bg-[color:var(--bg-app)] px-2 py-0.5 rounded-[2px]">{appliedFilter}</span>
         </div>
       )}
 
       {/* Table Header */}
-      <div className="flex bg-[#333333] border-b border-black/40 shadow-sm sticky top-0 z-10 select-none shrink-0">
+      <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 shadow-sm sticky top-0 z-10 select-none shrink-0">
         {columns.map(c => (
-          <div key={c.label} className={`${c.w} px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20 shrink-0`}>{c.label}</div>
+          <div key={c.label} className={`${c.w} px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0`}>{c.label}</div>
         ))}
       </div>
 
       {/* Table Body */}
-      <div className="flex-1 overflow-auto no-scrollbar bg-[#1e1e1e]">
+      <div className="flex-1 overflow-auto no-scrollbar bg-[color:var(--bg-app)]">
         {data.map((row, idx) => {
           const sid = row.id || row.schedule_id;
           return (
@@ -263,17 +263,17 @@ const LeverageScheduleView = () => {
               key={sid || idx}
               onContextMenu={e => handleContextMenu(e, row)}
               className={`flex cursor-default border-b border-black/10 hover:bg-blue-600/20 transition-colors
-                ${idx % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'}`}
+                ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}
             >
               <div className="w-[70px] px-3 py-1 text-[12px] text-[#9cdcfe] font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(sid)}</div>
-              <div className="w-[160px] px-3 py-1 text-[12px] text-[#e1e1e1] border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.group_name)}</div>
+              <div className="w-[160px] px-3 py-1 text-[12px] text-[color:var(--text-primary)] border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.group_name)}</div>
               <div className="w-[110px] px-3 py-1 text-[12px] text-[#4ec9b0] font-mono border-r border-black/10 shrink-0 truncate flex items-center">
                 {row.symbol === '*' ? <span className="text-[#888]">* (all)</span> : fmt(row.symbol)}
               </div>
-              <div className="w-[90px] px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 flex items-center">{fmt(row.leverage_from)}</div>
-              <div className="w-[90px] px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 flex items-center">{fmt(row.leverage_to)}</div>
-              <div className="w-[90px] px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 flex items-center">{fmt(row.volume_min)}</div>
-              <div className="w-[90px] px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 flex items-center">{fmt(row.volume_max)}</div>
+              <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.leverage_from)}</div>
+              <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.leverage_to)}</div>
+              <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.volume_min)}</div>
+              <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.volume_max)}</div>
               <div className="w-[160px] px-3 py-1 text-[11px] text-[#888] font-mono border-r border-black/10 shrink-0 truncate flex items-center">{fmtDate(row.effective_from)}</div>
               <div className="w-[160px] px-3 py-1 text-[11px] text-[#888] font-mono border-r border-black/10 shrink-0 truncate flex items-center">{fmtDate(row.effective_to)}</div>
               <div className="flex-1 px-3 py-1 text-[11px] text-[#666] font-mono flex items-center truncate">{fmtDate(row.created_at)}</div>
@@ -281,11 +281,11 @@ const LeverageScheduleView = () => {
           );
         })}
 
-        {loading && <div className="p-4 text-[#aaaaaa] text-[12px] italic">Loading schedules…</div>}
-        {!loading && data.length === 0 && <div className="p-4 text-[#aaaaaa] text-[12px] italic">No leverage schedule rules found.</div>}
+        {loading && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">Loading schedules…</div>}
+        {!loading && data.length === 0 && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">No leverage schedule rules found.</div>}
 
         {[...Array(20)].map((_, i) => (
-          <div key={`empty-${i}`} className={`flex border-b border-black/5 opacity-30 ${i % 2 !== 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'}`}>
+          <div key={`empty-${i}`} className={`flex border-b border-black/5 opacity-30 ${i % 2 !== 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
             <div className="w-full h-6"></div>
           </div>
         ))}
@@ -294,15 +294,15 @@ const LeverageScheduleView = () => {
       {/* Context Menu */}
       {contextMenu.visible && (
         <div
-          className="fixed z-[9999] bg-[#2d2d30] border border-[#3e3e42] shadow-2xl py-1 min-w-[200px] text-[12px] text-[#cccccc] font-sans rounded-[2px]"
+          className="fixed z-[9999] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] shadow-2xl py-1 min-w-[200px] text-[12px] text-[color:var(--text-secondary)] font-sans rounded-[2px]"
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={e => e.stopPropagation()}
         >
-          <div className="px-6 py-1 hover:bg-[#007acc] hover:text-white cursor-pointer select-none"
+          <div className="px-6 py-1 hover:bg-[color:var(--accent-500)] hover:text-white cursor-pointer select-none"
             onClick={() => { setIsAddOpen(true); setContextMenu({ visible: false }); }}>
             Add Schedule
           </div>
-          <div className="h-[1px] bg-[#3e3e42] my-1 mx-2"></div>
+          <div className="h-[1px] bg-[color:var(--border-default)] my-1 mx-2"></div>
           <div className="px-6 py-1 hover:bg-[#e51400] hover:text-white cursor-pointer select-none text-red-400" onClick={handleDelete}>
             Delete
           </div>
@@ -318,7 +318,7 @@ const LeverageScheduleView = () => {
       )}
 
       {/* Status Bar */}
-      <div className="h-6 bg-[#007acc] text-white flex items-center px-4 text-[11px] select-none shrink-0 border-t border-[#005a9e]">
+      <div className="h-6 bg-[color:var(--accent-500)] text-white flex items-center px-4 text-[11px] select-none shrink-0 border-t border-[color:var(--accent-700)]">
         <span>Total Schedule Rules: {data.length}</span>
         {appliedFilter && <span className="ml-4 opacity-70">Filtered: {appliedFilter}</span>}
       </div>

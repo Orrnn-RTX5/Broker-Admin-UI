@@ -26,20 +26,20 @@ const ServerStatusTab = () => {
   const statusColor = (v) => {
     if (typeof v === 'string') return v === 'connected' ? 'text-[#4ec9b0]' : 'text-[#f48771]';
     if (typeof v === 'number') return 'text-[#9cdcfe]';
-    return 'text-[#e1e1e1]';
+    return 'text-[color:var(--text-primary)]';
   };
 
   return (
     <div className="flex-1 overflow-auto p-4">
       <div className="flex items-center justify-between mb-3">
         <span className="text-[12px] font-semibold text-[#9cdcfe]">Live Server Health</span>
-        <button onClick={load} className="flex items-center gap-1.5 h-[22px] px-3 bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] text-[11px] rounded-[2px]">
+        <button onClick={load} className="flex items-center gap-1.5 h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]">
           <RefreshCw size={11} /> Refresh
         </button>
       </div>
       <div className="flex gap-4 flex-wrap">
         {/* Top-level stats */}
-        <div className="bg-[#252526] border border-[#3c3c3c] rounded-[3px] divide-y divide-black/30 min-w-[260px]">
+        <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--bg-surface-2)] rounded-[3px] divide-y divide-black/30 min-w-[260px]">
           {Object.entries(top).map(([k, v]) => (
             <div key={k} className="flex items-center px-4 h-[32px]">
               <span className="text-[11px] text-[#888] flex-1">{k.replace(/_/g, ' ')}</span>
@@ -49,7 +49,7 @@ const ServerStatusTab = () => {
         </div>
         {/* DB Pool */}
         {db_pool && (
-          <div className="bg-[#252526] border border-[#3c3c3c] rounded-[3px] min-w-[220px]">
+          <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--bg-surface-2)] rounded-[3px] min-w-[220px]">
             <div className="px-4 h-[28px] flex items-center border-b border-black/30">
               <span className="text-[10px] font-semibold text-[#888] uppercase tracking-wider">DB Pool</span>
             </div>
@@ -108,31 +108,31 @@ const ServerSettingsTab = () => {
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       {/* Toolbar */}
-      <div className="flex items-center gap-3 px-3 py-1.5 bg-[#252526] border-b border-black/30 shrink-0 flex-wrap">
-        <button onClick={loadAll} className="flex items-center gap-1.5 h-[24px] px-3 bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] text-[11px] rounded-[2px]">
+      <div className="flex items-center gap-3 px-3 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0 flex-wrap">
+        <button onClick={loadAll} className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]">
           <RefreshCw size={11} /> Refresh
         </button>
         <form onSubmit={handleSearch} className="flex items-center gap-1.5 ml-4">
           <span className="text-[10px] text-[#888]">Get key</span>
           <input value={searchKey} onChange={e => setSearchKey(e.target.value)} placeholder="e.g. max_leverage"
-            className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[22px] px-2 w-36 rounded-[2px] outline-none focus:border-[#007acc]" />
+            className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[22px] px-2 w-36 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]" />
           <button type="submit" disabled={searching}
-            className="flex items-center gap-1 h-[22px] px-3 bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] text-[11px] rounded-[2px]">
+            className="flex items-center gap-1 h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]">
             <Search size={11} /> {searching ? '…' : 'Get'}
           </button>
         </form>
         {searchResult && (
-          <div className="flex items-center gap-2 bg-[#094771] border border-[#007acc]/40 rounded-[2px] px-3 h-[22px]">
+          <div className="flex items-center gap-2 bg-[color:var(--accent-700)] border border-[color:var(--accent-500)]/40 rounded-[2px] px-3 h-[22px]">
             <span className="text-[11px] text-[#9cdcfe]">{searchResult.key}</span>
             <span className="text-[10px] text-[#555]">=</span>
-            <span className="text-[11px] font-mono text-[#e1e1e1]">{searchResult.value}</span>
+            <span className="text-[11px] font-mono text-[color:var(--text-primary)]">{searchResult.value}</span>
             <button onClick={() => setSearchResult(null)} className="text-[#555] hover:text-[#ccc] text-[11px] ml-1">×</button>
           </div>
         )}
       </div>
 
       {/* Header */}
-      <div className="flex items-center px-3 h-[24px] bg-[#252526] border-b border-black/30 shrink-0">
+      <div className="flex items-center px-3 h-[24px] bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0">
         <div className="w-64 text-[10px] font-semibold text-[#888] uppercase tracking-wider pr-3">Key</div>
         <div className="flex-1 text-[10px] font-semibold text-[#888] uppercase tracking-wider pr-3">Value</div>
         <div className="w-20 text-[10px] font-semibold text-[#888] uppercase tracking-wider">Action</div>
@@ -146,28 +146,28 @@ const ServerSettingsTab = () => {
             ? <div className="flex items-center justify-center h-24 text-[#555] text-[11px]">No settings found.</div>
             : data.map((row, i) => (
               <div key={row.key}
-                className={`flex items-center px-3 h-[26px] border-b border-black/20 ${i % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'} hover:bg-[#2a2d2e]`}>
+                className={`flex items-center px-3 h-[26px] border-b border-black/20 ${i % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-[#2a2d2e]`}>
                 <div className="w-64 text-[11px] text-[#9cdcfe] pr-3 font-mono">{row.key}</div>
                 <div className="flex-1 pr-3">
                   {editKey === row.key
                     ? <input autoFocus value={editVal} onChange={e => setEditVal(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') handleSave(row.key); if (e.key === 'Escape') setEditKey(null); }}
-                        className="w-full bg-[#1e1e1e] border border-[#007acc] text-[#e1e1e1] text-[11px] h-[20px] px-2 rounded-[2px] outline-none font-mono" />
-                    : <span className="text-[11px] text-[#e1e1e1] font-mono">{row.value}</span>}
+                        className="w-full bg-[color:var(--bg-app)] border border-[color:var(--accent-500)] text-[color:var(--text-primary)] text-[11px] h-[20px] px-2 rounded-[2px] outline-none font-mono" />
+                    : <span className="text-[11px] text-[color:var(--text-primary)] font-mono">{row.value}</span>}
                 </div>
                 <div className="w-20 flex items-center gap-1">
                   {editKey === row.key ? (
                     <>
                       <button onClick={() => handleSave(row.key)} disabled={saving}
-                        className="h-[18px] px-2 bg-[#007acc] hover:bg-[#0098ff] text-white text-[10px] rounded-[2px] disabled:opacity-50">
+                        className="h-[18px] px-2 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[10px] rounded-[2px] disabled:opacity-50">
                         {saving ? '…' : 'Save'}
                       </button>
                       <button onClick={() => setEditKey(null)}
-                        className="h-[18px] px-1.5 bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] text-[10px] rounded-[2px]">✕</button>
+                        className="h-[18px] px-1.5 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[10px] rounded-[2px]">✕</button>
                     </>
                   ) : (
                     <button onClick={() => { setEditKey(row.key); setEditVal(row.value); }}
-                      className="h-[18px] px-2 bg-[#3c3c3c] hover:bg-[#094771] text-[#ccc] hover:text-[#9cdcfe] text-[10px] rounded-[2px]">Edit</button>
+                      className="h-[18px] px-2 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--accent-700)] text-[#ccc] hover:text-[#9cdcfe] text-[10px] rounded-[2px]">Edit</button>
                   )}
                 </div>
               </div>
@@ -225,20 +225,20 @@ const SwapRatesTab = () => {
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       {/* Toolbar */}
-      <div className="flex items-center gap-3 px-3 py-1.5 bg-[#252526] border-b border-black/30 shrink-0 flex-wrap">
-        <button onClick={loadAll} className="flex items-center gap-1.5 h-[24px] px-3 bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] text-[11px] rounded-[2px]">
+      <div className="flex items-center gap-3 px-3 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0 flex-wrap">
+        <button onClick={loadAll} className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]">
           <RefreshCw size={11} /> Refresh
         </button>
         <form onSubmit={handleSearch} className="flex items-center gap-1.5 ml-4">
           <span className="text-[10px] text-[#888]">Symbol</span>
           <input value={symbolSearch} onChange={e => setSymbolSearch(e.target.value)} placeholder="e.g. EURUSD"
-            className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[22px] px-2 w-28 rounded-[2px] outline-none focus:border-[#007acc]" />
-          <button type="submit" className="flex items-center gap-1 h-[22px] px-3 bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] text-[11px] rounded-[2px]">
+            className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[22px] px-2 w-28 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]" />
+          <button type="submit" className="flex items-center gap-1 h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]">
             <Search size={11} /> Get
           </button>
         </form>
         {searchResult && (
-          <div className="flex items-center gap-3 bg-[#094771] border border-[#007acc]/40 rounded-[2px] px-3 h-[22px]">
+          <div className="flex items-center gap-3 bg-[color:var(--accent-700)] border border-[color:var(--accent-500)]/40 rounded-[2px] px-3 h-[22px]">
             <span className="text-[11px] text-[#9cdcfe] font-mono">{searchResult.symbol}</span>
             <span className="text-[10px] text-[#888]">Long: <span className={`font-mono ${swapColor(searchResult.swap_long)}`}>{searchResult.swap_long}</span></span>
             <span className="text-[10px] text-[#888]">Short: <span className={`font-mono ${swapColor(searchResult.swap_short)}`}>{searchResult.swap_short}</span></span>
@@ -248,7 +248,7 @@ const SwapRatesTab = () => {
       </div>
 
       {/* Header */}
-      <div className="flex items-center px-3 h-[24px] bg-[#252526] border-b border-black/30 shrink-0">
+      <div className="flex items-center px-3 h-[24px] bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0">
         {[['Symbol','w-32'],['Swap Long','w-32'],['Swap Short','w-32'],['Rollover Day','w-28'],['Action','w-20']].map(([l,w]) => (
           <div key={l} className={`${w} text-[10px] font-semibold text-[#888] uppercase tracking-wider pr-3`}>{l}</div>
         ))}
@@ -261,18 +261,18 @@ const SwapRatesTab = () => {
             ? <div className="flex items-center justify-center h-24 text-[#555] text-[11px]">No swap rates found.</div>
             : data.map((row, i) => (
               <div key={row.symbol}
-                className={`flex items-center px-3 h-[26px] border-b border-black/20 ${i % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'} hover:bg-[#2a2d2e]`}>
+                className={`flex items-center px-3 h-[26px] border-b border-black/20 ${i % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-[#2a2d2e]`}>
                 <div className="w-32 text-[11px] text-[#9cdcfe] pr-3 font-mono font-semibold">{row.symbol}</div>
                 <div className="w-32 pr-3">
                   {editRow?.symbol === row.symbol
                     ? <input value={editRow.long} onChange={e => setEditRow(r => ({ ...r, long: e.target.value }))}
-                        className="w-24 bg-[#1e1e1e] border border-[#007acc] text-[#e1e1e1] text-[11px] h-[20px] px-2 rounded-[2px] outline-none font-mono" />
+                        className="w-24 bg-[color:var(--bg-app)] border border-[color:var(--accent-500)] text-[color:var(--text-primary)] text-[11px] h-[20px] px-2 rounded-[2px] outline-none font-mono" />
                     : <span className={`text-[11px] font-mono ${swapColor(row.swap_long)}`}>{row.swap_long}</span>}
                 </div>
                 <div className="w-32 pr-3">
                   {editRow?.symbol === row.symbol
                     ? <input value={editRow.short} onChange={e => setEditRow(r => ({ ...r, short: e.target.value }))}
-                        className="w-24 bg-[#1e1e1e] border border-[#007acc] text-[#e1e1e1] text-[11px] h-[20px] px-2 rounded-[2px] outline-none font-mono" />
+                        className="w-24 bg-[color:var(--bg-app)] border border-[color:var(--accent-500)] text-[color:var(--text-primary)] text-[11px] h-[20px] px-2 rounded-[2px] outline-none font-mono" />
                     : <span className={`text-[11px] font-mono ${swapColor(row.swap_short)}`}>{row.swap_short}</span>}
                 </div>
                 <div className="w-28 text-[11px] text-[#888] pr-3">{row.swap_rollover_3days ?? '—'}</div>
@@ -280,15 +280,15 @@ const SwapRatesTab = () => {
                   {editRow?.symbol === row.symbol ? (
                     <>
                       <button onClick={handleSave} disabled={saving}
-                        className="flex items-center gap-1 h-[18px] px-2 bg-[#007acc] hover:bg-[#0098ff] text-white text-[10px] rounded-[2px] disabled:opacity-50">
+                        className="flex items-center gap-1 h-[18px] px-2 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[10px] rounded-[2px] disabled:opacity-50">
                         <Save size={9} /> {saving ? '…' : 'Save'}
                       </button>
                       <button onClick={() => setEditRow(null)}
-                        className="h-[18px] px-1.5 bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] text-[10px] rounded-[2px]">✕</button>
+                        className="h-[18px] px-1.5 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[10px] rounded-[2px]">✕</button>
                     </>
                   ) : (
                     <button onClick={() => openEdit(row)}
-                      className="h-[18px] px-2 bg-[#3c3c3c] hover:bg-[#094771] text-[#ccc] hover:text-[#9cdcfe] text-[10px] rounded-[2px]">Edit</button>
+                      className="h-[18px] px-2 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--accent-700)] text-[#ccc] hover:text-[#9cdcfe] text-[10px] rounded-[2px]">Edit</button>
                   )}
                 </div>
               </div>
@@ -325,13 +325,13 @@ const TradingHaltTab = () => {
         <div className="flex flex-col gap-1">
           <label className="text-[10px] text-[#f48771] uppercase tracking-wider">Symbol *</label>
           <input value={symbol} onChange={e => setSymbol(e.target.value)} placeholder="e.g. EURUSD"
-            className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[26px] px-2 rounded-[2px] outline-none focus:border-[#007acc] w-48 font-mono" />
+            className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[26px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)] w-48 font-mono" />
         </div>
 
         <div className="flex flex-col gap-1">
           <label className="text-[10px] text-[#888] uppercase tracking-wider">Reason (optional)</label>
           <input value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. Scheduled maintenance"
-            className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[26px] px-2 rounded-[2px] outline-none focus:border-[#007acc]" />
+            className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[26px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]" />
         </div>
 
         <div className="flex gap-2">
@@ -346,7 +346,7 @@ const TradingHaltTab = () => {
         </div>
 
         {lastResult && (
-          <div className={`bg-[#252526] border rounded-[3px] px-4 py-3 flex flex-col gap-1 ${lastResult.halted ? 'border-[#f48771]/40' : 'border-[#4ec9b0]/40'}`}>
+          <div className={`bg-[color:var(--bg-surface-1)] border rounded-[3px] px-4 py-3 flex flex-col gap-1 ${lastResult.halted ? 'border-[#f48771]/40' : 'border-[#4ec9b0]/40'}`}>
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-mono font-semibold text-[#9cdcfe]">{lastResult.symbol}</span>
               <span className={`text-[11px] font-semibold ${lastResult.halted ? 'text-[#f48771]' : 'text-[#4ec9b0]'}`}>
@@ -370,11 +370,11 @@ const ServerConfigView = () => {
   const [tab, setTab] = useState('Server Status');
 
   return (
-    <div className="flex-1 bg-[#1e1e1e] flex flex-col overflow-hidden">
-      <div className="flex items-center bg-[#252526] border-b border-black/40 shrink-0">
+    <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden">
+      <div className="flex items-center bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0">
         {TABS.map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-4 h-[30px] text-[11px] border-r border-black/30 whitespace-nowrap transition-colors ${tab === t ? 'bg-[#1e1e1e] text-[#e1e1e1] border-t-2 border-t-[#007acc]' : 'text-[#888] hover:text-[#ccc]'}`}>
+            className={`px-4 h-[30px] text-[11px] border-r border-black/30 whitespace-nowrap transition-colors ${tab === t ? 'bg-[color:var(--bg-app)] text-[color:var(--text-primary)] border-t-2 border-t-[color:var(--accent-500)]' : 'text-[#888] hover:text-[#ccc]'}`}>
             {t}
           </button>
         ))}

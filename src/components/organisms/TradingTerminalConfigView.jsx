@@ -68,19 +68,19 @@ const TradingTerminalConfigView = () => {
   };
 
   return (
-    <div className="flex-1 bg-[#1e1e1e] flex flex-col overflow-hidden">
+    <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden">
       {/* Top Bar */}
-      <div className="flex items-center gap-3 px-3 py-1.5 bg-[#252526] border-b border-black/40 shrink-0">
+      <div className="flex items-center gap-3 px-3 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0">
         <form onSubmit={handleLoad} className="flex items-center gap-2">
           <input
             value={searchGroup}
             onChange={e => setSearchGroup(e.target.value)}
             placeholder="Enter group name…"
-            className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[22px] px-2 rounded-[2px] outline-none w-[200px] focus:border-[#007acc]"
+            className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[22px] px-2 rounded-[2px] outline-none w-[200px] focus:border-[color:var(--accent-500)]"
           />
           <button
             type="submit"
-            className="flex items-center gap-1.5 h-[22px] px-3 bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] text-[11px] rounded-[2px]"
+            className="flex items-center gap-1.5 h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]"
           >
             <Search size={11} /> Load
           </button>
@@ -89,7 +89,7 @@ const TradingTerminalConfigView = () => {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-1.5 h-[24px] px-3 bg-[#007acc] hover:bg-[#0098ff] text-white text-[11px] rounded-[2px] ml-auto disabled:opacity-50"
+            className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] ml-auto disabled:opacity-50"
           >
             <Save size={12} /> {saving ? 'Saving…' : 'Save Config'}
           </button>
@@ -105,7 +105,7 @@ const TradingTerminalConfigView = () => {
         <div className="flex-1 overflow-auto p-6">
           <div className="max-w-[500px] flex flex-col gap-4">
             <div className="text-[12px] font-semibold text-[#9cdcfe]">
-              Trading Terminal Config — <span className="text-[#e1e1e1]">{group}</span>
+              Trading Terminal Config — <span className="text-[color:var(--text-primary)]">{group}</span>
               {config?.updated_at && (
                 <span className="ml-3 text-[10px] text-[#555] font-normal">
                   Last updated: {new Date(config.updated_at).toLocaleString()}
@@ -119,7 +119,7 @@ const TradingTerminalConfigView = () => {
                 <select
                   value={form.default_chart}
                   onChange={e => setForm(f => ({ ...f, default_chart: e.target.value }))}
-                  className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[28px] px-2 rounded-[2px] outline-none focus:border-[#007acc]"
+                  className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[28px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]"
                 >
                   {CHART_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -130,7 +130,7 @@ const TradingTerminalConfigView = () => {
                 <select
                   value={form.default_timeframe}
                   onChange={e => setForm(f => ({ ...f, default_timeframe: e.target.value }))}
-                  className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[28px] px-2 rounded-[2px] outline-none focus:border-[#007acc]"
+                  className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[28px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]"
                 >
                   {TIMEFRAMES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -141,7 +141,7 @@ const TradingTerminalConfigView = () => {
                 <select
                   value={form.theme}
                   onChange={e => setForm(f => ({ ...f, theme: e.target.value }))}
-                  className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[28px] px-2 rounded-[2px] outline-none focus:border-[#007acc]"
+                  className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[28px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]"
                 >
                   {THEMES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -154,7 +154,7 @@ const TradingTerminalConfigView = () => {
                 value={form.config_json}
                 onChange={e => setForm(f => ({ ...f, config_json: e.target.value }))}
                 rows={8}
-                className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] px-2 py-1.5 rounded-[2px] outline-none focus:border-[#007acc] resize-none font-mono"
+                className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] px-2 py-1.5 rounded-[2px] outline-none focus:border-[color:var(--accent-500)] resize-none font-mono"
               />
             </div>
           </div>

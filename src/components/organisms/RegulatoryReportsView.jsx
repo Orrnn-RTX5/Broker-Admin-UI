@@ -7,7 +7,7 @@ const TABS = ['EMIR', 'MiFID', 'Reconciliation', 'Daily Transactions', 'Generate
 const today = () => new Date().toISOString().split('T')[0];
 const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().split('T')[0]; };
 const fmt = (v) => (v == null ? '—' : typeof v === 'number' ? v.toFixed(4) : String(v));
-const pnlColor = (v) => (v > 0 ? 'text-[#4ec9b0]' : v < 0 ? 'text-[#f48771]' : 'text-[#e1e1e1]');
+const pnlColor = (v) => (v > 0 ? 'text-[#4ec9b0]' : v < 0 ? 'text-[#f48771]' : 'text-[color:var(--text-primary)]');
 
 const DataTable = ({ data }) => {
   if (!Array.isArray(data) || data.length === 0)
@@ -15,17 +15,17 @@ const DataTable = ({ data }) => {
   const cols = Object.keys(data[0]);
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
-      <div className="flex items-center px-3 h-[24px] bg-[#252526] border-b border-black/30 shrink-0">
+      <div className="flex items-center px-3 h-[24px] bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0">
         {cols.map(c => <div key={c} className="min-w-[130px] text-[10px] font-semibold text-[#888] uppercase tracking-wider pr-3">{c.replace(/_/g,' ')}</div>)}
       </div>
       <div className="flex-1 overflow-auto">
         {data.map((row, i) => (
-          <div key={i} className={`flex items-center px-3 h-[22px] border-b border-black/20 ${i % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'} hover:bg-[#2a2d2e]`}>
+          <div key={i} className={`flex items-center px-3 h-[22px] border-b border-black/20 ${i % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-[#2a2d2e]`}>
             {cols.map(c => {
               const v = row[c];
               const isProfit = c.includes('profit') || c.includes('revenue');
               return (
-                <div key={c} className={`min-w-[130px] text-[11px] pr-3 truncate font-mono ${isProfit && typeof v === 'number' ? pnlColor(v) : 'text-[#e1e1e1]'}`}>
+                <div key={c} className={`min-w-[130px] text-[11px] pr-3 truncate font-mono ${isProfit && typeof v === 'number' ? pnlColor(v) : 'text-[color:var(--text-primary)]'}`}>
                   {fmt(v)}
                 </div>
               );
@@ -33,7 +33,7 @@ const DataTable = ({ data }) => {
           </div>
         ))}
       </div>
-      <div className="px-3 h-[22px] flex items-center bg-[#252526] border-t border-black/30 shrink-0">
+      <div className="px-3 h-[22px] flex items-center bg-[color:var(--bg-surface-1)] border-t border-black/30 shrink-0">
         <span className="text-[10px] text-[#555]">{data.length} record{data.length !== 1 ? 's' : ''}</span>
       </div>
     </div>
@@ -45,14 +45,14 @@ const KVCard = ({ data, title }) => {
   return (
     <div className="p-6 max-w-[440px]">
       {title && <div className="text-[12px] font-semibold text-[#9cdcfe] mb-3">{title}</div>}
-      <div className="bg-[#252526] border border-[#3c3c3c] rounded-[3px] divide-y divide-black/30">
+      <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--bg-surface-2)] rounded-[3px] divide-y divide-black/30">
         {Object.entries(data).map(([k, v]) => {
           const isNum = typeof v === 'number';
           const isProfit = k.includes('profit') || k.includes('revenue') || k.includes('difference');
           return (
             <div key={k} className="flex items-center px-4 h-[34px]">
               <span className="text-[11px] text-[#888] flex-1">{k.replace(/_/g, ' ')}</span>
-              <span className={`text-[13px] font-mono font-semibold ${isProfit && isNum ? pnlColor(v) : isNum ? 'text-[#9cdcfe]' : typeof v === 'boolean' ? (v ? 'text-[#4ec9b0]' : 'text-[#f48771]') : 'text-[#e1e1e1]'}`}>
+              <span className={`text-[13px] font-mono font-semibold ${isProfit && isNum ? pnlColor(v) : isNum ? 'text-[#9cdcfe]' : typeof v === 'boolean' ? (v ? 'text-[#4ec9b0]' : 'text-[#f48771]') : 'text-[color:var(--text-primary)]'}`}>
                 {isNum ? v.toFixed(2) : String(v)}
               </span>
             </div>
@@ -84,15 +84,15 @@ const DateRangeReport = ({ onLoad }) => {
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
-      <form onSubmit={handleSubmit} className="flex items-center gap-3 px-3 py-2 bg-[#252526] border-b border-black/30 shrink-0">
+      <form onSubmit={handleSubmit} className="flex items-center gap-3 px-3 py-2 bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0">
         <span className="text-[10px] text-[#f48771]">From *</span>
         <input type="date" required value={from} onChange={e => setFrom(e.target.value)}
-          className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[22px] px-2 rounded-[2px] outline-none focus:border-[#007acc]" />
+          className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[22px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]" />
         <span className="text-[10px] text-[#f48771]">To *</span>
         <input type="date" required value={to} onChange={e => setTo(e.target.value)}
-          className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[22px] px-2 rounded-[2px] outline-none focus:border-[#007acc]" />
+          className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[22px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]" />
         <button type="submit" disabled={loading}
-          className="flex items-center gap-1.5 h-[22px] px-3 bg-[#007acc] hover:bg-[#0098ff] text-white text-[11px] rounded-[2px] disabled:opacity-50">
+          className="flex items-center gap-1.5 h-[22px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] disabled:opacity-50">
           <Search size={11} /> {loading ? 'Loading…' : 'Load'}
         </button>
       </form>
@@ -125,12 +125,12 @@ const SingleDateReport = ({ onLoad, renderResult }) => {
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
-      <form onSubmit={handleSubmit} className="flex items-center gap-3 px-3 py-2 bg-[#252526] border-b border-black/30 shrink-0">
+      <form onSubmit={handleSubmit} className="flex items-center gap-3 px-3 py-2 bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0">
         <span className="text-[10px] text-[#f48771]">Date *</span>
         <input type="date" required value={date} onChange={e => setDate(e.target.value)}
-          className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[22px] px-2 rounded-[2px] outline-none focus:border-[#007acc]" />
+          className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[22px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]" />
         <button type="submit" disabled={loading}
-          className="flex items-center gap-1.5 h-[22px] px-3 bg-[#007acc] hover:bg-[#0098ff] text-white text-[11px] rounded-[2px] disabled:opacity-50">
+          className="flex items-center gap-1.5 h-[22px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] disabled:opacity-50">
           <Search size={11} /> {loading ? 'Loading…' : 'Load'}
         </button>
       </form>
@@ -165,11 +165,11 @@ const GenerateReportTab = () => {
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
-      <form onSubmit={handleSubmit} className="flex items-center gap-3 px-3 py-2 bg-[#252526] border-b border-black/30 shrink-0 flex-wrap">
+      <form onSubmit={handleSubmit} className="flex items-center gap-3 px-3 py-2 bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0 flex-wrap">
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] text-[#f48771]">Type *</span>
           <select value={type} onChange={e => setType(e.target.value)}
-            className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[22px] px-1.5 rounded-[2px] outline-none focus:border-[#007acc]">
+            className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[22px] px-1.5 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]">
             <option value="emir">EMIR</option>
             <option value="mifid">MiFID</option>
             <option value="aml">AML</option>
@@ -178,15 +178,15 @@ const GenerateReportTab = () => {
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] text-[#f48771]">From *</span>
           <input type="date" required value={from} onChange={e => setFrom(e.target.value)}
-            className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[22px] px-2 rounded-[2px] outline-none focus:border-[#007acc]" />
+            className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[22px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]" />
         </div>
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] text-[#f48771]">To *</span>
           <input type="date" required value={to} onChange={e => setTo(e.target.value)}
-            className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[22px] px-2 rounded-[2px] outline-none focus:border-[#007acc]" />
+            className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[22px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]" />
         </div>
         <button type="submit" disabled={loading}
-          className="flex items-center gap-1.5 h-[22px] px-3 bg-[#007acc] hover:bg-[#0098ff] text-white text-[11px] rounded-[2px] disabled:opacity-50">
+          className="flex items-center gap-1.5 h-[22px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] disabled:opacity-50">
           <Search size={11} /> {loading ? 'Generating…' : 'Generate'}
         </button>
       </form>
@@ -223,18 +223,18 @@ const BestExecutionTab = () => {
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
-      <form onSubmit={handleSubmit} className="flex items-center gap-3 px-3 py-2 bg-[#252526] border-b border-black/30 shrink-0 flex-wrap">
+      <form onSubmit={handleSubmit} className="flex items-center gap-3 px-3 py-2 bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0 flex-wrap">
         <span className="text-[10px] text-[#f48771]">From *</span>
         <input type="date" required value={from} onChange={e => setFrom(e.target.value)}
-          className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[22px] px-2 rounded-[2px] outline-none focus:border-[#007acc]" />
+          className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[22px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]" />
         <span className="text-[10px] text-[#f48771]">To *</span>
         <input type="date" required value={to} onChange={e => setTo(e.target.value)}
-          className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[22px] px-2 rounded-[2px] outline-none focus:border-[#007acc]" />
+          className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[22px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]" />
         <span className="text-[10px] text-[#888]">Login</span>
         <input type="number" value={login} onChange={e => setLogin(e.target.value)} placeholder="Optional"
-          className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[22px] px-2 w-28 rounded-[2px] outline-none focus:border-[#007acc]" />
+          className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[22px] px-2 w-28 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]" />
         <button type="submit" disabled={loading}
-          className="flex items-center gap-1.5 h-[22px] px-3 bg-[#007acc] hover:bg-[#0098ff] text-white text-[11px] rounded-[2px] disabled:opacity-50">
+          className="flex items-center gap-1.5 h-[22px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] disabled:opacity-50">
           <Search size={11} /> {loading ? 'Loading…' : 'Load'}
         </button>
       </form>
@@ -252,11 +252,11 @@ const RegulatoryReportsView = () => {
   const [tab, setTab] = useState('EMIR');
 
   return (
-    <div className="flex-1 bg-[#1e1e1e] flex flex-col overflow-hidden">
-      <div className="flex items-center bg-[#252526] border-b border-black/40 shrink-0 overflow-x-auto">
+    <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden">
+      <div className="flex items-center bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0 overflow-x-auto">
         {TABS.map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-4 h-[30px] text-[11px] border-r border-black/30 whitespace-nowrap transition-colors ${tab === t ? 'bg-[#1e1e1e] text-[#e1e1e1] border-t-2 border-t-[#007acc]' : 'text-[#888] hover:text-[#ccc]'}`}>
+            className={`px-4 h-[30px] text-[11px] border-r border-black/30 whitespace-nowrap transition-colors ${tab === t ? 'bg-[color:var(--bg-app)] text-[color:var(--text-primary)] border-t-2 border-t-[color:var(--accent-500)]' : 'text-[#888] hover:text-[#ccc]'}`}>
             {t}
           </button>
         ))}

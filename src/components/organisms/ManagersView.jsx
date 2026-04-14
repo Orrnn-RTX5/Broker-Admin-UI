@@ -78,38 +78,38 @@ const CreateRoleModal = ({ onClose, onCreated }) => {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
-      <div className="w-[420px] bg-[#252526] border border-[#3e3e42] rounded-md shadow-2xl text-[12px]">
-        <div className="flex items-center justify-between px-4 py-3 bg-[#2d2d30] border-b border-[#3e3e42]">
+      <div className="w-[420px] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-md shadow-2xl text-[12px]">
+        <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)]">
           <div className="flex items-center gap-2 text-white text-[13px] font-medium"><ShieldPlus size={15} className="text-blue-400" />Create Role</div>
           <button onClick={onClose} className="text-[#999] hover:text-white p-1"><X size={14}/></button>
         </div>
-        <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3 bg-[#1e1e1e]">
+        <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3 bg-[color:var(--bg-app)]">
           {error && <div className="flex items-center gap-2 text-red-400 bg-red-500/10 border border-red-500/30 p-2 rounded"><AlertCircle size={13}/>{error}</div>}
           <div className="flex flex-col gap-1">
             <label className="text-[#ccc]">Role Name *</label>
             <input required value={form.role_name} onChange={e => setForm(p => ({ ...p, role_name: e.target.value }))}
-              placeholder="e.g. Dealer" className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[#007acc] outline-none" />
+              placeholder="e.g. Dealer" className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none" />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[#ccc]">Description</label>
             <input value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-              placeholder="Optional description" className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[#007acc] outline-none" />
+              placeholder="Optional description" className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none" />
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-[#ccc]">Permissions</label>
-            <div className="bg-[#2a2a2a] border border-[#3e3e42] rounded-sm p-3 grid grid-cols-2 gap-2">
+            <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-sm p-3 grid grid-cols-2 gap-2">
               {PERMISSIONS.map(({ key, label }) => (
                 <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
                   <input type="checkbox" checked={form.permissions[key]} onChange={() => togglePerm(key)}
-                    className="accent-[#007acc] w-3 h-3 cursor-pointer" />
+                    className="accent-[color:var(--accent-500)] w-3 h-3 cursor-pointer" />
                   <span className="text-[11px] text-[#ccc]">{label}</span>
                 </label>
               ))}
             </div>
           </div>
-          <div className="flex justify-end gap-2 pt-3 border-t border-[#3e3e42]">
+          <div className="flex justify-end gap-2 pt-3 border-t border-[color:var(--border-default)]">
             <button type="button" onClick={onClose} className="px-4 py-1.5 bg-[#444] hover:bg-[#555] text-white rounded-[2px]">Cancel</button>
-            <button type="submit" disabled={submitting} className="px-4 py-1.5 bg-[#007acc] hover:bg-[#0098ff] text-white rounded-[2px] disabled:opacity-50 min-w-[60px] flex justify-center">
+            <button type="submit" disabled={submitting} className="px-4 py-1.5 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white rounded-[2px] disabled:opacity-50 min-w-[60px] flex justify-center">
               {submitting ? '...' : 'Create'}
             </button>
           </div>
@@ -147,37 +147,37 @@ const CreateManagerModal = ({ roles, onClose, onCreated }) => {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
-      <div className="w-[440px] bg-[#252526] border border-[#3e3e42] rounded-md shadow-2xl text-[12px]">
-        <div className="flex items-center justify-between px-4 py-3 bg-[#2d2d30] border-b border-[#3e3e42]">
+      <div className="w-[440px] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-md shadow-2xl text-[12px]">
+        <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)]">
           <div className="flex items-center gap-2 text-white text-[13px] font-medium"><UserPlus size={15} className="text-blue-400"/>Create Manager</div>
           <button onClick={onClose} className="text-[#999] hover:text-white p-1"><X size={14}/></button>
         </div>
-        <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3 bg-[#1e1e1e]">
+        <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3 bg-[color:var(--bg-app)]">
           {error && <div className="flex items-center gap-2 text-red-400 bg-red-500/10 border border-red-500/30 p-2 rounded"><AlertCircle size={13}/>{error}</div>}
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1"><label className="text-[#ccc]">Login (MT5) *</label>
-              <input required type="number" value={form.login} onChange={e=>setForm(p=>({...p,login:e.target.value}))} className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[#007acc] outline-none"/></div>
+              <input required type="number" value={form.login} onChange={e=>setForm(p=>({...p,login:e.target.value}))} className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
             <div className="flex flex-col gap-1"><label className="text-[#ccc]">Role</label>
-              <select value={form.role_id} onChange={e=>setForm(p=>({...p,role_id:e.target.value}))} className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[#007acc] outline-none">
+              <select value={form.role_id} onChange={e=>setForm(p=>({...p,role_id:e.target.value}))} className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none">
                 <option value="">No Role</option>
                 {roles.map(r=><option key={r.id} value={r.id}>{r.role_name}</option>)}
               </select></div>
           </div>
           <div className="flex flex-col gap-1"><label className="text-[#ccc]">Name *</label>
-            <input required value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[#007acc] outline-none"/></div>
+            <input required value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
           <div className="flex flex-col gap-1"><label className="text-[#ccc]">Password *</label>
-            <input required type="password" value={form.password} onChange={e=>setForm(p=>({...p,password:e.target.value}))} className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[#007acc] outline-none"/></div>
+            <input required type="password" value={form.password} onChange={e=>setForm(p=>({...p,password:e.target.value}))} className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
           <div className="flex flex-col gap-1"><label className="text-[#ccc]">Allowed Groups (comma-sep)</label>
-            <input value={form.allowed_groups} onChange={e=>setForm(p=>({...p,allowed_groups:e.target.value}))} placeholder="retail, vip" className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[#007acc] outline-none"/></div>
+            <input value={form.allowed_groups} onChange={e=>setForm(p=>({...p,allowed_groups:e.target.value}))} placeholder="retail, vip" className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
           <div className="flex flex-col gap-1"><label className="text-[#ccc]">IP Whitelist (comma-sep)</label>
-            <input value={form.ip_whitelist} onChange={e=>setForm(p=>({...p,ip_whitelist:e.target.value}))} placeholder="192.168.1.10" className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[#007acc] outline-none"/></div>
+            <input value={form.ip_whitelist} onChange={e=>setForm(p=>({...p,ip_whitelist:e.target.value}))} placeholder="192.168.1.10" className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
           <div className="flex items-center gap-2 mt-1">
-            <input type="checkbox" id="is_admin" checked={form.is_admin} onChange={e=>setForm(p=>({...p,is_admin:e.target.checked}))} className="accent-[#007acc]"/>
+            <input type="checkbox" id="is_admin" checked={form.is_admin} onChange={e=>setForm(p=>({...p,is_admin:e.target.checked}))} className="accent-[color:var(--accent-500)]"/>
             <label htmlFor="is_admin" className="text-[#ccc] cursor-pointer">Is Admin</label>
           </div>
-          <div className="flex justify-end gap-2 pt-3 border-t border-[#3e3e42]">
+          <div className="flex justify-end gap-2 pt-3 border-t border-[color:var(--border-default)]">
             <button type="button" onClick={onClose} className="px-4 py-1.5 bg-[#444] hover:bg-[#555] text-white rounded-[2px]">Cancel</button>
-            <button type="submit" disabled={submitting} className="px-4 py-1.5 bg-[#007acc] hover:bg-[#0098ff] text-white rounded-[2px] disabled:opacity-50 min-w-[60px] flex justify-center">
+            <button type="submit" disabled={submitting} className="px-4 py-1.5 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white rounded-[2px] disabled:opacity-50 min-w-[60px] flex justify-center">
               {submitting ? '...' : 'Create'}
             </button>
           </div>
@@ -222,44 +222,44 @@ const EditRoleModal = ({ role, onClose, onSaved }) => {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
-      <div className="w-[420px] bg-[#252526] border border-[#3e3e42] rounded-md shadow-2xl text-[12px]">
-        <div className="flex items-center justify-between px-4 py-3 bg-[#2d2d30] border-b border-[#3e3e42]">
+      <div className="w-[420px] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-md shadow-2xl text-[12px]">
+        <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)]">
           <div className="flex items-center gap-2 text-white text-[13px] font-medium">
             <Edit2 size={15} className="text-blue-400" />Edit Role — <span className="text-[#9cdcfe]">{role.role_name}</span>
           </div>
           <button onClick={onClose} className="text-[#999] hover:text-white p-1"><X size={14}/></button>
         </div>
-        <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3 bg-[#1e1e1e]">
+        <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3 bg-[color:var(--bg-app)]">
           {error && <div className="flex items-center gap-2 text-red-400 bg-red-500/10 border border-red-500/30 p-2 rounded"><AlertCircle size={13}/>{error}</div>}
           <div className="flex flex-col gap-1">
             <label className="text-[#ccc]">Role Name *</label>
             <input required value={form.role_name}
               onChange={e => setForm(p => ({ ...p, role_name: e.target.value }))}
-              className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[#007acc] outline-none" />
+              className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none" />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[#ccc]">Description</label>
             <input value={form.description}
               onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
               placeholder="Optional description"
-              className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[#007acc] outline-none" />
+              className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none" />
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-[#ccc]">Permissions</label>
-            <div className="bg-[#2a2a2a] border border-[#3e3e42] rounded-sm p-3 grid grid-cols-2 gap-2">
+            <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-sm p-3 grid grid-cols-2 gap-2">
               {PERMISSIONS.map(({ key, label }) => (
                 <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
                   <input type="checkbox" checked={form.permissions[key]} onChange={() => togglePerm(key)}
-                    className="accent-[#007acc] w-3 h-3 cursor-pointer" />
+                    className="accent-[color:var(--accent-500)] w-3 h-3 cursor-pointer" />
                   <span className="text-[11px] text-[#ccc]">{label}</span>
                 </label>
               ))}
             </div>
           </div>
-          <div className="flex justify-end gap-2 pt-3 border-t border-[#3e3e42]">
+          <div className="flex justify-end gap-2 pt-3 border-t border-[color:var(--border-default)]">
             <button type="button" onClick={onClose} className="px-4 py-1.5 bg-[#444] hover:bg-[#555] text-white rounded-[2px]">Cancel</button>
             <button type="submit" disabled={submitting}
-              className="px-4 py-1.5 bg-[#007acc] hover:bg-[#0098ff] text-white rounded-[2px] disabled:opacity-50 min-w-[60px] flex justify-center">
+              className="px-4 py-1.5 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white rounded-[2px] disabled:opacity-50 min-w-[60px] flex justify-center">
               {submitting ? '...' : 'Save'}
             </button>
           </div>
@@ -282,15 +282,15 @@ const ActivityLogModal = ({ manager, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
-      <div className="w-[700px] max-h-[80vh] bg-[#252526] border border-[#3e3e42] rounded-md shadow-2xl flex flex-col text-[12px]">
-        <div className="flex items-center justify-between px-4 py-3 bg-[#2d2d30] border-b border-[#3e3e42] shrink-0">
+      <div className="w-[700px] max-h-[80vh] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-md shadow-2xl flex flex-col text-[12px]">
+        <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] shrink-0">
           <div className="flex items-center gap-2 text-white text-[13px] font-medium">
             <Activity size={15} className="text-blue-400"/>Activity Log — {manager.name} ({manager.login})
           </div>
           <button onClick={onClose} className="text-[#999] hover:text-white p-1"><X size={14}/></button>
         </div>
-        <div className="overflow-auto flex-1 bg-[#1e1e1e]">
-          <div className="flex border-b border-[#333] bg-[#2a2a2a] select-none sticky top-0">
+        <div className="overflow-auto flex-1 bg-[color:var(--bg-app)]">
+          <div className="flex border-b border-[#333] bg-[color:var(--bg-surface-1)] select-none sticky top-0">
             <div className="w-[60px] px-2 py-1.5 text-[11px] text-[#aaa] font-medium border-r border-[#333]">ID</div>
             <div className="w-[160px] px-2 py-1.5 text-[11px] text-[#aaa] font-medium border-r border-[#333]">Action</div>
             <div className="w-[90px] px-2 py-1.5 text-[11px] text-[#aaa] font-medium border-r border-[#333]">Target</div>
@@ -300,8 +300,8 @@ const ActivityLogModal = ({ manager, onClose }) => {
           {loading && <div className="p-4 text-[#888] italic">Loading...</div>}
           {!loading && logs.length === 0 && <div className="p-4 text-[#888] italic">No activity logs found.</div>}
           {logs.map((log, i) => (
-            <div key={log.id || i} className={`flex border-b border-black/10 ${i%2===0?'bg-[#1e1e1e]':'bg-[#252526]'}`}>
-              <div className="w-[60px] px-2 py-1 text-[#e1e1e1] border-r border-black/10">{log.id}</div>
+            <div key={log.id || i} className={`flex border-b border-black/10 ${i%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}>
+              <div className="w-[60px] px-2 py-1 text-[color:var(--text-primary)] border-r border-black/10">{log.id}</div>
               <div className="w-[160px] px-2 py-1 text-blue-400 border-r border-black/10 truncate">{log.action_type}</div>
               <div className="w-[90px] px-2 py-1 text-[#aaa] border-r border-black/10">{log.target_login || '—'}</div>
               <div className="w-[120px] px-2 py-1 text-[#aaa] border-r border-black/10 truncate">{log.ip_address || '—'}</div>
@@ -388,26 +388,26 @@ const ManagersView = () => {
   const tabs = ['Managers', 'Roles', 'Online'];
 
   return (
-    <div className="flex-1 bg-[#1e1e1e] flex flex-col overflow-hidden relative"
+    <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative"
       onClick={() => setContextMenu({ visible: false })}
       onContextMenu={(e) => e.preventDefault()}>
 
       {/* Top Action Bar */}
-      <div className="flex items-center gap-2 px-2 py-1.5 bg-[#252526] border-b border-black/40 shrink-0 select-none">
+      <div className="flex items-center gap-2 px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0 select-none">
         {activeTab === 'Managers' && (
           <button onClick={() => setIsCreateManagerOpen(true)}
-            className="flex items-center gap-1.5 h-[24px] px-3 bg-[#007acc] hover:bg-[#0098ff] text-white text-[11px] rounded-[2px] transition-colors">
+            className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] transition-colors">
             <UserPlus size={12}/> Create Manager
           </button>
         )}
         {activeTab === 'Roles' && (
           <button onClick={() => setIsCreateRoleOpen(true)}
-            className="flex items-center gap-1.5 h-[24px] px-3 bg-[#007acc] hover:bg-[#0098ff] text-white text-[11px] rounded-[2px] transition-colors">
+            className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] transition-colors">
             <ShieldPlus size={12}/> Create Role
           </button>
         )}
         <button onClick={refreshAll} disabled={loading}
-          className="flex items-center gap-1 h-[24px] px-2 bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] text-[11px] rounded-[2px] disabled:opacity-50 transition-colors">
+          className="flex items-center gap-1 h-[24px] px-2 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px] disabled:opacity-50 transition-colors">
           <RefreshCw size={11} className={loading ? 'animate-spin' : ''}/> Refresh
         </button>
         {activeTab === 'Online' && (
@@ -421,21 +421,21 @@ const ManagersView = () => {
       {activeTab === 'Managers' && (
         <>
           <div className="flex bg-[#333] border-b border-black/40 select-none shrink-0">
-            <div className="w-[80px]  px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20">Login</div>
-            <div className="w-[160px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20">Name</div>
-            <div className="w-[130px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20">Role</div>
-            <div className="w-[70px]  px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20">Admin</div>
-            <div className="w-[80px]  px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20">Status</div>
-            <div className="w-[130px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20">Last Login</div>
-            <div className="w-[120px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20">Last IP</div>
+            <div className="w-[80px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Login</div>
+            <div className="w-[160px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Name</div>
+            <div className="w-[130px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Role</div>
+            <div className="w-[70px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Admin</div>
+            <div className="w-[80px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Status</div>
+            <div className="w-[130px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Last Login</div>
+            <div className="w-[120px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Last IP</div>
             <div className="flex-1"></div>
           </div>
-          <div className="flex-1 overflow-auto bg-[#1e1e1e]">
+          <div className="flex-1 overflow-auto bg-[color:var(--bg-app)]">
             {loading && <div className="p-4 text-[#888] italic text-[12px]">Loading...</div>}
             {!loading && managers.length === 0 && <div className="p-4 text-[#888] italic text-[12px]">No managers found.</div>}
             {managers.map((row, idx) => (
               <div key={row.login} onContextMenu={e => handleContextMenu(e, row, 'manager')}
-                className={`flex cursor-default border-b border-black/10 hover:bg-blue-600/20 transition-colors ${idx%2===0?'bg-[#1e1e1e]':'bg-[#252526]'}`}>
+                className={`flex cursor-default border-b border-black/10 hover:bg-blue-600/20 transition-colors ${idx%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}>
                 <div className="w-[80px]  px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10"><BlueUserIcon/>{row.login}</div>
                 <div className="w-[160px] px-3 py-1 text-[12px] text-[#ccc] border-r border-black/10 truncate">{row.name}</div>
                 <div className="w-[130px] px-3 py-1 text-[12px] text-[#aaa] border-r border-black/10 truncate">{row.role_name || '—'}</div>
@@ -450,7 +450,7 @@ const ManagersView = () => {
                 <div className="flex-1"></div>
               </div>
             ))}
-            {[...Array(20)].map((_,i) => <div key={i} className={`flex h-6 border-b border-black/5 ${i%2!==0?'bg-[#1e1e1e]':'bg-[#252526]'} opacity-30`}></div>)}
+            {[...Array(20)].map((_,i) => <div key={i} className={`flex h-6 border-b border-black/5 ${i%2!==0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'} opacity-30`}></div>)}
           </div>
         </>
       )}
@@ -459,33 +459,33 @@ const ManagersView = () => {
       {activeTab === 'Roles' && (
         <>
           <div className="flex bg-[#333] border-b border-black/40 select-none shrink-0">
-            <div className="w-[50px]  px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20">ID</div>
-            <div className="w-[150px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20">Role Name</div>
-            <div className="w-[200px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20">Description</div>
-            <div className="w-[260px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20">Permissions</div>
-            <div className="w-[150px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20">Created</div>
-            <div className="w-[60px]  px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1]">Actions</div>
+            <div className="w-[50px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">ID</div>
+            <div className="w-[150px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Role Name</div>
+            <div className="w-[200px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Description</div>
+            <div className="w-[260px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Permissions</div>
+            <div className="w-[150px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Created</div>
+            <div className="w-[60px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)]">Actions</div>
           </div>
-          <div className="flex-1 overflow-auto bg-[#1e1e1e]">
+          <div className="flex-1 overflow-auto bg-[color:var(--bg-app)]">
             {loading && <div className="p-4 text-[#888] italic text-[12px]">Loading...</div>}
             {!loading && roles.length === 0 && <div className="p-4 text-[#888] italic text-[12px]">No roles found.</div>}
             {roles.map((row, idx) => (
               <div key={row.id} onContextMenu={e => handleContextMenu(e, row, 'role')}
-                className={`flex cursor-default border-b border-black/10 hover:bg-blue-600/20 transition-colors items-center ${idx%2===0?'bg-[#1e1e1e]':'bg-[#252526]'}`}>
-                <div className="w-[50px]  px-3 py-1 text-[12px] text-[#e1e1e1] border-r border-black/10">{row.id}</div>
+                className={`flex cursor-default border-b border-black/10 hover:bg-blue-600/20 transition-colors items-center ${idx%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}>
+                <div className="w-[50px]  px-3 py-1 text-[12px] text-[color:var(--text-primary)] border-r border-black/10">{row.id}</div>
                 <div className="w-[150px] px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10"><ShieldIcon/>{row.role_name}</div>
                 <div className="w-[200px] px-3 py-1 text-[12px] text-[#aaa] border-r border-black/10 truncate">{row.description || '—'}</div>
                 <div className="w-[260px] px-3 py-1 border-r border-black/10"><PermBadges permissions={row.permissions}/></div>
                 <div className="w-[150px] px-3 py-1 text-[11px] text-[#aaa] border-r border-black/10">{fmtTime(row.created_at)}</div>
                 <div className="w-[60px] px-3 py-1 flex items-center">
                   <button onClick={() => setEditingRole(row)} title="Edit Role"
-                    className="p-1 text-[#555] hover:text-[#007acc] hover:bg-[#007acc]/10 rounded-[2px] transition-colors">
+                    className="p-1 text-[#555] hover:text-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)]/10 rounded-[2px] transition-colors">
                     <Edit2 size={12}/>
                   </button>
                 </div>
               </div>
             ))}
-            {[...Array(20)].map((_,i) => <div key={i} className={`flex h-6 border-b border-black/5 ${i%2!==0?'bg-[#1e1e1e]':'bg-[#252526]'} opacity-30`}></div>)}
+            {[...Array(20)].map((_,i) => <div key={i} className={`flex h-6 border-b border-black/5 ${i%2!==0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'} opacity-30`}></div>)}
           </div>
         </>
       )}
@@ -494,17 +494,17 @@ const ManagersView = () => {
       {activeTab === 'Online' && (
         <>
           <div className="flex bg-[#333] border-b border-black/40 select-none shrink-0">
-            <div className="w-[80px]  px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20">Login</div>
-            <div className="w-[180px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20">Name</div>
-            <div className="w-[180px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20">Connected At</div>
-            <div className="w-[120px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20">Session Age</div>
+            <div className="w-[80px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Login</div>
+            <div className="w-[180px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Name</div>
+            <div className="w-[180px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Connected At</div>
+            <div className="w-[120px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Session Age</div>
             <div className="flex-1"></div>
           </div>
-          <div className="flex-1 overflow-auto bg-[#1e1e1e]">
+          <div className="flex-1 overflow-auto bg-[color:var(--bg-app)]">
             {loading && <div className="p-4 text-[#888] italic text-[12px]">Loading...</div>}
             {!loading && online.length === 0 && <div className="p-4 text-[#888] italic text-[12px]">No managers currently online.</div>}
             {online.map((row, idx) => (
-              <div key={row.login} className={`flex cursor-default border-b border-black/10 hover:bg-blue-600/20 transition-colors ${idx%2===0?'bg-[#1e1e1e]':'bg-[#252526]'}`}>
+              <div key={row.login} className={`flex cursor-default border-b border-black/10 hover:bg-blue-600/20 transition-colors ${idx%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}>
                 <div className="w-[80px]  px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0"></span>{row.login}
                 </div>
@@ -514,13 +514,13 @@ const ManagersView = () => {
                 <div className="flex-1"></div>
               </div>
             ))}
-            {[...Array(20)].map((_,i) => <div key={i} className={`flex h-6 border-b border-black/5 ${i%2!==0?'bg-[#1e1e1e]':'bg-[#252526]'} opacity-30`}></div>)}
+            {[...Array(20)].map((_,i) => <div key={i} className={`flex h-6 border-b border-black/5 ${i%2!==0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'} opacity-30`}></div>)}
           </div>
         </>
       )}
 
       {/* Bottom Tab Bar */}
-      <div className="h-7 bg-[#1e1e1e] border-t border-black/40 flex items-center px-1 gap-1 select-none shrink-0">
+      <div className="h-7 bg-[color:var(--bg-app)] border-t border-black/40 flex items-center px-1 gap-1 select-none shrink-0">
         {tabs.map(tab => (
           <div key={tab} onClick={() => setActiveTab(tab)}
             className={`h-[22px] px-4 text-[11px] flex items-center gap-1.5 rounded-sm cursor-default transition-colors ${activeTab===tab?'bg-[#3e3e3e] text-white border border-black/40':'text-[#999] hover:text-[#ccc] hover:bg-white/5'}`}>
@@ -532,7 +532,7 @@ const ManagersView = () => {
       </div>
 
       {/* Status Bar */}
-      <div className="h-6 bg-[#007acc] text-white flex items-center px-4 text-[11px] select-none shrink-0 border-t border-[#005a9e]">
+      <div className="h-6 bg-[color:var(--accent-500)] text-white flex items-center px-4 text-[11px] select-none shrink-0 border-t border-[color:var(--accent-700)]">
         {activeTab === 'Managers' && <span>Managers: {managers.length}</span>}
         {activeTab === 'Roles' && <span>Roles: {roles.length}</span>}
         {activeTab === 'Online' && <span>Online: {online.length}</span>}
@@ -540,15 +540,15 @@ const ManagersView = () => {
 
       {/* Context Menu */}
       {contextMenu.visible && (
-        <div className="fixed z-[9999] bg-[#2d2d30] border border-[#3e3e42] shadow-2xl py-1 min-w-[200px] text-[12px] text-[#ccc] rounded-[2px]"
+        <div className="fixed z-[9999] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] shadow-2xl py-1 min-w-[200px] text-[12px] text-[#ccc] rounded-[2px]"
           style={{ top: contextMenu.y, left: contextMenu.x }}>
           {contextMenu.type === 'manager' && (
             <>
-              <div className="px-5 py-1.5 hover:bg-[#007acc] hover:text-white cursor-pointer select-none"
+              <div className="px-5 py-1.5 hover:bg-[color:var(--accent-500)] hover:text-white cursor-pointer select-none"
                 onClick={() => { setActivityTarget(contextMenu.record); setContextMenu({ visible: false }); }}>
                 <span className="flex items-center gap-2"><Activity size={12}/>View Activity Log</span>
               </div>
-              <div className="h-[1px] bg-[#3e3e42] my-1 mx-2"></div>
+              <div className="h-[1px] bg-[color:var(--border-default)] my-1 mx-2"></div>
               <div className="px-5 py-1.5 hover:bg-red-700 hover:text-white cursor-pointer select-none text-red-400"
                 onClick={() => handleDisableManager(contextMenu.record.login)}>
                 <span className="flex items-center gap-2"><Trash2 size={12}/>Disable Manager</span>
@@ -557,11 +557,11 @@ const ManagersView = () => {
           )}
           {contextMenu.type === 'role' && (
             <>
-              <div className="px-5 py-1.5 hover:bg-[#007acc] hover:text-white cursor-pointer select-none"
+              <div className="px-5 py-1.5 hover:bg-[color:var(--accent-500)] hover:text-white cursor-pointer select-none"
                 onClick={() => { setEditingRole(contextMenu.record); setContextMenu({ visible: false }); }}>
                 <span className="flex items-center gap-2"><Edit2 size={12}/>Edit Role</span>
               </div>
-              <div className="h-[1px] bg-[#3e3e42] my-1 mx-2"></div>
+              <div className="h-[1px] bg-[color:var(--border-default)] my-1 mx-2"></div>
               <div className="px-5 py-1.5 hover:bg-red-700 hover:text-white cursor-pointer select-none text-red-400"
                 onClick={() => handleDeleteRole(contextMenu.record.id, contextMenu.record.role_name)}>
                 <span className="flex items-center gap-2"><Trash2 size={12}/>Delete Role</span>

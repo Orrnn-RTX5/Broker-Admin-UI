@@ -71,9 +71,9 @@ const CreateSessionOverridePopup = ({ symbol, group, existingOverrides = [], onC
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="w-[420px] bg-[#252526] border border-[#3e3e42] shadow-2xl flex flex-col font-sans rounded-md overflow-hidden"
+        className="w-[420px] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] shadow-2xl flex flex-col font-sans rounded-md overflow-hidden"
       >
-        <div className="flex items-center justify-between px-4 py-3 bg-[#2d2d30] border-b border-[#3e3e42] select-none">
+        <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] select-none">
           <div className="flex items-center gap-2 text-white text-[13px] font-medium">
             <Clock size={16} className="text-[#3b82f6]" />
             Add Session Override
@@ -83,7 +83,7 @@ const CreateSessionOverridePopup = ({ symbol, group, existingOverrides = [], onC
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-4 text-[12px] bg-[#1e1e1e]">
+        <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-4 text-[12px] bg-[color:var(--bg-app)]">
           {error && (
             <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 p-3 rounded-sm text-red-400">
               <AlertCircle size={14} className="mt-0.5 shrink-0" />
@@ -91,50 +91,50 @@ const CreateSessionOverridePopup = ({ symbol, group, existingOverrides = [], onC
             </div>
           )}
 
-          <div className="flex gap-4 text-[11px] text-[#888] bg-[#2a2a2a] border border-[#333] px-3 py-2 rounded-sm">
+          <div className="flex gap-4 text-[11px] text-[#888] bg-[color:var(--bg-surface-1)] border border-[#333] px-3 py-2 rounded-sm">
             <span>Symbol: <strong className="text-white">{symbol}</strong></span>
             <span>Group: <strong className="text-white">{group}</strong></span>
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-[#cccccc]">Day of Week</label>
+            <label className="text-[color:var(--text-secondary)]">Day of Week</label>
             <select name="day_of_week" value={formData.day_of_week} onChange={handleChange}
-              className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 focus:border-[#007acc] focus:outline-none rounded-sm transition-colors">
+              className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors">
               {DAY_OPTIONS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
             </select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[#cccccc]">Quote From</label>
+              <label className="text-[color:var(--text-secondary)]">Quote From</label>
               <input type="time" name="quote_from" value={formData.quote_from} onChange={handleChange}
-                className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 focus:border-[#007acc] focus:outline-none rounded-sm transition-colors [color-scheme:dark]" />
+                className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors [color-scheme:dark]" />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-[#cccccc]">Quote To</label>
+              <label className="text-[color:var(--text-secondary)]">Quote To</label>
               <input type="time" name="quote_to" value={formData.quote_to} onChange={handleChange}
-                className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 focus:border-[#007acc] focus:outline-none rounded-sm transition-colors [color-scheme:dark]" />
+                className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors [color-scheme:dark]" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[#cccccc]">Trade From</label>
+              <label className="text-[color:var(--text-secondary)]">Trade From</label>
               <input type="time" name="trade_from" value={formData.trade_from} onChange={handleChange}
-                className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 focus:border-[#007acc] focus:outline-none rounded-sm transition-colors [color-scheme:dark]" />
+                className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors [color-scheme:dark]" />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-[#cccccc]">Trade To</label>
+              <label className="text-[color:var(--text-secondary)]">Trade To</label>
               <input type="time" name="trade_to" value={formData.trade_to} onChange={handleChange}
-                className="bg-[#3c3f41] border border-[#555] text-white px-2 py-1.5 focus:border-[#007acc] focus:outline-none rounded-sm transition-colors [color-scheme:dark]" />
+                className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors [color-scheme:dark]" />
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 mt-2 pt-4 border-t border-[#3e3e42]">
+          <div className="flex justify-end gap-2 mt-2 pt-4 border-t border-[color:var(--border-default)]">
             <button type="button" onClick={onClose} disabled={isSubmitting}
               className="px-4 py-1.5 bg-[#444] hover:bg-[#555] text-white rounded-[2px] transition-colors disabled:opacity-50">Cancel</button>
             <button type="submit" disabled={isSubmitting}
-              className="px-4 py-1.5 bg-[#007acc] hover:bg-[#0098ff] text-white rounded-[2px] transition-colors disabled:opacity-50 min-w-[70px] flex justify-center">
+              className="px-4 py-1.5 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white rounded-[2px] transition-colors disabled:opacity-50 min-w-[70px] flex justify-center">
               {isSubmitting ? '...' : 'Add'}
             </button>
           </div>

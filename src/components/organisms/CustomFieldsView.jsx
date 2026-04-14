@@ -65,15 +65,15 @@ const CustomFieldsView = () => {
 
   return (
     <div
-      className="flex-1 bg-[#1e1e1e] flex flex-col overflow-hidden relative"
+      className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative"
       onClick={() => setContextMenu({ visible: false })}
       onContextMenu={(e) => e.preventDefault()}
     >
       {/* Top Bar */}
-      <div className="flex items-center gap-3 px-3 py-1.5 bg-[#252526] border-b border-black/40 shrink-0">
+      <div className="flex items-center gap-3 px-3 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0">
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 h-[24px] px-3 bg-[#007acc] hover:bg-[#0098ff] text-white text-[11px] rounded-[2px] transition-colors"
+          className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] transition-colors"
         >
           <Plus size={12} /> Add Field
         </button>
@@ -82,7 +82,7 @@ const CustomFieldsView = () => {
           <select
             value={entityType}
             onChange={e => setEntityType(e.target.value)}
-            className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[22px] px-1.5 rounded-[2px] outline-none"
+            className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[22px] px-1.5 rounded-[2px] outline-none"
           >
             {ENTITY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
@@ -90,7 +90,7 @@ const CustomFieldsView = () => {
       </div>
 
       {/* Header */}
-      <div className="flex items-center px-3 h-[24px] bg-[#252526] border-b border-black/30 shrink-0">
+      <div className="flex items-center px-3 h-[24px] bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0">
         {[['ID', 'w-16'], ['Field Name', 'w-48'], ['Field Type', 'w-32'], ['Required', 'w-24'], ['Options', 'flex-1'], ['Created', 'w-44']].map(([label, w]) => (
           <div key={label} className={`${w} text-[10px] font-semibold text-[#888] uppercase tracking-wider pr-3`}>{label}</div>
         ))}
@@ -107,10 +107,10 @@ const CustomFieldsView = () => {
             <div
               key={row.id}
               onContextMenu={e => { e.preventDefault(); e.stopPropagation(); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, row }); }}
-              className={`flex items-center px-3 h-[22px] border-b border-black/20 cursor-default select-none ${i % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'} hover:bg-[#2a2d2e]`}
+              className={`flex items-center px-3 h-[22px] border-b border-black/20 cursor-default select-none ${i % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-[#2a2d2e]`}
             >
-              <div className="w-16 text-[11px] text-[#e1e1e1] pr-3">{row.id}</div>
-              <div className="w-48 text-[11px] text-[#e1e1e1] pr-3 truncate">{row.field_name}</div>
+              <div className="w-16 text-[11px] text-[color:var(--text-primary)] pr-3">{row.id}</div>
+              <div className="w-48 text-[11px] text-[color:var(--text-primary)] pr-3 truncate">{row.field_name}</div>
               <div className="w-32 text-[11px] text-[#9cdcfe] pr-3">{row.field_type}</div>
               <div className="w-24 text-[11px] pr-3">
                 <span className={row.required ? 'text-[#4ec9b0]' : 'text-[#888]'}>{row.required ? 'Yes' : 'No'}</span>
@@ -129,13 +129,13 @@ const CustomFieldsView = () => {
       {/* Context Menu */}
       {contextMenu.visible && (
         <div
-          className="fixed z-50 bg-[#252526] border border-[#454545] shadow-xl rounded-[2px] py-0.5 min-w-[140px]"
+          className="fixed z-50 bg-[color:var(--bg-surface-1)] border border-[color:var(--bg-surface-3)] shadow-xl rounded-[2px] py-0.5 min-w-[140px]"
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={e => e.stopPropagation()}
         >
           <button
             onClick={handleDelete}
-            className="flex items-center gap-2 w-full px-3 h-[26px] text-[11px] text-[#f48771] hover:bg-[#094771] transition-colors"
+            className="flex items-center gap-2 w-full px-3 h-[26px] text-[11px] text-[#f48771] hover:bg-[color:var(--accent-700)] transition-colors"
           >
             <Trash2 size={12} /> Delete
           </button>
@@ -147,17 +147,17 @@ const CustomFieldsView = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
           <form
             onSubmit={handleCreate}
-            className="bg-[#252526] border border-[#454545] rounded-[3px] shadow-2xl w-[340px] p-5 flex flex-col gap-3"
+            className="bg-[color:var(--bg-surface-1)] border border-[color:var(--bg-surface-3)] rounded-[3px] shadow-2xl w-[340px] p-5 flex flex-col gap-3"
             onClick={e => e.stopPropagation()}
           >
-            <div className="text-[12px] font-semibold text-[#e1e1e1] mb-1">Create Custom Field</div>
+            <div className="text-[12px] font-semibold text-[color:var(--text-primary)] mb-1">Create Custom Field</div>
 
             <div className="flex flex-col gap-1">
               <label className="text-[10px] text-[#888] uppercase tracking-wider">Entity Type</label>
               <select
                 value={form.entity_type}
                 onChange={e => setForm(f => ({ ...f, entity_type: e.target.value }))}
-                className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[24px] px-1.5 rounded-[2px] outline-none focus:border-[#007acc]"
+                className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[24px] px-1.5 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]"
               >
                 {ENTITY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
@@ -169,7 +169,7 @@ const CustomFieldsView = () => {
                 required
                 value={form.field_name}
                 onChange={e => setForm(f => ({ ...f, field_name: e.target.value }))}
-                className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[24px] px-2 rounded-[2px] outline-none focus:border-[#007acc]"
+                className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[24px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]"
               />
             </div>
 
@@ -179,7 +179,7 @@ const CustomFieldsView = () => {
                 <select
                   value={form.field_type}
                   onChange={e => setForm(f => ({ ...f, field_type: e.target.value }))}
-                  className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[24px] px-1.5 rounded-[2px] outline-none"
+                  className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[24px] px-1.5 rounded-[2px] outline-none"
                 >
                   {FIELD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
@@ -190,7 +190,7 @@ const CustomFieldsView = () => {
                     type="checkbox"
                     checked={form.required}
                     onChange={e => setForm(f => ({ ...f, required: e.target.checked }))}
-                    className="accent-[#007acc]"
+                    className="accent-[color:var(--accent-500)]"
                   />
                   Required
                 </label>
@@ -203,7 +203,7 @@ const CustomFieldsView = () => {
                 value={form.options}
                 onChange={e => setForm(f => ({ ...f, options: e.target.value }))}
                 placeholder="e.g. gold, silver, bronze"
-                className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[24px] px-2 rounded-[2px] outline-none focus:border-[#007acc]"
+                className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[24px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]"
               />
             </div>
 
@@ -211,14 +211,14 @@ const CustomFieldsView = () => {
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="h-[24px] px-4 bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] text-[11px] rounded-[2px]"
+                className="h-[24px] px-4 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="h-[24px] px-4 bg-[#007acc] hover:bg-[#0098ff] text-white text-[11px] rounded-[2px] disabled:opacity-50"
+                className="h-[24px] px-4 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] disabled:opacity-50"
               >
                 {saving ? 'Saving…' : 'Create'}
               </button>

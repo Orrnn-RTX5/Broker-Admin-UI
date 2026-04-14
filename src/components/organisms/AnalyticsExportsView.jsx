@@ -12,14 +12,14 @@ const downloadBlob = (blob, filename) => {
 };
 
 const ExportCard = ({ icon: Icon, title, description, color, onExport, loading }) => (
-  <div className="bg-[#252526] border border-[#3c3c3c] rounded-[3px] p-5 flex flex-col gap-3 w-[280px]">
+  <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--bg-surface-2)] rounded-[3px] p-5 flex flex-col gap-3 w-[280px]">
     <div className="flex items-center gap-2">
       <Icon size={16} className={color} />
-      <span className="text-[12px] font-semibold text-[#e1e1e1]">{title}</span>
+      <span className="text-[12px] font-semibold text-[color:var(--text-primary)]">{title}</span>
     </div>
     <p className="text-[11px] text-[#888] leading-relaxed">{description}</p>
     <button onClick={onExport} disabled={loading}
-      className="flex items-center justify-center gap-1.5 h-[26px] px-4 bg-[#007acc] hover:bg-[#0098ff] text-white text-[11px] rounded-[2px] disabled:opacity-50 mt-1">
+      className="flex items-center justify-center gap-1.5 h-[26px] px-4 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] disabled:opacity-50 mt-1">
       <Download size={11} /> {loading ? 'Exporting…' : 'Export'}
     </button>
   </div>
@@ -50,8 +50,8 @@ const AnalyticsExportsView = () => {
   };
 
   return (
-    <div className="flex-1 bg-[#1e1e1e] flex flex-col overflow-hidden">
-      <div className="flex items-center px-3 h-[30px] bg-[#252526] border-b border-black/40 shrink-0">
+    <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden">
+      <div className="flex items-center px-3 h-[30px] bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0">
         <span className="text-[11px] font-semibold text-[#9cdcfe]">Data Exports</span>
       </div>
       <div className="flex-1 overflow-auto p-6">

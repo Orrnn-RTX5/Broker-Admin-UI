@@ -58,11 +58,11 @@ const RiskEventsView = () => {
   };
 
   return (
-    <div className="flex-1 bg-[#1e1e1e] flex flex-col overflow-hidden">
+    <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden">
       {/* Top Bar */}
-      <div className="flex items-center gap-3 px-3 py-1.5 bg-[#252526] border-b border-black/40 shrink-0">
+      <div className="flex items-center gap-3 px-3 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0">
         <button onClick={fetchEvents}
-          className="flex items-center gap-1.5 h-[24px] px-3 bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] text-[11px] rounded-[2px]">
+          className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]">
           <RefreshCw size={11} /> Refresh
         </button>
         <button onClick={handleAckAll} disabled={ackingAll}
@@ -71,25 +71,25 @@ const RiskEventsView = () => {
         </button>
         <div className="flex items-center gap-2 ml-2">
           <select value={severity} onChange={e => setSeverity(e.target.value)}
-            className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[22px] px-1.5 rounded-[2px] outline-none">
+            className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[22px] px-1.5 rounded-[2px] outline-none">
             <option value="">All severities</option>
             {SEVERITIES.filter(Boolean).map(s => <option key={s} value={s}>{s}</option>)}
           </select>
           <select value={acknowledged} onChange={e => setAcknowledged(e.target.value)}
-            className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[22px] px-1.5 rounded-[2px] outline-none">
+            className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[22px] px-1.5 rounded-[2px] outline-none">
             <option value="">All</option>
             <option value="false">Unacknowledged</option>
             <option value="true">Acknowledged</option>
           </select>
           <button onClick={fetchEvents}
-            className="h-[22px] px-3 bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] text-[11px] rounded-[2px]">
+            className="h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]">
             Load
           </button>
         </div>
       </div>
 
       {/* Header */}
-      <div className="flex items-center px-3 h-[24px] bg-[#252526] border-b border-black/30 shrink-0">
+      <div className="flex items-center px-3 h-[24px] bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0">
         {[['ID','w-12'],['Event Type','w-40'],['Severity','w-24'],['Account','w-24'],['Symbol','w-24'],['Triggered','w-28'],['Limit','w-24'],['Action','w-28'],['Acked','w-20'],['Time','w-40']].map(([l,w]) => (
           <div key={l} className={`${w} text-[10px] font-semibold text-[#888] uppercase tracking-wider pr-2`}>{l}</div>
         ))}
@@ -102,10 +102,10 @@ const RiskEventsView = () => {
           : data.map((row, i) => (
             <div key={row.id}
               onDoubleClick={() => !row.acknowledged && setShowAckModal(row)}
-              className={`flex items-center px-3 h-[22px] border-b border-black/20 cursor-default select-none ${i % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'} hover:bg-[#2a2d2e]`}
+              className={`flex items-center px-3 h-[22px] border-b border-black/20 cursor-default select-none ${i % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-[#2a2d2e]`}
               title="Double-click to acknowledge">
-              <div className="w-12 text-[11px] text-[#e1e1e1] pr-2">{row.id}</div>
-              <div className="w-40 text-[11px] text-[#e1e1e1] pr-2 truncate">{row.event_type}</div>
+              <div className="w-12 text-[11px] text-[color:var(--text-primary)] pr-2">{row.id}</div>
+              <div className="w-40 text-[11px] text-[color:var(--text-primary)] pr-2 truncate">{row.event_type}</div>
               <div className={`w-24 text-[11px] pr-2 font-semibold ${severityColor(row.severity)}`}>{row.severity}</div>
               <div className="w-24 text-[11px] text-[#9cdcfe] pr-2">{row.account_login || '—'}</div>
               <div className="w-24 text-[11px] text-[#9cdcfe] pr-2 font-mono">{row.symbol || '—'}</div>
@@ -125,20 +125,20 @@ const RiskEventsView = () => {
       {/* Ack Modal */}
       {showAckModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="bg-[#252526] border border-[#454545] rounded-[3px] shadow-2xl w-[340px] p-5 flex flex-col gap-3"
+          <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--bg-surface-3)] rounded-[3px] shadow-2xl w-[340px] p-5 flex flex-col gap-3"
             onClick={e => e.stopPropagation()}>
-            <div className="text-[12px] font-semibold text-[#e1e1e1]">Acknowledge Event #{showAckModal.id}</div>
+            <div className="text-[12px] font-semibold text-[color:var(--text-primary)]">Acknowledge Event #{showAckModal.id}</div>
             <div className="text-[11px] text-[#888]">{showAckModal.event_type} — {showAckModal.description}</div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] text-[#888] uppercase tracking-wider">Comment (optional)</label>
               <input value={comment} onChange={e => setComment(e.target.value)} placeholder="e.g. Reviewed and noted"
-                className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[24px] px-2 rounded-[2px] outline-none focus:border-[#007acc]" />
+                className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[24px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]" />
             </div>
             <div className="flex gap-2 justify-end">
               <button onClick={() => { setShowAckModal(null); setComment(''); }}
-                className="h-[24px] px-4 bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] text-[11px] rounded-[2px]">Cancel</button>
+                className="h-[24px] px-4 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]">Cancel</button>
               <button onClick={handleAck} disabled={!!acking}
-                className="h-[24px] px-4 bg-[#007acc] hover:bg-[#0098ff] text-white text-[11px] rounded-[2px] disabled:opacity-50">
+                className="h-[24px] px-4 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] disabled:opacity-50">
                 {acking ? 'Saving…' : 'Acknowledge'}
               </button>
             </div>

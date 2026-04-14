@@ -105,18 +105,18 @@ const providers = [
 
 const PaymentsView = () => {
   return (
-    <div className="flex-1 flex flex-col bg-[#1e1e1e] overflow-hidden text-[#e1e1e1]">
+    <div className="flex-1 flex flex-col bg-[color:var(--bg-app)] overflow-hidden text-[color:var(--text-primary)]">
       {/* Header Area */}
       <div className="flex justify-between items-start px-6 py-5 border-b border-white/10 shrink-0">
         <div>
           <h1 className="text-[16px] font-semibold text-white mb-1">Payment Service Providers</h1>
-          <p className="text-[12px] text-[#aaaaaa]">Select the required payment providers for your traders and activate them inside MetaTrader 5 terminal</p>
+          <p className="text-[12px] text-[color:var(--text-muted)]">Select the required payment providers for your traders and activate them inside MetaTrader 5 terminal</p>
         </div>
-        <div className="flex border border-[#555555] bg-[#111111] h-7 items-center w-64 px-2 rounded-sm focus-within:border-[#3B82F6] transition-colors">
+        <div className="flex border border-[color:var(--border-strong)] bg-[#111111] h-7 items-center w-64 px-2 rounded-sm focus-within:border-[#3B82F6] transition-colors">
           <input 
             type="text" 
             placeholder="Search" 
-            className="bg-transparent border-none outline-none w-full text-[12px] text-white placeholder:text-[#666666]" 
+            className="bg-transparent border-none outline-none w-full text-[12px] text-white placeholder:text-[color:var(--text-muted)]" 
           />
           <Search size={14} className="text-[#3B82F6]" />
         </div>
@@ -129,7 +129,7 @@ const PaymentsView = () => {
             
             {/* Action Button - Top Right */}
             <div className="absolute top-6 right-6">
-              <button className="flex items-center gap-1.5 px-3 h-7 bg-transparent border border-[#555555] rounded text-[11px] text-[#21BA45] hover:border-[#21BA45] hover:bg-[#21BA45]/10 transition-all font-medium">
+              <button className="flex items-center gap-1.5 px-3 h-7 bg-transparent border border-[color:var(--border-strong)] rounded text-[11px] text-[#21BA45] hover:border-[#21BA45] hover:bg-[#21BA45]/10 transition-all font-medium">
                 <Link size={12} className="rotate-45" />
                 Connect Provider
               </button>
@@ -146,35 +146,35 @@ const PaymentsView = () => {
               
               <div className="flex flex-wrap items-center gap-5 text-[11px] text-[#4ea0e9] mb-4">
                 <a href="#" className="flex items-center gap-1.5 hover:underline">
-                  <Globe size={11} className="text-[#aaaaaa] shrink-0" />
+                  <Globe size={11} className="text-[color:var(--text-muted)] shrink-0" />
                   {provider.website}
                 </a>
                 <a href="#" className="flex items-center gap-1.5 hover:underline">
-                  <AtSign size={11} className="text-[#aaaaaa] shrink-0" />
+                  <AtSign size={11} className="text-[color:var(--text-muted)] shrink-0" />
                   {provider.email}
                 </a>
                 <span className="flex items-center gap-1.5">
-                  <Phone size={11} className="text-[#aaaaaa] shrink-0" />
+                  <Phone size={11} className="text-[color:var(--text-muted)] shrink-0" />
                   {provider.phone}
                 </span>
 
-                <div className="flex items-center gap-4 ml-2 text-[#cccccc]">
+                <div className="flex items-center gap-4 ml-2 text-[color:var(--text-secondary)]">
                   <span className="flex items-center gap-1.5" title="Views">
-                    <Eye size={11} className="text-[#aaaaaa]" />
+                    <Eye size={11} className="text-[color:var(--text-muted)]" />
                     {provider.stats.views}
                   </span>
                   <span className="flex items-center gap-1.5" title="Folders">
-                    <Folder size={11} className="text-[#aaaaaa]" />
+                    <Folder size={11} className="text-[color:var(--text-muted)]" />
                     {provider.stats.folders}
                   </span>
                   <span className="flex items-center gap-1.5" title="Tags">
-                    <Tag size={11} className="text-[#aaaaaa]" />
+                    <Tag size={11} className="text-[color:var(--text-muted)]" />
                     {provider.stats.tags}
                   </span>
                 </div>
               </div>
 
-              <p className="text-[12px] text-[#aaaaaa] leading-[1.6]">
+              <p className="text-[12px] text-[color:var(--text-muted)] leading-[1.6]">
                 {provider.description}
               </p>
             </div>

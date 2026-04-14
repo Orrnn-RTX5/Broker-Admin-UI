@@ -93,34 +93,34 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData }) => {
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.1 }}
-        className="w-[600px] bg-[#1e1e1e] border border-[#444444] rounded-[6px] shadow-2xl flex flex-col overflow-hidden max-h-[90vh]"
+        className="w-[600px] bg-[color:var(--bg-app)] border border-[color:var(--bg-surface-3)] rounded-[6px] shadow-2xl flex flex-col overflow-hidden max-h-[90vh]"
       >
-        <div className="flex justify-between items-center h-8 bg-[#1e1e1e] px-3 border-b border-white/5 select-none shrink-0">
-          <div className="text-[12px] text-[#e1e1e1]">{initialData ? 'Update Group' : 'Create Group'}</div>
-          <button onClick={onClose} className="w-[28px] h-[20px] flex items-center justify-center hover:bg-red-500 hover:text-white text-[#aaaaaa] transition-colors rounded-tr-[4px]">
+        <div className="flex justify-between items-center h-8 bg-[color:var(--bg-app)] px-3 border-b border-white/5 select-none shrink-0">
+          <div className="text-[12px] text-[color:var(--text-primary)]">{initialData ? 'Update Group' : 'Create Group'}</div>
+          <button onClick={onClose} className="w-[28px] h-[20px] flex items-center justify-center hover:bg-red-500 hover:text-white text-[color:var(--text-muted)] transition-colors rounded-tr-[4px]">
             <X size={12} />
           </button>
         </div>
 
-        <div className="p-4 flex flex-col gap-4 text-[#cccccc] overflow-y-auto no-scrollbar">
+        <div className="p-4 flex flex-col gap-4 text-[color:var(--text-secondary)] overflow-y-auto no-scrollbar">
           <div className="grid grid-cols-2 gap-x-8 gap-y-3">
             {/* Left Column */}
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-3">
                 <label className="text-[12px] w-28 shrink-0 text-right">Name:</label>
-                <input type="text" name="name" value={formData.name} onChange={handleChange} disabled={!!initialData} className="flex-1 bg-[#1e1e1e] border border-[#555555] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm disabled:opacity-50" />
+                <input type="text" name="name" value={formData.name} onChange={handleChange} disabled={!!initialData} className="flex-1 bg-[color:var(--bg-app)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm disabled:opacity-50" />
               </div>
               <div className="flex items-center gap-3">
                 <label className="text-[12px] w-28 shrink-0 text-right">Description:</label>
-                <input type="text" name="description" value={formData.description} onChange={handleChange} className="flex-1 bg-[#1e1e1e] border border-[#555555] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm" />
+                <input type="text" name="description" value={formData.description} onChange={handleChange} className="flex-1 bg-[color:var(--bg-app)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm" />
               </div>
               <div className="flex items-center gap-3">
                 <label className="text-[12px] w-28 shrink-0 text-right">Currency:</label>
-                <input type="text" name="currency" value={formData.currency} onChange={handleChange} className="flex-1 bg-[#1e1e1e] border border-[#555555] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm" />
+                <input type="text" name="currency" value={formData.currency} onChange={handleChange} className="flex-1 bg-[color:var(--bg-app)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm" />
               </div>
               <div className="flex items-center gap-3">
                 <label className="text-[12px] w-28 shrink-0 text-right">Account Type:</label>
-                <select name="accountType" value={formData.accountType} onChange={handleChange} className="flex-1 bg-[#252526] border border-[#555555] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm">
+                <select name="accountType" value={formData.accountType} onChange={handleChange} className="flex-1 bg-[color:var(--bg-surface-1)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm">
                   <option value="standard">Standard</option>
                   <option value="cent">Cent</option>
                   <option value="micro">Micro</option>
@@ -129,14 +129,14 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData }) => {
               </div>
               <div className="flex items-center gap-3">
                 <label className="text-[12px] w-28 shrink-0 text-right">Book Type:</label>
-                <select name="bookType" value={formData.bookType} onChange={handleChange} className="flex-1 bg-[#252526] border border-[#555555] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm">
+                <select name="bookType" value={formData.bookType} onChange={handleChange} className="flex-1 bg-[color:var(--bg-surface-1)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm">
                   <option value="b">B-Book</option>
                   <option value="a">A-Book</option>
                 </select>
               </div>
               <div className="flex items-center gap-3">
                 <label className="text-[12px] w-28 shrink-0 text-right">Leverage (1:x):</label>
-                <input type="number" name="leverage" value={formData.leverage} onChange={handleChange} className="flex-1 bg-[#1e1e1e] border border-[#555555] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm" />
+                <input type="number" name="leverage" value={formData.leverage} onChange={handleChange} className="flex-1 bg-[color:var(--bg-app)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm" />
               </div>
             </div>
 
@@ -144,30 +144,30 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData }) => {
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-3">
                 <label className="text-[12px] w-28 shrink-0 text-right">Margin Call %:</label>
-                <input type="number" name="marginCallLevel" value={formData.marginCallLevel} onChange={handleChange} className="flex-1 bg-[#1e1e1e] border border-[#555555] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm" />
+                <input type="number" name="marginCallLevel" value={formData.marginCallLevel} onChange={handleChange} className="flex-1 bg-[color:var(--bg-app)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm" />
               </div>
               <div className="flex items-center gap-3">
                 <label className="text-[12px] w-28 shrink-0 text-right">Stop Out %:</label>
-                <input type="number" name="stopOutLevel" value={formData.stopOutLevel} onChange={handleChange} className="flex-1 bg-[#1e1e1e] border border-[#555555] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm" />
+                <input type="number" name="stopOutLevel" value={formData.stopOutLevel} onChange={handleChange} className="flex-1 bg-[color:var(--bg-app)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm" />
               </div>
               <div className="flex items-center gap-3">
                 <label className="text-[12px] w-28 shrink-0 text-right">Spread Markup:</label>
-                <input type="number" name="spreadMarkup" value={formData.spreadMarkup} onChange={handleChange} className="flex-1 bg-[#1e1e1e] border border-[#555555] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm" />
+                <input type="number" name="spreadMarkup" value={formData.spreadMarkup} onChange={handleChange} className="flex-1 bg-[color:var(--bg-app)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm" />
               </div>
               <div className="flex items-center gap-3">
                 <label className="text-[12px] w-28 shrink-0 text-right">Comm. Rate:</label>
-                <input type="number" name="commissionRate" value={formData.commissionRate} onChange={handleChange} className="flex-1 bg-[#1e1e1e] border border-[#555555] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm" />
+                <input type="number" name="commissionRate" value={formData.commissionRate} onChange={handleChange} className="flex-1 bg-[color:var(--bg-app)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm" />
               </div>
               <div className="flex items-center gap-3">
                 <label className="text-[12px] w-28 shrink-0 text-right">Comm. Type:</label>
-                <select name="commissionType" value={formData.commissionType} onChange={handleChange} className="flex-1 bg-[#252526] border border-[#555555] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm">
+                <select name="commissionType" value={formData.commissionType} onChange={handleChange} className="flex-1 bg-[color:var(--bg-surface-1)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm">
                   <option value="per_lot">Per Lot</option>
                   <option value="standard">Standard</option>
                 </select>
               </div>
               <div className="flex items-center gap-3">
                 <label className="text-[12px] w-28 shrink-0 text-right">Execution:</label>
-                <select name="executionMode" value={formData.executionMode} onChange={handleChange} className="flex-1 bg-[#252526] border border-[#555555] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm">
+                <select name="executionMode" value={formData.executionMode} onChange={handleChange} className="flex-1 bg-[color:var(--bg-surface-1)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm">
                   <option value="market">Market</option>
                   <option value="instant">Instant</option>
                 </select>
@@ -175,11 +175,11 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData }) => {
             </div>
           </div>
           
-          <hr className="border-[#3e3e42] my-1" />
+          <hr className="border-[color:var(--border-default)] my-1" />
           
           <div className="flex items-center gap-3">
             <label className="text-[12px] w-28 shrink-0 text-right">Allowed Symbols:</label>
-            <input type="text" name="symbolsAllowed" value={formData.symbolsAllowed} onChange={handleChange} placeholder="EURUSD, GBPUSD" className="flex-1 bg-[#1e1e1e] border border-[#555555] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm" />
+            <input type="text" name="symbolsAllowed" value={formData.symbolsAllowed} onChange={handleChange} placeholder="EURUSD, GBPUSD" className="flex-1 bg-[color:var(--bg-app)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm" />
           </div>
 
           <div className="grid grid-cols-3 gap-2 px-10 mt-2">
@@ -200,17 +200,17 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData }) => {
           {error && <div className="text-red-400 text-[11px] text-center mt-2">{error}</div>}
         </div>
 
-        <div className="px-4 py-3 bg-[#1e1e1e] flex justify-end gap-2 border-t border-white/5 select-none shrink-0">
+        <div className="px-4 py-3 bg-[color:var(--bg-app)] flex justify-end gap-2 border-t border-white/5 select-none shrink-0">
           <button 
             onClick={handleSubmit}
             disabled={isLoading}
-            className="px-6 h-[24px] bg-[#007acc] text-white border border-transparent rounded text-[12px] hover:bg-[#0098ff] transition-all disabled:opacity-50"
+            className="px-6 h-[24px] bg-[color:var(--accent-500)] text-white border border-transparent rounded text-[12px] hover:bg-[color:var(--accent-500)] transition-all disabled:opacity-50"
           >
             {isLoading ? 'Saving...' : 'Save'}
           </button>
           <button 
             onClick={onClose}
-            className="px-6 h-[24px] bg-transparent border border-[#555555] rounded text-[12px] text-white hover:bg-white/10 hover:border-[#777777] transition-all"
+            className="px-6 h-[24px] bg-transparent border border-[color:var(--border-strong)] rounded text-[12px] text-white hover:bg-white/10 hover:border-[#777777] transition-all"
           >
             Cancel
           </button>

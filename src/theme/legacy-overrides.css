@@ -1,0 +1,144 @@
+/* Legacy color remap.
+   The original views hardcoded dark MT5 hex values everywhere. This layer
+   maps those hex classes to theme tokens so light/dark actually switch
+   without touching every file. Phase 4 (per-view migration) will remove
+   entries as views get rewritten to use tokens directly.
+
+   Tailwind arbitrary-value classes like `bg-[#1e1e1e]` compile to
+   `.bg-\[\#1e1e1e\]` — escape the `[`, `]`, `#` in selectors.
+
+   Branded color hexes (blues/greens/reds/yellows used for icons, badges,
+   P/L text, etc.) are INTENTIONALLY not overridden — they're data colors
+   that should keep their meaning in both themes. */
+
+/* ============================================================
+   LIGHT MODE — override dark chrome to light surfaces
+   ============================================================ */
+[data-theme="light"] {
+
+  /* -------- Dark surface backgrounds → light surfaces -------- */
+  .bg-\[\#111\], .bg-\[\#111111\],
+  .bg-\[\#121212\],
+  .bg-\[\#1e1e1e\],
+  .bg-\[\#1e293b\],
+  .bg-\[\#1a1a2e\],
+  .bg-\[\#1a2d48\],
+  .bg-\[\#1a334d\],
+  .bg-\[\#0f2240\],
+  .bg-\[\#0f2e1b\],
+  .bg-\[\#1e3a2e\],
+  .bg-\[\#1e3a8a\],
+  .bg-\[\#222\], .bg-\[\#222222\]     { background-color: var(--bg-app) !important; }
+
+  .bg-\[\#252526\],
+  .bg-\[\#2a2a2b\],
+  .bg-\[\#2a2d2e\],
+  .bg-\[\#2a2d3e\],
+  .bg-\[\#2a7b3b\],
+  .bg-\[\#2d5a1b\],
+  .bg-\[\#2b2b2b\],
+  .bg-\[\#323233\],
+  .bg-\[\#333\], .bg-\[\#333333\]     { background-color: var(--bg-surface-1) !important; }
+
+  .bg-\[\#3c3f41\],
+  .bg-\[\#3a1c1c\],
+  .bg-\[\#3a7022\],
+  .bg-\[\#3e3e3e\],
+  .bg-\[\#3e3e42\],
+  .bg-\[\#3f2020\],
+  .bg-\[\#404040\],
+  .bg-\[\#444\], .bg-\[\#444444\],
+  .bg-\[\#4a4a4a\],
+  .bg-\[\#555\], .bg-\[\#555555\],
+  .bg-\[\#666\]                       { background-color: var(--bg-surface-2) !important; }
+
+  /* -------- Dark text (originally bright-on-dark) → dark-on-light -------- */
+  .text-\[\#fff\], .text-\[\#ffffff\],
+  .text-\[\#dddddd\], .text-\[\#dedede\],
+  .text-\[\#d1d1d1\], .text-\[\#e1e1e1\],
+  .text-\[\#e0e0e0\], .text-\[\#cccccc\],
+  .text-\[\#ccc\], .text-\[\#ddd\], .text-\[\#eee\],
+  .text-white                         { color: var(--text-primary) !important; }
+
+  .text-\[\#aaa\], .text-\[\#aaaaaa\],
+  .text-\[\#bbb\],
+  .text-\[\#999\], .text-\[\#999999\],
+  .text-\[\#888\],
+  .text-\[\#a0a0a0\]                  { color: var(--text-secondary) !important; }
+
+  .text-\[\#666\],
+  .text-\[\#777\],
+  .text-\[\#555\],
+  .text-\[\#606060\], .text-\[\#808080\] { color: var(--text-muted) !important; }
+
+  .text-\[\#000\], .text-\[\#000000\]  { color: var(--text-primary) !important; }
+
+  /* -------- Dark borders → subtle light borders -------- */
+  .border-\[\#000\], .border-\[\#000000\],
+  .border-\[\#3e3e42\],
+  .border-\[\#404040\],
+  .border-\[\#444\],
+  .border-\[\#555\],
+  .border-\[\#666\],
+  .border-\[\#777777\],
+  .border-\[\#888\],
+  .border-\[\#aaa\]                   { border-color: var(--border-default) !important; }
+
+  .border-\[\#333\]                   { border-color: var(--border-subtle) !important; }
+
+  .border-black\/40,
+  .border-black\/30,
+  .border-black\/20                   { border-color: var(--border-default) !important; }
+  .border-black\/10,
+  .border-black\/5                    { border-color: var(--border-subtle) !important; }
+  .border-white\/5                    { border-color: var(--border-subtle) !important; }
+  .border-white\/10                   { border-color: var(--border-default) !important; }
+  .border-white\/20,
+  .border-white\/30                   { border-color: var(--border-default) !important; }
+
+  .focus\:border-\[\#555\]:focus,
+  .focus\:border-\[\#555555\]:focus,
+  .focus\:border-\[\#444\]:focus      { border-color: var(--accent-500) !important; }
+
+  /* -------- Hover states on dark chrome -------- */
+  .hover\:bg-\[\#3e3e42\]:hover,
+  .hover\:bg-\[\#404040\]:hover,
+  .hover\:bg-\[\#444\]:hover,
+  .hover\:bg-\[\#555\]:hover,
+  .hover\:bg-\[\#2b2b2b\]:hover,
+  .hover\:bg-\[\#2a2d2e\]:hover,
+  .hover\:bg-\[\#2a2d3e\]:hover,
+  .hover\:bg-\[\#333\]:hover          { background-color: var(--bg-surface-2) !important; }
+
+  .hover\:bg-white\/5:hover,
+  .hover\:bg-white\/10:hover          { background-color: var(--bg-surface-2) !important; }
+  .hover\:text-white:hover            { color: var(--text-primary) !important; }
+
+  /* -------- MT5 accent blues (chrome, status bar) — already handled by accent token -------- */
+  .bg-\[\#007acc\]\/20                { background-color: color-mix(in srgb, var(--accent-500) 12%, transparent) !important; }
+  .bg-\[\#007acc\]\/10                { background-color: color-mix(in srgb, var(--accent-500) 8%, transparent) !important; }
+
+  /* -------- VS-Code-ish token hues -------- */
+  .text-\[\#9cdcfe\]                  { color: var(--info-500) !important; }
+  .text-\[\#f48771\]                  { color: var(--danger-500) !important; }
+  .bg-\[\#e51400\]                    { background-color: var(--danger-500) !important; }
+  .hover\:bg-\[\#e51400\]:hover       { background-color: var(--danger-600, var(--danger-500)) !important; }
+  .bg-\[\#c42b1c\]                    { background-color: var(--danger-500) !important; }
+  .hover\:bg-\[\#c42b1c\]:hover       { background-color: var(--danger-500) !important; }
+
+  /* -------- Input surface — dark bg inputs become bordered white -------- */
+  input, textarea, select             { color-scheme: light; }
+}
+
+/* ============================================================
+   DARK MODE — soften pure black borders only
+   ============================================================ */
+[data-theme="dark"] {
+  .border-black\/40,
+  .border-black\/30,
+  .border-black\/20,
+  .border-black\/10   { border-color: var(--border-default) !important; }
+  .border-black\/5    { border-color: var(--border-subtle) !important; }
+  .border-white\/5    { border-color: var(--border-subtle) !important; }
+  .border-white\/10   { border-color: var(--border-default) !important; }
+}

@@ -84,13 +84,13 @@ const LeveragesView = () => {
   const scheduleOpen = !!selectedRow;
 
   return (
-    <div className="flex-1 bg-[#1e1e1e] flex flex-col overflow-hidden relative" onClick={handleCloseContextMenu} onContextMenu={(e) => e.preventDefault()}>
+    <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative" onClick={handleCloseContextMenu} onContextMenu={(e) => e.preventDefault()}>
 
       {/* Top Action Bar */}
-      <div className="flex items-center px-2 py-1.5 bg-[#252526] border-b border-black/40 shrink-0 select-none">
+      <div className="flex items-center px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0 select-none">
         <button
           onClick={() => setIsAddPopupOpen(true)}
-          className="flex items-center gap-1.5 h-[24px] px-3 bg-[#007acc] hover:bg-[#0098ff] text-white text-[11px] rounded-[2px] transition-colors"
+          className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] transition-colors"
         >
           <Plus size={12} /> Add Leverage Rule
         </button>
@@ -105,21 +105,21 @@ const LeveragesView = () => {
         {/* Main Table */}
         <div className={`flex flex-col overflow-hidden ${scheduleOpen ? 'flex-1' : 'flex-1'}`}>
           {/* Grid Header */}
-          <div className="flex bg-[#333333] border-b border-black/40 shadow-sm sticky top-0 z-10 select-none shrink-0">
-            <div className="w-[80px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20 shrink-0">ID</div>
-            <div className="w-[70px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20 shrink-0">Enabled</div>
-            <div className="w-[180px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20 shrink-0">Group Name</div>
-            <div className="w-[120px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20 shrink-0">Symbol</div>
-            <div className="w-[80px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20 shrink-0">Priority</div>
-            <div className="w-[100px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20 shrink-0">Leverage</div>
-            <div className="w-[100px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20 shrink-0">Margin Rate</div>
-            <div className="w-[100px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20 shrink-0">Vol From</div>
-            <div className="w-[100px] px-3 py-1.5 text-[11px] font-medium text-[#d1d1d1] border-r border-black/20 shrink-0">Vol To</div>
-            <div className="flex-1 px-3 py-1.5 bg-[#333333]"></div>
+          <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 shadow-sm sticky top-0 z-10 select-none shrink-0">
+            <div className="w-[80px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0">ID</div>
+            <div className="w-[70px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0">Enabled</div>
+            <div className="w-[180px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0">Group Name</div>
+            <div className="w-[120px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0">Symbol</div>
+            <div className="w-[80px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0">Priority</div>
+            <div className="w-[100px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0">Leverage</div>
+            <div className="w-[100px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0">Margin Rate</div>
+            <div className="w-[100px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0">Vol From</div>
+            <div className="w-[100px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0">Vol To</div>
+            <div className="flex-1 px-3 py-1.5 bg-[color:var(--bg-surface-2)]"></div>
           </div>
 
           {/* Table Body */}
-          <div className="flex-1 overflow-auto no-scrollbar bg-[#1e1e1e]">
+          <div className="flex-1 overflow-auto no-scrollbar bg-[color:var(--bg-app)]">
             {data.map((row, idx) => {
               const rowId = row.rule_id || row.id;
               const isSelected = (selectedRow?.rule_id || selectedRow?.id) === rowId;
@@ -129,37 +129,37 @@ const LeveragesView = () => {
                   onClick={(e) => { e.stopPropagation(); handleRowClick(row); }}
                   onContextMenu={(e) => handleContextMenu(e, row)}
                   className={`flex cursor-pointer border-b border-black/10 transition-colors
-                    ${isSelected ? 'bg-[#094771] border-l-2 border-l-[#007acc]' : idx % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'}
+                    ${isSelected ? 'bg-[color:var(--accent-700)] border-l-2 border-l-[color:var(--accent-500)]' : idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}
                     hover:bg-blue-600/20`}
                 >
                   <div className="w-[80px] px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10 shrink-0">
                     <HashIcon />
-                    <span className="text-[#e1e1e1] font-medium truncate">{rowId || '-'}</span>
+                    <span className="text-[color:var(--text-primary)] font-medium truncate">{rowId || '-'}</span>
                   </div>
                   <div className="w-[70px] px-3 py-1 text-[12px] border-r border-black/10 shrink-0 flex items-center">
                     <span className={`text-[11px] font-semibold ${row.enabled ? 'text-[#4ec9b0]' : 'text-[#f48771]'}`}>
                       {row.enabled ? 'Yes' : 'No'}
                     </span>
                   </div>
-                  <div className="w-[180px] px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate flex items-center">{row.group_name}</div>
-                  <div className="w-[120px] px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate flex items-center">{row.symbol}</div>
-                  <div className="w-[80px] px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate flex items-center">{row.priority}</div>
+                  <div className="w-[180px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate flex items-center">{row.group_name}</div>
+                  <div className="w-[120px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate flex items-center">{row.symbol}</div>
+                  <div className="w-[80px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate flex items-center">{row.priority}</div>
                   <div className="w-[100px] px-3 py-1 text-[12px] text-[#9cdcfe] font-semibold border-r border-black/10 shrink-0 truncate flex items-center">{row.leverage}</div>
-                  <div className="w-[100px] px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate flex items-center">{row.margin_rate}</div>
-                  <div className="w-[100px] px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate flex items-center">{row.volume_from}</div>
-                  <div className="w-[100px] px-3 py-1 text-[12px] text-[#aaaaaa] border-r border-black/10 shrink-0 truncate flex items-center">{row.volume_to}</div>
+                  <div className="w-[100px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate flex items-center">{row.margin_rate}</div>
+                  <div className="w-[100px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate flex items-center">{row.volume_from}</div>
+                  <div className="w-[100px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate flex items-center">{row.volume_to}</div>
                   <div className="flex-1 flex items-center justify-end pr-2">
-                    {isSelected && <ChevronRight size={12} className="text-[#007acc]" />}
+                    {isSelected && <ChevronRight size={12} className="text-[color:var(--accent-500)]" />}
                   </div>
                 </div>
               );
             })}
 
-            {loading && <div className="p-4 text-[#aaaaaa] text-[12px] italic">Loading leverages...</div>}
-            {!loading && data.length === 0 && <div className="p-4 text-[#aaaaaa] text-[12px] italic">No dynamic leverages found.</div>}
+            {loading && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">Loading leverages...</div>}
+            {!loading && data.length === 0 && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">No dynamic leverages found.</div>}
 
             {[...Array(20)].map((_, i) => (
-              <div key={`empty-${i}`} className={`flex border-b border-black/5 opacity-40 ${i % 2 !== 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'}`}>
+              <div key={`empty-${i}`} className={`flex border-b border-black/5 opacity-40 ${i % 2 !== 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
                 <div className="w-full h-6 border-r border-black/10"></div>
               </div>
             ))}
@@ -168,9 +168,9 @@ const LeveragesView = () => {
 
         {/* Schedule Panel */}
         {scheduleOpen && (
-          <div className="w-[340px] flex flex-col border-l border-black/40 bg-[#1e1e1e] shrink-0">
+          <div className="w-[340px] flex flex-col border-l border-black/40 bg-[color:var(--bg-app)] shrink-0">
             {/* Panel Header */}
-            <div className="flex items-center px-3 h-[30px] bg-[#252526] border-b border-black/40 shrink-0">
+            <div className="flex items-center px-3 h-[30px] bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0">
               <span className="text-[11px] font-semibold text-[#9cdcfe] flex-1 truncate">
                 Schedule — {selectedRow.group_name || selectedRow.rule_id || selectedRow.id}
               </span>
@@ -181,7 +181,7 @@ const LeveragesView = () => {
             </div>
 
             {/* Rule summary */}
-            <div className="px-3 py-2 border-b border-black/30 bg-[#252526] shrink-0">
+            <div className="px-3 py-2 border-b border-black/30 bg-[color:var(--bg-surface-1)] shrink-0">
               <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
                 {[
                   ['ID', selectedRow.id || selectedRow.rule_id],
@@ -195,14 +195,14 @@ const LeveragesView = () => {
                 ].map(([k, v]) => (
                   <div key={k} className="flex items-center h-[18px]">
                     <span className="text-[10px] text-[#555] w-20 shrink-0">{k}</span>
-                    <span className="text-[10px] font-mono text-[#e1e1e1]">{v ?? '—'}</span>
+                    <span className="text-[10px] font-mono text-[color:var(--text-primary)]">{v ?? '—'}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Schedule list header */}
-            <div className="flex items-center px-3 h-[24px] bg-[#252526] border-b border-black/30 shrink-0">
+            <div className="flex items-center px-3 h-[24px] bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0">
               {[['From','flex-1'],['To','flex-1'],['Leverage','w-20']].map(([l,w]) => (
                 <div key={l} className={`${w} text-[10px] font-semibold text-[#888] uppercase tracking-wider pr-2`}>{l}</div>
               ))}
@@ -217,9 +217,9 @@ const LeveragesView = () => {
                 <div className="flex items-center justify-center h-16 text-[#555] text-[11px]">No schedule entries.</div>
               )}
               {!scheduleLoading && schedule.map((s, i) => (
-                <div key={i} className={`flex items-center px-3 h-[22px] border-b border-black/20 ${i % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'}`}>
-                  <div className="flex-1 text-[11px] text-[#e1e1e1] pr-2 font-mono truncate">{s.from ?? s.time_from ?? s.start ?? '—'}</div>
-                  <div className="flex-1 text-[11px] text-[#e1e1e1] pr-2 font-mono truncate">{s.to ?? s.time_to ?? s.end ?? '—'}</div>
+                <div key={i} className={`flex items-center px-3 h-[22px] border-b border-black/20 ${i % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
+                  <div className="flex-1 text-[11px] text-[color:var(--text-primary)] pr-2 font-mono truncate">{s.from ?? s.time_from ?? s.start ?? '—'}</div>
+                  <div className="flex-1 text-[11px] text-[color:var(--text-primary)] pr-2 font-mono truncate">{s.to ?? s.time_to ?? s.end ?? '—'}</div>
                   <div className="w-20 text-[11px] text-[#9cdcfe] font-semibold font-mono">{s.leverage ?? '—'}</div>
                 </div>
               ))}
@@ -235,18 +235,18 @@ const LeveragesView = () => {
       {/* Context Menu */}
       {contextMenu.visible && (
         <div
-          className="fixed z-[9999] bg-[#2d2d30] border border-[#3e3e42] shadow-2xl py-1 min-w-[200px] text-[12px] text-[#cccccc] font-sans rounded-[2px]"
+          className="fixed z-[9999] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] shadow-2xl py-1 min-w-[200px] text-[12px] text-[color:var(--text-secondary)] font-sans rounded-[2px]"
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={e => e.stopPropagation()}
         >
-          <div className="px-6 py-1 hover:bg-[#007acc] hover:text-white cursor-pointer select-none" onClick={() => { setIsAddPopupOpen(true); handleCloseContextMenu(); }}>Add Rule</div>
-          <div className="h-[1px] bg-[#3e3e42] my-1 mx-2"></div>
+          <div className="px-6 py-1 hover:bg-[color:var(--accent-500)] hover:text-white cursor-pointer select-none" onClick={() => { setIsAddPopupOpen(true); handleCloseContextMenu(); }}>Add Rule</div>
+          <div className="h-[1px] bg-[color:var(--border-default)] my-1 mx-2"></div>
           <div className="px-6 py-1 hover:bg-[#e51400] hover:text-white cursor-pointer select-none text-red-400" onClick={handleDelete}>Delete</div>
         </div>
       )}
 
       {/* Bottom Status Bar */}
-      <div className="h-6 bg-[#007acc] text-white flex items-center px-4 text-[11px] select-none shrink-0 border-t border-[#005a9e]">
+      <div className="h-6 bg-[color:var(--accent-500)] text-white flex items-center px-4 text-[11px] select-none shrink-0 border-t border-[color:var(--accent-700)]">
         <span>Total Leverage Rules: {data.length}</span>
         {selectedRow && (
           <span className="ml-4 opacity-70">

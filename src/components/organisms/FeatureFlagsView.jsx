@@ -65,12 +65,12 @@ const FeatureFlagsView = () => {
   };
 
   return (
-    <div className="flex-1 bg-[#1e1e1e] flex flex-col overflow-hidden relative">
+    <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative">
       {/* Top Bar */}
-      <div className="flex items-center gap-3 px-3 py-1.5 bg-[#252526] border-b border-black/40 shrink-0">
+      <div className="flex items-center gap-3 px-3 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0">
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 h-[24px] px-3 bg-[#007acc] hover:bg-[#0098ff] text-white text-[11px] rounded-[2px] transition-colors"
+          className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] transition-colors"
         >
           <Plus size={12} /> Add Flag
         </button>
@@ -79,11 +79,11 @@ const FeatureFlagsView = () => {
             value={groupFilter}
             onChange={e => setGroupFilter(e.target.value)}
             placeholder="Filter by group…"
-            className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[22px] px-2 rounded-[2px] outline-none w-[160px]"
+            className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[22px] px-2 rounded-[2px] outline-none w-[160px]"
           />
           <button
             onClick={() => fetchFlags(groupFilter)}
-            className="h-[22px] px-3 bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] text-[11px] rounded-[2px]"
+            className="h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]"
           >
             Load
           </button>
@@ -91,7 +91,7 @@ const FeatureFlagsView = () => {
       </div>
 
       {/* Header */}
-      <div className="flex items-center px-3 h-[24px] bg-[#252526] border-b border-black/30 shrink-0">
+      <div className="flex items-center px-3 h-[24px] bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0">
         {[['ID', 'w-12'], ['Feature Name', 'w-56'], ['Group', 'w-36'], ['Enabled', 'w-20'], ['Config', 'flex-1'], ['Updated', 'w-44']].map(([label, w]) => (
           <div key={label} className={`${w} text-[10px] font-semibold text-[#888] uppercase tracking-wider pr-3`}>{label}</div>
         ))}
@@ -107,10 +107,10 @@ const FeatureFlagsView = () => {
           data.map((row, i) => (
             <div
               key={row.id || row.feature_name}
-              className={`flex items-center px-3 h-[22px] border-b border-black/20 cursor-default select-none ${i % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'} hover:bg-[#2a2d2e]`}
+              className={`flex items-center px-3 h-[22px] border-b border-black/20 cursor-default select-none ${i % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-[#2a2d2e]`}
             >
-              <div className="w-12 text-[11px] text-[#e1e1e1] pr-3">{row.id}</div>
-              <div className="w-56 text-[11px] text-[#e1e1e1] pr-3 truncate">{row.feature_name}</div>
+              <div className="w-12 text-[11px] text-[color:var(--text-primary)] pr-3">{row.id}</div>
+              <div className="w-56 text-[11px] text-[color:var(--text-primary)] pr-3 truncate">{row.feature_name}</div>
               <div className="w-36 text-[11px] text-[#9cdcfe] pr-3 truncate">{row.group_name || <span className="text-[#555]">global</span>}</div>
               <div className="w-20 pr-3">
                 <button
@@ -140,10 +140,10 @@ const FeatureFlagsView = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
           <form
             onSubmit={handleCreate}
-            className="bg-[#252526] border border-[#454545] rounded-[3px] shadow-2xl w-[360px] p-5 flex flex-col gap-3"
+            className="bg-[color:var(--bg-surface-1)] border border-[color:var(--bg-surface-3)] rounded-[3px] shadow-2xl w-[360px] p-5 flex flex-col gap-3"
             onClick={e => e.stopPropagation()}
           >
-            <div className="text-[12px] font-semibold text-[#e1e1e1] mb-1">Set Feature Flag</div>
+            <div className="text-[12px] font-semibold text-[color:var(--text-primary)] mb-1">Set Feature Flag</div>
 
             <div className="flex flex-col gap-1">
               <label className="text-[10px] text-[#888] uppercase tracking-wider">Feature Name *</label>
@@ -151,7 +151,7 @@ const FeatureFlagsView = () => {
                 required
                 value={form.feature_name}
                 onChange={e => setForm(f => ({ ...f, feature_name: e.target.value }))}
-                className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[24px] px-2 rounded-[2px] outline-none focus:border-[#007acc]"
+                className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[24px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]"
               />
             </div>
 
@@ -162,7 +162,7 @@ const FeatureFlagsView = () => {
                   value={form.group_name}
                   onChange={e => setForm(f => ({ ...f, group_name: e.target.value }))}
                   placeholder="e.g. standard"
-                  className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[24px] px-2 rounded-[2px] outline-none focus:border-[#007acc]"
+                  className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[24px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]"
                 />
               </div>
               <div className="flex flex-col gap-1 justify-end">
@@ -171,7 +171,7 @@ const FeatureFlagsView = () => {
                     type="checkbox"
                     checked={form.enabled}
                     onChange={e => setForm(f => ({ ...f, enabled: e.target.checked }))}
-                    className="accent-[#007acc]"
+                    className="accent-[color:var(--accent-500)]"
                   />
                   Enabled
                 </label>
@@ -184,17 +184,17 @@ const FeatureFlagsView = () => {
                 value={form.config_json}
                 onChange={e => setForm(f => ({ ...f, config_json: e.target.value }))}
                 rows={3}
-                className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] px-2 py-1 rounded-[2px] outline-none focus:border-[#007acc] resize-none font-mono"
+                className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] px-2 py-1 rounded-[2px] outline-none focus:border-[color:var(--accent-500)] resize-none font-mono"
               />
             </div>
 
             <div className="flex gap-2 mt-1 justify-end">
               <button type="button" onClick={() => setShowForm(false)}
-                className="h-[24px] px-4 bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] text-[11px] rounded-[2px]">
+                className="h-[24px] px-4 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]">
                 Cancel
               </button>
               <button type="submit" disabled={saving}
-                className="h-[24px] px-4 bg-[#007acc] hover:bg-[#0098ff] text-white text-[11px] rounded-[2px] disabled:opacity-50">
+                className="h-[24px] px-4 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] disabled:opacity-50">
                 {saving ? 'Saving…' : 'Save'}
               </button>
             </div>

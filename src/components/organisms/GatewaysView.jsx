@@ -148,7 +148,7 @@ const gateways = [
     build: '5.00 build 5370 (17 Oct 2025)',
     logo: (
       <div className="h-12 w-40 flex items-center justify-center p-2 mx-auto">
-        <div className="text-[#444444] font-medium text-3xl opacity-50 tracking-tighter">
+        <div className="text-[color:var(--bg-surface-3)] font-medium text-3xl opacity-50 tracking-tighter">
           Integral
         </div>
       </div>
@@ -263,22 +263,22 @@ const gateways = [
 
 const GatewaysView = () => {
   return (
-    <div className="flex-1 flex flex-col bg-[#1e1e1e] overflow-hidden text-[#e1e1e1]">
+    <div className="flex-1 flex flex-col bg-[color:var(--bg-app)] overflow-hidden text-[color:var(--text-primary)]">
       {/* Header Area */}
-      <div className="flex justify-between items-start px-5 py-4 border-b border-black/40 shrink-0 bg-[#252526]">
+      <div className="flex justify-between items-start px-5 py-4 border-b border-black/40 shrink-0 bg-[color:var(--bg-surface-1)]">
         <div>
           <h1 className="text-[17px] font-semibold text-white mb-1">Gateways</h1>
-          <p className="text-[12px] text-[#aaaaaa]">Gateways connect the platform to liquidity providers and exchanges. Choose from built-in modules and App Store offerings or create custom solutions with Gateway API</p>
+          <p className="text-[12px] text-[color:var(--text-muted)]">Gateways connect the platform to liquidity providers and exchanges. Choose from built-in modules and App Store offerings or create custom solutions with Gateway API</p>
         </div>
       </div>
 
       {/* Grid Area */}
-      <div className="flex-1 overflow-y-auto no-scrollbar p-6 bg-[#1e1e1e]">
+      <div className="flex-1 overflow-y-auto no-scrollbar p-6 bg-[color:var(--bg-app)]">
         <div className="grid grid-cols-1 md:grid-cols-2 mt-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {gateways.map((gw) => (
             <div 
               key={gw.id} 
-              className="flex flex-col items-center justify-between p-4 bg-[#1e1e1e] border border-[#333333] hover:border-[#555555] rounded-sm transition-colors cursor-pointer group hover:bg-[#252526] h-32"
+              className="flex flex-col items-center justify-between p-4 bg-[color:var(--bg-app)] border border-[color:var(--bg-surface-2)] hover:border-[color:var(--border-strong)] rounded-sm transition-colors cursor-pointer group hover:bg-[color:var(--bg-surface-1)] h-32"
             >
               <div className="mt-1 w-full text-center">
                 {gw.logo}
@@ -286,7 +286,7 @@ const GatewaysView = () => {
               <div className="mt-auto text-center w-full">
                 <h3 className="text-[12px] font-medium text-[#dddddd] group-hover:text-white transition-colors">{gw.name}</h3>
                 {gw.build && (
-                  <p className="text-[#888888] text-[10px] mt-0.5">{gw.build}</p>
+                  <p className="text-[color:var(--text-muted)] text-[10px] mt-0.5">{gw.build}</p>
                 )}
               </div>
             </div>

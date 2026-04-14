@@ -52,23 +52,23 @@ const CreateManagerPopup = ({ onClose, onCreated }) => {
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.1 }}
-        className="w-[450px] bg-[#1e1e1e] border border-[#444444] rounded-[6px] shadow-2xl flex flex-col overflow-hidden"
+        className="w-[450px] bg-[color:var(--bg-app)] border border-[color:var(--bg-surface-3)] rounded-[6px] shadow-2xl flex flex-col overflow-hidden"
       >
-        <div className="flex justify-between items-center h-8 bg-[#1e1e1e] px-3 border-b border-white/5 select-none">
-          <div className="text-[12px] text-[#e1e1e1]">Create Manager</div>
-          <button onClick={onClose} className="w-[28px] h-[20px] flex items-center justify-center hover:bg-red-500 hover:text-white text-[#aaaaaa] transition-colors rounded-tr-[4px]">
+        <div className="flex justify-between items-center h-8 bg-[color:var(--bg-app)] px-3 border-b border-white/5 select-none">
+          <div className="text-[12px] text-[color:var(--text-primary)]">Create Manager</div>
+          <button onClick={onClose} className="w-[28px] h-[20px] flex items-center justify-center hover:bg-red-500 hover:text-white text-[color:var(--text-muted)] transition-colors rounded-tr-[4px]">
             <X size={12} />
           </button>
         </div>
 
-        <div className="p-4 flex flex-col gap-4 text-[#cccccc]">
+        <div className="p-4 flex flex-col gap-4 text-[color:var(--text-secondary)]">
           <div className="flex items-center gap-3">
             <label className="text-[12px] w-24 shrink-0 text-right">Login (ID):</label>
             <input 
               type="number" 
               value={login}
               onChange={(e) => setLogin(e.target.value)}
-              className="flex-1 bg-[#1e1e1e] border border-[#555555] px-2 py-1 text-[12px] text-white focus:outline-none focus:border-blue-500 rounded-sm"
+              className="flex-1 bg-[color:var(--bg-app)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:outline-none focus:border-blue-500 rounded-sm"
               autoFocus
             />
           </div>
@@ -79,7 +79,7 @@ const CreateManagerPopup = ({ onClose, onCreated }) => {
               type="text" 
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="flex-1 bg-[#1e1e1e] border border-[#555555] px-2 py-1 text-[12px] text-white focus:outline-none focus:border-blue-500 rounded-sm"
+              className="flex-1 bg-[color:var(--bg-app)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:outline-none focus:border-blue-500 rounded-sm"
             />
           </div>
 
@@ -89,7 +89,7 @@ const CreateManagerPopup = ({ onClose, onCreated }) => {
               type="password" 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="flex-1 bg-[#1e1e1e] border border-[#555555] px-2 py-1 text-[12px] text-white focus:outline-none focus:border-blue-500 rounded-sm"
+              className="flex-1 bg-[color:var(--bg-app)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:outline-none focus:border-blue-500 rounded-sm"
             />
           </div>
 
@@ -98,7 +98,7 @@ const CreateManagerPopup = ({ onClose, onCreated }) => {
             <select 
               value={roleId}
               onChange={(e) => setRoleId(e.target.value)}
-              className="flex-1 bg-[#252526] border border-[#555555] px-2 py-1 text-[12px] text-white focus:outline-none focus:border-blue-500 rounded-sm cursor-pointer"
+              className="flex-1 bg-[color:var(--bg-surface-1)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:outline-none focus:border-blue-500 rounded-sm cursor-pointer"
             >
               <option value="" disabled>Select Role...</option>
               {roles.map(r => (
@@ -114,7 +114,7 @@ const CreateManagerPopup = ({ onClose, onCreated }) => {
               value={allowedGroups}
               onChange={(e) => setAllowedGroups(e.target.value)}
               placeholder="e.g. std_ecn, real_account"
-              className="flex-1 bg-[#1e1e1e] border border-[#555555] px-2 py-1 text-[12px] text-white focus:outline-none focus:border-blue-500 rounded-sm"
+              className="flex-1 bg-[color:var(--bg-app)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:outline-none focus:border-blue-500 rounded-sm"
             />
           </div>
 
@@ -125,7 +125,7 @@ const CreateManagerPopup = ({ onClose, onCreated }) => {
               value={ipWhitelist}
               onChange={(e) => setIpWhitelist(e.target.value)}
               placeholder="e.g. 192.168.1.0/24"
-              className="flex-1 bg-[#1e1e1e] border border-[#555555] px-2 py-1 text-[12px] text-white focus:outline-none focus:border-blue-500 rounded-sm"
+              className="flex-1 bg-[color:var(--bg-app)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:outline-none focus:border-blue-500 rounded-sm"
             />
           </div>
 
@@ -138,24 +138,24 @@ const CreateManagerPopup = ({ onClose, onCreated }) => {
                 onChange={(e) => setIsAdmin(e.target.checked)}
                 className="accent-blue-500 w-3 h-3 cursor-pointer"
               />
-              <span className="text-[11px] text-[#aaaaaa] italic">Requires full privileges</span>
+              <span className="text-[11px] text-[color:var(--text-muted)] italic">Requires full privileges</span>
             </label>
           </div>
           
           {error && <div className="text-red-400 text-[11px] text-center mt-2">{error}</div>}
         </div>
 
-        <div className="px-4 py-3 bg-[#1e1e1e] flex justify-end gap-2 border-t border-white/5 select-none">
+        <div className="px-4 py-3 bg-[color:var(--bg-app)] flex justify-end gap-2 border-t border-white/5 select-none">
           <button 
             onClick={handleSubmit}
             disabled={isLoading}
-            className="px-6 h-[24px] bg-[#007acc] text-white border border-transparent rounded text-[12px] hover:bg-[#0098ff] transition-all disabled:opacity-50"
+            className="px-6 h-[24px] bg-[color:var(--accent-500)] text-white border border-transparent rounded text-[12px] hover:bg-[color:var(--accent-500)] transition-all disabled:opacity-50"
           >
             {isLoading ? 'Saving...' : 'Save'}
           </button>
           <button 
             onClick={onClose}
-            className="px-6 h-[24px] bg-transparent border border-[#555555] rounded text-[12px] text-white hover:bg-white/10 hover:border-[#777777] transition-all"
+            className="px-6 h-[24px] bg-transparent border border-[color:var(--border-strong)] rounded text-[12px] text-white hover:bg-white/10 hover:border-[#777777] transition-all"
           >
             Cancel
           </button>

@@ -45,7 +45,7 @@ const NetworkOverviewMap = () => (
                            <Geography
                               key={geo.rsmKey}
                               geography={geo}
-                              fill={isHighlight ? "#2563eb" : "#4a4a4a"}
+                              fill={isHighlight ? "#2563eb" : "var(--bg-surface-3)"}
                               stroke="#3a3a3a"
                               strokeWidth={0.5}
                               style={{
@@ -86,8 +86,8 @@ const NetworkOverviewMap = () => (
 
 
 const NetworkNodesTable = () => (
-   <div className="flex-1 overflow-auto no-scrollbar bg-[#1e1e1e]">
-      <div className="flex border-b border-black/40 bg-[#333333] sticky top-0 z-10 shadow-sm text-[11px] font-medium text-[#d1d1d1]">
+   <div className="flex-1 overflow-auto no-scrollbar bg-[color:var(--bg-app)]">
+      <div className="flex border-b border-black/40 bg-[color:var(--bg-surface-2)] sticky top-0 z-10 shadow-sm text-[11px] font-medium text-[color:var(--text-primary)]">
          <div className="w-40 px-3 py-1.5 border-r border-black/20 truncate">Type</div>
          <div className="w-48 px-3 py-1.5 border-r border-black/20 truncate">Server</div>
          <div className="w-32 px-3 py-1.5 border-r border-black/20 truncate">IPv4 Address</div>
@@ -103,33 +103,33 @@ const NetworkNodesTable = () => (
          <div className="w-20 px-3 py-1.5 border-r border-black/20 text-right truncate">Connect...</div>
          <div className="w-20 px-3 py-1.5 border-r border-black/20 text-right truncate">Traffic In</div>
          <div className="w-20 px-3 py-1.5 border-r border-black/20 text-right truncate">Traffic Out</div>
-         <div className="flex-1 bg-[#333333]"></div>
+         <div className="flex-1 bg-[color:var(--bg-surface-2)]"></div>
       </div>
       {networkNodesData.map((node, idx) => (
-         <div key={idx} className={`flex text-[11px] border-b border-black/10 cursor-default hover:bg-blue-600/20 ${idx % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'}`}>
+         <div key={idx} className={`flex text-[11px] border-b border-black/10 cursor-default hover:bg-blue-600/20 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
             <div className="w-40 px-3 py-1 border-r border-black/10 flex items-center gap-1.5 truncate">
                {renderIcon(node.type)}
-               <span className="text-[#e1e1e1]">{node.type}</span>
+               <span className="text-[color:var(--text-primary)]">{node.type}</span>
             </div>
-            <div className="w-48 px-3 py-1 border-r border-black/10 text-[#d1d1d1] truncate">{node.server}</div>
-            <div className="w-32 px-3 py-1 border-r border-black/10 text-[#aaaaaa]">{node.ipv4}</div>
-            <div className="w-32 px-3 py-1 border-r border-black/10 text-[#aaaaaa]">{node.ipv6}</div>
-            <div className="w-40 px-3 py-1 border-r border-black/10 text-[#aaaaaa]">{node.pubAddr}</div>
-            <div className="w-12 px-3 py-1 border-r border-black/10 text-[#aaaaaa] text-right">{node.id}</div>
-            <div className="w-20 px-3 py-1 border-r border-black/10 text-[#aaaaaa] text-right">{node.basePri}</div>
-            <div className="w-20 px-3 py-1 border-r border-black/10 text-[#aaaaaa] text-right">{node.curPri}</div>
-            <div className="w-16 px-3 py-1 border-r border-black/10 text-[#aaaaaa] text-right">{node.cpu}</div>
-            <div className="w-20 px-3 py-1 border-r border-black/10 text-[#aaaaaa] text-right">{node.threads}</div>
-            <div className="w-24 px-3 py-1 border-r border-black/10 text-[#aaaaaa] text-right">{node.memory}</div>
-            <div className="w-20 px-3 py-1 border-r border-black/10 text-[#aaaaaa] text-right">{node.sockets}</div>
-            <div className="w-20 px-3 py-1 border-r border-black/10 text-[#aaaaaa] text-right">{node.connect}</div>
-            <div className="w-20 px-3 py-1 border-r border-black/10 text-[#aaaaaa] text-right">{node.trafficIn}</div>
-            <div className="w-20 px-3 py-1 border-r border-black/10 text-[#aaaaaa] text-right">{node.trafficOut}</div>
+            <div className="w-48 px-3 py-1 border-r border-black/10 text-[color:var(--text-primary)] truncate">{node.server}</div>
+            <div className="w-32 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)]">{node.ipv4}</div>
+            <div className="w-32 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)]">{node.ipv6}</div>
+            <div className="w-40 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)]">{node.pubAddr}</div>
+            <div className="w-12 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right">{node.id}</div>
+            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right">{node.basePri}</div>
+            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right">{node.curPri}</div>
+            <div className="w-16 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right">{node.cpu}</div>
+            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right">{node.threads}</div>
+            <div className="w-24 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right">{node.memory}</div>
+            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right">{node.sockets}</div>
+            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right">{node.connect}</div>
+            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right">{node.trafficIn}</div>
+            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right">{node.trafficOut}</div>
             <div className="flex-1"></div>
          </div>
       ))}
       {[...Array(15)].map((_, i) => (
-         <div key={i} className={`flex border-b border-black/5 opacity-40 ${(networkNodesData.length + i) % 2 === 0 ? 'bg-[#1e1e1e]' : 'bg-[#252526]'}`}>
+         <div key={i} className={`flex border-b border-black/5 opacity-40 ${(networkNodesData.length + i) % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
             <div className="w-full h-[26px] border-r border-black/10"></div>
          </div>
       ))}
@@ -193,50 +193,50 @@ const NetworkGraphPanel = ({ title, type, servers }) => {
    return (
       <div className="flex-1 bg-[#121212] overflow-auto no-scrollbar flex flex-col pt-[1px]">
          {servers.map((srv, idx) => (
-            <div key={idx} className="h-[200px] bg-[#1a1a1a] border-b-[1.5px] border-[#000000] relative shrink-0">
+            <div key={idx} className="h-[200px] bg-[color:var(--bg-app)] border-b-[1.5px] border-[#000000] relative shrink-0">
                {/* Server Title Header */}
-               <div className="absolute top-1 left-2 text-[11px] text-[#e0e0e0] flex items-center gap-1.5 z-20">
+               <div className="absolute top-1 left-2 text-[11px] text-[color:var(--text-primary)] flex items-center gap-1.5 z-20">
                   {renderIcon(srv.type)} <span className="font-semibold tracking-wide whitespace-nowrap">{srv.name}</span>
                </div>
 
                {/* Legend & Stat Blocks Overlay */}
                {type === 'CPU' ? (
-                  <div className="absolute top-[26px] left-[10px] flex gap-[9px] z-20 select-none bg-[#1a1a1a]/40 p-1 rounded backdrop-blur-[1px]">
+                  <div className="absolute top-[26px] left-[10px] flex gap-[9px] z-20 select-none bg-[color:var(--bg-app)]/40 p-1 rounded backdrop-blur-[1px]">
                      <div className="text-[10px] font-sans leading-[15px] flex flex-col shadow-sm">
-                        <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[#2563eb]"></div><span className="text-[#888888] font-medium drop-shadow-md">CPU total: <span className="text-white">1%, 8 cores</span></span></div>
-                        <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[#808080]"></div><span className="text-[#888888] font-medium drop-shadow-md">CPU process: <span className="text-white">0%</span></span></div>
-                        <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[#f59e0b]"></div><span className="text-[#888888] font-medium drop-shadow-md">CPU DPC: <span className="text-white">0</span></span></div>
-                        <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[#4ade80]"></div><span className="text-[#888888] font-medium drop-shadow-md">CPU interrupts: <span className="text-white">0</span></span></div>
+                        <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[#2563eb]"></div><span className="text-[color:var(--text-muted)] font-medium drop-shadow-md">CPU total: <span className="text-white">1%, 8 cores</span></span></div>
+                        <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[color:var(--text-muted)]"></div><span className="text-[color:var(--text-muted)] font-medium drop-shadow-md">CPU process: <span className="text-white">0%</span></span></div>
+                        <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[#f59e0b]"></div><span className="text-[color:var(--text-muted)] font-medium drop-shadow-md">CPU DPC: <span className="text-white">0</span></span></div>
+                        <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[#4ade80]"></div><span className="text-[color:var(--text-muted)] font-medium drop-shadow-md">CPU interrupts: <span className="text-white">0</span></span></div>
                      </div>
                      {/* Floating Context/Tooltip block next to legend */}
-                     <div className="flex flex-col text-[10px] font-mono leading-[15px] opacity-100 bg-[#e0e0e0] w-[18px] items-center mt-[-1px] shadow-2xl border border-[#aaa]">
+                     <div className="flex flex-col text-[10px] font-mono leading-[15px] opacity-100 bg-[color:var(--text-primary)] w-[18px] items-center mt-[-1px] shadow-2xl border border-[#aaa]">
                         <div className="bg-[#b3c7f9] text-[#000] w-full text-center border-b border-white font-bold">{Math.floor(Math.random() * 6 + 3)}</div>
-                        <div className="bg-[#e0e0e0] text-[#000] w-full text-center border-b border-white font-bold">0</div>
+                        <div className="bg-[color:var(--text-primary)] text-[#000] w-full text-center border-b border-white font-bold">0</div>
                         <div className="bg-[#fcd34d] text-[#000] w-full text-center border-b border-white font-bold">{Math.floor(Math.random() * 2)}</div>
-                        <div className="bg-[#e0e0e0] text-[#000] w-full text-center font-bold">0</div>
+                        <div className="bg-[color:var(--text-primary)] text-[#000] w-full text-center font-bold">0</div>
                      </div>
                   </div>
                ) : type === 'Connections' ? (
                   <div className="absolute top-[26px] left-[6px] z-20 select-none">
                      <div className="text-[10px] font-sans leading-[14px]">
-                        <div><span className="text-[#2563eb] font-bold mr-1">-</span><span className="text-[#aaaaaa] tracking-tight">Connections: <span className="text-white">{Math.floor(Math.random() * 15 + 5)}</span></span></div>
-                        <div><span className="text-[#4ade80] font-bold mr-1">-</span><span className="text-[#aaaaaa] tracking-tight">Sockets: <span className="text-white">{Math.floor(Math.random() * 80 + 40)}</span></span></div>
+                        <div><span className="text-[#2563eb] font-bold mr-1">-</span><span className="text-[color:var(--text-muted)] tracking-tight">Connections: <span className="text-white">{Math.floor(Math.random() * 15 + 5)}</span></span></div>
+                        <div><span className="text-[#4ade80] font-bold mr-1">-</span><span className="text-[color:var(--text-muted)] tracking-tight">Sockets: <span className="text-white">{Math.floor(Math.random() * 80 + 40)}</span></span></div>
                      </div>
                   </div>
                ) : (
-                  <div className="absolute top-[26px] left-[10px] flex gap-[9px] z-20 select-none bg-[#1a1a1a]/40 p-1 rounded backdrop-blur-[1px]">
+                  <div className="absolute top-[26px] left-[10px] flex gap-[9px] z-20 select-none bg-[color:var(--bg-app)]/40 p-1 rounded backdrop-blur-[1px]">
                      <div className="text-[10px] font-sans leading-[15px] flex flex-col shadow-sm">
-                        <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[#2563eb]"></div><span className="text-[#888888] font-medium drop-shadow-md">{type === 'Disk' ? 'Disk Read:' : 'Allocated:'} <span className="text-white">{srv.memory} MB{type === 'Disk' ? '/s' : ''}, {Math.floor(Math.random() * 10 + 60)}%</span></span></div>
-                        <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[#808080]"></div><span className="text-[#888888] font-medium drop-shadow-md">{type === 'Disk' ? 'Disk Write:' : 'System:'} <span className="text-white">{Math.floor(Math.random() * 5 + 5)}%</span></span></div>
-                        <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[#f59e0b]"></div><span className="text-[#888888] font-medium drop-shadow-md">{type === 'Disk' ? 'Active Time:' : 'Cache:'} <span className="text-white">{type === 'Disk' ? '12%' : 'Active'}</span></span></div>
-                        <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[#4ade80]"></div><span className="text-[#888888] font-medium drop-shadow-md">{type === 'Disk' ? 'Queue Length:' : 'Page Faults:'} <span className="text-white">0</span></span></div>
+                        <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[#2563eb]"></div><span className="text-[color:var(--text-muted)] font-medium drop-shadow-md">{type === 'Disk' ? 'Disk Read:' : 'Allocated:'} <span className="text-white">{srv.memory} MB{type === 'Disk' ? '/s' : ''}, {Math.floor(Math.random() * 10 + 60)}%</span></span></div>
+                        <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[color:var(--text-muted)]"></div><span className="text-[color:var(--text-muted)] font-medium drop-shadow-md">{type === 'Disk' ? 'Disk Write:' : 'System:'} <span className="text-white">{Math.floor(Math.random() * 5 + 5)}%</span></span></div>
+                        <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[#f59e0b]"></div><span className="text-[color:var(--text-muted)] font-medium drop-shadow-md">{type === 'Disk' ? 'Active Time:' : 'Cache:'} <span className="text-white">{type === 'Disk' ? '12%' : 'Active'}</span></span></div>
+                        <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[#4ade80]"></div><span className="text-[color:var(--text-muted)] font-medium drop-shadow-md">{type === 'Disk' ? 'Queue Length:' : 'Page Faults:'} <span className="text-white">0</span></span></div>
                      </div>
                      {/* Floating Context/Tooltip block next to legend */}
-                     <div className="flex flex-col text-[10px] font-mono leading-[15px] opacity-100 bg-[#e0e0e0] w-[18px] items-center mt-[-1px] shadow-2xl border border-[#aaa]">
+                     <div className="flex flex-col text-[10px] font-mono leading-[15px] opacity-100 bg-[color:var(--text-primary)] w-[18px] items-center mt-[-1px] shadow-2xl border border-[#aaa]">
                         <div className="bg-[#b3c7f9] text-[#000] w-full text-center border-b border-white font-bold">{Math.floor(Math.random() * 10 + 60)}</div>
-                        <div className="bg-[#e0e0e0] text-[#000] w-full text-center border-b border-white font-bold">{Math.floor(Math.random() * 5 + 5)}</div>
+                        <div className="bg-[color:var(--text-primary)] text-[#000] w-full text-center border-b border-white font-bold">{Math.floor(Math.random() * 5 + 5)}</div>
                         <div className="bg-[#fcd34d] text-[#000] w-full text-center border-b border-white font-bold">1</div>
-                        <div className="bg-[#e0e0e0] text-[#000] w-full text-center font-bold">0</div>
+                        <div className="bg-[color:var(--text-primary)] text-[#000] w-full text-center font-bold">0</div>
                      </div>
                   </div>
                )}
@@ -250,7 +250,7 @@ const NetworkGraphPanel = ({ title, type, servers }) => {
                      ))}
 
                      {/* Base Flat Baseline */}
-                     <path d="M 0,100 L 100,100" fill="none" stroke="#252526" strokeWidth="1" vectorEffect="non-scaling-stroke"/>
+                     <path d="M 0,100 L 100,100" fill="none" stroke="var(--bg-surface-1)" strokeWidth="1" vectorEffect="non-scaling-stroke"/>
                      
                      {/* Sub-Metric Graphs */}
                      <path d={generatePath(type === 'CPU' ? 500 : (type === 'Connections' ? 400 : 100), 100, type === 'CPU' ? 'green' : (type === 'Connections' ? 'connection-green' : 'memory-green'))} fill="none" stroke="#4ade80" strokeWidth="1" vectorEffect="non-scaling-stroke" />
@@ -262,11 +262,11 @@ const NetworkGraphPanel = ({ title, type, servers }) => {
 
                {/* Y-Axis Labeling Right Side */}
                {type !== 'Connections' && (
-                  <div className="absolute right-[5px] top-[2px] text-[9.5px] text-[#aaaaaa]">
+                  <div className="absolute right-[5px] top-[2px] text-[9.5px] text-[color:var(--text-muted)]">
                      %
                   </div>
                )}
-               <div className="absolute right-[5px] top-0 bottom-0 flex flex-col justify-between py-1 text-[9.5px] text-[#aaaaaa] text-right pointer-events-none mt-4 z-10 w-[14px]">
+               <div className="absolute right-[5px] top-0 bottom-0 flex flex-col justify-between py-1 text-[9.5px] text-[color:var(--text-muted)] text-right pointer-events-none mt-4 z-10 w-[14px]">
                   {type === 'Connections' ? (
                      <>
                         <span>200</span>
@@ -332,29 +332,29 @@ const NetworkCluster = () => {
    ];
 
    return (
-      <div className="flex-1 bg-[#1e1e1e] flex flex-col overflow-hidden relative">
+      <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative">
          {/* Header section */}
-         <div className={`px-4 pt-4 pb-0 bg-[#1e1e1e] ${bottomTab === 'Nodes' ? 'border-b border-black/40 bg-[#252526]' : 'border-b border-white/5'}`}>
+         <div className={`px-4 pt-4 pb-0 bg-[color:var(--bg-app)] ${bottomTab === 'Nodes' ? 'border-b border-black/40 bg-[color:var(--bg-surface-1)]' : 'border-b border-white/5'}`}>
             <div className="flex justify-between items-start mb-4">
                <div>
                   <h2 className="text-white text-[15px] font-semibold flex items-center gap-2">
-                     Network Cluster: <span className="text-[#a0a0a0] font-normal text-sm">23 online</span>
+                     Network Cluster: <span className="text-[color:var(--text-muted)] font-normal text-sm">23 online</span>
                   </h2>
                   {bottomTab === 'Nodes' && (
-                     <p className="text-[#aaaaaa] text-[12px] mt-0.5">Monitor the platform infrastructure, manage network settings, and scale the cluster for load balancing</p>
+                     <p className="text-[color:var(--text-muted)] text-[12px] mt-0.5">Monitor the platform infrastructure, manage network settings, and scale the cluster for load balancing</p>
                   )}
                </div>
                <div className="flex gap-2">
-                  <button className="px-3 py-1 bg-transparent border border-[#555555] rounded-sm text-[12px] text-[#e0e0e0] hover:bg-white/5 transition-colors">
+                  <button className="px-3 py-1 bg-transparent border border-[color:var(--border-strong)] rounded-sm text-[12px] text-[color:var(--text-primary)] hover:bg-white/5 transition-colors">
                      Add Server
                   </button>
                   {bottomTab === 'Nodes' && (
-                     <button className="px-2 py-1 bg-transparent text-[#007acc] hover:bg-white/5 transition-colors ml-2">
+                     <button className="px-2 py-1 bg-transparent text-[color:var(--accent-500)] hover:bg-white/5 transition-colors ml-2">
                         <Router size={16} />
                      </button>
                   )}
                   {bottomTab === 'Nodes' && (
-                     <button className="px-2 py-1 bg-transparent text-[#007acc] hover:bg-white/5 transition-colors">
+                     <button className="px-2 py-1 bg-transparent text-[color:var(--accent-500)] hover:bg-white/5 transition-colors">
                         <List size={16} />
                      </button>
                   )}
@@ -367,7 +367,7 @@ const NetworkCluster = () => {
                   <div
                      key={tab}
                      onClick={() => setTopTab(tab)}
-                     className={`pb-1 cursor-default flex items-center gap-1.5 transition-colors relative ${topTab === tab ? 'text-[#e0e0e0]' : 'text-[#808080] hover:text-[#d1d1d1]'
+                     className={`pb-1 cursor-default flex items-center gap-1.5 transition-colors relative ${topTab === tab ? 'text-[color:var(--text-primary)]' : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]'
                         }`}
                   >
                      {tab === 'Cluster' && <Database size={13} className={topTab === tab ? "text-[#4ade80]" : "text-green-800"} />}
@@ -375,14 +375,14 @@ const NetworkCluster = () => {
                      {tab === 'Hosted Access Servers' && <Server size={13} className={topTab === tab ? "text-[#4ade80]" : "text-green-800"} />}
                      {tab === 'Sponsored VPS' && <Cloud size={13} className={topTab === tab ? "text-[#60a5fa]" : "text-blue-800"} />}
                      {tab}
-                     {topTab === tab && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[#007acc]"></div>}
+                     {topTab === tab && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[color:var(--accent-500)]"></div>}
                   </div>
                ))}
             </div>
          </div>
 
          {/* Main Content Area based on bottom tab selection */}
-         <div className="flex-1 flex flex-col overflow-hidden bg-[#1e1e1e]">
+         <div className="flex-1 flex flex-col overflow-hidden bg-[color:var(--bg-app)]">
             {bottomTab === 'Overview' && <NetworkOverviewMap />}
             {bottomTab === 'Nodes' && <NetworkNodesTable />}
             {bottomTab === 'CPU' && <NetworkGraphPanel title="CPU Performance" type="CPU" servers={serversList} />}
@@ -391,21 +391,21 @@ const NetworkCluster = () => {
             {bottomTab === 'Connections' && <NetworkGraphPanel title="Connections" type="Connections" servers={serversList} />}
             {/* Fallback for empty tabs */}
             {['Traffic', 'Latency', 'Network Packets', 'Trade'].includes(bottomTab) && (
-               <div className="flex-1 flex items-center justify-center text-[#666666] text-sm">
+               <div className="flex-1 flex items-center justify-center text-[color:var(--text-muted)] text-sm">
                   No data available for {bottomTab}
                </div>
             )}
          </div>
 
          {/* Bottom Tabs (Replacing AdminDataTable standard footer) */}
-         <div className="h-7 bg-[#2b2b2b] border-t border-black/40 flex items-center px-1 overflow-x-auto no-scrollbar gap-0.5 shrink-0">
+         <div className="h-7 bg-[color:var(--bg-surface-1)] border-t border-black/40 flex items-center px-1 overflow-x-auto no-scrollbar gap-0.5 shrink-0">
             {bottomTabs.map(tab => (
                <div
                   key={tab}
                   onClick={() => setBottomTab(tab)}
                   className={`h-[22px] px-3 text-[11px] flex items-center cursor-default transition-colors rounded-sm ${bottomTab === tab
                         ? 'bg-[#3e3e3e] text-white border border-black/40 shadow-sm'
-                        : 'text-[#999999] hover:text-[#cccccc] hover:bg-white/5 border border-transparent'
+                        : 'text-[#999999] hover:text-[color:var(--text-secondary)] hover:bg-white/5 border border-transparent'
                      }`}
                >
                   {tab}

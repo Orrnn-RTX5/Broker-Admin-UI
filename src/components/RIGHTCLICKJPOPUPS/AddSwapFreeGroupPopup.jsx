@@ -5,24 +5,24 @@ import { useGroups } from '../../hooks/useAdmin';
 
 const InputField = ({ label, value, onChange, type = "text", width = "w-[240px]", labelWidth = "w-[120px]" }) => (
   <div className="flex items-center gap-2 mb-2">
-    <label className={`text-[11px] text-[#cccccc] ${labelWidth} shrink-0`}>{label}</label>
+    <label className={`text-[11px] text-[color:var(--text-secondary)] ${labelWidth} shrink-0`}>{label}</label>
     <input 
       type={type}
       value={value}
       onChange={onChange}
-      className={`bg-[#1e1e1e] border border-[#3e3e42] rounded-sm px-2 py-0.5 text-[11px] text-[#e1e1e1] outline-none ${width} hover:border-[#555] focus:border-[#007acc] focus:bg-[#252526] transition-colors`}
+      className={`bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-2 py-0.5 text-[11px] text-[color:var(--text-primary)] outline-none ${width} hover:border-[#555] focus:border-[color:var(--accent-500)] focus:bg-[color:var(--bg-surface-1)] transition-colors`}
     />
   </div>
 );
 
 const SelectField = ({ label, value, onChange, options, loading, width = "w-[240px]", labelWidth = "w-[120px]" }) => (
   <div className="flex items-center gap-2 mb-2">
-    <label className={`text-[11px] text-[#cccccc] ${labelWidth} shrink-0`}>{label}</label>
+    <label className={`text-[11px] text-[color:var(--text-secondary)] ${labelWidth} shrink-0`}>{label}</label>
     <select 
       value={value}
       onChange={onChange}
       disabled={loading}
-      className={`bg-[#1e1e1e] border border-[#3e3e42] rounded-sm px-1 py-0.5 text-[11px] text-[#e1e1e1] outline-none ${width} hover:border-[#555] focus:border-[#007acc]`}
+      className={`bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-1 py-0.5 text-[11px] text-[color:var(--text-primary)] outline-none ${width} hover:border-[#555] focus:border-[color:var(--accent-500)]`}
     >
       {loading ? <option>Loading...</option> : options.map(opt => (
         <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -37,10 +37,10 @@ const CheckboxField = ({ label, checked, onChange }) => (
       type="checkbox" 
       checked={checked}
       onChange={onChange}
-      className="appearance-none w-3.5 h-3.5 border border-[#3e3e42] rounded-[2px] bg-[#1e1e1e] checked:bg-[#007acc] checked:border-[#007acc] relative
+      className="appearance-none w-3.5 h-3.5 border border-[color:var(--border-default)] rounded-[2px] bg-[color:var(--bg-app)] checked:bg-[color:var(--accent-500)] checked:border-[color:var(--accent-500)] relative
       after:content-[''] after:absolute after:hidden checked:after:block after:left-[3px] after:top-[1px] after:w-[4px] after:h-[7px] after:border-r-[1.5px] after:border-b-[1.5px] after:border-white after:rotate-45"
     />
-    <span className="text-[11px] text-[#cccccc] select-none">{label}</span>
+    <span className="text-[11px] text-[color:var(--text-secondary)] select-none">{label}</span>
   </div>
 );
 
@@ -106,12 +106,12 @@ const AddSwapFreeGroupPopup = ({ onClose, onCreated }) => {
     <>
       <div className="fixed inset-0 bg-black/60 z-[9998]" onClick={onClose} />
       <div className="fixed inset-0 flex items-center justify-center z-[9999] pointer-events-none">
-        <div className="w-[450px] bg-[#1e1e1e] border border-black shadow-2xl flex flex-col pointer-events-auto rounded-[2px] overflow-hidden">
+        <div className="w-[450px] bg-[color:var(--bg-app)] border border-black shadow-2xl flex flex-col pointer-events-auto rounded-[2px] overflow-hidden">
           
           {/* Header */}
           <div className="h-8 bg-[#323233] flex items-center px-3 justify-between select-none">
-            <span className="text-[12px] font-medium text-[#cccccc]">Add Swap-Free Configuration</span>
-            <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-sm text-[#808080] hover:text-white transition-colors">
+            <span className="text-[12px] font-medium text-[color:var(--text-secondary)]">Add Swap-Free Configuration</span>
+            <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-sm text-[color:var(--text-muted)] hover:text-white transition-colors">
               <X size={14} />
             </button>
           </div>
@@ -164,17 +164,17 @@ const AddSwapFreeGroupPopup = ({ onClose, onCreated }) => {
           </div>
 
           {/* Footer Actions */}
-          <div className="p-3 bg-[#252526] flex justify-end gap-2">
+          <div className="p-3 bg-[color:var(--bg-surface-1)] flex justify-end gap-2">
             <button 
               onClick={handleSubmit} 
               disabled={isSubmitting}
-              className={`px-6 py-1 bg-[#007acc] hover:bg-[#0098ff] text-white text-[11px] rounded-sm transition-colors ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}
+              className={`px-6 py-1 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-sm transition-colors ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}
             >
               OK
             </button>
             <button 
               onClick={onClose}
-              className="px-4 py-1 bg-[#333333] hover:bg-[#444] border border-[#555] text-white text-[11px] rounded-sm transition-colors"
+              className="px-4 py-1 bg-[color:var(--bg-surface-2)] hover:bg-[#444] border border-[#555] text-white text-[11px] rounded-sm transition-colors"
             >
               Cancel
             </button>

@@ -64,14 +64,14 @@ const SymbolVisibilityView = () => {
   };
 
   return (
-    <div className="flex-1 bg-[#1e1e1e] flex overflow-hidden">
+    <div className="flex-1 bg-[color:var(--bg-app)] flex overflow-hidden">
       {/* Left: list */}
       <div className="w-[260px] border-r border-black/40 flex flex-col">
-        <div className="flex items-center px-3 py-1.5 bg-[#252526] border-b border-black/40 shrink-0">
+        <div className="flex items-center px-3 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0">
           <span className="text-[11px] text-[#888] flex-1">Groups</span>
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-1 h-[22px] px-2 bg-[#007acc] hover:bg-[#0098ff] text-white text-[10px] rounded-[2px]"
+            className="flex items-center gap-1 h-[22px] px-2 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[10px] rounded-[2px]"
           >
             <Plus size={11} /> New
           </button>
@@ -86,7 +86,7 @@ const SymbolVisibilityView = () => {
               <div
                 key={row.id || row.group}
                 onClick={() => handleSelect(row)}
-                className={`px-3 h-[24px] flex items-center cursor-pointer text-[11px] border-b border-black/20 ${selected?.group === row.group ? 'bg-[#094771] text-white' : 'text-[#e1e1e1] hover:bg-[#2a2d2e]'}`}
+                className={`px-3 h-[24px] flex items-center cursor-pointer text-[11px] border-b border-black/20 ${selected?.group === row.group ? 'bg-[color:var(--accent-700)] text-white' : 'text-[color:var(--text-primary)] hover:bg-[#2a2d2e]'}`}
               >
                 {row.group}
                 <span className="ml-auto text-[10px] text-[#888]">{Array.isArray(row.symbols) ? row.symbols.length : 0} sym</span>
@@ -100,13 +100,13 @@ const SymbolVisibilityView = () => {
       <div className="flex-1 flex flex-col">
         {selected ? (
           <>
-            <div className="flex items-center px-3 py-1.5 bg-[#252526] border-b border-black/40 shrink-0 gap-2">
+            <div className="flex items-center px-3 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0 gap-2">
               <span className="text-[11px] text-[#9cdcfe] font-semibold">{selected.group}</span>
               <span className="text-[#555] text-[11px]">— symbol visibility</span>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="ml-auto flex items-center gap-1.5 h-[24px] px-3 bg-[#007acc] hover:bg-[#0098ff] text-white text-[11px] rounded-[2px] disabled:opacity-50"
+                className="ml-auto flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] disabled:opacity-50"
               >
                 <Save size={12} /> {saving ? 'Saving…' : 'Save'}
               </button>
@@ -119,7 +119,7 @@ const SymbolVisibilityView = () => {
                 value={editSymbols}
                 onChange={e => setEditSymbols(e.target.value)}
                 rows={12}
-                className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] px-2 py-1.5 rounded-[2px] outline-none focus:border-[#007acc] resize-none font-mono"
+                className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] px-2 py-1.5 rounded-[2px] outline-none focus:border-[color:var(--accent-500)] resize-none font-mono"
                 placeholder="EURUSD, GBPUSD, XAUUSD…"
               />
               <div className="text-[10px] text-[#555]">
@@ -139,10 +139,10 @@ const SymbolVisibilityView = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
           <form
             onSubmit={handleCreate}
-            className="bg-[#252526] border border-[#454545] rounded-[3px] shadow-2xl w-[360px] p-5 flex flex-col gap-3"
+            className="bg-[color:var(--bg-surface-1)] border border-[color:var(--bg-surface-3)] rounded-[3px] shadow-2xl w-[360px] p-5 flex flex-col gap-3"
             onClick={e => e.stopPropagation()}
           >
-            <div className="text-[12px] font-semibold text-[#e1e1e1] mb-1">New Symbol Visibility</div>
+            <div className="text-[12px] font-semibold text-[color:var(--text-primary)] mb-1">New Symbol Visibility</div>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] text-[#888] uppercase tracking-wider">Group *</label>
               <input
@@ -150,7 +150,7 @@ const SymbolVisibilityView = () => {
                 value={newGroup}
                 onChange={e => setNewGroup(e.target.value)}
                 placeholder="e.g. standard"
-                className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] h-[24px] px-2 rounded-[2px] outline-none focus:border-[#007acc]"
+                className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[24px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -159,17 +159,17 @@ const SymbolVisibilityView = () => {
                 value={newSymbols}
                 onChange={e => setNewSymbols(e.target.value)}
                 rows={4}
-                className="bg-[#1e1e1e] border border-[#555] text-[#e1e1e1] text-[11px] px-2 py-1 rounded-[2px] outline-none focus:border-[#007acc] resize-none font-mono"
+                className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] px-2 py-1 rounded-[2px] outline-none focus:border-[color:var(--accent-500)] resize-none font-mono"
                 placeholder="EURUSD, GBPUSD…"
               />
             </div>
             <div className="flex gap-2 mt-1 justify-end">
               <button type="button" onClick={() => setShowForm(false)}
-                className="h-[24px] px-4 bg-[#3c3c3c] hover:bg-[#4a4a4a] text-[#ccc] text-[11px] rounded-[2px]">
+                className="h-[24px] px-4 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]">
                 Cancel
               </button>
               <button type="submit" disabled={saving}
-                className="h-[24px] px-4 bg-[#007acc] hover:bg-[#0098ff] text-white text-[11px] rounded-[2px] disabled:opacity-50">
+                className="h-[24px] px-4 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] disabled:opacity-50">
                 {saving ? 'Saving…' : 'Create'}
               </button>
             </div>
