@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./theme/tokens.css";
+@import "./theme/manager-ui.css";
 @import "./theme/legacy-overrides.css";
 
 @theme {

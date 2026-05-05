@@ -61,6 +61,8 @@ import PaymentReconciliationView from './PaymentReconciliationView';
 import ChargebacksView from './ChargebacksView';
 import CommunicationsView from './CommunicationsView';
 import SecurityAccessView from './SecurityAccessView';
+import MarketsView from './MarketsView';
+import LPRoutingView from './LPRoutingView';
 
 // Custom icons for MT5 style table
 const YellowFolderIcon = (props) => (
@@ -198,11 +200,17 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   }
 
   // --- IMPORTED VIEWS ---
+  if (viewType === 'Market Overview') {
+    return <MarketsView />;
+  }
   if (viewType === 'Swap-Free Configs') {
     return <SwapFreeGroupsView />;
   }
   if (viewType === 'Leverages') {
     return <LeveragesView />;
+  }
+  if (viewType === 'LP Routing') {
+    return <LPRoutingView />;
   }
   if (viewType === 'Leverage Schedules') {
     return <LeverageScheduleView />;

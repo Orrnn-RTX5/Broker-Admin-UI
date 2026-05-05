@@ -12,6 +12,7 @@ import { TabBar } from './components/organisms/TabBar';
 import { HelpModal } from './components/organisms/HelpModal';
 import { useAuthStore } from './store/authStore';
 import { useConnectionStore } from './store/connectionStore';
+import useSymbolStore from './store/useSymbolStore';
 import { useLocalStorage } from './lib/useLocalStorage';
 import { useKbStatus } from './lib/useKbStatus';
 import { Network, Globe } from 'lucide-react';
@@ -100,6 +101,13 @@ const AppInner = () => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // ── Symbol Store WebSocket (feeds Market Overview counts & live bid/ask) ──
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      useSymbolStore.getState().initWebSocket();
+    }
+  }, [isAuthenticated]);
 
   // ── Tabs + navigation ────────────────────────────────────────────────────
   const openTab = React.useCallback((label) => {

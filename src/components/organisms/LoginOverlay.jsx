@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AuthService } from '../../services/auth.service';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function LoginOverlay({ onLoginSuccess }) {
   const [user, setUser] = useState('10007');
@@ -7,6 +8,7 @@ export default function LoginOverlay({ onLoginSuccess }) {
   const [server, setServer] = useState('69.197.178.27');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -56,13 +58,23 @@ export default function LoginOverlay({ onLoginSuccess }) {
             
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] text-[color:var(--text-muted)]">Password</label>
-              <input 
-                type="password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-7 bg-[color:var(--bg-app)] border border-[color:var(--border-default)] text-[color:var(--text-primary)] text-[12px] px-2 outline-none focus:border-[color:var(--accent-500)]"
-                required
-              />
+              <div className="relative">
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full h-7 bg-[color:var(--bg-app)] border border-[color:var(--border-default)] text-[color:var(--text-primary)] text-[12px] pl-2 pr-8 outline-none focus:border-[color:var(--accent-500)]"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-2 flex items-center text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] transition-colors"
+                  tabIndex="-1"
+                >
+                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
             </div>
             
             <div className="flex flex-col gap-1.5">

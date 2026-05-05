@@ -286,6 +286,7 @@ export const sidebarData = [
               { label: "Holidays", icon: Calendar },
               { label: "Session Overrides", icon: Clock },
               { label: "Leverages", icon: Hash },
+              { label: "LP Routing", icon: Network },
               { label: "Leverage Schedules", icon: Hash },
               { label: "Swap-Free Configs", icon: Settings },
               { 
@@ -405,6 +406,7 @@ export const sidebarData = [
                   { label: "Search", icon: BlueSearchIcon }
                 ]
               },
+              { label: "Market Overview", icon: TrendingUp },
               { label: "Symbols", count: 696, icon: Hash },
               { label: "Market Depth", icon: Database },
               { label: "Spreads", icon: Activity },

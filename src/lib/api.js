@@ -39,7 +39,7 @@ api.interceptors.response.use((response) => {
     );
   }
 
-  if (error.response?.status === 401 && !originalRequest._retry) {
+  if (error.response?.status === 401 && !originalRequest._retry && !originalRequest._noRetry) {
     originalRequest._retry = true;
     
     try {
@@ -49,11 +49,12 @@ api.interceptors.response.use((response) => {
       }
 
       // We call standard fetch/axios directly to avoid a loop in interceptor
-      const res = await axios.post(`${API_URL}/api/v2/auth/refresh`, {
+      // Use the correct manager refresh endpoint
+      const res = await axios.post(`${API_URL}/manager/api/v1/auth/refresh`, {
         refresh_token: refreshToken
       });
 
-      const { access_token } = res.data;
+      const access_token = res.data.token || res.data.access_token;
       
       // Update store
       useAuthStore.getState().setToken(access_token, refreshToken);

@@ -100,6 +100,21 @@ function createWindow() {
     win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
   }
 
+  win.webContents.on('render-process-gone', (_e, details) => {
+    console.error('[renderer crashed]', details);
+    win.webContents.openDevTools({ mode: 'detach' });
+  });
+  win.webContents.on('did-fail-load', (_e, code, desc, url) => {
+    console.error('[did-fail-load]', code, desc, url);
+    win.webContents.openDevTools({ mode: 'detach' });
+  });
+  win.webContents.on('before-input-event', (_e, input) => {
+    const isToggle =
+      (input.control && input.shift && input.key.toLowerCase() === 'i') ||
+      input.key === 'F12';
+    if (isToggle) win.webContents.toggleDevTools();
+  });
+
   win.once('ready-to-show', () => win.show());
   win.on('page-title-updated', (e) => e.preventDefault());
 }

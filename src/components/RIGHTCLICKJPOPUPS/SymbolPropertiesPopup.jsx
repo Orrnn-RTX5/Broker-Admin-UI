@@ -261,7 +261,7 @@ const SymbolPropertiesPopup = ({ symbol, groupName, onClose }) => {
                       </select>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Label width="w-[110px]">Consider holidays</Label>
+                      <Label width="w-[110px]">+</Label>
                       <select className="w-[124px] bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-1 py-0.5 text-[11px] text-white outline-none">
                         <option>0</option>
                       </select>
