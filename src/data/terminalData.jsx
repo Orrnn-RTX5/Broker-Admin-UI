@@ -75,12 +75,12 @@ const YellowFolderIcon = (props) => (
 const BlueUserIcon = (props) => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="#3B82F6" stroke="#1D4ED8" strokeWidth="1" {...props}>
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
+    <circle cx="12" cy="7" r="4" />  
   </svg>
 );
 
 const GreenHexagonIcon = (props) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#21BA45" strokeWidth="1.5" {...props}>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#238d3cff" strokeWidth="1.5" {...props}>
     <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
     <path d="M12 22V12" /><path d="M12 12l8.5-5" /><path d="M12 12L3.5 7" />
   </svg>
