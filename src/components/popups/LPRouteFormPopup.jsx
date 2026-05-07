@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { X, GitBranch, AlertCircle } from 'lucide-react';
+import { X, GitBranch, AlertCircle, Plus, Trash2, Loader2 } from 'lucide-react';
 import { RoutingService } from '../../services/routing.service';
+import { ManagerService } from '../../services/manager.service';
+import { gatewayGetRoutingOptions } from '../../services/gateway.service';
 
 const ROUTING_MODES = [
   { value: 'a_book', label: 'A-Book (External LP)' },
@@ -23,6 +25,32 @@ const DEFAULT = {
   enabled: true,
   fallback_policy: 'best_available',
   max_volume: 10.0,
+
+  // Processing Rule fields
+  rule_symbols: '*',
+  rule_logins: '*',
+  rule_bbi_pools: '',
+  rule_groups: '*',
+  rule_min_volume: 0,
+  rule_max_volume: 1000000000,
+  rule_security: '*',
+  rule_order_types: 'All',
+  rule_order_directions: 'All',
+  rule_round_type: "Trader's worst",
+  rule_fok_with_ce: false,
+  rule_execute_limits: false,
+  rule_compensate_slippage: false,
+  rule_enabled: true,
+
+  // Markup fields
+  markup_mode: 'Standard',
+  markup_take_positive: true,
+  markup_send_lp_min: 100,
+  markup_send_lp_max: 100,
+  markup_min_market: 30,
+  markup_max_market: 30,
+  markup_min_limit: 30,
+  markup_max_limit: 30,
 };
 
 const inputCls =
@@ -40,26 +68,189 @@ const Field = ({ label, hint, children }) => (
   </div>
 );
 
+const HiddenMarkupSection = ({ initialGroup, groups }) => {
+  const [selectedGroup, setSelectedGroup] = useState(initialGroup || '');
+  const [markups, setMarkups] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+  
+  const [newAcc, setNewAcc] = useState('*');
+  const [newMarkup, setNewMarkup] = useState('0.00000');
+  const [adding, setAdding] = useState(false);
+
+  useEffect(() => {
+    if (initialGroup && !selectedGroup) setSelectedGroup(initialGroup);
+  }, [initialGroup]);
+
+  const fetchMarkups = useCallback(async () => {
+    if (!selectedGroup) {
+      setMarkups([]);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await ManagerService.getHiddenMarkupList();
+      const filtered = (res || []).filter(m => m.group_name === selectedGroup);
+      setMarkups(filtered);
+      setErr('');
+    } catch (e) {
+      setErr(e.message || 'Failed to fetch markups');
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedGroup]);
+
+  useEffect(() => {
+    fetchMarkups();
+  }, [fetchMarkups]);
+
+  const handleAdd = async () => {
+    if (!selectedGroup) return alert('Select a group name first');
+    if (!newAcc || !newMarkup) return;
+    setAdding(true);
+    try {
+      await ManagerService.setHiddenMarkup({
+        group_name: selectedGroup,
+        account_number: newAcc,
+        hidden_markup: parseFloat(newMarkup)
+      });
+      setNewAcc('*');
+      setNewMarkup('0.00000');
+      fetchMarkups();
+    } catch (e) {
+      alert(e.message || 'Failed to add markup');
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleDelete = async (acc) => {
+    try {
+      await ManagerService.deleteHiddenMarkup(selectedGroup, acc);
+      fetchMarkups();
+    } catch (e) {
+      alert(e.message || 'Failed to delete markup');
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-3 border border-black/20 rounded-md p-4 bg-[color:var(--bg-surface-2)]">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-sm font-semibold text-[color:var(--text-primary)]">Hidden Markups</h3>
+          <p className="text-[11px] text-[color:var(--text-muted)] mt-0.5">Configure hidden markups for the entire group (*) or specific accounts.</p>
+        </div>
+        <select
+          className="bg-[color:var(--bg-surface-1)] border border-[#555] text-white px-2 py-1 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors text-[11px] min-w-[150px] cursor-pointer"
+          value={selectedGroup}
+          onChange={e => setSelectedGroup(e.target.value)}
+        >
+          <option value="">-- Select Group --</option>
+          {(groups || []).map(g => (
+            <option key={g} value={g}>{g}</option>
+          ))}
+        </select>
+      </div>
+      
+      {!selectedGroup ? (
+        <div className="py-6 text-center text-[11px] text-[color:var(--text-muted)] italic">
+          Select a group from the dropdown to manage its hidden markups.
+        </div>
+      ) : (
+        <>
+          {/* Table */}
+          <div className="flex flex-col gap-1 mt-1">
+        <div className="grid grid-cols-[1fr_1fr_40px] px-2 py-1.5 bg-black/10 rounded-sm text-[10px] font-bold uppercase text-[color:var(--text-muted)]">
+          <div>Account</div>
+          <div>Markup</div>
+          <div></div>
+        </div>
+        {loading ? (
+          <div className="py-4 flex justify-center"><Loader2 size={14} className="animate-spin text-gray-400" /></div>
+        ) : err ? (
+          <div className="py-2 text-red-400">{err}</div>
+        ) : markups.length === 0 ? (
+          <div className="py-3 text-center text-[11px] text-[color:var(--text-muted)] italic">No hidden markups found</div>
+        ) : (
+          markups.map(m => (
+            <div key={m.id || m.account_number} className="grid grid-cols-[1fr_1fr_40px] px-2 py-1.5 items-center border-b border-black/10 last:border-0 hover:bg-black/5">
+              <div className="font-mono text-[11px] text-white">{m.account_number}</div>
+              <div className="font-mono text-[11px] text-[color:var(--accent-400)]">{m.hidden_markup}</div>
+              <button
+                type="button"
+                onClick={() => handleDelete(m.account_number)}
+                className="text-red-400 hover:text-red-300 p-1 flex justify-center"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Add Form */}
+      <div className="flex items-center gap-2 mt-2 pt-3 border-t border-black/10">
+        <div className="flex-1">
+          <input 
+            className="bg-[color:var(--bg-surface-1)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors w-full font-mono text-[11px]"
+            value={newAcc}
+            onChange={e => setNewAcc(e.target.value)}
+            placeholder="Account (* for all)"
+          />
+        </div>
+        <div className="flex-1">
+          <input 
+            className="bg-[color:var(--bg-surface-1)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors w-full font-mono text-[11px]"
+            type="number"
+            step="0.00001"
+            min="0"
+            value={newMarkup}
+            onChange={e => setNewMarkup(e.target.value)}
+            placeholder="Markup (e.g. 0.0005)"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={adding}
+          className="bg-[color:var(--accent-500)] hover:opacity-90 text-white px-3 py-1.5 rounded-sm transition-colors disabled:opacity-50 flex items-center gap-1 shrink-0 text-[11px]"
+        >
+          {adding ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} Add
+        </button>
+      </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
   const isEdit = !!initialData;
 
   const [form, setForm] = useState(() =>
-    isEdit
-      ? {
-          group_name:      initialData.group_name      ?? '',
-          symbol_pattern:  initialData.symbol_pattern  ?? '',
-          routing_mode:    initialData.routing_mode     ?? 'a_book',
-          lp_name:         initialData.lp_name          ?? '',
-          priority:        initialData.priority         ?? 100,
-          enabled:         initialData.enabled          ?? true,
-          fallback_policy: initialData.fallback_policy  ?? 'best_available',
-          max_volume:      initialData.max_volume        ?? 10.0,
-        }
-      : { ...DEFAULT }
+    isEdit ? { ...DEFAULT, ...initialData } : { ...DEFAULT }
   );
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [groups, setGroups] = useState([]);
+  const [lpOptions, setLpOptions] = useState([]);
+  const [activeTab, setActiveTab] = useState('basic');
+
+  useEffect(() => {
+    ManagerService.getGroupList()
+      .then(data => {
+        const list = Array.isArray(data) ? data : (data?.answer ?? []);
+        setGroups(list);
+      })
+      .catch(() => {});
+
+    gatewayGetRoutingOptions()
+      .then(res => {
+        setLpOptions(res.items || []);
+      })
+      .catch(() => {});
+  }, []);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -88,51 +279,83 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[9999] bg-black/50 flex justify-end">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="w-[520px] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] shadow-2xl flex flex-col font-sans rounded-md overflow-hidden"
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className="w-[750px] h-full bg-[color:var(--bg-surface-1)] border-l border-[color:var(--border-default)] shadow-2xl flex flex-col font-sans"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] select-none">
-          <div className="flex items-center gap-2 text-white text-[13px] font-medium">
-            <GitBranch size={15} className="text-[#3b82f6]" />
-            {isEdit
-              ? `Edit Route — ${initialData.group_name} / ${initialData.symbol_pattern}`
-              : 'Create LP Routing Rule'}
+        <div className="flex flex-col bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] select-none shrink-0">
+          <div className="flex items-center justify-between px-5 py-4">
+            <div className="flex items-center gap-2 text-white text-[15px] font-medium">
+              <GitBranch size={16} className="text-[#3b82f6]" />
+              {isEdit
+                ? `Edit Route — ${initialData.group_name} / ${initialData.symbol_pattern}`
+                : 'Create LP Routing Rule'}
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-[#999] hover:text-white hover:bg-[color:var(--bg-surface-2)] p-1.5 rounded-sm transition-colors"
+            >
+              <X size={16} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-[#999] hover:text-white hover:bg-white/10 p-1 rounded-sm transition-colors"
-          >
-            <X size={14} />
-          </button>
+          
+          {/* Tabs */}
+          <div className="flex items-center px-5 gap-6 border-t border-black/20 bg-[color:var(--bg-surface-2)]">
+            {[
+              { id: 'basic', label: 'Basic Config' },
+              { id: 'rules', label: 'Processing Rules' },
+              { id: 'markups', label: 'Markups & Slippage' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`py-3 text-[12px] font-medium transition-colors border-b-[3px] ${
+                  activeTab === tab.id 
+                    ? 'border-[color:var(--accent-500)] text-[color:var(--accent-500)]' 
+                    : 'border-transparent text-[color:var(--text-muted)] hover:text-white'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-4 text-[12px] bg-[color:var(--bg-app)]">
-          {error && (
-            <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 p-3 rounded-sm text-red-400">
-              <AlertCircle size={14} className="mt-0.5 shrink-0" />
-              <span className="leading-tight">{error}</span>
-            </div>
-          )}
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden bg-[color:var(--bg-app)] text-[12px]">
+          <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-6">
+            {error && (
+              <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 p-3 rounded-sm text-red-400 shrink-0">
+                <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                <span className="leading-tight">{error}</span>
+              </div>
+            )}
 
-          {/* Identification */}
+            {/* TAB: BASIC CONFIG */}
+            <div className={activeTab === 'basic' ? 'flex flex-col gap-6' : 'hidden'}>
+              {/* Identification */}
           <div className="flex flex-col gap-2.5 pb-3 border-b border-[#333]">
             <p className="text-[10px] uppercase tracking-widest text-[#555] font-semibold">Route Identification</p>
             <div className="grid grid-cols-3 gap-3">
               <Field label="Group Name" hint="*required">
-                <input
-                  className={inputCls + (isEdit ? ' opacity-50 cursor-not-allowed' : '')}
+                <select
+                  className={selectCls + (isEdit ? ' opacity-50 cursor-not-allowed' : '')}
                   value={form.group_name}
                   onChange={(e) => set('group_name', e.target.value)}
-                  placeholder="retail"
                   disabled={isEdit}
-                />
+                >
+                  <option value="">Select group…</option>
+                  {groups.map(g => (
+                    <option key={g.name} value={g.name}>{g.name}</option>
+                  ))}
+                </select>
               </Field>
               <Field label="Symbol Pattern" hint="* = all">
                 <input
@@ -143,12 +366,16 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
                 />
               </Field>
               <Field label="LP Name" hint="*required">
-                <input
-                  className={inputCls}
+                <select
+                  className={selectCls}
                   value={form.lp_name}
                   onChange={(e) => set('lp_name', e.target.value)}
-                  placeholder="T4B"
-                />
+                >
+                  <option value="">Select LP Route…</option>
+                  {lpOptions.map(opt => (
+                    <option key={opt.id} value={opt.name}>{opt.name}</option>
+                  ))}
+                </select>
               </Field>
             </div>
           </div>
@@ -197,24 +424,146 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
               <span className="text-[color:var(--text-secondary)]">Route Enabled</span>
             </label>
           </div>
+            </div>
+
+            {/* TAB: PROCESSING RULES */}
+            <div className={activeTab === 'rules' ? 'flex flex-col gap-6' : 'hidden'}>
+              <div className="flex items-center justify-center h-[200px] text-[color:var(--text-muted)] italic border border-dashed border-black/20 rounded-md">
+                (Processing tab is currently empty per request)
+              </div>
+            </div>
+
+            {/* TAB: MARKUPS & SLIPPAGE */}
+            <div className={activeTab === 'markups' ? 'flex flex-col gap-6' : 'hidden'}>
+              <HiddenMarkupSection initialGroup={form.group_name} groups={groups} />
+              
+              <div className="flex flex-col gap-3 pb-3 border-b border-[#333]">
+                <p className="text-[10px] uppercase tracking-widest text-[#555] font-semibold">A-book markups</p>
+                <Field label="Markup mode">
+                  <select className={selectCls} value={form.markup_mode} onChange={(e) => set('markup_mode', e.target.value)}>
+                    <option value="Standard">Standard</option>
+                  </select>
+                </Field>
+                <label className="flex items-center gap-2.5 cursor-pointer select-none my-1">
+                  <input type="checkbox" checked={form.markup_take_positive} onChange={(e) => set('markup_take_positive', e.target.checked)} className="w-3.5 h-3.5 accent-blue-500" />
+                  <span className="text-[color:var(--text-secondary)]">Take positive slippage</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3 mt-1">
+                  <Field label="Send to LP after (min, ms)">
+                    <input className={inputCls} type="number" value={form.markup_send_lp_min} onChange={(e) => set('markup_send_lp_min', e.target.value)} />
+                  </Field>
+                  <Field label="Send to LP after (max, ms)">
+                    <input className={inputCls} type="number" value={form.markup_send_lp_max} onChange={(e) => set('markup_send_lp_max', e.target.value)} />
+                  </Field>
+                  <Field label="Min market markup">
+                    <input className={inputCls} type="number" value={form.markup_min_market} onChange={(e) => set('markup_min_market', e.target.value)} />
+                  </Field>
+                  <Field label="Max market markup">
+                    <input className={inputCls} type="number" value={form.markup_max_market} onChange={(e) => set('markup_max_market', e.target.value)} />
+                  </Field>
+                  <Field label="Min limit markup">
+                    <input className={inputCls} type="number" value={form.markup_min_limit} onChange={(e) => set('markup_min_limit', e.target.value)} />
+                  </Field>
+                  <Field label="Max limit markup">
+                    <input className={inputCls} type="number" value={form.markup_max_limit} onChange={(e) => set('markup_max_limit', e.target.value)} />
+                  </Field>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 pb-3 border-b border-[#333]">
+                <p className="text-[10px] uppercase tracking-widest text-[#555] font-semibold">Modify processing rule</p>
+                <Field label="Platform symbols and tags">
+                  <input className={inputCls} value={form.rule_symbols} onChange={(e) => set('rule_symbols', e.target.value)} />
+                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Logins">
+                    <input className={inputCls} value={form.rule_logins} onChange={(e) => set('rule_logins', e.target.value)} />
+                  </Field>
+                  <Field label="Logins from BBI pools">
+                    <select className={selectCls} value={form.rule_bbi_pools} onChange={(e) => set('rule_bbi_pools', e.target.value)}>
+                      <option value="">Select...</option>
+                    </select>
+                  </Field>
+                  <Field label="Groups">
+                    <input className={inputCls} value={form.rule_groups} onChange={(e) => set('rule_groups', e.target.value)} />
+                  </Field>
+                  <Field label="Min volume (lots)">
+                    <input className={inputCls} type="number" value={form.rule_min_volume} onChange={(e) => set('rule_min_volume', e.target.value)} />
+                  </Field>
+                  <Field label="Max volume (lots)">
+                    <input className={inputCls} type="number" value={form.rule_max_volume} onChange={(e) => set('rule_max_volume', e.target.value)} />
+                  </Field>
+                  <Field label="Security">
+                    <input className={inputCls} value={form.rule_security} onChange={(e) => set('rule_security', e.target.value)} />
+                  </Field>
+                </div>
+                <Field label="Order types">
+                  <select className={selectCls} value={form.rule_order_types} onChange={(e) => set('rule_order_types', e.target.value)}>
+                    <option value="All">All</option>
+                    <option value="Market">Market</option>
+                    <option value="Limit">Limit</option>
+                  </select>
+                </Field>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Order directions">
+                    <select className={selectCls} value={form.rule_order_directions} onChange={(e) => set('rule_order_directions', e.target.value)}>
+                      <option value="All">All</option>
+                      <option value="Buy">Buy</option>
+                      <option value="Sell">Sell</option>
+                    </select>
+                  </Field>
+                  <Field label="Round type">
+                    <select className={selectCls} value={form.rule_round_type} onChange={(e) => set('rule_round_type', e.target.value)}>
+                      <option value="Trader's worst">Trader's worst</option>
+                      <option value="Trader's best">Trader's best</option>
+                    </select>
+                  </Field>
+                </div>
+                <div className="flex flex-col gap-2 mt-2">
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input type="checkbox" checked={form.rule_fok_with_ce} onChange={(e) => set('rule_fok_with_ce', e.target.checked)} className="w-3.5 h-3.5 accent-blue-500" />
+                    <span className="text-[color:var(--text-secondary)]">FOK with CE</span>
+                  </label>
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input type="checkbox" checked={form.rule_execute_limits} onChange={(e) => set('rule_execute_limits', e.target.checked)} className="w-3.5 h-3.5 accent-blue-500" />
+                    <span className="text-[color:var(--text-secondary)]">Execute limits as markets</span>
+                  </label>
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input type="checkbox" checked={form.rule_compensate_slippage} onChange={(e) => set('rule_compensate_slippage', e.target.checked)} className="w-3.5 h-3.5 accent-blue-500" />
+                    <span className="text-[color:var(--text-secondary)]">Compensate slippage for SL / Stop orders</span>
+                  </label>
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none mt-2">
+                    <input type="checkbox" checked={form.rule_enabled} onChange={(e) => set('rule_enabled', e.target.checked)} className="w-3.5 h-3.5 accent-blue-500" />
+                    <span className="text-[color:var(--text-primary)] font-medium">Enabled</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+          </div>
 
           {/* Footer */}
-          <div className="flex justify-end gap-2 pt-3 border-t border-[color:var(--border-default)]">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={submitting}
-              className="px-4 py-1.5 bg-[#444] hover:bg-[#555] text-white rounded-[2px] transition-colors disabled:opacity-50 text-[12px]"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-4 py-1.5 bg-[color:var(--accent-500)] hover:opacity-90 text-white rounded-[2px] transition-colors disabled:opacity-50 min-w-[90px] flex justify-center text-[12px]"
-            >
-              {submitting ? '…' : isEdit ? 'Update Route' : 'Create Route'}
-            </button>
+          <div className="flex items-center justify-between px-5 py-4 border-t border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] shrink-0">
+            <span className="text-[11px] text-[color:var(--text-muted)] italic">
+              * Some fields are required
+            </span>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={submitting}
+                className="px-5 py-2 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] border border-black/20 text-white rounded-[3px] transition-colors disabled:opacity-50 text-[12px]"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-5 py-2 bg-[color:var(--accent-500)] hover:opacity-90 text-white rounded-[3px] transition-colors disabled:opacity-50 min-w-[120px] flex justify-center font-medium text-[12px]"
+              >
+                {submitting ? 'Saving...' : isEdit ? 'Update Route' : 'Create Route'}
+              </button>
+            </div>
           </div>
         </form>
       </motion.div>

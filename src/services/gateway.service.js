@@ -1,12 +1,15 @@
 import { api } from '../lib/api';
 
-const BASE = '/api/v1/manager/gateway/lp';
+const BASE = '/api/v1/gateway/lp';
 
 const extractData = (res) => res.data;
 
 const handleError = (error) => {
-  if (error.response && error.response.data) {
-    throw new Error(error.response.data.error || error.response.data.message || `HTTP ${error.response.status}`);
+  if (error.response) {
+    const msg = error.response.data?.error || error.response.data?.message || `HTTP ${error.response.status}`;
+    const err = new Error(msg);
+    err.status = error.response.status;
+    throw err;
   }
   throw error;
 };
@@ -26,3 +29,6 @@ export const gatewayConnect = (payload) =>
 
 export const gatewayDisconnect = (role = 'both') =>
   api.post(`${BASE}/disconnect`, { role }).then(extractData).catch(handleError);
+
+export const gatewayGetRoutingOptions = () =>
+  api.get(`${BASE}/routing-options`).then(extractData).catch(handleError);

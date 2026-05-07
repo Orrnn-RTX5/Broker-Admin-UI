@@ -112,7 +112,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   const { data: symbolsResponse, loading: symbolsLoading, mutate: refetchSymbols } = useInstruments(1, 100, '', '', viewType === 'Symbols');
   const { data: positionsResponse, loading: positionsLoading, mutate: refetchPositions } = usePositions({ page: 1, limit: 100 }, true, 2000, viewType === 'Positions');
 
-  const { data: groupsResponse, loading: groupsLoading, mutate: refetchGroups } = useGroups(viewType === 'Groups');
+  const { data: groupsResponse, loading: groupsLoading, mutate: refetchGroups } = useGroups(true);
 
   React.useEffect(() => {
     if (!refreshTrigger) return;
@@ -421,7 +421,10 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     columns = clientsColumns;
     data = usersResponse?.users
       ? usersResponse.users.filter(u => !u.is_admin && u.role !== 'manager').map(u => ({ id: u.id, iconType: 'user', name: u.name, description: u.email }))
-      : [];
+      : [];   
+
+
+      
     isClientsViewTemp = true;
     isLoading = usersLoading;
   } else if (viewType === 'Trading Accounts') {
@@ -529,7 +532,27 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     isClientsViewTemp = true;
   } else {
     // Check if the viewType matches a specific sub-group name inside the terminalTableData
-    const matchingSubGroupData = terminalTableData.filter(item => item.group === viewType);
+    let matchingSubGroupData = terminalTableData.filter(item => item.group === viewType);
+
+    if (matchingSubGroupData.length === 0 && groupsResponse) {
+      const groupsList = Array.isArray(groupsResponse) ? groupsResponse : (groupsResponse.answer || []);
+      const backendGroup = groupsList.find(g => g.name === viewType);
+      if (backendGroup) {
+        matchingSubGroupData = [{
+          id: backendGroup.name,
+          group: backendGroup.name,
+          server: 'Main Trade Server',
+          company: backendGroup.description,
+          type: backendGroup.accountType,
+          auth: 'Normal',
+          risk: backendGroup.executionMode,
+          margin: `${backendGroup.marginCallLevel}% / ${backendGroup.stopOutLevel}%`,
+          leverage: `1 : ${backendGroup.leverage}`,
+          currency: backendGroup.currency,
+          iconType: 'group'
+        }];
+      }
+    }
 
     if (matchingSubGroupData.length > 0) {
       columns = groupColumns;

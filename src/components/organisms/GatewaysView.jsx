@@ -1,30 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Wifi, WifiOff, Loader2, X, Plus, RefreshCw, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
-import { gatewayGetStatus, gatewayConnect, gatewayDisconnect } from '../../services/gateway.service';
+import { Wifi, WifiOff, Loader2, X, Plus, RefreshCw, ChevronDown, ChevronUp, AlertCircle, Network } from 'lucide-react';
+import { gatewayGetStatus, gatewayConnect, gatewayDisconnect, gatewayGetRoutingOptions } from '../../services/gateway.service';
 import { ManagerService } from '../../services/manager.service';
-
-// ─── Static gateway catalogue ──────────────────────────────────────────────────
-const GATEWAY_CATALOGUE = [
-  { id: 1,  name: 'ASX Gateway',                build: '5.00 build 5370 (17 Oct 2025)' },
-  { id: 2,  name: 'BMFBOVESPA Gateway',          build: '5.00 build 5370 (17 Oct 2025)' },
-  { id: 3,  name: 'Borsa Istanbul VIOP Gateway', build: '5.00 build 5370 (17 Oct 2025)' },
-  { id: 4,  name: 'BSE Gateway',                 build: '5.00 build 5370 (17 Oct 2025)' },
-  { id: 5,  name: 'Cboe FX Gateway',             build: '5.00 build 5370 (17 Oct 2025)' },
-  { id: 6,  name: 'Currenex Gateway',            build: '5.00 build 5370 (17 Oct 2025)' },
-  { id: 7,  name: 'DGCX Gateway',                build: '5.00 build 5370 (17 Oct 2025)' },
-  { id: 8,  name: 'Euronext FX Gateway',         build: '5.00 build 5370 (17 Oct 2025)' },
-  { id: 9,  name: 'FXCM Pro Gateway',            build: '5.00 build 5370 (17 Oct 2025)' },
-  { id: 10, name: 'GBOT Gateway',                build: '5.00 build 5370 (17 Oct 2025)' },
-  { id: 11, name: 'Integral Gateway',            build: '5.00 build 5370 (17 Oct 2025)' },
-  { id: 12, name: 'Interactive Brokers Gateway', build: '5.00 build 5100 (6 Jun 2025)'  },
-  { id: 13, name: 'LMAX Gateway',                build: '5.00 build 5370 (17 Oct 2025)' },
-  { id: 14, name: 'MetaTrader 4 Gateway',        build: '5.00 build 5370 (17 Oct 2025)' },
-  { id: 15, name: 'MetaTrader 5 Gateway',        build: '5.00 build 5370 (17 Oct 2025)' },
-  { id: 16, name: 'MOEX Derivatives Gateway',    build: '5.00 build 5370 (17 Oct 2025)' },
-  { id: 17, name: 'MOEX Securities Gateway',     build: '5.00 build 5370 (17 Oct 2025)' },
-  { id: 18, name: 'MOEXFX Gateway',              build: '5.00 build 5370 (17 Oct 2025)' },
-  { id: 19, name: 'Remote gateway',              build: '' },
-];
 
 // ─── Shared field components ───────────────────────────────────────────────────
 const F = ({ label, required, children }) => (
@@ -85,34 +62,24 @@ const ErrBox = ({ msg }) => msg ? (
 
 // ─── Connect Modal ─────────────────────────────────────────────────────────────
 const ConnectModal = ({ onClose, onConnected }) => {
-  const [groups, setGroups]   = useState([]);
-  const [role, setRole]       = useState('both');
+  const [role, setRole]       = useState('quote');
   const [form, setForm]       = useState({
-    provider:             '',
-    host:                 '',
-    port:                 '',
-    sender_comp_id:       '',
-    target_comp_id:       '',
-    username:             '',
-    password:             '',
-    account:              '',
+    name:                 'T4B',
+    provider:             'Tools for Brokers',
+    host:                 'achiever.tp.t4b.app',
+    port:                 '12333',
+    sender_comp_id:       'TIGER-50071-QUOTES',
+    target_comp_id:       'TIGER',
+    username:             'TIGER-50071-QUOTES',
+    password:             'TIGER@50071$$$$',
+    account:              '50071',
     use_ssl:              false,
-    trade_sender_comp_id: '',
-    trade_username:       '',
+    trade_sender_comp_id: 'TIGER-50071-TRADE',
+    trade_username:       'TIGER-50071-TRADE',
     trade_password:       '',
   });
   const [saving, setSaving]   = useState(false);
   const [err, setErr]         = useState('');
-
-  // Fetch MT5 groups to populate the Provider dropdown
-  useEffect(() => {
-    ManagerService.getGroupList()
-      .then(data => {
-        const list = Array.isArray(data) ? data : (data?.answer ?? []);
-        setGroups(list);
-      })
-      .catch(() => {});
-  }, []);
 
   const sf = (k) => (e) =>
     setForm(f => ({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
@@ -125,6 +92,7 @@ const ConnectModal = ({ onClose, onConnected }) => {
     setErr('');
     try {
       const payload = {
+        name:            form.name,
         provider:        form.provider,
         role,
         host:            form.host,
@@ -167,19 +135,12 @@ const ConnectModal = ({ onClose, onConnected }) => {
 
           {/* ── Provider (groups dropdown) + Role ── */}
           <SectionLabel>Identity</SectionLabel>
-          <div className="grid grid-cols-2 gap-3">
-            <F label="Provider" required>
-              <select
-                className="ui-input ui-input-sm"
-                value={form.provider}
-                onChange={sf('provider')}
-                required
-              >
-                <option value="">Select group…</option>
-                {groups.map(g => (
-                  <option key={g.name} value={g.name}>{g.name}</option>
-                ))}
-              </select>
+          <div className="grid grid-cols-3 gap-3">
+            <F label="Name" required>
+              <Input value={form.name} onChange={sf('name')} placeholder="e.g. T4B" required />
+            </F>
+            <F label="Provider">
+              <Input value={form.provider} onChange={sf('provider')} placeholder="e.g. Tools for Brokers" />
             </F>
             <F label="Role">
               <RoleSelector value={role} onChange={setRole} />
@@ -334,26 +295,28 @@ const KV = ({ label, value, mono }) => (
   </div>
 );
 
-const SessionBlock = ({ title, data, color }) => {
-  if (!data) return null;
+const SessionBlock = ({ title, data, color, hideDetails }) => {
+  if (!data || !data.configured) return null;
+  const config = data.config || {};
   return (
     <div className="flex flex-col gap-0 rounded-lg overflow-hidden border" style={{ borderColor: 'var(--border)' }}>
-      <div className="px-3 py-2 text-[10px] uppercase tracking-widest font-bold" style={{ background: 'var(--surface-2)', color }}>
-        {title}
+      <div className="px-3 py-2 text-[10px] uppercase tracking-widest font-bold flex justify-between" style={{ background: 'var(--surface-2)', color }}>
+        <span>{title}</span>
+        <span>{data.name}</span>
       </div>
       <div className="px-3 py-2 flex flex-col" style={{ background: 'var(--surface)' }}>
-        {data.session    && <KV label="Session"     value={data.session}    mono />}
-        {data.host       && <KV label="Host : Port" value={`${data.host} : ${data.port}`} mono />}
-        <KV label="Logged On"    value={data.logged_on    ? '✓ Yes' : '✗ No'} />
-        <KV label="Password Set" value={data.password_set ? '✓ Yes' : '✗ No'} />
-        {data.symbols    && <KV label="Symbols"     value={data.symbols.join(', ')} mono />}
+        <KV label="Connected"    value={data.connected ? '✓ Yes' : '✗ No'} />
+        {config.adapter_name && <KV label="Adapter"     value={config.adapter_name}    mono />}
+        {(!hideDetails && config.host) && <KV label="Host : Port" value={`${config.host} : ${config.port}`} mono />}
+        {(!hideDetails) && <KV label="Password Set" value={config.password_set ? '✓ Yes' : '✗ No'} />}
+        {config.symbols    && <KV label="Symbols"     value={config.symbols.join(', ')} mono />}
       </div>
     </div>
   );
 };
 
 // ─── LP Gateway Panel ──────────────────────────────────────────────────────────
-const LpGatewayPanel = () => {
+const LpGatewayPanel = ({ hideHostPortPassword }) => {
   const [status, setStatus]           = useState(null);
   const [loading, setLoading]         = useState(true);
   const [modal, setModal]             = useState(null); // 'connect' | 'disconnect'
@@ -366,14 +329,14 @@ const LpGatewayPanel = () => {
     gatewayGetStatus()
       .then(setStatus)
       .catch(e => {
-        const httpStatus = e.response?.status ?? (e.message?.match(/HTTP (\d+)/)?.[1] && Number(e.message.match(/HTTP (\d+)/)[1]));
+        const httpStatus = e.status ?? e.response?.status ?? (e.message?.match(/HTTP (\d+)/)?.[1] && Number(e.message.match(/HTTP (\d+)/)[1]));
         // 401 means the LP gateway has no active session — treat silently as disconnected
         // 404 / "No active" has the same meaning
         if (httpStatus === 401 || httpStatus === 404 || e.message?.includes('No active')) {
-          setStatus({ status: 'disconnected' });
+          setStatus({ quote: { connected: false }, trade: { connected: false } });
         } else {
           setErr(e.message || 'Failed to fetch gateway status');
-          setStatus({ status: 'disconnected' });
+          setStatus({ quote: { connected: false }, trade: { connected: false } });
         }
       })
       .finally(() => setLoading(false));
@@ -381,7 +344,7 @@ const LpGatewayPanel = () => {
 
   useEffect(() => { fetchStatus(); }, [fetchStatus]);
 
-  const isConnected = status?.status === 'connected';
+  const isConnected = status?.quote?.connected || status?.trade?.connected;
 
   return (
     <div className="rounded-xl border overflow-hidden"
@@ -398,16 +361,15 @@ const LpGatewayPanel = () => {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>LP Gateway</span>
-              {status?.name && <span className="text-sm font-normal" style={{ color: 'var(--text-3)' }}>— {status.name}</span>}
+              {status?.quote?.config?.provider && <span className="text-sm font-normal" style={{ color: 'var(--text-3)' }}>— {status.quote.config.provider}</span>}
               {loading && <Loader2 size={11} className="animate-spin" style={{ color: 'var(--muted)' }} />}
             </div>
             <div className="flex items-center gap-2 mt-0.5">
               <StatusDot on={isConnected} />
               <span className="text-xs capitalize" style={{ color: isConnected ? '#4ade80' : 'var(--muted)' }}>
-                {status?.status ?? 'loading…'}
+                {isConnected ? 'Connected' : (status ? 'Disconnected' : 'loading…')}
               </span>
-              {status?.provider && <span className="text-xs" style={{ color: 'var(--text-3)' }}>· {status.provider}</span>}
-              {status?.role     && <span className="text-xs" style={{ color: 'var(--text-3)' }}>· role: {status.role}</span>}
+              {status?.quote?.config?.role && <span className="text-xs" style={{ color: 'var(--text-3)' }}>· role: {status.quote.config.role}</span>}
             </div>
           </div>
         </div>
@@ -418,15 +380,14 @@ const LpGatewayPanel = () => {
             className="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm">
             <RefreshCw size={13} />
           </button>
-          {isConnected ? (
+          <button onClick={() => setModal('connect')} className="ui-btn ui-btn-primary ui-btn-sm gap-1.5">
+            <Plus size={12} /> Connect LP
+          </button>
+          {isConnected && (
             <button onClick={() => setModal('disconnect')}
               className="ui-btn ui-btn-sm gap-1.5"
               style={{ background: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}>
               <WifiOff size={12} /> Disconnect
-            </button>
-          ) : (
-            <button onClick={() => setModal('connect')} className="ui-btn ui-btn-primary ui-btn-sm gap-1.5">
-              <Plus size={12} /> Connect LP
             </button>
           )}
           <button onClick={() => setExpanded(e => !e)} className="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm">
@@ -461,9 +422,9 @@ const LpGatewayPanel = () => {
               {/* Summary row */}
               <div className="grid grid-cols-3 gap-2 mt-2">
                 {[
-                  { label: 'Status',            value: status.status,          color: '#4ade80' },
-                  { label: 'Live Data Source',  value: status.live_data_source, color: '#60a5fa' },
-                  { label: 'Order Routing LP',  value: status.order_routing_lp, color: '#c084fc' },
+                  { label: 'Status',            value: isConnected ? 'Connected' : 'Disconnected', color: isConnected ? '#4ade80' : 'var(--muted)' },
+                  { label: 'Live Data Source',  value: status.quote?.name || '—', color: '#60a5fa' },
+                  { label: 'Order Routing LP',  value: status.order_routing_lp || status.trade?.name || '—', color: '#c084fc' },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="rounded-lg p-3 flex flex-col gap-1"
                     style={{ background: 'var(--surface-2)', border: '1px solid var(--border-3)' }}>
@@ -500,41 +461,26 @@ const LpGatewayPanel = () => {
   );
 };
 
+// Removed LpRoutingOptionsPanel from here, it will be moved to LPRoutingView
+
 // ─── Main View ─────────────────────────────────────────────────────────────────
-const GatewaysView = () => (
-  <div className="flex-1 flex flex-col bg-[color:var(--bg-app)] overflow-hidden text-[color:var(--text-primary)]">
-    <div className="flex justify-between items-start px-5 py-4 border-b border-black/40 shrink-0 bg-[color:var(--bg-surface-1)]">
-      <div>
-        <h1 className="text-[17px] font-semibold text-white mb-1">Gateways</h1>
-        <p className="text-[12px] text-[color:var(--text-muted)]">
-          Connect liquidity providers via the LP Gateway API, or choose from built-in exchange gateways below.
-        </p>
+const GatewaysView = () => {
+  return (
+    <div className="flex-1 flex flex-col bg-[color:var(--bg-app)] overflow-hidden text-[color:var(--text-primary)]">
+      <div className="flex justify-between items-start px-5 py-4 border-b border-black/40 shrink-0 bg-[color:var(--bg-surface-1)]">
+        <div>
+          <h1 className="text-[17px] font-semibold text-white mb-1">Gateways</h1>
+          <p className="text-[12px] text-[color:var(--text-muted)]">
+            Connect liquidity providers via the LP Gateway API, or choose from built-in exchange gateways below.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-6">
+        <LpGatewayPanel />
       </div>
     </div>
-
-    <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-6">
-      <LpGatewayPanel />
-
-      <div className="flex items-center gap-3">
-        <div className="flex-1 border-t" style={{ borderColor: 'var(--border-3)' }} />
-        <span className="text-[10px] uppercase tracking-widest font-bold" style={{ color: 'var(--text-3)' }}>
-          Available Gateway Modules
-        </span>
-        <div className="flex-1 border-t" style={{ borderColor: 'var(--border-3)' }} />
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-        {GATEWAY_CATALOGUE.map(gw => (
-          <div key={gw.id}
-            className="flex flex-col items-center justify-center gap-1.5 p-4 rounded-lg border transition-colors"
-            style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-            <span className="text-xs font-medium text-center leading-snug" style={{ color: 'var(--text-2)' }}>{gw.name}</span>
-            {gw.build && <span className="text-[10px] text-center" style={{ color: 'var(--text-3)' }}>{gw.build}</span>}
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
+  );
+};
 
 export default GatewaysView;

@@ -7,6 +7,12 @@ export const ManagerService = {
     return res.data;
   },
 
+  getGroupRoutingOverviewList: async () => {
+    const token = useAuthStore.getState().accessToken;
+    const res = await api.get(`/manager/GroupRoutingOverviewList?id=${token}`);
+    return res.data;
+  },
+
   createGroup: async (groupData) => {
     const token = useAuthStore.getState().accessToken;
     const res = await api.post(`/manager/GroupCreate?id=${token}`, groupData);
@@ -280,6 +286,34 @@ export const ManagerService = {
   deleteSpreadSchedule: async (scheduleId) => {
     const res = await api.get(`/ext-api/SpreadScheduleDelete`, {
       params: { schedule_id: scheduleId }
+    });
+    return res.data;
+  },
+
+  // --- HIDDEN MARKUP ---
+  getHiddenMarkupList: async () => {
+    const token = useAuthStore.getState().accessToken;
+    const res = await api.get(`/manager/HiddenMarkupList`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return res.data;
+  },
+
+  setHiddenMarkup: async (data) => {
+    const token = useAuthStore.getState().accessToken;
+    const res = await api.post(`/manager/HiddenMarkupSet`, data, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return res.data;
+  },
+
+  deleteHiddenMarkup: async (groupName, accountNumber) => {
+    const token = useAuthStore.getState().accessToken;
+    const res = await api.post(`/manager/HiddenMarkupDelete`, {
+      group_name: groupName,
+      account_number: accountNumber
+    }, {
+      headers: { Authorization: `Bearer ${token}` }
     });
     return res.data;
   },

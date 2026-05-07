@@ -1,12 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, RefreshCw, X, Edit2, Trash2, GitBranch } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Plus, RefreshCw, X, Edit2, Trash2, GitBranch, Network, Loader2, ChevronUp, ChevronDown, ArrowLeft } from 'lucide-react';
 import { RoutingService } from '../../services/routing.service';
+import { ManagerService } from '../../services/manager.service';
+import { gatewayGetRoutingOptions } from '../../services/gateway.service';
 import LPRouteFormPopup from '../popups/LPRouteFormPopup';
 
 const ROUTING_MODE_COLOR = {
   a_book: 'text-[#d97706]',
   hybrid:  'text-[#3b82f6]',
-};
+};    
 
 const ROUTING_MODE_LABEL = {
   a_book: 'A-Book',
@@ -26,6 +28,290 @@ const RouteIcon = (props) => (
   </svg>
 );
 
+const KV = ({ label, value, mono }) => (
+  <div className="flex items-start justify-between gap-4 py-1 border-b" style={{ borderColor: 'var(--border-3)' }}>
+    <span className="text-[11px] shrink-0" style={{ color: 'var(--text-3)' }}>{label}</span>
+    <span className={`text-[11px] text-right break-all ${mono ? 'font-mono' : 'font-medium'}`} style={{ color: 'var(--text)' }}>
+      {value ?? '—'}
+    </span>
+  </div>
+);
+
+const ErrBox = ({ msg }) => {
+  if (!msg) return null;
+  return (
+    <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg text-sm mb-4">
+      {msg}
+    </div>
+  );
+};
+
+// ─── Routing Options Panel ─────────────────────────────────────────────────────
+const LpRoutingOptionsPanel = () => {
+  const [options, setOptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+  const [err, setErr] = useState('');
+
+  const fetchOptions = useCallback(() => {
+    setLoading(true);
+    setErr('');
+    gatewayGetRoutingOptions()
+      .then((res) => {
+        setOptions(res.items || []);
+      })
+      .catch(e => {
+        setErr(e.message || 'Failed to fetch routing options');
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { fetchOptions(); }, [fetchOptions]);
+
+  const toggleExpand = () => setExpanded(e => !e);
+
+  return (
+    <div className="rounded-xl border overflow-hidden shrink-0"
+      style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
+      
+      {/* ── Panel header ── */}
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-3 cursor-pointer select-none" onClick={toggleExpand}>
+          <div className="p-2 rounded-lg bg-purple-500/10">
+            <Network size={16} className="text-purple-400" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Routing Options API</span>
+              {loading && <Loader2 size={11} className="animate-spin" style={{ color: 'var(--muted)' }} />}
+            </div>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-xs" style={{ color: 'var(--text-3)' }}>
+                {options.length} routes active
+              </span>
+              <span className="text-xs" style={{ color: 'var(--text-3)' }}>· Available LP endpoints</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button onClick={fetchOptions} title="Refresh options"
+            className="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm">
+            <RefreshCw size={13} />
+          </button>
+          <button onClick={toggleExpand} className="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm">
+            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Expanded view ── */}
+      {expanded && (
+        <div className="px-4 pb-4 border-t" style={{ borderColor: 'var(--border-3)' }}>
+          <ErrBox msg={err} />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
+            {options.map((opt) => (
+              <div key={opt.id} className="rounded-lg border p-4 flex flex-col gap-3 relative overflow-hidden"
+                style={{ background: 'var(--surface-2)', borderColor: 'var(--border-3)' }}>
+                
+                <div className="flex justify-between items-start">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold" style={{ color: 'var(--text)' }}>{opt.name}</span>
+                    <span className="text-[10px] uppercase tracking-widest mt-0.5" style={{ color: 'var(--text-3)' }}>
+                      {opt.adapter_type}
+                    </span>
+                  </div>
+                  <div className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${opt.routing_mode === 'a_book' ? 'bg-blue-500/10 text-blue-400' : 'bg-orange-500/10 text-orange-400'}`}>
+                    {opt.routing_mode.replace('_', '-')}</div>
+                </div>
+
+                <div className="flex flex-col gap-1.5 mt-1">
+                  <KV label="Route Value" value={opt.route_value} mono />
+                  <KV label="Connection" value={opt.connected ? 'Connected' : 'Disconnected'} mono />
+                  <KV label="Trade Enabled" value={opt.trade_connected ? '✓ Yes' : '✗ No'} mono />
+                  {opt.is_internal_route && <KV label="Internal" value="Yes" mono />}
+                  {opt.is_external_route && <KV label="External LP" value="Yes" mono />}
+                </div>
+                
+                <div className="mt-2 text-[10px] truncate" style={{ color: 'var(--text-3)' }}>
+                  {(!opt.supported_symbols || opt.supported_symbols.length === 0)
+                    ? 'No explicit symbols filtered'
+                    : `Symbols: ${opt.supported_symbols.join(', ')}`}
+                </div>
+              </div>
+            ))}
+            
+            {!loading && options.length === 0 && !err && (
+              <div className="col-span-full py-8 text-center text-sm" style={{ color: 'var(--muted)' }}>
+                No routing options available.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Group Dashboard Panel ───────────────────────────────────────────────────
+const GroupDashboardPanel = ({ groupName, onClose }) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    setErr('');
+    ManagerService.getGroupRoutingOverviewList()
+      .then(res => {
+        const list = Array.isArray(res) ? res : [];
+        const groupData = list.find(g => g.group_name === groupName);
+        if (groupData) {
+          setData(groupData);
+        } else {
+          setErr('Group not found in routing overview.');
+        }
+      })
+      .catch(e => {
+        setErr(e.message || 'Failed to fetch routing overview');
+      })
+      .finally(() => setLoading(false));
+  }, [groupName]);
+
+  return (
+    <div className="flex flex-col flex-1 bg-[color:var(--bg-app)] overflow-hidden">
+      {/* Dashboard Header */}
+      <div className="flex items-center justify-between px-5 py-4 border-b border-black/40 bg-[color:var(--bg-surface-1)] shrink-0">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={onClose}
+            className="text-[color:var(--text-muted)] hover:text-white transition-colors p-1"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <h1 className="text-[17px] font-semibold text-white">Group Dashboard: {groupName}</h1>
+        </div>
+      </div>
+      
+      {/* Dashboard Body */}
+      <div className="flex-1 p-6 overflow-y-auto no-scrollbar">
+        {loading && (
+          <div className="flex items-center justify-center h-full text-[color:var(--text-muted)] gap-2">
+            <Loader2 size={16} className="animate-spin" /> Loading group details...
+          </div>
+        )}
+        {!loading && err && (
+          <div className="flex items-center justify-center h-full">
+            <ErrBox msg={err} />
+          </div>
+        )}
+        {!loading && data && (
+          <div className="flex flex-col gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              
+              {/* Group Settings */}
+              <div className="rounded-lg border p-4 flex flex-col gap-3 bg-[color:var(--bg-surface-2)] border-black/20">
+                <h3 className="text-sm font-semibold text-[color:var(--text-primary)] border-b border-black/20 pb-2">Overview</h3>
+                <div className="flex flex-col gap-1.5 mt-1">
+                  <KV label="ID" value={data.group_id} mono />
+                  <KV label="Broker" value={data.broker_id} mono />
+                  <KV label="Description" value={data.group_description} />
+                  <KV label="Currency" value={data.group_currency} mono />
+                  <KV label="Account Type" value={data.group_account_type} />
+                  <KV label="Demo Account" value={data.group_demo ? 'Yes' : 'No'} />
+                  <KV label="Trade Allowed" value={data.group_trade_allowed ? 'Yes' : 'No'} />
+                </div>
+              </div>
+
+              {/* Trading & Risk Config */}
+              <div className="rounded-lg border p-4 flex flex-col gap-3 bg-[color:var(--bg-surface-2)] border-black/20">
+                <h3 className="text-sm font-semibold text-[color:var(--text-primary)] border-b border-black/20 pb-2">Trading & Risk</h3>
+                <div className="flex flex-col gap-1.5 mt-1">
+                  <KV label="Leverage" value={`1:${data.group_leverage}`} mono />
+                  <KV label="Margin Call" value={`${data.group_margin_call_level}%`} mono />
+                  <KV label="Stop Out" value={`${data.group_stop_out_level}%`} mono />
+                  <KV label="Execution Mode" value={data.group_execution_mode} />
+                  <KV label="Book Type" value={data.group_book_type} />
+                  <KV label="Neg. Bal. Prot." value={data.group_negative_balance_protection ? 'Yes' : 'No'} />
+                  <KV label="Max Lot/Trade" value={data.group_max_lot_per_trade} mono />
+                  <KV label="Max Total Lots" value={data.group_max_total_lots} mono />
+                  <KV label="Lot Divisor" value={data.group_lot_divisor} mono />
+                </div>
+              </div>
+
+              {/* Fees & Spread */}
+              <div className="rounded-lg border p-4 flex flex-col gap-3 bg-[color:var(--bg-surface-2)] border-black/20">
+                <h3 className="text-sm font-semibold text-[color:var(--text-primary)] border-b border-black/20 pb-2">Fees & Spreads</h3>
+                <div className="flex flex-col gap-1.5 mt-1">
+                  <KV label="Commission Rate" value={data.group_commission_rate} mono />
+                  <KV label="Commission Type" value={data.group_commission_type || '—'} />
+                  <KV label="Swap Multiplier" value={data.group_swap_multiplier} mono />
+                  <KV label="Spread Markup" value={data.group_spread_markup} mono />
+                </div>
+              </div>
+
+              {/* Routing Configuration */}
+              <div className="rounded-lg border p-4 flex flex-col gap-3 bg-[color:var(--bg-surface-2)] border-black/20">
+                <h3 className="text-sm font-semibold text-[color:var(--text-primary)] border-b border-black/20 pb-2">Routing Config</h3>
+                <div className="flex flex-col gap-1.5 mt-1">
+                  <KV label="Configured" value={data.routing_configured ? 'Yes' : 'No'} />
+                  <KV label="Route ID" value={data.route_id ?? '—'} mono />
+                  <KV label="LP Name" value={data.lp_name || '—'} mono />
+                  <KV label="Routing Mode" value={data.routing_mode} />
+                  <KV label="Internal Route" value={data.is_internal_route ? 'Yes' : 'No'} />
+                  <KV label="External Route" value={data.is_external_route ? 'Yes' : 'No'} />
+                  <KV label="Priority" value={data.priority} mono />
+                  <KV label="Fallback Policy" value={data.fallback_policy || '—'} />
+                  <KV label="Symbol Pattern" value={data.symbol_pattern} mono />
+                </div>
+              </div>
+
+              {/* Symbols */}
+              <div className="col-span-1 md:col-span-2 lg:col-span-2 rounded-lg border p-4 flex flex-col gap-3 bg-[color:var(--bg-surface-2)] border-black/20">
+                <h3 className="text-sm font-semibold text-[color:var(--text-primary)] border-b border-black/20 pb-2">Symbol Restrictions</h3>
+                
+                <div className="grid grid-cols-2 gap-6 mt-1">
+                  <div>
+                    <span className="text-[11px] text-[color:var(--text-3)] mb-2 block">Allowed Symbols</span>
+                    {data.group_symbols_allowed && data.group_symbols_allowed.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {data.group_symbols_allowed.map(sym => (
+                          <span key={sym} className="px-2 py-0.5 bg-green-500/10 text-green-400 text-[10px] rounded border border-green-500/20 font-mono">
+                            {sym}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-[11px] text-[color:var(--text-muted)] italic">No explicit allowed symbols (or all allowed)</span>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <span className="text-[11px] text-[color:var(--text-3)] mb-2 block">Blocked Symbols</span>
+                    {data.group_symbols_blocked && data.group_symbols_blocked.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {data.group_symbols_blocked.map(sym => (
+                          <span key={sym} className="px-2 py-0.5 bg-red-500/10 text-red-400 text-[10px] rounded border border-red-500/20 font-mono">
+                            {sym}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-[11px] text-[color:var(--text-muted)] italic">None explicitly blocked</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const LPRoutingView = () => {
   const [data, setData]               = useState([]);
   const [loading, setLoading]         = useState(true);
@@ -35,6 +321,7 @@ const LPRoutingView = () => {
   const [contextMenu, setContextMenu] = useState({ visible: false });
   const [filterEnabled, setFilterEnabled] = useState('all'); // 'all' | 'active' | 'off'
   const [search, setSearch]           = useState('');
+  const [blankUiGroup, setBlankUiGroup] = useState(null);
 
   const fetchRoutes = async () => {
     setLoading(true);
@@ -109,8 +396,15 @@ const LPRoutingView = () => {
       onClick={closeCtx}
       onContextMenu={(e) => e.preventDefault()}
     >
-      {/* ── Top Bar ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0 select-none flex-wrap">
+      {blankUiGroup ? (
+        <GroupDashboardPanel 
+          groupName={blankUiGroup} 
+          onClose={() => setBlankUiGroup(null)} 
+        />
+      ) : (
+        <>
+          {/* ── Top Bar ─────────────────────────────────────────────────────────── */}
+          <div className="flex items-center gap-2 px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0 select-none flex-wrap">
         <button
           onClick={openCreate}
           className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:opacity-90 text-white text-[11px] rounded-[2px] transition-colors"
@@ -126,7 +420,7 @@ const LPRoutingView = () => {
               className={`h-[22px] px-2.5 text-[10px] rounded-[2px] transition-colors capitalize ${
                 filterEnabled === f
                   ? 'bg-[color:var(--accent-500)] text-white'
-                  : 'bg-[#333] text-[#888] hover:text-white'
+                  : 'bg-transparent text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]'
               }`}
             >
               {f === 'all' ? `All (${stats.total})` : f === 'active' ? `Active (${stats.active})` : `Off (${stats.off})`}
@@ -139,10 +433,10 @@ const LPRoutingView = () => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Filter group, symbol, LP…"
-          className="h-[24px] px-2 text-[11px] bg-[#2a2a2a] border border-[#444] text-white placeholder-[#555] focus:border-[color:var(--accent-500)] focus:outline-none rounded-[2px] w-44"
+          className="h-[24px] px-2 text-[11px] bg-[color:var(--bg-app)] border border-black/20 text-[color:var(--text-primary)] placeholder-[color:var(--text-muted)] focus:border-[color:var(--accent-500)] focus:outline-none rounded-[2px] w-44"
         />
         {search && (
-          <button onClick={() => setSearch('')} className="text-[#555] hover:text-white transition-colors">
+          <button onClick={() => setSearch('')} className="text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] transition-colors">
             <X size={12} />
           </button>
         )}
@@ -161,10 +455,13 @@ const LPRoutingView = () => {
       </div>
 
       {/* ── Split: Table + Detail Panel ─────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col flex-1 overflow-hidden p-4 gap-4">
+        
+        <LpRoutingOptionsPanel />
 
         {/* Table */}
-        <div className="flex flex-col overflow-hidden flex-1">
+        <div className="flex overflow-hidden flex-1 border border-black/20 rounded-md">
+          <div className="flex flex-col overflow-hidden flex-1">
 
           {/* Grid Header */}
           <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 shadow-sm sticky top-0 z-10 select-none shrink-0">
@@ -210,6 +507,7 @@ const LPRoutingView = () => {
                 <div
                   key={rowId ?? idx}
                   onClick={(e) => { e.stopPropagation(); setSelectedRow(row); }}
+                  onDoubleClick={(e) => { e.stopPropagation(); setBlankUiGroup(row.group_name); }}
                   onContextMenu={(e) => handleContextMenu(e, row)}
                   className={`flex cursor-pointer border-b border-black/10 transition-colors
                     ${isSelected
@@ -363,6 +661,7 @@ const LPRoutingView = () => {
           </div>
         )}
       </div>
+      </div>
 
       {/* ── Context Menu ────────────────────────────────────────────────────── */}
       {contextMenu.visible && (
@@ -394,6 +693,9 @@ const LPRoutingView = () => {
           onClose={() => { setFormOpen(false); setEditRoute(null); }}
           onSaved={() => fetchRoutes()}
         />
+      )}
+
+        </>
       )}
     </div>
   );

@@ -1,19 +1,4 @@
-/* Legacy color remap.
-   The original views hardcoded dark MT5 hex values everywhere. This layer
-   maps those hex classes to theme tokens so light/dark actually switch
-   without touching every file. Phase 4 (per-view migration) will remove
-   entries as views get rewritten to use tokens directly.
 
-   Tailwind arbitrary-value classes like `bg-[#1e1e1e]` compile to
-   `.bg-\[\#1e1e1e\]` — escape the `[`, `]`, `#` in selectors.
-
-   Branded color hexes (blues/greens/reds/yellows used for icons, badges,
-   P/L text, etc.) are INTENTIONALLY not overridden — they're data colors
-   that should keep their meaning in both themes. */
-
-/* ============================================================
-   LIGHT MODE — override dark chrome to light surfaces
-   ============================================================ */
 [data-theme="light"] {
 
   /* -------- Dark surface backgrounds → light surfaces -------- */
@@ -145,14 +130,10 @@
 
   .hover\:bg-white\/5:hover,
   .hover\:bg-white\/10:hover          { background-color: var(--bg-surface-2) !important; }
-  /* hover:text-white intentionally NOT globally flipped — same reason as text-white.
-     If a specific chrome spot needs it, add a chained .bg-...hover\:text-white:hover rule. */
 
-  /* -------- MT5 accent blues (chrome, status bar) — already handled by accent token -------- */
   .bg-\[\#007acc\]\/20                { background-color: color-mix(in srgb, var(--accent-500) 12%, transparent) !important; }
   .bg-\[\#007acc\]\/10                { background-color: color-mix(in srgb, var(--accent-500) 8%, transparent) !important; }
 
-  /* -------- VS-Code-ish token hues -------- */
   .text-\[\#9cdcfe\]                  { color: var(--info-500) !important; }
   .text-\[\#f48771\]                  { color: var(--danger-500) !important; }
   .bg-\[\#e51400\]                    { background-color: var(--danger-500) !important; }
@@ -160,13 +141,11 @@
   .bg-\[\#c42b1c\]                    { background-color: var(--danger-500) !important; }
   .hover\:bg-\[\#c42b1c\]:hover       { background-color: var(--danger-500) !important; }
 
-  /* -------- Input surface — dark bg inputs become bordered white -------- */
+  
   input, textarea, select             { color-scheme: light; }
 }
 
-/* ============================================================
-   DARK MODE — soften pure black borders only
-   ============================================================ */
+
 [data-theme="dark"] {
   .border-black\/40,
   .border-black\/30,
@@ -176,3 +155,4 @@
   .border-white\/5    { border-color: var(--border-subtle) !important; }
   .border-white\/10   { border-color: var(--border-default) !important; }
 }
+

@@ -8,12 +8,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
 const DEV_SERVER = 'http://localhost:5173';
-const API_ORIGIN = 'http://69.197.178.27';       // port 80  — /manager/* and /api/*
-const EXT_ORIGIN = 'http://69.197.178.27:8091';  // port 8091 — ext-api paths (prefix stripped)
+const API_ORIGIN = 'http://69.197.178.27';       
+const EXT_ORIGIN = 'http://69.197.178.27:8091';  
 
 const isDev = !app.isPackaged;
 
-// ── Auto-updater (production only) ───────────────────────────────────────────
+
 function setupAutoUpdater() {
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
@@ -49,11 +49,11 @@ function setupAutoUpdater() {
   setTimeout(() => autoUpdater.checkForUpdates(), 3000);
 }
 
-// ── Request interceptors (production only — dev uses the Vite proxy) ─────────
+
 function setupProductionInterceptors() {
   const ses = session.defaultSession;
 
-  // Reroute ext-api: http://69.197.178.27/ext-api/Foo → http://69.197.178.27:8091/Foo
+  
   ses.webRequest.onBeforeRequest(
     { urls: [`${API_ORIGIN}/ext-api/*`] },
     (details, callback) => {
