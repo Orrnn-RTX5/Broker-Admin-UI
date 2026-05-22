@@ -231,6 +231,11 @@ const AppInner = () => {
       if (mod && e.key.toLowerCase() === 'r') { e.preventDefault(); handleRefresh(); return; }
       if (mod && e.shiftKey && e.key.toLowerCase() === 'e') { e.preventDefault(); handleExportCsv(); return; }
       if (mod && e.key.toLowerCase() === 'e') { e.preventDefault(); handleExport(); return; }
+      if (mod && !e.altKey && e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        setGlobalTheme(prev => prev === 'dark' ? 'light' : 'dark');
+        return;
+      }
       if (mod && (e.key.toLowerCase() === 'f' || e.key.toLowerCase() === 'k')) {
         e.preventDefault(); searchInputRef.current?.focus(); return;
       }

@@ -84,6 +84,9 @@ function createWindow() {
     minHeight: 680,
     title: 'RTX5 Admin',
     backgroundColor: '#1e1e1e',
+    icon: isDev 
+      ? path.join(__dirname, '..', 'public', 'logo V2.ico')
+      : path.join(__dirname, '..', 'dist', 'logo V2.ico'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

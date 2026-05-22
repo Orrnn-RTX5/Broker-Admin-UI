@@ -68,6 +68,92 @@ const Field = ({ label, hint, children }) => (
   </div>
 );
 
+const DispatchDelaySection = () => {
+  const [delayMs, setDelayMs] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const fetchDelay = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await ManagerService.getLPDispatchDelay();
+      if (res && res.dispatch_delay_ms !== undefined) {
+        setDelayMs(res.dispatch_delay_ms.toString());
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to fetch delay');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDelay();
+  }, [fetchDelay]);
+
+  const handleSave = async () => {
+    if (delayMs === '') return;
+    setSaving(true);
+    setError('');
+    setSuccess('');
+    try {
+      await ManagerService.setLPDispatchDelay(delayMs);
+      setSuccess('Delay updated successfully');
+      setTimeout(() => setSuccess(''), 3000);
+      await fetchDelay();
+    } catch (err) {
+      setError(err.message || 'Failed to set delay');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-3 border border-black/20 rounded-md p-4 bg-[color:var(--bg-surface-2)]">
+      <div>
+        <h3 className="text-sm font-semibold text-[color:var(--text-primary)]">Dispatch Delay</h3>
+        <p className="text-[11px] text-[color:var(--text-muted)] mt-0.5">Configure the global LP dispatch delay.</p>
+      </div>
+      
+      {loading ? (
+        <div className="py-4 flex justify-center"><Loader2 size={14} className="animate-spin text-gray-400" /></div>
+      ) : (
+        <div className="flex flex-col gap-2 mt-2">
+          {error && <div className="text-red-400 text-[11px]">{error}</div>}
+          {success && <div className="text-green-400 text-[11px]">{success}</div>}
+          
+          <div className="flex items-end gap-3">
+            <div className="flex-1">
+              <Field label="Delay (ms)">
+                <input
+                  className={inputCls + " font-mono"}
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={delayMs}
+                  onChange={(e) => setDelayMs(e.target.value)}
+                  placeholder="e.g. 250"
+                />
+              </Field>
+            </div>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || delayMs === ''}
+              className="bg-[color:var(--accent-500)] hover:opacity-90 text-white px-4 py-1.5 rounded-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-1 min-w-[80px] h-[30px] text-[11px]"
+            >
+              {saving ? <Loader2 size={12} className="animate-spin" /> : 'Save'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
 const HiddenMarkupSection = ({ initialGroup, groups }) => {
   const [selectedGroup, setSelectedGroup] = useState(initialGroup || '');
   const [markups, setMarkups] = useState([]);
@@ -146,9 +232,10 @@ const HiddenMarkupSection = ({ initialGroup, groups }) => {
           onChange={e => setSelectedGroup(e.target.value)}
         >
           <option value="">-- Select Group --</option>
-          {(groups || []).map(g => (
-            <option key={g} value={g}>{g}</option>
-          ))}
+          {(groups || []).map(g => {
+            const groupName = typeof g === 'object' ? g.name : g;
+            return <option key={groupName} value={groupName}>{groupName}</option>;
+          })}
         </select>
       </div>
       
@@ -428,9 +515,7 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
 
             {/* TAB: PROCESSING RULES */}
             <div className={activeTab === 'rules' ? 'flex flex-col gap-6' : 'hidden'}>
-              <div className="flex items-center justify-center h-[200px] text-[color:var(--text-muted)] italic border border-dashed border-black/20 rounded-md">
-                (Processing tab is currently empty per request)
-              </div>
+              <DispatchDelaySection />
             </div>
 
             {/* TAB: MARKUPS & SLIPPAGE */}

@@ -7,16 +7,16 @@ const apiClient = {
   async request(endpoint, options = {}) {
     let url = endpoint.startsWith('http') ? endpoint : `${DEFAULT_BASE_URL}${endpoint}`;
     
-    // Add ?id=token to the URL because the MetaTrader 5 web APIs require it
+   
     const token = useAuthStore.getState().accessToken;
     if (token) {
       try {
-        // Safe parsing of relative or absolute URL
+        
         const urlObj = new URL(url, window.location.origin);
         urlObj.searchParams.set('id', token);
         url = urlObj.pathname + urlObj.search;
       } catch (e) {
-        // fallback for very weird urls
+        
       }
     }
     

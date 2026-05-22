@@ -154,7 +154,7 @@ const LpRoutingOptionsPanel = () => {
   );
 };
 
-// ─── Group Dashboard Panel ───────────────────────────────────────────────────
+
 const GroupDashboardPanel = ({ groupName, onClose }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -240,12 +240,12 @@ const GroupDashboardPanel = ({ groupName, onClose }) => {
                 </div>
               </div>
 
-              {/* Fees & Spread */}
+              {/* Fees & Spreads */}
               <div className="rounded-lg border p-4 flex flex-col gap-3 bg-[color:var(--bg-surface-2)] border-black/20">
                 <h3 className="text-sm font-semibold text-[color:var(--text-primary)] border-b border-black/20 pb-2">Fees & Spreads</h3>
                 <div className="flex flex-col gap-1.5 mt-1">
                   <KV label="Commission Rate" value={data.group_commission_rate} mono />
-                  <KV label="Commission Type" value={data.group_commission_type || '—'} />
+                  <KV label="Commission Type" value={data.group_commission_type } />
                   <KV label="Swap Multiplier" value={data.group_swap_multiplier} mono />
                   <KV label="Spread Markup" value={data.group_spread_markup} mono />
                 </div>

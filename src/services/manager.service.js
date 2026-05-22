@@ -318,6 +318,25 @@ export const ManagerService = {
     return res.data;
   },
 
+  // --- LP DISPATCH DELAY ---
+  getLPDispatchDelay: async () => {
+    const token = useAuthStore.getState().accessToken;
+    const res = await api.get(`/manager/LPDispatchDelayGet`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return res.data;
+  },
+
+  setLPDispatchDelay: async (delayMs) => {
+    const token = useAuthStore.getState().accessToken;
+    const res = await api.post(`/manager/LPDispatchDelaySet`, {
+      dispatch_delay_ms: Number(delayMs)
+    }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return res.data;
+  },
+
   // --- TRADING / EXECUTION ---
 
   getPositionsAll: async (page = 1, limit = 50) => {
