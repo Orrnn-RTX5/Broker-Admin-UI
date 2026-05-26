@@ -1,10 +1,5 @@
 import { useEffect, useState } from 'react';
 
-/**
- * Track CapsLock / NumLock / ScrollLock state. Browser exposes this only via
- * KeyboardEvent.getModifierState, so we update on keydown/keyup. Initial state
- * stays unknown until the first key event.
- */
 export function useKbStatus() {
   const [state, setState] = useState({ caps: false, num: false, scroll: false });
 

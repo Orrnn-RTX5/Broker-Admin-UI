@@ -3,16 +3,28 @@ import { useAuthStore } from '../store/authStore';
 import { useConnectionStore } from '../store/connectionStore';
 
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = import.meta.env.VITE_API_HOST || '';
+const EXT_API_URL = import.meta.env.VITE_API_HOST_EXT || '';
 
-export const   api = axios.create({
-  baseURL: API_URL,
+export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
 api.interceptors.request.use((config) => {
+  if (config.url && !config.url.startsWith('http')) {
+    if (config.url.startsWith('/ext-api')) {
+      if (EXT_API_URL) {
+        config.url = `${EXT_API_URL}${config.url.replace(/^\/ext-api/, '')}`;
+      }
+    } else if (config.url.startsWith('/')) {
+      if (API_URL) {
+        config.url = `${API_URL}${config.url}`;
+      }
+    }
+  }
+
   const token = useAuthStore.getState().accessToken;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;

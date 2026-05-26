@@ -45,7 +45,6 @@ function setupAutoUpdater() {
     console.error('Auto-update error:', err.message);
   });
 
-  // Check for updates after a short delay so the window has time to render
   setTimeout(() => autoUpdater.checkForUpdates(), 3000);
 }
 
@@ -62,7 +61,7 @@ function setupProductionInterceptors() {
     }
   );
 
-  // Inject CORS headers so all API responses are accepted by the renderer
+  
   ses.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
@@ -75,7 +74,6 @@ function setupProductionInterceptors() {
   });
 }
 
-// ── Window ────────────────────────────────────────────────────────────────────
 function createWindow() {
   const win = new BrowserWindow({
     width: 1440,
@@ -122,7 +120,7 @@ function createWindow() {
   win.on('page-title-updated', (e) => e.preventDefault());
 }
 
-// ── App lifecycle ─────────────────────────────────────────────────────────────
+
 app.whenReady().then(() => {
   if (!isDev) {
     setupProductionInterceptors();

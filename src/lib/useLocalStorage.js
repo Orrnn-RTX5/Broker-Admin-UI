@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-/**
- * Persisted useState. Value syncs to localStorage under `key`.
- * SSR-safe; returns `initial` if localStorage is unavailable.
- */
+
 export function useLocalStorage(key, initial) {
   const read = () => {
     try {
