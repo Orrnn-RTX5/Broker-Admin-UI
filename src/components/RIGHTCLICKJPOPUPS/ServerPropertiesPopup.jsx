@@ -174,7 +174,7 @@ const BackupTab = () => (
 
             <div className="flex items-center gap-2 h-[22px] mt-2">
                 <span className="w-[100px] text-right text-[11px] text-[color:var(--text-primary)]">Backups path:</span>
-                <input className="flex-1 h-full border border-[#555] bg-[color:var(--bg-app)] text-white px-1.5 text-[11px] outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" defaultValue="D:\MetaTrader5Backup\TradeMain" />
+                <input className="flex-1 h-full border border-[#555] bg-[color:var(--bg-app)] text-white px-1.5 text-[11px] outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" defaultValue="D:\RTX5Backup\TradeMain" />
             </div>
 
             <div className="flex items-center gap-6 h-[22px] mt-2">

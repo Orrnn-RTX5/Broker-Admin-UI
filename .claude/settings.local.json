@@ -4,7 +4,9 @@
       "Bash(npm run:*)",
       "Bash(npm install:*)",
       "Bash(node -e ':*)",
-      "Bash(mkdir -p \"c:/Users/YoForexTech/Desktop/RTX5 admin/build\")"
+      "Bash(mkdir -p \"c:/Users/YoForexTech/Desktop/RTX5 admin/build\")",
+      "Bash(pkill -9 -f \"node\")",
+      "Bash(npm run *)"
     ]
   }
 }

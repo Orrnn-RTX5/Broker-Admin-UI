@@ -161,11 +161,11 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
                       <div className="pl-6 flex flex-col border-l border-dotted border-[color:var(--text-muted)] ml-2.5">
                         <div className="flex items-center gap-1.5 py-[2px] relative before:absolute before:content-[''] before:w-3.5 before:h-[1px] before:border-t before:border-dotted before:border-[color:var(--text-muted)] before:-left-1.5 before:top-1/2 hover:bg-white/5">
                           <CheckboxIcon isRedCross={true} />
-                          <span className="text-[12px] text-white">Connect using MetaTrader 5 Administrator</span>
+                          <span className="text-[12px] text-white">Connect using RTX5 Administrator</span>
                         </div>
                         <div className="flex items-center gap-1.5 py-[2px] relative before:absolute before:content-[''] before:w-3.5 before:h-[1px] before:border-t before:border-dotted before:border-[color:var(--text-muted)] before:-left-1.5 before:top-1/2 hover:bg-white/5">
                           <CheckboxIcon checked={true} />
-                          <span className="text-[12px] text-white">Connect using MetaTrader 5 Manager</span>
+                          <span className="text-[12px] text-white">Connect using RTX5 Manager</span>
                         </div>
                       </div>
                     </div>

@@ -94,7 +94,7 @@ const SupportCenterView = () => {
               </div>
               <div className="flex flex-col">
                 <span className="text-[11.5px] font-bold text-[#fff] leading-tight mb-0.5 font-sans">App Store</span>
-                <span className="text-[11px] text-[color:var(--text-muted)] leading-snug font-sans w-[130px]">Get new MetaTrader 5 features</span>
+                <span className="text-[11px] text-[color:var(--text-muted)] leading-snug font-sans w-[130px]">Get new RTX5 features</span>
               </div>
             </div>
 

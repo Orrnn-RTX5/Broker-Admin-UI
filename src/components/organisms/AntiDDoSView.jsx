@@ -174,7 +174,7 @@ const AntiDDoSView = () => {
         {/* Text Description */}
         <div className="mb-8">
           <p className="text-[12px] text-[color:var(--text-primary)] leading-relaxed mb-1.5 font-sans">
-            Protect your MetaTrader 5 access servers from DDoS attacks by applying professional solutions offered by our partners. Installation is quick and does not require any changes in your existing network infrastructure.
+            Protect your RTX5 access servers from DDoS attacks by applying professional solutions offered by our partners. Installation is quick and does not require any changes in your existing network infrastructure.
           </p>
           <p className="text-[12px] text-[color:var(--text-primary)] leading-relaxed font-sans max-w-[1250px]">
             With the Anti-DDoS proxy server component, unwanted connections are blocked on the distributed network of an external provider's servers rather than on your access servers. The network will reject unwanted connections, while legitimate connections from real clients will be forwarded to access servers.
@@ -193,7 +193,7 @@ const AntiDDoSView = () => {
               </div>
             }
             name="Akamai"
-            description="Fully managed DDoS protection solutions for your applications, data centers, and network infrastructure. Offering protection against the largest and most sophisticated attacks, Akamai helps you safeguard your MetaTrader platform from the risks of downtime. The vendor's globally distributed platform combines high capacity scrubbing centers with fast and effective response to attacks."
+            description="Fully managed DDoS protection solutions for your applications, data centers, and network infrastructure. Offering protection against the largest and most sophisticated attacks, Akamai helps you safeguard your RTX5 platform from the risks of downtime. The vendor's globally distributed platform combines high capacity scrubbing centers with fast and effective response to attacks."
           />
 
           <VendorItem 
@@ -220,7 +220,7 @@ const AntiDDoSView = () => {
         
         {/* Footer Area */}
         <div className="mt-8 pt-6 border-t border-[#333] text-[12px] text-[color:var(--text-muted)] font-sans pb-10">
-          <a href="#" className="text-[#3b82f6] hover:underline">Sign in to the Support Center</a> to receive MetaTrader 5 platform user support: articles, news, documents and direct contact with the technical support team. Explore the AppStore and enhance the MetaTrader 5 platform functionality using third-party applications: liquidity solutions, news feeds, and money management tools, amongst others.
+          <a href="#" className="text-[#3b82f6] hover:underline">Sign in to the Support Center</a> to receive RTX5 platform user support: articles, news, documents and direct contact with the technical support team. Explore the AppStore and enhance the RTX5 platform functionality using third-party applications: liquidity solutions, news feeds, and money management tools, amongst others.
         </div>
       </div>
     </div>

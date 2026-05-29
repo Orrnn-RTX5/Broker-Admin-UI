@@ -1,10 +1,9 @@
-import axios from 'axios';
+0import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 import { useConnectionStore } from '../store/connectionStore';
 
 
-const API_URL = import.meta.env.VITE_API_HOST || '';
-const EXT_API_URL = import.meta.env.VITE_API_HOST_EXT || '';
+import { API_HOST, buildExtApiUrl, buildManagerApiUrl } from '../config/endpoints';
 
 export const api = axios.create({
   headers: {
@@ -15,12 +14,12 @@ export const api = axios.create({
 api.interceptors.request.use((config) => {
   if (config.url && !config.url.startsWith('http')) {
     if (config.url.startsWith('/ext-api')) {
-      if (EXT_API_URL) {
-        config.url = `${EXT_API_URL}${config.url.replace(/^\/ext-api/, '')}`;
-      }
+      config.url = buildExtApiUrl(config.url);
+    } else if (config.url.startsWith('/manager')) {
+      config.url = buildManagerApiUrl(config.url);
     } else if (config.url.startsWith('/')) {
-      if (API_URL) {
-        config.url = `${API_URL}${config.url}`;
+      if (API_HOST) {
+        config.url = `${API_HOST}${config.url}`;
       }
     }
   }
@@ -29,17 +28,34 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  console.log(`%c[API Request] ${config.method?.toUpperCase()} ${config.url}`, 'color: #00bcd4; font-weight: bold;', {
+    headers: config.headers,
+    data: config.data
+  });
+
   return config;
 }, (error) => {
+  console.error('[API Request Error]', error);
   return Promise.reject(error);
 });
 
 api.interceptors.response.use((response) => {
   useConnectionStore.getState().markOk();
+  console.log(`%c[API Response Success] ${response.config.method?.toUpperCase()} ${response.config.url}`, 'color: #4caf50; font-weight: bold;', {
+    status: response.status,
+    data: response.data
+  });
   return response;
 }, async (error) => {
   const originalRequest = error.config;
 
+  console.error(`%c[API Response Error] ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}`, 'color: #f44336; font-weight: bold;', {
+    status: error.response?.status,
+    statusText: error.response?.statusText,
+    data: error.response?.data,
+    message: error.message
+  });
 
   if (!error.response || error.response.status >= 500) {
     useConnectionStore.getState().markError(
@@ -57,7 +73,7 @@ api.interceptors.response.use((response) => {
       }
 
 
-      const res = await axios.post(`${API_URL}/manager/api/v1/auth/refresh`, {
+      const res = await axios.post(buildManagerApiUrl('/api/v1/auth/refresh'), {
         refresh_token: refreshToken
       });
 

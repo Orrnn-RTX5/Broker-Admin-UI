@@ -83,7 +83,7 @@ const IntegrationsView = () => {
             { icon: <Info size={13} className="text-[#3b82f6]" />, label: 'MasterSite ID:', value: 'not specified', valueColor: 'text-[#ef4444]', colorClass: 'text-[#3b82f6]' },
             { icon: <Info size={13} className="text-[#3b82f6]" />, label: 'Data:', value: 'no export', valueColor: 'text-[#ef4444]', colorClass: 'text-[#3b82f6]' }
           ]}
-          description="Use end-to-end brokerage analytics for MetaTrader 5."
+          description="Use end-to-end brokerage analytics for RTX5."
           linkText="More about the service"
         />
 

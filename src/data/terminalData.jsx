@@ -161,7 +161,7 @@ export const sidebarData = [
     initiallyExpanded: true,
     children: [
       {
-        label: "MetaTrader Server",
+        label: "RTX5 Server",
         icon: Cpu,
         initiallyExpanded: true,
         active: true,
@@ -211,7 +211,7 @@ export const sidebarData = [
     initiallyExpanded: true,
     children: [
       {
-        label: "MetaTrader Server",
+        label: "RTX5 Server",
             icon: Cpu,
             initiallyExpanded: true,
             active: true,

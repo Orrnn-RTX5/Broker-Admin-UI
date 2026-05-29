@@ -1,5 +1,6 @@
 import { api } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
+import { clearBrokerInfo } from './brokerAuth';
 
 export const AuthService = {
   login: async (user, password, server) => {
@@ -48,6 +49,12 @@ export const AuthService = {
   },
 
   logout: () => {
+    sessionStorage.removeItem('auth');
+    clearBrokerInfo();
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('brokerLogin');
+    localStorage.removeItem('brokerId');
     useAuthStore.getState().logout();
   }
 };

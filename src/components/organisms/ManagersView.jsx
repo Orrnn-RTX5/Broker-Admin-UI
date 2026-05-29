@@ -155,7 +155,7 @@ const CreateManagerModal = ({ roles, onClose, onCreated }) => {
         <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3 bg-[color:var(--bg-app)]">
           {error && <div className="flex items-center gap-2 text-red-400 bg-red-500/10 border border-red-500/30 p-2 rounded"><AlertCircle size={13}/>{error}</div>}
           <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1"><label className="text-[#ccc]">Login (MT5) *</label>
+            <div className="flex flex-col gap-1"><label className="text-[#ccc]">Login (RTX5) *</label>
               <input required type="number" value={form.login} onChange={e=>setForm(p=>({...p,login:e.target.value}))} className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
             <div className="flex flex-col gap-1"><label className="text-[#ccc]">Role</label>
               <select value={form.role_id} onChange={e=>setForm(p=>({...p,role_id:e.target.value}))} className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none">

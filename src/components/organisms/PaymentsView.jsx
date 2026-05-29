@@ -53,7 +53,7 @@ const providers = [
     email: 'info@eupaymentz.com',
     phone: '+441244941125',
     stats: { views: 90, folders: 12, tags: 198 },
-    description: 'EUPaymentz is an authorized partner of MetaQuotes and a preferred payment service provider of MetaTrader 5 Payments. Our latest Bitronum payment technology combines advanced encryption and security with some of the fastest deposit and withdrawal rates in the industry. This technology has enabled brokers to accept more deposits and maintain higher account balances. Traders also benefit from our new blockchain platform, which allows for easy deposits a...',
+    description: 'EUPaymentz is an authorized partner and a preferred payment service provider of RTX5 Payments. Our latest Bitronum payment technology combines advanced encryption and security with some of the fastest deposit and withdrawal rates in the industry. This technology has enabled brokers to accept more deposits and maintain higher account balances. Traders also benefit from our new blockchain platform, which allows for easy deposits a...',
   },
   {
     id: 4,
@@ -110,7 +110,7 @@ const PaymentsView = () => {
       <div className="flex justify-between items-start px-6 py-5 border-b border-white/10 shrink-0">
         <div>
           <h1 className="text-[16px] font-semibold text-white mb-1">Payment Service Providers</h1>
-          <p className="text-[12px] text-[color:var(--text-muted)]">Select the required payment providers for your traders and activate them inside MetaTrader 5 terminal</p>
+          <p className="text-[12px] text-[color:var(--text-muted)]">Select the required payment providers for your traders and activate them inside RTX5 terminal</p>
         </div>
         <div className="flex border border-[color:var(--border-strong)] bg-[#111111] h-7 items-center w-64 px-2 rounded-sm focus-within:border-[#3B82F6] transition-colors">
           <input 

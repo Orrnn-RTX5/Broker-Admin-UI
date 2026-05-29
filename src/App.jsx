@@ -7,7 +7,7 @@ import GroupPropertiesPopup from './components/RIGHTCLICKJPOPUPS/GroupProperties
 import ManagerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ManagerPropertiesPopup';
 import ServerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ServerPropertiesPopup';
 import CreateGroupPopup from './components/RIGHTCLICKJPOPUPS/CreateGroupPopup';
-import LoginOverlay from './components/organisms/LoginOverlay';
+import { AdminLogin, BrokerSelector, ManagerLogin, ManualBrokerEntry } from './components/organisms/BrokerAuthScreens';
 import { TabBar } from './components/organisms/TabBar';
 import { HelpModal } from './components/organisms/HelpModal';
 import { useAuthStore } from './store/authStore';
@@ -24,12 +24,35 @@ import { StatusDot } from './components/ui/Badge';
 const formatTime = (d) =>
   `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
 
+const AUTH_PATHS = new Set(['/', '/manager-login', '/admin-login', '/broker-manual-entry']);
+
+const useBrowserPath = () => {
+  const [pathname, setPathname] = React.useState(() => window.location.pathname || '/');
+
+  const navigate = React.useCallback((to, options = {}) => {
+    const method = options.replace ? 'replaceState' : 'pushState';
+    window.history[method](null, '', to);
+    setPathname(to);
+  }, []);
+
+  React.useEffect(() => {
+    const handlePopState = () => setPathname(window.location.pathname || '/');
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  return { pathname, navigate };
+};
+
 const AppInner = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const setToken = useAuthStore((state) => state.setToken);
+  const setUser = useAuthStore((state) => state.setUser);
   const connStatus = useConnectionStore((s) => s.status);
   const connError  = useConnectionStore((s) => s.lastError);
   const { notify } = useToast();
   const kb = useKbStatus();
+  const { pathname, navigate } = useBrowserPath();
 
   const [selectedGroup, setSelectedGroup] = React.useState(null);
   const [isPopupOpen, setIsPopupOpen] = React.useState(false);
@@ -58,6 +81,31 @@ const AppInner = () => {
     setSavedSearches((prev) => ({ ...prev, [activeNode]: q }));
 
   const searchInputRef = React.useRef(null);
+
+  const handleAuthSuccess = React.useCallback((session, redirectPath) => {
+    const accessToken = session.token || session.session_token || session.access_token;
+    const refreshToken = session.refresh_token || accessToken;
+
+    if (accessToken) {
+      setToken(accessToken, refreshToken);
+      setUser({
+        id: session.login || session.user || 'admin',
+        login: session.login || session.user || '',
+        name: `Agent ${session.login || session.user || ''}`.trim(),
+        role: session.is_admin ? 'admin' : 'manager',
+        is_admin: !!session.is_admin,
+        broker_id: session.broker_id || null,
+      });
+    }
+
+    navigate(redirectPath, { replace: true });
+  }, [navigate, setToken, setUser]);
+
+  React.useEffect(() => {
+    if (!isAuthenticated && !AUTH_PATHS.has(pathname)) {
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, navigate, pathname]);
 
   // ── Theme (light/dark/system/auto-time) ──────────────────────────────────
   React.useEffect(() => {
@@ -269,9 +317,24 @@ const AppInner = () => {
   const connTone = connStatus === 'error' ? 'danger' : 'success';
   const connText = connStatus === 'error' ? `Connection issue: ${connError}` : 'Connected to RTX5-PROD-01';
 
+  if (!isAuthenticated) {
+    if (pathname === '/manager-login') {
+      return <ManagerLogin navigate={navigate} onLoginSuccess={handleAuthSuccess} />;
+    }
+
+    if (pathname === '/admin-login') {
+      return <AdminLogin navigate={navigate} onLoginSuccess={handleAuthSuccess} />;
+    }
+
+    if (pathname === '/broker-manual-entry') {
+      return <ManualBrokerEntry navigate={navigate} onLoginSuccess={handleAuthSuccess} />;
+    }
+
+    return <BrokerSelector navigate={navigate} />;
+  }
+
   return (
     <>
-      {!isAuthenticated && <LoginOverlay />}
       <div className="flex flex-col h-screen w-screen overflow-hidden bg-[color:var(--bg-app)] text-[color:var(--text-primary)] font-sans">
         <MenuBar
           onMenuSelect={handleNodeSelect}
