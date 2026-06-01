@@ -1,15 +1,16 @@
 // Central place for all network endpoints.
 // Components should import from here instead of hardcoding a host.
+import { getRuntimeValue } from './runtimeConfig';
 
 const trimTrailingSlash = (value = '') => String(value || '').replace(/\/+$/, '');
 const hasProtocol = (value = '') => /^[a-z][a-z\d+.-]*:\/\//i.test(value);
 const withProtocol = (value = '') => (hasProtocol(value) ? value : `http://${value}`);
 
 const DEFAULTS = {
-  API_HOST: trimTrailingSlash(import.meta.env.VITE_API_HOST || ''),
-  WS_HOST: trimTrailingSlash(import.meta.env.VITE_WS_HOST || ''),
-  API_HOST_EXT: trimTrailingSlash(import.meta.env.VITE_API_HOST_EXT || ''),
-  DEFAULT_MT5_SERVER: import.meta.env.VITE_DEFAULT_MT5_SERVER || '',
+  API_HOST: trimTrailingSlash(getRuntimeValue('API_HOST', 'VITE_API_HOST') || import.meta.env.VITE_API_HOST || ''),
+  WS_HOST: trimTrailingSlash(getRuntimeValue('WS_HOST', 'VITE_WS_HOST') || import.meta.env.VITE_WS_HOST || ''),
+  API_HOST_EXT: trimTrailingSlash(getRuntimeValue('API_HOST_EXT', 'VITE_API_HOST_EXT') || import.meta.env.VITE_API_HOST_EXT || ''),
+  DEFAULT_MT5_SERVER: getRuntimeValue('DEFAULT_MT5_SERVER', 'VITE_DEFAULT_MT5_SERVER') || import.meta.env.VITE_DEFAULT_MT5_SERVER || '',
 };
 
 export let API_HOST = DEFAULTS.API_HOST;

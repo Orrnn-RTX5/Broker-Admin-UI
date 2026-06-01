@@ -1,0 +1,14 @@
+.git
+.github
+.claude
+node_modules
+dist
+dist-ssr
+release
+logs
+*.log
+.env
+.env.*
+!.env.example
+brokers.json
+deploy/brokers.json
