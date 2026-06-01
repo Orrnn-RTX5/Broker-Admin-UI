@@ -10,6 +10,7 @@ Create these repository secrets:
 | --- | --- |
 | `BROKERS_JSON` | JSON broker list. Use `brokers.example.json` as the template. |
 | `BROKER_SSH_PRIVATE_KEY` | Private SSH key that can log in to each broker server listed in `BROKERS_JSON`. |
+| `BROKER_ENV_GTA` | Runtime env file for the Grow Trading Academy broker. Referenced by `env_secret` in `BROKERS_JSON`. |
 | `GHCR_USERNAME` | GitHub user or machine account used by broker servers to pull from GHCR. |
 | `GHCR_TOKEN` | GitHub token with permission to read the GHCR package. For private packages, use `read:packages` plus repo access. |
 | `LETSENCRYPT_EMAIL` | Email used by Certbot for HTTPS certificates. Optional if each broker entry has `ssl_email`. |
@@ -22,28 +23,35 @@ Do not commit real broker credentials. `brokers.json` is ignored by Git for loca
 {
   "brokers": [
     {
-      "name": "broker-name",
-      "host": "203.0.113.10",
-      "port": 22,
-      "user": "deploy",
-      "deploy_dir": "/opt/rtx5-broker-admin-ui",
-      "container_name": "rtx5-broker-admin-ui",
-      "app_port": 8080,
+      "id": "grow-trading-academy",
+      "host": "103.91.186.142",
+      "user": "root",
+      "port": 40111,
+      "channel": "canary",
+      "enabled": true,
+      "env_secret": "BROKER_ENV_GTA",
       "domain": "admin.growtradingacademy.com",
       "https": true,
-      "ssl_email": "admin@growtradingacademy.com",
-      "env": {
-        "API_HOST": "https://broker-api.example.com",
-        "API_HOST_EXT": "http://broker-api.example.com:8091",
-        "WS_HOST": "wss://broker-api.example.com/ws/feed",
-        "DEFAULT_MT5_SERVER": "broker-api.example.com",
-        "DISCOVERY_BASE_URL": "https://superbackend.orrnn.com",
-        "USE_MOCK_DISCOVERY": "false"
-      }
+      "app_port": 8080
     }
   ]
 }
 ```
+
+## Broker Env Secret Shape
+
+`BROKER_ENV_GTA` is stored separately from `BROKERS_JSON` and must use Docker `--env-file` format:
+
+```env
+API_HOST=http://103.91.186.142:8091
+API_HOST_EXT=http://103.91.186.142:8091
+WS_HOST=ws://103.91.186.142:8091
+DEFAULT_MT5_SERVER=103.91.186.142
+DISCOVERY_BASE_URL=https://superbackend.orrnn.com
+USE_MOCK_DISCOVERY=false
+```
+
+Add another workflow env mapping if you create a new `env_secret` name for another broker.
 
 ## Server Requirements
 

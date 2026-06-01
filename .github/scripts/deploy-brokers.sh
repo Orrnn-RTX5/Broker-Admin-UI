@@ -46,6 +46,34 @@ shell_quote() {
 write_runtime_env() {
   local broker_json="$1"
   local output_file="$2"
+  local env_secret_name
+  local env_secret_value
+
+  env_secret_name="$(jq -r '.env_secret // empty' <<< "$broker_json")"
+  if [[ -n "$env_secret_name" ]]; then
+    if [[ ! "$env_secret_name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+      echo "Invalid env_secret name: $env_secret_name" >&2
+      exit 1
+    fi
+
+    env_secret_value="${!env_secret_name:-}"
+    if [[ -z "$env_secret_value" ]]; then
+      echo "Broker env secret '$env_secret_name' is empty or not mapped in the workflow." >&2
+      exit 1
+    fi
+
+    if printf '%s' "$env_secret_value" | jq -e 'type == "object"' >/dev/null 2>&1; then
+      printf '%s' "$env_secret_value" | jq -r '
+        to_entries[]
+        | select(.value != null)
+        | "\(.key)=\(.value | tostring | gsub("\r"; "") | gsub("\n"; "\\n"))"
+      ' > "$output_file"
+    else
+      printf '%s\n' "$env_secret_value" > "$output_file"
+    fi
+
+    return
+  fi
 
   jq -r '
     (.env // {})
@@ -64,12 +92,21 @@ ssh_opts=(
 
 for ((i = 0; i < broker_count; i++)); do
   broker="$(jq -c ".brokers[$i]" "$brokers_file")"
-  name="$(jq -r ".name // \"broker-$i\"" <<< "$broker")"
+  enabled="$(jq -r 'if (.enabled // true) == true then "true" else "false" end' <<< "$broker")"
+  if [[ "$enabled" != "true" ]]; then
+    name="$(jq -r ".name // .id // \"broker-$i\"" <<< "$broker")"
+    echo "Skipping disabled broker $name"
+    continue
+  fi
+
+  broker_id="$(jq -r ".id // .name // \"broker-$i\"" <<< "$broker")"
+  channel="$(jq -r '.channel // "production"' <<< "$broker")"
+  name="$(jq -r ".name // .id // \"broker-$i\"" <<< "$broker")"
   host="$(jq -r '.host // empty' <<< "$broker")"
   user="$(jq -r '.user // "root"' <<< "$broker")"
   port="$(jq -r '.port // 22' <<< "$broker")"
-  deploy_dir="$(jq -r '.deploy_dir // "/opt/rtx5-broker-admin-ui"' <<< "$broker")"
-  container_name="$(jq -r '.container_name // "rtx5-broker-admin-ui"' <<< "$broker")"
+  deploy_dir="$(jq -r --arg id "$broker_id" --arg channel "$channel" '.deploy_dir // "/opt/rtx5-broker-admin-ui/\($id)/\($channel)"' <<< "$broker")"
+  container_name="$(jq -r --arg id "$broker_id" --arg channel "$channel" '.container_name // "rtx5-broker-admin-ui-\($id)-\($channel)"' <<< "$broker")"
   app_port="$(jq -r '.app_port // 8080' <<< "$broker")"
   domain="$(jq -r '.domain // .nginx.domain // empty' <<< "$broker")"
   enable_nginx="$(jq -r 'if ((.nginx.enabled // false) == true) or ((.domain // .nginx.domain // "") != "") then "true" else "false" end' <<< "$broker")"

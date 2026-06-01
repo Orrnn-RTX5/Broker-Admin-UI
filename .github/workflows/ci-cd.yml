@@ -90,4 +90,5 @@ jobs:
           GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
           LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
+          BROKER_ENV_GTA: ${{ secrets.BROKER_ENV_GTA }}
         run: bash .github/scripts/deploy-brokers.sh

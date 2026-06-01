@@ -1,24 +1,16 @@
 {
   "brokers": [
     {
-      "name": "demo-broker",
-      "host": "203.0.113.10",
-      "port": 22,
-      "user": "deploy",
-      "deploy_dir": "/opt/rtx5-broker-admin-ui",
-      "container_name": "rtx5-broker-admin-ui",
-      "app_port": 8080,
+      "id": "grow-trading-academy",
+      "host": "103.91.186.142",
+      "user": "root",
+      "port": 40111,
+      "channel": "canary",
+      "enabled": true,
+      "env_secret": "BROKER_ENV_GTA",
       "domain": "admin.growtradingacademy.com",
       "https": true,
-      "ssl_email": "admin@growtradingacademy.com",
-      "env": {
-        "API_HOST": "https://broker-api.example.com",
-        "API_HOST_EXT": "http://broker-api.example.com:8091",
-        "WS_HOST": "wss://broker-api.example.com/ws/feed",
-        "DEFAULT_MT5_SERVER": "broker-api.example.com",
-        "DISCOVERY_BASE_URL": "https://superbackend.orrnn.com",
-        "USE_MOCK_DISCOVERY": "false"
-      }
+      "app_port": 8080
     }
   ]
 }
