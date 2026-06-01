@@ -12,6 +12,7 @@ Create these repository secrets:
 | `BROKER_SSH_PRIVATE_KEY` | Private SSH key that can log in to each broker server listed in `BROKERS_JSON`. |
 | `GHCR_USERNAME` | GitHub user or machine account used by broker servers to pull from GHCR. |
 | `GHCR_TOKEN` | GitHub token with permission to read the GHCR package. For private packages, use `read:packages` plus repo access. |
+| `LETSENCRYPT_EMAIL` | Email used by Certbot for HTTPS certificates. Optional if each broker entry has `ssl_email`. |
 
 Do not commit real broker credentials. `brokers.json` is ignored by Git for local notes; the workflow reads the real config from the `BROKERS_JSON` secret.
 
@@ -28,6 +29,9 @@ Do not commit real broker credentials. `brokers.json` is ignored by Git for loca
       "deploy_dir": "/opt/rtx5-broker-admin-ui",
       "container_name": "rtx5-broker-admin-ui",
       "app_port": 8080,
+      "domain": "admin.growtradingacademy.com",
+      "https": true,
+      "ssl_email": "admin@growtradingacademy.com",
       "env": {
         "API_HOST": "https://broker-api.example.com",
         "API_HOST_EXT": "http://broker-api.example.com:8091",
@@ -47,8 +51,12 @@ Each broker server must have:
 
 - Docker installed and running.
 - SSH access for the configured `user`.
-- The configured user must be able to run Docker commands.
-- The selected `app_port` must be open in the firewall or reverse proxy.
+- The configured user must be able to run Docker commands, or have passwordless `sudo` for Docker.
+- For Nginx/HTTPS automation, the configured user must have passwordless `sudo`.
+- DNS `A`/`AAAA` record for the configured `domain` must point to the server before Certbot runs.
+- Ports `80` and `443` must be open on the server firewall/security group.
+
+When `domain` is set, the deployment binds Docker to `127.0.0.1:<app_port>` and configures host Nginx to serve the public domain. If `https` is true, Certbot configures the Let's Encrypt certificate and redirects HTTP to HTTPS.
 
 ## Workflow
 

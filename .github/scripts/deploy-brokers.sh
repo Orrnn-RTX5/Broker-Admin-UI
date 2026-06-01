@@ -71,6 +71,13 @@ for ((i = 0; i < broker_count; i++)); do
   deploy_dir="$(jq -r '.deploy_dir // "/opt/rtx5-broker-admin-ui"' <<< "$broker")"
   container_name="$(jq -r '.container_name // "rtx5-broker-admin-ui"' <<< "$broker")"
   app_port="$(jq -r '.app_port // 8080' <<< "$broker")"
+  domain="$(jq -r '.domain // .nginx.domain // empty' <<< "$broker")"
+  enable_nginx="$(jq -r 'if ((.nginx.enabled // false) == true) or ((.domain // .nginx.domain // "") != "") then "true" else "false" end' <<< "$broker")"
+  enable_https="$(jq -r 'if (.https // .nginx.https // true) == true then "true" else "false" end' <<< "$broker")"
+  ssl_email="$(jq -r '.ssl_email // .nginx.email // empty' <<< "$broker")"
+  if [[ -z "$ssl_email" ]]; then
+    ssl_email="${LETSENCRYPT_EMAIL:-}"
+  fi
 
   if [[ -z "$host" ]]; then
     echo "Broker '$name' is missing host." >&2
@@ -92,24 +99,147 @@ for ((i = 0; i < broker_count; i++)); do
   remote_env="$remote_env DEPLOY_DIR=$(shell_quote "$deploy_dir")"
   remote_env="$remote_env GHCR_USERNAME=$(shell_quote "$GHCR_USERNAME")"
   remote_env="$remote_env GHCR_TOKEN=$(shell_quote "$GHCR_TOKEN")"
+  remote_env="$remote_env DOMAIN=$(shell_quote "$domain")"
+  remote_env="$remote_env ENABLE_NGINX=$(shell_quote "$enable_nginx")"
+  remote_env="$remote_env ENABLE_HTTPS=$(shell_quote "$enable_https")"
+  remote_env="$remote_env SSL_EMAIL=$(shell_quote "$ssl_email")"
 
   ssh -p "$port" "${ssh_opts[@]}" "$target" "$remote_env bash -s" <<'REMOTE'
 set -Eeuo pipefail
+
+as_root() {
+  if [ "$(id -u)" -eq 0 ]; then
+    "$@"
+  else
+    sudo -n "$@"
+  fi
+}
+
+docker_cmd() {
+  if docker ps >/dev/null 2>&1; then
+    docker "$@"
+  else
+    as_root docker "$@"
+  fi
+}
+
+install_nginx_stack() {
+  if command -v nginx >/dev/null 2>&1 && { [ "$ENABLE_HTTPS" != "true" ] || command -v certbot >/dev/null 2>&1; }; then
+    return
+  fi
+
+  if command -v apt-get >/dev/null 2>&1; then
+    as_root env DEBIAN_FRONTEND=noninteractive apt-get update
+    as_root env DEBIAN_FRONTEND=noninteractive apt-get install -y nginx certbot python3-certbot-nginx
+    return
+  fi
+
+  echo "Nginx/Certbot auto-install currently supports Debian/Ubuntu servers with apt-get." >&2
+  echo "Install nginx, certbot, and the nginx certbot plugin manually, then rerun deploy." >&2
+  exit 1
+}
+
+reload_nginx() {
+  as_root nginx -t
+
+  if command -v systemctl >/dev/null 2>&1; then
+    as_root systemctl enable --now nginx
+    as_root systemctl reload nginx
+  elif command -v service >/dev/null 2>&1; then
+    as_root service nginx reload || as_root service nginx restart
+  else
+    as_root nginx -s reload || as_root nginx
+  fi
+}
+
+configure_nginx() {
+  if [ "$ENABLE_NGINX" != "true" ]; then
+    return
+  fi
+
+  if [ -z "$DOMAIN" ]; then
+    echo "ENABLE_NGINX is true but DOMAIN is empty." >&2
+    exit 1
+  fi
+
+  if ! printf '%s' "$DOMAIN" | grep -Eq '^[A-Za-z0-9.-]+$'; then
+    echo "DOMAIN contains invalid characters: $DOMAIN" >&2
+    exit 1
+  fi
+
+  if [ "$ENABLE_HTTPS" = "true" ] && [ -z "$SSL_EMAIL" ]; then
+    echo "HTTPS is enabled for $DOMAIN but SSL_EMAIL/LETSENCRYPT_EMAIL is empty." >&2
+    exit 1
+  fi
+
+  install_nginx_stack
+
+  tmp_conf="$(mktemp)"
+  cat > "$tmp_conf" <<NGINX
+server {
+  listen 80;
+  listen [::]:80;
+  server_name $DOMAIN;
+
+  client_max_body_size 20m;
+
+  location / {
+    proxy_pass http://127.0.0.1:$APP_PORT;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_set_header Upgrade \$http_upgrade;
+    proxy_set_header Connection "upgrade";
+  }
+}
+NGINX
+
+  if [ -d /etc/nginx/sites-available ] && [ -d /etc/nginx/sites-enabled ]; then
+    conf_path="/etc/nginx/sites-available/$CONTAINER_NAME.conf"
+    as_root install -m 0644 "$tmp_conf" "$conf_path"
+    as_root ln -sfn "$conf_path" "/etc/nginx/sites-enabled/$CONTAINER_NAME.conf"
+  else
+    conf_path="/etc/nginx/conf.d/$CONTAINER_NAME.conf"
+    as_root install -m 0644 "$tmp_conf" "$conf_path"
+  fi
+
+  rm -f "$tmp_conf"
+  reload_nginx
+
+  if [ "$ENABLE_HTTPS" = "true" ]; then
+    as_root certbot --nginx \
+      --non-interactive \
+      --agree-tos \
+      --redirect \
+      --keep-until-expiring \
+      -m "$SSL_EMAIL" \
+      -d "$DOMAIN"
+    reload_nginx
+  fi
+}
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "Docker is not installed on this server." >&2
   exit 1
 fi
 
-printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null
-docker pull "$IMAGE_REF"
-docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
-docker run -d \
+port_binding="$APP_PORT:80"
+if [ "$ENABLE_NGINX" = "true" ]; then
+  port_binding="127.0.0.1:$APP_PORT:80"
+fi
+
+printf '%s' "$GHCR_TOKEN" | docker_cmd login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null
+docker_cmd pull "$IMAGE_REF"
+docker_cmd rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+docker_cmd run -d \
   --name "$CONTAINER_NAME" \
   --restart unless-stopped \
-  -p "$APP_PORT:80" \
+  -p "$port_binding" \
   --env-file "$DEPLOY_DIR/runtime.env" \
   "$IMAGE_REF"
-docker image prune -f >/dev/null 2>&1 || true
+docker_cmd image prune -f >/dev/null 2>&1 || true
+configure_nginx
 REMOTE
 done

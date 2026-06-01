@@ -89,4 +89,5 @@ jobs:
           BROKER_SSH_PRIVATE_KEY: ${{ secrets.BROKER_SSH_PRIVATE_KEY }}
           GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
         run: bash .github/scripts/deploy-brokers.sh

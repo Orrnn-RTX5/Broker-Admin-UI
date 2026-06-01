@@ -8,6 +8,9 @@
       "deploy_dir": "/opt/rtx5-broker-admin-ui",
       "container_name": "rtx5-broker-admin-ui",
       "app_port": 8080,
+      "domain": "admin.growtradingacademy.com",
+      "https": true,
+      "ssl_email": "admin@growtradingacademy.com",
       "env": {
         "API_HOST": "https://broker-api.example.com",
         "API_HOST_EXT": "http://broker-api.example.com:8091",
