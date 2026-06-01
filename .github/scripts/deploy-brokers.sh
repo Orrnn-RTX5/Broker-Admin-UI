@@ -109,6 +109,8 @@ for ((i = 0; i < broker_count; i++)); do
   container_name="$(jq -r --arg id "$broker_id" --arg channel "$channel" '.container_name // "rtx5-broker-admin-ui-\($id)-\($channel)"' <<< "$broker")"
   app_port="$(jq -r '.app_port // 8080' <<< "$broker")"
   domain="$(jq -r '.domain // .nginx.domain // empty' <<< "$broker")"
+  backend_host="$(jq -r '.backend_host // .nginx.backend_host // "127.0.0.1"' <<< "$broker")"
+  backend_port="$(jq -r '.backend_port // .nginx.backend_port // 8091' <<< "$broker")"
   enable_nginx="$(jq -r 'if ((.nginx.enabled // false) == true) or ((.domain // .nginx.domain // "") != "") then "true" else "false" end' <<< "$broker")"
   enable_https="$(jq -r 'if (.https // .nginx.https // true) == true then "true" else "false" end' <<< "$broker")"
   ssl_email="$(jq -r '.ssl_email // .nginx.email // empty' <<< "$broker")"
@@ -137,6 +139,8 @@ for ((i = 0; i < broker_count; i++)); do
   remote_env="$remote_env GHCR_USERNAME=$(shell_quote "$GHCR_USERNAME")"
   remote_env="$remote_env GHCR_TOKEN=$(shell_quote "$GHCR_TOKEN")"
   remote_env="$remote_env DOMAIN=$(shell_quote "$domain")"
+  remote_env="$remote_env BACKEND_HOST=$(shell_quote "$backend_host")"
+  remote_env="$remote_env BACKEND_PORT=$(shell_quote "$backend_port")"
   remote_env="$remote_env ENABLE_NGINX=$(shell_quote "$enable_nginx")"
   remote_env="$remote_env ENABLE_HTTPS=$(shell_quote "$enable_https")"
   remote_env="$remote_env SSL_EMAIL=$(shell_quote "$ssl_email")"
@@ -219,6 +223,53 @@ server {
   server_name $DOMAIN;
 
   client_max_body_size 20m;
+
+  location /api/ {
+    proxy_pass http://$BACKEND_HOST:$BACKEND_PORT;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+  }
+
+  location /manager/ {
+    proxy_pass http://$BACKEND_HOST:$BACKEND_PORT;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+  }
+
+  location /Manager/ {
+    proxy_pass http://$BACKEND_HOST:$BACKEND_PORT;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+  }
+
+  location /ext-api/ {
+    proxy_pass http://$BACKEND_HOST:$BACKEND_PORT/;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+  }
+
+  location /ws/ {
+    proxy_pass http://$BACKEND_HOST:$BACKEND_PORT;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_set_header Upgrade \$http_upgrade;
+    proxy_set_header Connection "upgrade";
+  }
 
   location / {
     proxy_pass http://127.0.0.1:$APP_PORT;
