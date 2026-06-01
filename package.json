@@ -27,8 +27,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "YoForex005",
-        "repo": "RTX-5-Admin-"
+        "owner": "rtx5-orrnn",
+        "repo": "rtx5-broker-admin-ui"
       }
     ],
     "win": {
