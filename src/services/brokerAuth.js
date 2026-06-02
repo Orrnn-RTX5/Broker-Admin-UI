@@ -30,6 +30,15 @@ export const RUNTIME_DEFAULT_MT5_SERVER =
 
 const hasProtocol = (value = '') => /^[a-z][a-z\d+.-]*:\/\//i.test(value);
 
+const mapIpToDomain = (urlStr) => {
+  if (!urlStr) return urlStr;
+  const trimmed = String(urlStr).trim();
+  if (trimmed.includes('103.91.186.142') || trimmed.includes('gta_broker')) {
+    return 'https://services.growtradingacademy.com';
+  }
+  return trimmed;
+};
+
 const getHostFromValue = (value = '') => {
   const trimmed = String(value || '').trim();
   if (!trimmed) return '';
@@ -74,6 +83,10 @@ const trimTrailingSlash = (value = '') => String(value || '').replace(/\/+$/, ''
 const buildBackendUrl = (info) => {
   const explicitUrl = info.backend_url || info.api_url || info.server_url;
   if (explicitUrl) {
+    const mapped = mapIpToDomain(explicitUrl);
+    if (mapped !== explicitUrl) {
+      return mapped;
+    }
     // If it has protocol, keep it, but if it is http and the page is HTTPS, upgrade it to https!
     const trimmed = trimTrailingSlash(explicitUrl);
     if (/^http:\/\//i.test(trimmed)) {
@@ -434,6 +447,11 @@ export const validateBrokerCredentials = async ({ broker_id, license_key, server
 const normalizeBackendUrl = (server = '') => {
   const trimmed = String(server).trim();
   if (!trimmed) throw new Error('Server URL is required.');
+
+  const mapped = mapIpToDomain(trimmed);
+  if (mapped !== trimmed) {
+    return mapped;
+  }
 
   // If it already has protocol, return as-is (but upgrade to https if page is HTTPS)
   if (/^https?:\/\//i.test(trimmed)) {

@@ -4,6 +4,15 @@ import { getRuntimeValue } from './runtimeConfig';
 
 const trimTrailingSlash = (value = '') => String(value || '').replace(/\/+$/, '');
 const hasProtocol = (value = '') => /^[a-z][a-z\d+.-]*:\/\//i.test(value);
+
+const mapIpToDomain = (urlStr) => {
+  if (!urlStr) return urlStr;
+  const trimmed = String(urlStr).trim();
+  if (trimmed.includes('103.91.186.142') || trimmed.includes('gta_broker')) {
+    return 'https://services.growtradingacademy.com';
+  }
+  return trimmed;
+};
 const withProtocol = (value = '') => (hasProtocol(value) ? value : `http://${value}`);
 
 const DEFAULTS = {
@@ -47,6 +56,11 @@ const getExplicitPort = (endpoint) => {
 const BROKER_HTTP_PORT = 8091;
 
 const normalizeBrokerBackendUrl = (backendUrl = '') => {
+  const mapped = mapIpToDomain(backendUrl);
+  if (mapped !== backendUrl) {
+    return mapped;
+  }
+
   const trimmed = trimTrailingSlash(backendUrl);
   if (!trimmed) return trimmed;
 
@@ -166,7 +180,7 @@ export const buildManagerApiUrl = (endpoint = '') => {
 
   // For broker backend (103.91.186.142:8091), don't add /manager/ prefix
   // Just use the path directly (e.g., /GroupList, /ManagerOnline)
-  const isBrokerBackend = API_HOST && /103\.91\.186\.142|localhost.*:8091/.test(API_HOST);
+  const isBrokerBackend = API_HOST && /103\.91\.186\.142|localhost.*:8091|services\.growtradingacademy\.com/.test(API_HOST);
 
   let managerPath;
   if (isBrokerBackend) {
