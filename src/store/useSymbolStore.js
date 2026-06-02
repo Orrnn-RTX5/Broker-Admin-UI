@@ -39,6 +39,8 @@ const useSymbolStore = create(
       symbolMetadata: [], // Stable list of metadata
       ws: null,
       isConnected: false,
+      shouldReconnect: false,
+      reconnectTimer: null,
 
       upsertSymbols: (dataArray) => {
         set((state) => {
@@ -78,7 +80,13 @@ const useSymbolStore = create(
       initWebSocket: () => {
         if (get().ws) return;
 
+        const existingTimer = get().reconnectTimer;
+        if (existingTimer) clearTimeout(existingTimer);
+        set({ shouldReconnect: true, reconnectTimer: null });
+
         const connect = () => {
+          if (!get().shouldReconnect) return;
+
           const ws = new WebSocket(buildFeedWsUrl());
           
           ws.onopen = () => {
@@ -107,9 +115,13 @@ const useSymbolStore = create(
           };
 
           ws.onclose = () => {
-            console.log('[SymbolStore] Disconnected. Reconnecting...');
+            const shouldReconnect = get().shouldReconnect;
+            console.log(shouldReconnect ? '[SymbolStore] Disconnected. Reconnecting...' : '[SymbolStore] Disconnected.');
             set({ isConnected: false, ws: null });
-            setTimeout(connect, 5000);
+            if (shouldReconnect) {
+              const reconnectTimer = setTimeout(connect, 5000);
+              set({ reconnectTimer });
+            }
           };
 
           ws.onerror = (err) => {
@@ -121,6 +133,26 @@ const useSymbolStore = create(
         };
 
         connect();
+      },
+
+      disconnectWebSocket: () => {
+        const { ws, reconnectTimer } = get();
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+
+        set({
+          shouldReconnect: false,
+          reconnectTimer: null,
+          isConnected: false,
+          ws: null,
+        });
+
+        if (ws && typeof WebSocket !== 'undefined') {
+          const closing = WebSocket.CLOSING ?? 2;
+          const closed = WebSocket.CLOSED ?? 3;
+          if (ws.readyState !== closing && ws.readyState !== closed) {
+            ws.close(1000, 'Symbol feed disabled');
+          }
+        }
       },
 
       syncMetadata: () => {

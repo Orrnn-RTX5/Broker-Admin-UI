@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Wifi, WifiOff, Loader2, X, Plus, RefreshCw, ChevronDown, ChevronUp, AlertCircle, Network } from 'lucide-react';
-import { gatewayGetStatus, gatewayConnect, gatewayDisconnect, gatewayGetRoutingOptions } from '../../services/gateway.service';
-import { ManagerService } from '../../services/manager.service';
+import { Wifi, WifiOff, Loader2, X, Plus, RefreshCw, ChevronDown, ChevronUp, AlertCircle, Save, ShieldCheck, Activity } from 'lucide-react';
+import {
+  gatewayGetStatus,
+  gatewayConnect,
+  gatewayDisconnect,
+  gatewayGetCentralConfig,
+  gatewaySaveCentralConfig,
+} from '../../services/gateway.service';
 
 // ─── Shared field components ───────────────────────────────────────────────────
 const F = ({ label, required, children }) => (
@@ -59,6 +64,352 @@ const ErrBox = ({ msg }) => msg ? (
     <AlertCircle size={12} className="shrink-0" /> {msg}
   </div>
 ) : null;
+
+const DEFAULT_CENTRAL_LP_FORM = {
+  enabled: true,
+  upstream_ws_url: '',
+  upstream_ws_broker_id: 'gta_broker',
+  token: '',
+  upstream_ws_auth_header: 'Authorization',
+  upstream_ws_symbols: 'EURUSD, GBPUSD, XAUUSD, BTCUSD',
+  central_lp_order_url: '',
+  central_lp_order_broker_id: 'gta_broker',
+  central_lp_order_auth_header: 'Authorization',
+  central_lp_order_target_lp: 'T4B-TRADE',
+  central_lp_order_timeout_ms: 30000,
+  connect: true,
+};
+
+const unwrapCentralConfig = (data) =>
+  data?.config || data?.central_config || data?.central_lp || data?.data || data || {};
+
+const normalizeSymbols = (symbols) => {
+  if (Array.isArray(symbols)) return symbols.join(', ');
+  if (typeof symbols === 'string') return symbols;
+  return DEFAULT_CENTRAL_LP_FORM.upstream_ws_symbols;
+};
+
+const parseSymbols = (symbols) =>
+  String(symbols || '')
+    .split(',')
+    .map((symbol) => symbol.trim())
+    .filter(Boolean);
+
+const isSecretConfigured = (config) =>
+  Boolean(
+    config?.token_configured ??
+    config?.token_set ??
+    config?.has_token ??
+    config?.hasToken ??
+    config?.broker_service_token_configured ??
+    config?.token
+  );
+
+const normalizeCentralForm = (data) => {
+  const config = unwrapCentralConfig(data);
+
+  return {
+    ...DEFAULT_CENTRAL_LP_FORM,
+    enabled: config.enabled ?? DEFAULT_CENTRAL_LP_FORM.enabled,
+    upstream_ws_url: config.upstream_ws_url || '',
+    upstream_ws_broker_id: config.upstream_ws_broker_id || DEFAULT_CENTRAL_LP_FORM.upstream_ws_broker_id,
+    token: '',
+    upstream_ws_auth_header: config.upstream_ws_auth_header || DEFAULT_CENTRAL_LP_FORM.upstream_ws_auth_header,
+    upstream_ws_symbols: normalizeSymbols(config.upstream_ws_symbols),
+    central_lp_order_url: config.central_lp_order_url || '',
+    central_lp_order_broker_id: config.central_lp_order_broker_id || DEFAULT_CENTRAL_LP_FORM.central_lp_order_broker_id,
+    central_lp_order_auth_header: config.central_lp_order_auth_header || DEFAULT_CENTRAL_LP_FORM.central_lp_order_auth_header,
+    central_lp_order_target_lp: config.central_lp_order_target_lp || DEFAULT_CENTRAL_LP_FORM.central_lp_order_target_lp,
+    central_lp_order_timeout_ms: Number(config.central_lp_order_timeout_ms || DEFAULT_CENTRAL_LP_FORM.central_lp_order_timeout_ms),
+    connect: config.connect ?? DEFAULT_CENTRAL_LP_FORM.connect,
+  };
+};
+
+const buildCentralPayload = (form) => {
+  const payload = {
+    enabled: Boolean(form.enabled),
+    upstream_ws_url: form.upstream_ws_url.trim(),
+    upstream_ws_broker_id: form.upstream_ws_broker_id.trim(),
+    upstream_ws_auth_header: form.upstream_ws_auth_header.trim() || 'Authorization',
+    upstream_ws_symbols: parseSymbols(form.upstream_ws_symbols),
+    central_lp_order_url: form.central_lp_order_url.trim(),
+    central_lp_order_broker_id: form.central_lp_order_broker_id.trim(),
+    central_lp_order_auth_header: form.central_lp_order_auth_header.trim() || 'Authorization',
+    central_lp_order_target_lp: form.central_lp_order_target_lp.trim(),
+    central_lp_order_timeout_ms: Number(form.central_lp_order_timeout_ms) || 30000,
+    connect: Boolean(form.connect),
+  };
+
+  const token = form.token.trim();
+  if (token) payload.token = token;
+
+  return payload;
+};
+
+const getStatusSummary = (status) => {
+  const central = status?.central_lp || status?.central || status || {};
+  const quoteConnected = Boolean(status?.quote?.connected);
+  const tradeConnected = Boolean(status?.trade?.connected);
+  const centralConnected =
+    central.connected ??
+    central.central_lp_connected ??
+    central.upstream_connected;
+  const connected = Boolean(centralConnected ?? (quoteConnected || tradeConnected));
+
+  return {
+    connected,
+    quote: quoteConnected,
+    trade: tradeConnected,
+    upstream: central.upstream || central.upstream_ws_url || central.feed || null,
+    orderLp: status?.order_routing_lp || central.order_routing_lp || central.target_lp || null,
+  };
+};
+
+const GATEWAY_DISCONNECTED_RE = /(No active|LP Gateway unreachable|connection refused|ECONNREFUSED|dial tcp)/i;
+
+const isGatewayDisconnectedError = (error) => {
+  const httpStatus =
+    error?.status ??
+    error?.response?.status ??
+    (error?.message?.match(/HTTP (\d+)/)?.[1] && Number(error.message.match(/HTTP (\d+)/)[1]));
+
+  return httpStatus === 401 || httpStatus === 404 || GATEWAY_DISCONNECTED_RE.test(error?.message || '');
+};
+
+const DISCONNECTED_STATUS = {
+  quote: { connected: false },
+  trade: { connected: false },
+};
+
+const ToggleField = ({ label, checked, onChange, disabled }) => (
+  <label className="flex items-center gap-2 h-[30px] cursor-pointer">
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      disabled={disabled}
+      className="w-4 h-4 accent-blue-500 rounded"
+    />
+    <span className="text-xs" style={{ color: 'var(--text-2)' }}>{label}</span>
+  </label>
+);
+
+const ConfiguredBadge = ({ show }) => show ? (
+  <span
+    className="inline-flex items-center h-5 px-2 rounded text-[10px] font-semibold uppercase tracking-wide"
+    style={{ background: 'rgba(34,197,94,0.12)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.25)' }}
+  >
+    Configured
+  </span>
+) : null;
+
+const CentralLpConfigPanel = () => {
+  const [form, setForm] = useState(DEFAULT_CENTRAL_LP_FORM);
+  const [tokenConfigured, setTokenConfigured] = useState(false);
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
+  const [notice, setNotice] = useState('');
+
+  const setField = (key) => (event) => {
+    const { type, checked, value } = event.target;
+    setForm((current) => ({ ...current, [key]: type === 'checkbox' ? checked : value }));
+    setNotice('');
+  };
+
+  const loadConfig = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
+    setErr('');
+    try {
+      const data = await gatewayGetCentralConfig();
+      const config = unwrapCentralConfig(data);
+      setForm(normalizeCentralForm(data));
+      setTokenConfigured(isSecretConfigured(config));
+      return data;
+    } catch (error) {
+      setErr(error.message || 'Failed to load Central LP config');
+      return null;
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, []);
+
+  const loadStatus = useCallback(async () => {
+    setStatusLoading(true);
+    try {
+      const data = await gatewayGetStatus();
+      setStatus(data);
+      return data;
+    } catch (error) {
+      if (isGatewayDisconnectedError(error)) {
+        setStatus(DISCONNECTED_STATUS);
+      } else {
+        setErr(error.message || 'Failed to fetch gateway status');
+      }
+      return null;
+    } finally {
+      setStatusLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadConfig(); }, [loadConfig]);
+  useEffect(() => { loadStatus(); }, [loadStatus]);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setErr('');
+    setNotice('');
+
+    if (!tokenConfigured && !form.token.trim()) {
+      setErr('Broker service token is required before Central LP can be configured.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const payload = buildCentralPayload(form);
+      await gatewaySaveCentralConfig(payload);
+      if (payload.token) setTokenConfigured(true);
+      setForm((current) => ({ ...current, token: '' }));
+      setNotice('Central LP config saved.');
+      await loadConfig({ silent: true });
+      await loadStatus();
+    } catch (error) {
+      setErr(error.message || 'Failed to save Central LP config');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const summary = getStatusSummary(status);
+  const disabled = loading || saving;
+
+  return (
+    <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
+      <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--border-3)' }}>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-blue-500/10">
+            <ShieldCheck size={16} className="text-blue-400" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Central LP</span>
+              {loading && <Loader2 size={11} className="animate-spin" style={{ color: 'var(--muted)' }} />}
+            </div>
+            <div className="flex items-center gap-2 mt-0.5">
+              <StatusDot on={summary.connected} />
+              <span className="text-xs" style={{ color: summary.connected ? '#4ade80' : 'var(--muted)' }}>
+                {summary.connected ? 'Connected' : 'Disconnected'}
+              </span>
+              <ConfiguredBadge show={tokenConfigured} />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => { loadConfig(); loadStatus(); }} disabled={disabled} title="Refresh config"
+            className="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm">
+            <RefreshCw size={13} className={loading || statusLoading ? 'animate-spin' : ''} />
+          </button>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-4">
+        <ErrBox msg={err} />
+        {notice && (
+          <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
+            style={{ background: 'rgba(34,197,94,0.1)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.25)' }}>
+            <Activity size={12} className="shrink-0" /> {notice}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          <F label="Enabled">
+            <ToggleField label="Central LP enabled" checked={form.enabled} onChange={setField('enabled')} disabled={disabled} />
+          </F>
+          <F label="Connect">
+            <ToggleField label="Connect after save" checked={form.connect} onChange={setField('connect')} disabled={disabled} />
+          </F>
+          <F label="Timeout MS">
+            <Input type="number" value={form.central_lp_order_timeout_ms} onChange={setField('central_lp_order_timeout_ms')} disabled={disabled} />
+          </F>
+        </div>
+
+        <SectionLabel>Upstream Feed</SectionLabel>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <F label="WebSocket URL" required>
+            <Input value={form.upstream_ws_url} onChange={setField('upstream_ws_url')} placeholder="wss://superadmin.example.com/ws/feed?broker_id=gta_broker" required disabled={disabled} />
+          </F>
+          <F label="Broker ID" required>
+            <Input value={form.upstream_ws_broker_id} onChange={setField('upstream_ws_broker_id')} placeholder="gta_broker" required disabled={disabled} />
+          </F>
+          <F label="Auth Header" required>
+            <Input value={form.upstream_ws_auth_header} onChange={setField('upstream_ws_auth_header')} placeholder="Authorization" required disabled={disabled} />
+          </F>
+          <F label="Symbols" required>
+            <Input value={form.upstream_ws_symbols} onChange={setField('upstream_ws_symbols')} placeholder="EURUSD, GBPUSD, XAUUSD, BTCUSD" required disabled={disabled} />
+          </F>
+        </div>
+
+        <SectionLabel>Order Route</SectionLabel>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <F label="Order URL" required>
+            <Input value={form.central_lp_order_url} onChange={setField('central_lp_order_url')} placeholder="https://superadmin.example.com/api/v1/central-lp/order" required disabled={disabled} />
+          </F>
+          <F label="Order Broker ID" required>
+            <Input value={form.central_lp_order_broker_id} onChange={setField('central_lp_order_broker_id')} placeholder="gta_broker" required disabled={disabled} />
+          </F>
+          <F label="Order Auth Header" required>
+            <Input value={form.central_lp_order_auth_header} onChange={setField('central_lp_order_auth_header')} placeholder="Authorization" required disabled={disabled} />
+          </F>
+          <F label="Target LP" required>
+            <Input value={form.central_lp_order_target_lp} onChange={setField('central_lp_order_target_lp')} placeholder="T4B-TRADE" required disabled={disabled} />
+          </F>
+        </div>
+
+        <SectionLabel>Broker Service Token</SectionLabel>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3 items-end">
+          <F label="Token" required={!tokenConfigured}>
+            <Input
+              type="password"
+              value={form.token}
+              onChange={setField('token')}
+              placeholder={tokenConfigured ? 'Configured - enter replacement token' : 'Broker service token'}
+              required={!tokenConfigured}
+              disabled={disabled}
+            />
+          </F>
+          <div className="h-[30px] flex items-center">
+            <ConfiguredBadge show={tokenConfigured} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+          {[
+            { label: 'Status', value: summary.connected ? 'Connected' : 'Disconnected', color: summary.connected ? '#4ade80' : 'var(--muted)' },
+            { label: 'Quote', value: summary.quote ? 'Connected' : 'Idle', color: summary.quote ? '#60a5fa' : 'var(--muted)' },
+            { label: 'Trade', value: summary.trade ? 'Connected' : 'Idle', color: summary.trade ? '#c084fc' : 'var(--muted)' },
+            { label: 'Order LP', value: summary.orderLp || form.central_lp_order_target_lp || '-', color: 'var(--text)' },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="rounded-lg p-3 flex flex-col gap-1"
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--border-3)' }}>
+              <span className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>{label}</span>
+              <span className="text-xs font-mono font-semibold truncate" style={{ color }}>{value}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <button type="submit" disabled={disabled} className="ui-btn ui-btn-primary ui-btn-sm gap-1.5">
+            {saving ? <><Loader2 size={12} className="animate-spin" /> Saving</> : <><Save size={12} /> Save Central LP</>}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
 
 // ─── Connect Modal ─────────────────────────────────────────────────────────────
 const ConnectModal = ({ onClose, onConnected }) => {
@@ -260,7 +611,7 @@ const DisconnectModal = ({ onClose, onDisconnected }) => {
           <div className="rounded-lg p-3 font-mono text-[11px]"
             style={{ background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border-3)' }}>
             <span style={{ color: 'var(--text-3)' }}>POST</span>{' '}
-            <span style={{ color: '#60a5fa' }}>/api/v1/gateway/lp/disconnect</span>
+            <span style={{ color: '#60a5fa' }}>/api/v1/manager/gateway/lp/disconnect</span>
             <br />
             {`{ "role": "${role}" }`}
           </div>
@@ -329,14 +680,12 @@ const LpGatewayPanel = ({ hideHostPortPassword }) => {
     gatewayGetStatus()
       .then(setStatus)
       .catch(e => {
-        const httpStatus = e.status ?? e.response?.status ?? (e.message?.match(/HTTP (\d+)/)?.[1] && Number(e.message.match(/HTTP (\d+)/)[1]));
-        // 401 means the LP gateway has no active session — treat silently as disconnected
-        // 404 / "No active" has the same meaning
-        if (httpStatus === 401 || httpStatus === 404 || e.message?.includes('No active')) {
-          setStatus({ quote: { connected: false }, trade: { connected: false } });
+        // The manager backend returns this when the LP gateway sidecar is down.
+        if (isGatewayDisconnectedError(e)) {
+          setStatus(DISCONNECTED_STATUS);
         } else {
           setErr(e.message || 'Failed to fetch gateway status');
-          setStatus({ quote: { connected: false }, trade: { connected: false } });
+          setStatus(DISCONNECTED_STATUS);
         }
       })
       .finally(() => setLoading(false));
@@ -466,7 +815,7 @@ const LpGatewayPanel = ({ hideHostPortPassword }) => {
 // ─── Main View ─────────────────────────────────────────────────────────────────
 const GatewaysView = () => {
   return (
-    <div className="flex-1 flex flex-col bg-[color:var(--bg-app)] overflow-hidden text-[color:var(--text-primary)]">
+    <div className="flex-1 min-h-0 bg-[color:var(--bg-app)] overflow-y-auto text-[color:var(--text-primary)]">
       <div className="flex justify-between items-start px-5 py-4 border-b border-black/40 shrink-0 bg-[color:var(--bg-surface-1)]">
         <div>
           <h1 className="text-[17px] font-semibold text-white mb-1">Gateways</h1>
@@ -476,7 +825,8 @@ const GatewaysView = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-6">
+      <div className="p-5 pb-12 flex flex-col gap-6">
+        <CentralLpConfigPanel />
         <LpGatewayPanel />
       </div>
     </div>

@@ -465,6 +465,7 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
   const [brokerInfo, setBrokerInfoState] = React.useState(() => getBrokerInfo());
   const [user, setUser] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [server, setServer] = React.useState('');
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
 
@@ -475,18 +476,19 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
       return;
     }
     setBrokerInfoState(storedBroker);
+    setServer(storedBroker.server_ip || storedBroker.broker_id || '');
   }, [navigate]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!user || !password) {
-      setError('Login and password are required.');
+    if (!user || !password || !server) {
+      setError('Login, password, and server are required.');
       return;
     }
     setLoading(true);
     setError('');
     try {
-      const auth = await loginAdmin(brokerInfo, { user, password });
+      const auth = await loginAdmin(brokerInfo, { user, password, server });
       const session = setAuthSession(auth, brokerInfo);
       onLoginSuccess(session, '/admin-dashboard');
     } catch (err) {
@@ -512,6 +514,7 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
     >
       <Field id="admin-login" label="Login" type="number" icon={User} value={user} onChange={setUser} required />
       <PasswordField id="admin-password" value={password} onChange={setPassword} />
+      <Field id="admin-server" label="Server" icon={Server} value={server} onChange={setServer} readOnly required />
     </LoginScreen>
   );
 };

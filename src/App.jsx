@@ -25,6 +25,7 @@ const formatTime = (d) =>
   `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
 
 const AUTH_PATHS = new Set(['/', '/manager-login', '/admin-login', '/broker-manual-entry']);
+const SYMBOL_FEED_VIEWS = new Set(['Market Overview']);
 
 const useBrowserPath = () => {
   const [pathname, setPathname] = React.useState(() => window.location.pathname || '/');
@@ -152,10 +153,14 @@ const AppInner = () => {
 
   // ── Symbol Store WebSocket (feeds Market Overview counts & live bid/ask) ──
   React.useEffect(() => {
-    if (isAuthenticated) {
-      useSymbolStore.getState().initWebSocket();
+    const symbolStore = useSymbolStore.getState();
+    if (isAuthenticated && SYMBOL_FEED_VIEWS.has(activeNode)) {
+      symbolStore.initWebSocket();
+      return;
     }
-  }, [isAuthenticated]);
+
+    symbolStore.disconnectWebSocket();
+  }, [isAuthenticated, activeNode]);
 
   // ── Tabs + navigation ────────────────────────────────────────────────────
   const openTab = React.useCallback((label) => {
@@ -368,14 +373,14 @@ const AppInner = () => {
           searchInputRef={searchInputRef}
         />
 
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 min-h-0 overflow-hidden">
           <SidebarNavTree
             onNodeSelect={handleNodeSelect}
             onNodeDoubleClick={handleNodeDoubleClick}
             selectedNodeLabel={activeNode}
           />
 
-          <div className="flex-1 flex flex-col overflow-hidden border-l border-[color:var(--border-subtle)]">
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden border-l border-[color:var(--border-subtle)]">
             <TabBar
               tabs={openTabs}
               activeTab={activeTab}

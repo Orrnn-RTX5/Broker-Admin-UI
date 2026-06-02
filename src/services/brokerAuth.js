@@ -102,6 +102,25 @@ const getResponseMessage = (data) =>
   data?.title ||
   '';
 
+const SECRET_KEY_RE = /(password|token|secret|authorization|api[_-]?key)/i;
+
+const redactForLog = (value, seen = new WeakSet()) => {
+  if (!value || typeof value !== 'object') return value;
+  if (seen.has(value)) return '[Circular]';
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    return value.map((item) => redactForLog(item, seen));
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => [
+      key,
+      SECRET_KEY_RE.test(key) ? '[REDACTED]' : redactForLog(entry, seen),
+    ])
+  );
+};
+
 const withAdminPort = (backendUrl = '') => {
   const trimmed = trimTrailingSlash(backendUrl);
   if (!trimmed) return '';
@@ -188,7 +207,7 @@ export const discoverBrokerById = (brokerList, brokerId) => {
 export const normalizeBrokerId = (value) => value.trim().toLowerCase();
 
 const postJson = async (url, body) => {
-  console.log(`%c[Auth Request] POST ${url}`, 'color: #00bcd4; font-weight: bold;', { body });
+  console.log(`%c[Auth Request] POST ${url}`, 'color: #00bcd4; font-weight: bold;', { body: redactForLog(body) });
   let response;
   try {
     response = await fetch(url, {
@@ -209,14 +228,14 @@ const postJson = async (url, body) => {
   if (!response.ok) {
     console.error(`%c[Auth Response Error] POST ${url}`, 'color: #f44336; font-weight: bold;', {
       status: response.status,
-      data
+      data: redactForLog(data)
     });
     throw new Error(getResponseMessage(data) || `HTTP ${response.status}`);
   }
 
   console.log(`%c[Auth Response Success] POST ${url}`, 'color: #4caf50; font-weight: bold;', {
     status: response.status,
-    data
+    data: redactForLog(data)
   });
   return data || {};
 };
@@ -232,11 +251,11 @@ export const loginManager = async (brokerInfo, { user, password, server }) => {
   }
 };
 
-export const loginAdmin = async (brokerInfo, { user, password }) => {
+export const loginAdmin = async (brokerInfo, { user, password, server }) => {
   try {
     return await postJson(
       `${withAdminPort(brokerInfo.backend_url).replace(/\/+$/, '')}/api/v2/admin/login`,
-      { user, password }
+      { user, password, server: server || brokerInfo?.server_ip || brokerInfo?.broker_id }
     );
   } catch (error) {
     throw new Error(mapAdminLoginError(error.message));

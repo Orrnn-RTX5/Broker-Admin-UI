@@ -348,7 +348,11 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
 
   // --- GATEWAYS INJECTION ---
   if (viewType === 'Gateways') {
-    return <GatewaysView />;
+    return (
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <GatewaysView />
+      </div>
+    );
   }
 
   // --- SERVER STATUS INJECTION ---

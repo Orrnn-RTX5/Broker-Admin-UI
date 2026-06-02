@@ -5,6 +5,25 @@ import { useConnectionStore } from '../store/connectionStore';
 
 import { API_HOST, buildExtApiUrl, buildManagerApiUrl } from '../config/endpoints';
 
+const SECRET_KEY_RE = /(authorization|password|token|secret|api[_-]?key)/i;
+
+const redactForLog = (value, seen = new WeakSet()) => {
+  if (!value || typeof value !== 'object') return value;
+  if (seen.has(value)) return '[Circular]';
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    return value.map((item) => redactForLog(item, seen));
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => [
+      key,
+      SECRET_KEY_RE.test(key) ? '[REDACTED]' : redactForLog(entry, seen),
+    ])
+  );
+};
+
 export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
@@ -30,8 +49,8 @@ api.interceptors.request.use((config) => {
   }
 
   console.log(`%c[API Request] ${config.method?.toUpperCase()} ${config.url}`, 'color: #00bcd4; font-weight: bold;', {
-    headers: config.headers,
-    data: config.data
+    headers: redactForLog(config.headers),
+    data: redactForLog(config.data)
   });
 
   return config;

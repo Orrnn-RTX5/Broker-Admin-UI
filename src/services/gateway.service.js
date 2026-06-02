@@ -1,6 +1,6 @@
 import { api } from '../lib/api';
 
-const BASE = '/api/v1/gateway/lp';
+const BASE = '/api/v1/manager/gateway/lp';
 
 const extractData = (res) => res.data;
 
@@ -21,6 +21,14 @@ export const gatewayGetRequiredFields = () =>
 
 export const gatewayGetStatus = () =>
   api.get(`${BASE}/status`, { _noRetry: true }).then(extractData).catch(handleError);
+
+
+export const gatewayGetCentralConfig = () =>
+  api.get(`${BASE}/central/config`).then(extractData).catch(handleError);
+
+
+export const gatewaySaveCentralConfig = (payload) =>
+  api.post(`${BASE}/central/config`, payload).then(extractData).catch(handleError);
 
 
 export const gatewayConnect = (payload) =>
