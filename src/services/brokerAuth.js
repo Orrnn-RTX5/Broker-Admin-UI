@@ -72,34 +72,35 @@ const MOCK_BROKER_LIST = [
 const trimTrailingSlash = (value = '') => String(value || '').replace(/\/+$/, '');
 
 const buildBackendUrl = (info) => {
-  // If host matches our default MT5 server or matches our runtime api host hostname, use the runtime proxy!
-  if (RUNTIME_API_HOST) {
-    const serverIpHost = getHostFromValue(info.server_ip);
-    const hostFieldHost = getHostFromValue(info.host);
-    const serverUrlHost = getHostFromValue(info.server_url);
-    const backendUrlHost = getHostFromValue(info.backend_url);
-    const apiHostUrl = new URL(RUNTIME_API_HOST);
-
-    const matches = [serverIpHost, hostFieldHost, serverUrlHost, backendUrlHost].some(
-      (h) => h && (h === RUNTIME_DEFAULT_MT5_SERVER || h === apiHostUrl.hostname)
-    );
-
-    if (matches) {
-      return RUNTIME_API_HOST;
-    }
-  }
-
   const explicitUrl = info.backend_url || info.api_url || info.server_url;
-  if (explicitUrl) return trimTrailingSlash(explicitUrl);
+  if (explicitUrl) {
+    // If it has protocol, keep it, but if it is http and the page is HTTPS, upgrade it to https!
+    const trimmed = trimTrailingSlash(explicitUrl);
+    if (/^http:\/\//i.test(trimmed)) {
+      const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
+      if (isHttpsPage) {
+        return trimmed.replace(/^http:\/\//i, 'https://');
+      }
+    }
+    return trimmed;
+  }
 
   const host = info.server_ip || info.host;
   if (!host) return '';
 
-  if (/^https?:\/\//i.test(host)) return trimTrailingSlash(host);
+  if (/^https?:\/\//i.test(host)) {
+    const trimmed = trimTrailingSlash(host);
+    const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
+    if (isHttpsPage && /^http:\/\//i.test(trimmed)) {
+      return trimmed.replace(/^http:\/\//i, 'https://');
+    }
+    return trimmed;
+  }
 
   const port = Number(info.server_port);
-  // Port 8091 uses HTTP (direct connection), not HTTPS
-  const protocol = info.protocol || (port === 8091 ? 'http' : 'https');
+  const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
+  // Default to HTTPS if page is HTTPS, or if port is not 8091
+  const protocol = info.protocol || (isHttpsPage ? 'https' : (port === 8091 ? 'http' : 'https'));
   const portSuffix = port && ![80, 443].includes(port) ? `:${port}` : '';
 
   return `${protocol}://${host}${portSuffix}`;
@@ -169,33 +170,20 @@ const withAdminPort = (backendUrl = '') => {
 
   try {
     const url = new URL(trimmed);
-
-    // If the host matches our runtime API host or default MT5 server, do NOT append port 8091 or change protocol!
-    if (RUNTIME_API_HOST) {
-      try {
-        const apiHostUrl = new URL(RUNTIME_API_HOST);
-        if (url.hostname === apiHostUrl.hostname || url.hostname === RUNTIME_DEFAULT_MT5_SERVER) {
-          return RUNTIME_API_HOST;
-        }
-      } catch {
-        if (RUNTIME_API_HOST.includes(url.hostname)) {
-          return RUNTIME_API_HOST;
-        }
-      }
-    }
-
     if (!url.port || url.port === '443') {
       url.port = String(ADMIN_LOGIN_PORT);
     }
-    // Port 8091 is plain HTTP — no TLS. Force protocol to http.
+    // If the page is HTTPS, force https protocol. Otherwise default to http for port 8091.
     if (url.port === String(ADMIN_LOGIN_PORT)) {
-      url.protocol = 'http:';
+      const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
+      url.protocol = isHttpsPage ? 'https:' : 'http:';
     }
     return trimTrailingSlash(url.toString());
   } catch {
+    const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
     return trimmed
       .replace(/:443(?=\/|$)/, `:${ADMIN_LOGIN_PORT}`)
-      .replace(/^https(?=:\/\/)/, 'http');
+      .replace(/^https?(?=:\/\/)/, isHttpsPage ? 'https' : 'http');
   }
 };
 
@@ -440,18 +428,12 @@ const normalizeBackendUrl = (server = '') => {
   const trimmed = String(server).trim();
   if (!trimmed) throw new Error('Server URL is required.');
 
-  const hostOfServer = getHostFromValue(trimmed);
-  if (RUNTIME_API_HOST && hostOfServer) {
-    try {
-      const apiHostUrl = new URL(RUNTIME_API_HOST);
-      if (hostOfServer === RUNTIME_DEFAULT_MT5_SERVER || hostOfServer === apiHostUrl.hostname) {
-        return RUNTIME_API_HOST;
-      }
-    } catch {}
-  }
-
-  // If it already has protocol, return as-is (trimmed)
+  // If it already has protocol, return as-is (but upgrade to https if page is HTTPS)
   if (/^https?:\/\//i.test(trimmed)) {
+    const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
+    if (isHttpsPage && /^http:\/\//i.test(trimmed)) {
+      return trimTrailingSlash(trimmed.replace(/^http:\/\//i, 'https://'));
+    }
     return trimTrailingSlash(trimmed);
   }
 
@@ -467,8 +449,9 @@ const normalizeBackendUrl = (server = '') => {
 
   // Determine final port and protocol
   let finalPort = port ? parseInt(port) : 8091;  // Default to 8091
-  // Port 8091 uses HTTP (direct connection), not HTTPS
-  const protocol = finalPort === 8091 ? 'http' : 'https';
+  const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
+  // Default to HTTPS if page is HTTPS, or if port is not 8091
+  const protocol = isHttpsPage ? 'https' : (finalPort === 8091 ? 'http' : 'https');
 
   // Build URL with explicit port
   let url = `${protocol}://${host}:${finalPort}`;

@@ -53,37 +53,23 @@ const normalizeBrokerBackendUrl = (backendUrl = '') => {
   try {
     const url = new URL(trimmed);
 
-    // If the host matches our runtime API host (i.e. it's proxied), do NOT append port 8091 or change protocol!
-    const runtimeApiHost = DEFAULTS.API_HOST;
-    if (runtimeApiHost) {
-      try {
-        const apiHostUrl = new URL(runtimeApiHost);
-        if (url.hostname === apiHostUrl.hostname) {
-          return trimmed;
-        }
-      } catch {
-        if (runtimeApiHost.includes(url.hostname)) {
-          return trimmed;
-        }
-      }
-    }
-
     // If no explicit port or port is the HTTPS default, set to broker port
     if (!url.port || url.port === '443') {
       url.port = String(BROKER_HTTP_PORT);
     }
 
-    // Port 8091 is always plain HTTP
+    // Determine protocol for broker port: HTTPS on HTTPS pages, otherwise HTTP
     if (url.port === String(BROKER_HTTP_PORT)) {
-      url.protocol = 'http:';
+      const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
+      url.protocol = isHttpsPage ? 'https:' : 'http:';
     }
 
     return trimTrailingSlash(url.toString());
   } catch {
-    // Fallback: string-replace https with http and :443 with :8091
+    const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
     return trimmed
       .replace(/:443(?=\/|$)/, `:${BROKER_HTTP_PORT}`)
-      .replace(/^https(?=:\/\/)/, 'http');
+      .replace(/^https?(?=:\/\/)/, isHttpsPage ? 'https' : 'http');
   }
 };
 
@@ -133,34 +119,7 @@ export const updateDynamicEndpoints = () => {
     const rawUrl = trimTrailingSlash(info?.backend_url || '');
 
     if (rawUrl) {
-      // Check if this broker's IP matches the configured default server or if the host matches.
-      const serverIp = info?.server_ip || '';
-      const defaultServer = DEFAULTS.DEFAULT_MT5_SERVER;
-      
-      let isDefaultBroker = false;
-      if (defaultServer && serverIp === defaultServer) {
-        isDefaultBroker = true;
-      } else if (info?.broker_id && defaultServer && info.broker_id === defaultServer) {
-        isDefaultBroker = true;
-      } else {
-        try {
-          const url = new URL(rawUrl);
-          if (window.location.hostname && url.hostname === window.location.hostname) {
-            isDefaultBroker = true;
-          }
-        } catch {}
-      }
-
-      if (isDefaultBroker && DEFAULTS.API_HOST) {
-        // Use the configured proxy endpoints from environment
-        API_HOST = DEFAULTS.API_HOST;
-        WS_HOST = DEFAULTS.WS_HOST || buildWsHost(DEFAULTS.API_HOST);
-        API_HOST_EXT = DEFAULTS.API_HOST_EXT || buildExtHost(DEFAULTS.API_HOST);
-        DEFAULT_MT5_SERVER = resolveMt5Server(info, DEFAULTS.API_HOST);
-        return;
-      }
-
-      // Normalize: force http:// + port 8091 — the broker backend is plain HTTP, no TLS.
+      // Normalize: force https:// on HTTPS pages, or http:// on HTTP pages for port 8091
       const backendUrl = normalizeBrokerBackendUrl(rawUrl);
       API_HOST = backendUrl;
       WS_HOST = buildWsHost(backendUrl);
