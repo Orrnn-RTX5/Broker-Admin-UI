@@ -208,6 +208,38 @@ reload_nginx() {
   fi
 }
 
+ensure_conf_d_include() {
+  if as_root grep -Fq 'include /etc/nginx/conf.d/*.conf;' /etc/nginx/nginx.conf; then
+    return
+  fi
+
+  tmp_nginx="$(mktemp)"
+  if ! as_root awk '
+    BEGIN { inserted = 0 }
+    /^[[:space:]]*http[[:space:]]*\{/ && inserted == 0 {
+      print
+      print "    include /etc/nginx/conf.d/*.conf;"
+      inserted = 1
+      next
+    }
+    { print }
+  ' /etc/nginx/nginx.conf > "$tmp_nginx"; then
+    rm -f "$tmp_nginx"
+    echo "Failed to prepare nginx.conf with conf.d include." >&2
+    exit 1
+  fi
+
+  if ! grep -Fq 'include /etc/nginx/conf.d/*.conf;' "$tmp_nginx"; then
+    rm -f "$tmp_nginx"
+    echo "Could not find http block in /etc/nginx/nginx.conf for conf.d include." >&2
+    exit 1
+  fi
+
+  as_root cp /etc/nginx/nginx.conf "/etc/nginx/nginx.conf.bak.$(date +%s)"
+  as_root install -m 0644 "$tmp_nginx" /etc/nginx/nginx.conf
+  rm -f "$tmp_nginx"
+}
+
 configure_nginx() {
   if [ "$ENABLE_NGINX" != "true" ]; then
     return
@@ -308,6 +340,7 @@ NGINX
     as_root rm -f /etc/nginx/sites-enabled/default
   fi
   as_root rm -f /etc/nginx/conf.d/default.conf
+  ensure_conf_d_include
 
   rm -f "$tmp_conf"
   reload_nginx
