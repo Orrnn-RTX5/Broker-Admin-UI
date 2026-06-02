@@ -218,6 +218,7 @@ export const BrokerSelector = ({ navigate }) => {
         if (list.length > 0) {
           const defaultBroker = list.find(
             (b) =>
+              b.broker_id === 'gta_broker' ||
               b.broker_id === 'grow-trading-academy' ||
               (RUNTIME_DEFAULT_MT5_SERVER &&
                 (b.server_ip === RUNTIME_DEFAULT_MT5_SERVER || b.broker_id === RUNTIME_DEFAULT_MT5_SERVER))
@@ -245,6 +246,7 @@ export const BrokerSelector = ({ navigate }) => {
         if (list.length > 0) {
           const defaultBroker = list.find(
             (b) =>
+              b.broker_id === 'gta_broker' ||
               b.broker_id === 'grow-trading-academy' ||
               (RUNTIME_DEFAULT_MT5_SERVER &&
                 (b.server_ip === RUNTIME_DEFAULT_MT5_SERVER || b.broker_id === RUNTIME_DEFAULT_MT5_SERVER))

@@ -30,6 +30,19 @@ export const RUNTIME_DEFAULT_MT5_SERVER =
 
 const hasProtocol = (value = '') => /^[a-z][a-z\d+.-]*:\/\//i.test(value);
 
+const getHostFromValue = (value = '') => {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return '';
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      return new URL(trimmed).hostname;
+    } catch {
+      return trimmed.replace(/^https?:\/\//i, '').split('/')[0].split(':')[0];
+    }
+  }
+  return trimmed.split(':')[0];
+};
+
 // ---------------------------------------------------------------------------
 // Mock broker list — mirrors what the real /api/v2/broker/servers returns.
 // Each entry must have: broker_id, name, status, backend_url, server_ip.
@@ -59,6 +72,23 @@ const MOCK_BROKER_LIST = [
 const trimTrailingSlash = (value = '') => String(value || '').replace(/\/+$/, '');
 
 const buildBackendUrl = (info) => {
+  // If host matches our default MT5 server or matches our runtime api host hostname, use the runtime proxy!
+  if (RUNTIME_API_HOST) {
+    const serverIpHost = getHostFromValue(info.server_ip);
+    const hostFieldHost = getHostFromValue(info.host);
+    const serverUrlHost = getHostFromValue(info.server_url);
+    const backendUrlHost = getHostFromValue(info.backend_url);
+    const apiHostUrl = new URL(RUNTIME_API_HOST);
+
+    const matches = [serverIpHost, hostFieldHost, serverUrlHost, backendUrlHost].some(
+      (h) => h && (h === RUNTIME_DEFAULT_MT5_SERVER || h === apiHostUrl.hostname)
+    );
+
+    if (matches) {
+      return RUNTIME_API_HOST;
+    }
+  }
+
   const explicitUrl = info.backend_url || info.api_url || info.server_url;
   if (explicitUrl) return trimTrailingSlash(explicitUrl);
 
@@ -66,20 +96,6 @@ const buildBackendUrl = (info) => {
   if (!host) return '';
 
   if (/^https?:\/\//i.test(host)) return trimTrailingSlash(host);
-
-  // If host matches our default MT5 server or matches our runtime api host hostname, use the runtime proxy!
-  if (RUNTIME_API_HOST) {
-    try {
-      const apiHostUrl = new URL(RUNTIME_API_HOST);
-      if (host === RUNTIME_DEFAULT_MT5_SERVER || host === apiHostUrl.hostname) {
-        return RUNTIME_API_HOST;
-      }
-    } catch {
-      if (host === RUNTIME_DEFAULT_MT5_SERVER || RUNTIME_API_HOST.includes(host)) {
-        return RUNTIME_API_HOST;
-      }
-    }
-  }
 
   const port = Number(info.server_port);
   // Port 8091 uses HTTP (direct connection), not HTTPS
@@ -154,16 +170,16 @@ const withAdminPort = (backendUrl = '') => {
   try {
     const url = new URL(trimmed);
 
-    // If the host matches our runtime API host (i.e. it's proxied), do NOT append port 8091 or change protocol!
+    // If the host matches our runtime API host or default MT5 server, do NOT append port 8091 or change protocol!
     if (RUNTIME_API_HOST) {
       try {
         const apiHostUrl = new URL(RUNTIME_API_HOST);
-        if (url.hostname === apiHostUrl.hostname) {
-          return trimmed;
+        if (url.hostname === apiHostUrl.hostname || url.hostname === RUNTIME_DEFAULT_MT5_SERVER) {
+          return RUNTIME_API_HOST;
         }
       } catch {
         if (RUNTIME_API_HOST.includes(url.hostname)) {
-          return trimmed;
+          return RUNTIME_API_HOST;
         }
       }
     }
@@ -424,6 +440,16 @@ const normalizeBackendUrl = (server = '') => {
   const trimmed = String(server).trim();
   if (!trimmed) throw new Error('Server URL is required.');
 
+  const hostOfServer = getHostFromValue(trimmed);
+  if (RUNTIME_API_HOST && hostOfServer) {
+    try {
+      const apiHostUrl = new URL(RUNTIME_API_HOST);
+      if (hostOfServer === RUNTIME_DEFAULT_MT5_SERVER || hostOfServer === apiHostUrl.hostname) {
+        return RUNTIME_API_HOST;
+      }
+    } catch {}
+  }
+
   // If it already has protocol, return as-is (trimmed)
   if (/^https?:\/\//i.test(trimmed)) {
     return trimTrailingSlash(trimmed);
@@ -437,20 +463,6 @@ const normalizeBackendUrl = (server = '') => {
   // Validate host format (IP, domain, or hostname)
   if (!host || !/^[a-z0-9.-]+(\.[a-z0-9.-]+)*$|^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/i.test(host)) {
     throw new Error('Invalid server URL format.');
-  }
-
-  // Check if this matches our runtime API host
-  if (RUNTIME_API_HOST) {
-    try {
-      const apiHostUrl = new URL(RUNTIME_API_HOST);
-      if (host === RUNTIME_DEFAULT_MT5_SERVER || host === apiHostUrl.hostname) {
-        return RUNTIME_API_HOST;
-      }
-    } catch {
-      if (host === RUNTIME_DEFAULT_MT5_SERVER || RUNTIME_API_HOST.includes(host)) {
-        return RUNTIME_API_HOST;
-      }
-    }
   }
 
   // Determine final port and protocol
