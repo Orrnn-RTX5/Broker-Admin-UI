@@ -53,23 +53,30 @@ const normalizeBrokerBackendUrl = (backendUrl = '') => {
   try {
     const url = new URL(trimmed);
 
+    // If protocol is HTTPS and port is 443 or empty, keep it on HTTPS / 443 (no rewrite to 8091)
+    if (url.protocol === 'https:' && (!url.port || url.port === '443')) {
+      return trimmed;
+    }
+
     // If no explicit port or port is the HTTPS default, set to broker port
     if (!url.port || url.port === '443') {
       url.port = String(BROKER_HTTP_PORT);
     }
 
-    // Determine protocol for broker port: HTTPS on HTTPS pages, otherwise HTTP
+    // Port 8091 is always plain HTTP
     if (url.port === String(BROKER_HTTP_PORT)) {
-      const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
-      url.protocol = isHttpsPage ? 'https:' : 'http:';
+      url.protocol = 'http:';
     }
 
     return trimTrailingSlash(url.toString());
   } catch {
-    const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
+    if (/^https:/i.test(trimmed)) {
+      return trimmed;
+    }
+    // Fallback: string-replace https with http and :443 with :8091
     return trimmed
       .replace(/:443(?=\/|$)/, `:${BROKER_HTTP_PORT}`)
-      .replace(/^https?(?=:\/\/)/, isHttpsPage ? 'https' : 'http');
+      .replace(/^https(?=:\/\/)/, 'http');
   }
 };
 

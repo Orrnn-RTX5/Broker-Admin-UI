@@ -170,20 +170,27 @@ const withAdminPort = (backendUrl = '') => {
 
   try {
     const url = new URL(trimmed);
+
+    // If protocol is HTTPS and port is 443 or empty, keep it on HTTPS / 443 (no rewrite to 8091)
+    if (url.protocol === 'https:' && (!url.port || url.port === '443')) {
+      return trimmed;
+    }
+
     if (!url.port || url.port === '443') {
       url.port = String(ADMIN_LOGIN_PORT);
     }
-    // If the page is HTTPS, force https protocol. Otherwise default to http for port 8091.
+    // Port 8091 is plain HTTP — no TLS. Force protocol to http.
     if (url.port === String(ADMIN_LOGIN_PORT)) {
-      const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
-      url.protocol = isHttpsPage ? 'https:' : 'http:';
+      url.protocol = 'http:';
     }
     return trimTrailingSlash(url.toString());
   } catch {
-    const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
+    if (/^https:/i.test(trimmed)) {
+      return trimmed;
+    }
     return trimmed
       .replace(/:443(?=\/|$)/, `:${ADMIN_LOGIN_PORT}`)
-      .replace(/^https?(?=:\/\/)/, isHttpsPage ? 'https' : 'http');
+      .replace(/^https(?=:\/\/)/, 'http');
   }
 };
 
