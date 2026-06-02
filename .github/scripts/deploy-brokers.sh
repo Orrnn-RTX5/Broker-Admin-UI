@@ -298,18 +298,34 @@ server {
 }
 NGINX
 
+  conf_path="/etc/nginx/conf.d/$CONTAINER_NAME.conf"
+  as_root mkdir -p /etc/nginx/conf.d
+  as_root install -m 0644 "$tmp_conf" "$conf_path"
+
   if [ -d /etc/nginx/sites-available ] && [ -d /etc/nginx/sites-enabled ]; then
-    conf_path="/etc/nginx/sites-available/$CONTAINER_NAME.conf"
-    as_root install -m 0644 "$tmp_conf" "$conf_path"
-    as_root ln -sfn "$conf_path" "/etc/nginx/sites-enabled/$CONTAINER_NAME.conf"
+    as_root rm -f "/etc/nginx/sites-enabled/$CONTAINER_NAME.conf"
+    as_root rm -f "/etc/nginx/sites-available/$CONTAINER_NAME.conf"
     as_root rm -f /etc/nginx/sites-enabled/default
-  else
-    conf_path="/etc/nginx/conf.d/$CONTAINER_NAME.conf"
-    as_root install -m 0644 "$tmp_conf" "$conf_path"
   fi
+  as_root rm -f /etc/nginx/conf.d/default.conf
 
   rm -f "$tmp_conf"
   reload_nginx
+
+  nginx_dump="$(mktemp)"
+  if ! as_root nginx -T > "$nginx_dump" 2>&1; then
+    cat "$nginx_dump" >&2
+    rm -f "$nginx_dump"
+    exit 1
+  fi
+
+  if ! grep -Fq "server_name $DOMAIN;" "$nginx_dump"; then
+    cat "$nginx_dump" >&2
+    rm -f "$nginx_dump"
+    echo "Nginx loaded config does not include server_name $DOMAIN." >&2
+    exit 1
+  fi
+  rm -f "$nginx_dump"
 
   if [ "$ENABLE_HTTPS" = "true" ]; then
     certbot_args="--register-unsafely-without-email"
