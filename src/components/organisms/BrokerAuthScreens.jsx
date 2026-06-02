@@ -25,6 +25,7 @@ import {
   setAuthSession,
   setBrokerInfo,
   validateBrokerCredentials,
+  RUNTIME_DEFAULT_MT5_SERVER,
 } from '../../services/brokerAuth';
 
 // ---------------------------------------------------------------------------
@@ -214,7 +215,15 @@ export const BrokerSelector = ({ navigate }) => {
       .then((list) => {
         if (cancelled) return;
         setBrokerList(list);
-        if (list.length > 0) setSelectedId(list[0].broker_id);
+        if (list.length > 0) {
+          const defaultBroker = list.find(
+            (b) =>
+              b.broker_id === 'grow-trading-academy' ||
+              (RUNTIME_DEFAULT_MT5_SERVER &&
+                (b.server_ip === RUNTIME_DEFAULT_MT5_SERVER || b.broker_id === RUNTIME_DEFAULT_MT5_SERVER))
+          );
+          setSelectedId(defaultBroker ? defaultBroker.broker_id : list[0].broker_id);
+        }
       })
       .catch((err) => {
         if (cancelled) return;
@@ -233,7 +242,15 @@ export const BrokerSelector = ({ navigate }) => {
     fetchBrokerList()
       .then((list) => {
         setBrokerList(list);
-        if (list.length > 0) setSelectedId(list[0].broker_id);
+        if (list.length > 0) {
+          const defaultBroker = list.find(
+            (b) =>
+              b.broker_id === 'grow-trading-academy' ||
+              (RUNTIME_DEFAULT_MT5_SERVER &&
+                (b.server_ip === RUNTIME_DEFAULT_MT5_SERVER || b.broker_id === RUNTIME_DEFAULT_MT5_SERVER))
+          );
+          setSelectedId(defaultBroker ? defaultBroker.broker_id : list[0].broker_id);
+        }
       })
       .catch((err) => setListError(err.message || 'Failed to load brokers.'))
       .finally(() => setListLoading(false));
