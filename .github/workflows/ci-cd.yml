@@ -78,6 +78,10 @@ jobs:
     needs: publish-image
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      packages: read
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -87,8 +91,8 @@ jobs:
           IMAGE_REF: ${{ env.IMAGE_NAME }}:${{ github.sha }}
           BROKERS_JSON: ${{ secrets.BROKERS_JSON }}
           BROKER_SSH_PRIVATE_KEY: ${{ secrets.BROKER_SSH_PRIVATE_KEY }}
-          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
-          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME || github.actor }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN || github.token }}
           LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
           BROKER_ENV_GTA: ${{ secrets.BROKER_ENV_GTA }}
         run: bash .github/scripts/deploy-brokers.sh

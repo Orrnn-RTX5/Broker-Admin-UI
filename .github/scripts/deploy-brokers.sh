@@ -54,6 +54,15 @@ write_runtime_env() {
   local env_secret_name
   local env_secret_value
 
+  write_inline_runtime_env() {
+    jq -r '
+      (.env // {})
+      | to_entries[]
+      | select(.value != null)
+      | "\(.key)=\(.value | tostring | gsub("\r"; "") | gsub("\n"; "\\n"))"
+    ' <<< "$broker_json" > "$output_file"
+  }
+
   env_secret_name="$(jq -r '.env_secret // empty' <<< "$broker_json")"
   if [[ -n "$env_secret_name" ]]; then
     if [[ ! "$env_secret_name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
@@ -63,7 +72,13 @@ write_runtime_env() {
 
     env_secret_value="${!env_secret_name:-}"
     if [[ -z "$env_secret_value" ]]; then
-      echo "Broker env secret '$env_secret_name' is empty or not mapped in the workflow." >&2
+      if jq -e '(.env // {}) | type == "object" and length > 0' <<< "$broker_json" >/dev/null; then
+        echo "Broker env secret '$env_secret_name' is empty; using inline env from broker config."
+        write_inline_runtime_env
+        return
+      fi
+
+      echo "Broker env secret '$env_secret_name' is empty or not mapped in the workflow, and no inline env fallback is configured." >&2
       exit 1
     fi
 
@@ -80,12 +95,7 @@ write_runtime_env() {
     return
   fi
 
-  jq -r '
-    (.env // {})
-    | to_entries[]
-    | select(.value != null)
-    | "\(.key)=\(.value | tostring | gsub("\r"; "") | gsub("\n"; "\\n"))"
-  ' <<< "$broker_json" > "$output_file"
+  write_inline_runtime_env
 }
 
 ssh_opts=(
@@ -214,8 +224,7 @@ configure_nginx() {
   fi
 
   if [ "$ENABLE_HTTPS" = "true" ] && [ -z "$SSL_EMAIL" ]; then
-    echo "HTTPS is enabled for $DOMAIN but SSL_EMAIL/LETSENCRYPT_EMAIL is empty." >&2
-    exit 1
+    echo "HTTPS is enabled for $DOMAIN but SSL_EMAIL/LETSENCRYPT_EMAIL is empty; registering without email."
   fi
 
   install_nginx_stack
@@ -293,6 +302,7 @@ NGINX
     conf_path="/etc/nginx/sites-available/$CONTAINER_NAME.conf"
     as_root install -m 0644 "$tmp_conf" "$conf_path"
     as_root ln -sfn "$conf_path" "/etc/nginx/sites-enabled/$CONTAINER_NAME.conf"
+    as_root rm -f /etc/nginx/sites-enabled/default
   else
     conf_path="/etc/nginx/conf.d/$CONTAINER_NAME.conf"
     as_root install -m 0644 "$tmp_conf" "$conf_path"
@@ -302,12 +312,17 @@ NGINX
   reload_nginx
 
   if [ "$ENABLE_HTTPS" = "true" ]; then
+    certbot_args="--register-unsafely-without-email"
+    if [ -n "$SSL_EMAIL" ]; then
+      certbot_args="-m $SSL_EMAIL"
+    fi
+
     as_root certbot --nginx \
       --non-interactive \
       --agree-tos \
       --redirect \
       --keep-until-expiring \
-      -m "$SSL_EMAIL" \
+      $certbot_args \
       -d "$DOMAIN"
     reload_nginx
   fi
