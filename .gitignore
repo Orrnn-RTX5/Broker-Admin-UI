@@ -31,6 +31,5 @@ dist-ssr
 *.sw?
 release/*
 
-# Deployment credentials/config generated per environment
-brokers.json
+# Deployment credentials generated per environment
 deploy/brokers.json

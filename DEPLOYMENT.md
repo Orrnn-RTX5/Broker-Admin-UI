@@ -8,14 +8,14 @@ Create these repository secrets:
 
 | Secret | Purpose |
 | --- | --- |
-| `BROKERS_JSON` | JSON broker list. Use `brokers.example.json` as the template. |
+| `BROKERS_JSON` | Optional JSON broker list override. If empty, CI/CD reads the checked-in `brokers.json`. |
 | `BROKER_SSH_PRIVATE_KEY` | Private SSH key that can log in to each broker server listed in `BROKERS_JSON`. |
 | `BROKER_ENV_GTA` | Runtime env file for the Grow Trading Academy broker. Referenced by `env_secret` in `BROKERS_JSON`. |
 | `GHCR_USERNAME` | GitHub user or machine account used by broker servers to pull from GHCR. |
 | `GHCR_TOKEN` | GitHub token with permission to read the GHCR package. For private packages, use `read:packages` plus repo access. |
 | `LETSENCRYPT_EMAIL` | Email used by Certbot for HTTPS certificates. Optional if each broker entry has `ssl_email`. |
 
-Do not commit real broker credentials. `brokers.json` is ignored by Git for local notes; the workflow reads the real config from the `BROKERS_JSON` secret.
+Do not commit real broker credentials. The checked-in `brokers.json` should contain only broker deployment metadata and `env_secret` names. Runtime environment values stay in secrets such as `BROKER_ENV_GTA`.
 
 ## Broker JSON Shape
 
@@ -77,5 +77,5 @@ On push to `main`, GitHub Actions:
 1. Runs `npm ci` and `npm run build`.
 2. Builds the Docker image.
 3. Pushes the image to `ghcr.io/rtx5-orrnn/rtx5-broker-admin-ui` with `latest` and commit SHA tags.
-4. SSHes into each broker server in `BROKERS_JSON`.
+4. SSHes into each broker server from `BROKERS_JSON`, or from checked-in `brokers.json` when that secret is empty.
 5. Pulls the commit SHA image and restarts the container with that broker's runtime config.

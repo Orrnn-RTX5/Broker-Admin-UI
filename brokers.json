@@ -1,0 +1,18 @@
+{
+    "brokers": [
+        {
+            "id": "grow-trading-academy",
+            "host": "103.91.186.142",
+            "user": "root",
+            "port": 40111,
+            "channel": "canary",
+            "enabled": true,
+            "env_secret": "BROKER_ENV_GTA",
+            "domain": "admin.growtradingacademy.com",
+            "https": true,
+            "backend_host": "127.0.0.1",
+            "backend_port": 8091,
+            "app_port": 8080
+        }
+    ]
+}

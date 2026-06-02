@@ -2,8 +2,13 @@
 set -Eeuo pipefail
 
 if [[ -z "${BROKERS_JSON:-}" ]]; then
-  echo "BROKERS_JSON secret is empty; skipping broker deploy."
-  exit 0
+  if [[ -f brokers.json ]]; then
+    echo "BROKERS_JSON secret is empty; using checked-in brokers.json."
+    BROKERS_JSON="$(cat brokers.json)"
+  else
+    echo "BROKERS_JSON secret is empty and brokers.json is missing; skipping broker deploy."
+    exit 0
+  fi
 fi
 
 if [[ -z "${IMAGE_REF:-}" ]]; then
