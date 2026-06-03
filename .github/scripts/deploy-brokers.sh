@@ -508,6 +508,13 @@ fi
 printf '%s' "$GHCR_TOKEN" | docker_cmd login ghcr.io -u "$GHCR_USERNAME" --password-stdin >/dev/null
 docker_cmd pull "$IMAGE_REF"
 docker_cmd rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
+if [ "$ENABLE_NGINX" = "true" ]; then
+  stale_port_containers="$(docker_cmd ps -aq --filter "publish=$APP_PORT" || true)"
+  if [ -n "$stale_port_containers" ]; then
+    echo "Removing stale containers bound to app port $APP_PORT: $stale_port_containers"
+    docker_cmd rm -f $stale_port_containers >/dev/null 2>&1 || true
+  fi
+fi
 docker_cmd run -d \
   --name "$CONTAINER_NAME" \
   --restart unless-stopped \
