@@ -434,7 +434,7 @@ NGINX
     fi
 
     http_listen="$(nginx_listen_directives 80)"
-    https_listen="$(nginx_listen_directives 443 " ssl")"
+    https_listen="$(nginx_listen_directives 443 " ssl http2")"
     tmp_conf="$(mktemp)"
     cat > "$tmp_conf" <<NGINX
 server {
