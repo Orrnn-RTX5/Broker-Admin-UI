@@ -502,8 +502,23 @@ NGINX
       --non-interactive \
       --agree-tos \
       --keep-until-expiring \
+      --cert-name "$DOMAIN" \
       $certbot_args \
       -d "$DOMAIN"
+    cert_path="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+    cert_file_details="$(as_root openssl x509 -in "$cert_path" -noout -subject -ext subjectAltName 2>/dev/null || true)"
+    echo "Certificate file details for $DOMAIN:"
+    echo "$cert_file_details"
+    if ! printf '%s\n' "$cert_file_details" | grep -Fq "$DOMAIN"; then
+      echo "Certificate file for $DOMAIN does not match; forcing renewal."
+      as_root certbot certonly --nginx \
+        --non-interactive \
+        --agree-tos \
+        --force-renewal \
+        --cert-name "$DOMAIN" \
+        $certbot_args \
+        -d "$DOMAIN"
+    fi
     write_https_conf
     reload_nginx
 
