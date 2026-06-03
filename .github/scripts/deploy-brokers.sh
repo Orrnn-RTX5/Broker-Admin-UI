@@ -304,7 +304,6 @@ configure_nginx() {
 
     if [ -n "$listen_addr" ]; then
       printf '  listen %s:%s%s;\n' "$listen_addr" "$port" "$suffix"
-      printf '  listen %s%s;\n' "$port" "$suffix"
       return
     fi
 
