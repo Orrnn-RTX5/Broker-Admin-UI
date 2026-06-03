@@ -124,6 +124,7 @@ for ((i = 0; i < broker_count; i++)); do
   container_name="$(jq -r --arg id "$broker_id" --arg channel "$channel" '.container_name // "rtx5-broker-admin-ui-\($id)-\($channel)"' <<< "$broker")"
   app_port="$(jq -r '.app_port // 8080' <<< "$broker")"
   domain="$(jq -r '.domain // .nginx.domain // empty' <<< "$broker")"
+  nginx_listen_host="$(jq -r '.nginx.listen_host // .listen_host // empty' <<< "$broker")"
   backend_host="$(jq -r '.backend_host // .nginx.backend_host // "127.0.0.1"' <<< "$broker")"
   backend_port="$(jq -r '.backend_port // .nginx.backend_port // 8091' <<< "$broker")"
   enable_nginx="$(jq -r 'if ((.nginx.enabled // false) == true) or ((.domain // .nginx.domain // "") != "") then "true" else "false" end' <<< "$broker")"
@@ -154,6 +155,7 @@ for ((i = 0; i < broker_count; i++)); do
   remote_env="$remote_env GHCR_USERNAME=$(shell_quote "$GHCR_USERNAME")"
   remote_env="$remote_env GHCR_TOKEN=$(shell_quote "$GHCR_TOKEN")"
   remote_env="$remote_env DOMAIN=$(shell_quote "$domain")"
+  remote_env="$remote_env NGINX_LISTEN_HOST=$(shell_quote "$nginx_listen_host")"
   remote_env="$remote_env BACKEND_HOST=$(shell_quote "$backend_host")"
   remote_env="$remote_env BACKEND_PORT=$(shell_quote "$backend_port")"
   remote_env="$remote_env ENABLE_NGINX=$(shell_quote "$enable_nginx")"
@@ -255,6 +257,11 @@ configure_nginx() {
     exit 1
   fi
 
+  if [ -n "${NGINX_LISTEN_HOST:-}" ] && ! printf '%s' "$NGINX_LISTEN_HOST" | grep -Eq '^[A-Za-z0-9.:\[\]-]+$'; then
+    echo "NGINX_LISTEN_HOST contains invalid characters: $NGINX_LISTEN_HOST" >&2
+    exit 1
+  fi
+
   if [ "$ENABLE_HTTPS" = "true" ] && [ -z "$SSL_EMAIL" ]; then
     echo "HTTPS is enabled for $DOMAIN but SSL_EMAIL/LETSENCRYPT_EMAIL is empty; registering without email."
   fi
@@ -277,12 +284,49 @@ configure_nginx() {
     done
   }
 
+  nginx_listen_addr() {
+    if [ -z "${NGINX_LISTEN_HOST:-}" ]; then
+      return
+    fi
+
+    if printf '%s' "$NGINX_LISTEN_HOST" | grep -q ':' && ! printf '%s' "$NGINX_LISTEN_HOST" | grep -Eq '^\[.*\]$'; then
+      printf '[%s]' "$NGINX_LISTEN_HOST"
+      return
+    fi
+
+    printf '%s' "$NGINX_LISTEN_HOST"
+  }
+
+  nginx_listen_directives() {
+    port="$1"
+    suffix="${2:-}"
+    listen_addr="$(nginx_listen_addr)"
+
+    if [ -n "$listen_addr" ]; then
+      printf '  listen %s:%s%s;\n' "$listen_addr" "$port" "$suffix"
+      return
+    fi
+
+    printf '  listen %s%s;\n' "$port" "$suffix"
+    printf '  listen [::]:%s%s;\n' "$port" "$suffix"
+  }
+
+  openssl_connect_target() {
+    connect_host="${1:-127.0.0.1}"
+    if printf '%s' "$connect_host" | grep -q ':' && ! printf '%s' "$connect_host" | grep -Eq '^\[.*\]$'; then
+      printf '[%s]:443' "$connect_host"
+      return
+    fi
+
+    printf '%s:443' "$connect_host"
+  }
+
   write_http_conf() {
+    http_listen="$(nginx_listen_directives 80)"
     tmp_conf="$(mktemp)"
     cat > "$tmp_conf" <<NGINX
 server {
-  listen 80;
-  listen [::]:80;
+$http_listen
   server_name $DOMAIN;
 
   client_max_body_size 20m;
@@ -371,11 +415,12 @@ NGINX
       ssl_dhparam="ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;"
     fi
 
+    http_listen="$(nginx_listen_directives 80)"
+    https_listen="$(nginx_listen_directives 443 " ssl")"
     tmp_conf="$(mktemp)"
     cat > "$tmp_conf" <<NGINX
 server {
-  listen 80;
-  listen [::]:80;
+$http_listen
   server_name $DOMAIN;
 
   location /.well-known/acme-challenge/ {
@@ -388,8 +433,7 @@ server {
 }
 
 server {
-  listen 443 ssl;
-  listen [::]:443 ssl;
+$https_listen
   server_name $DOMAIN;
 
   ssl_certificate $cert_path;
@@ -522,11 +566,13 @@ NGINX
     write_https_conf
     reload_nginx
 
-    cert_subject="$(echo | openssl s_client -servername "$DOMAIN" -connect "127.0.0.1:443" 2>/dev/null | openssl x509 -noout -subject 2>/dev/null || true)"
-    cert_san="$(echo | openssl s_client -servername "$DOMAIN" -connect "127.0.0.1:443" 2>/dev/null | openssl x509 -noout -ext subjectAltName 2>/dev/null || true)"
-    echo "Loaded certificate subject for $DOMAIN: $cert_subject"
+    cert_connect_target="$(openssl_connect_target "${NGINX_LISTEN_HOST:-127.0.0.1}")"
+    cert_subject="$(echo | openssl s_client -servername "$DOMAIN" -connect "$cert_connect_target" 2>/dev/null | openssl x509 -noout -subject 2>/dev/null || true)"
+    cert_san="$(echo | openssl s_client -servername "$DOMAIN" -connect "$cert_connect_target" 2>/dev/null | openssl x509 -noout -ext subjectAltName 2>/dev/null || true)"
+    echo "Loaded certificate subject for $DOMAIN via $cert_connect_target: $cert_subject"
     echo "$cert_san"
     if ! printf '%s\n%s\n' "$cert_subject" "$cert_san" | grep -Fq "$DOMAIN"; then
+      echo "Configured nginx listen host: ${NGINX_LISTEN_HOST:-wildcard}" >&2
       echo "Nginx is not serving a certificate for $DOMAIN." >&2
       exit 1
     fi

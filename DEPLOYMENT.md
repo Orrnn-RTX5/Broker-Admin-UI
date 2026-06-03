@@ -32,6 +32,9 @@ Do not commit real broker credentials. The checked-in `brokers.json` should cont
       "env_secret": "BROKER_ENV_GTA",
       "domain": "admin.growtradingacademy.com",
       "https": true,
+      "nginx": {
+        "listen_host": "103.91.186.142"
+      },
       "backend_url": "https://services.growtradingacademy.com",
       "server_ip": "103.91.186.142",
       "backend_host": "127.0.0.1",
@@ -58,7 +61,7 @@ USE_MOCK_DISCOVERY=false
 
 Add another workflow env mapping if you create a new `env_secret` name for another broker.
 
-The broker `domain` is the deployed admin UI host. The frontend backend API should use `backend_url`/`API_HOST`, such as `https://services.growtradingacademy.com`. The host Nginx config can still proxy `/api/`, `/manager/`, `/Manager/`, `/ext-api/`, and `/ws/` to `backend_host:backend_port` when a broker uses its admin domain as the API origin.
+The broker `domain` is the deployed admin UI host. The frontend backend API should use `backend_url`/`API_HOST`, such as `https://services.growtradingacademy.com`. The host Nginx config can still proxy `/api/`, `/manager/`, `/Manager/`, `/ext-api/`, and `/ws/` to `backend_host:backend_port` when a broker uses its admin domain as the API origin. Set `nginx.listen_host` to the broker server IP when that server already has IP-specific nginx HTTPS vhosts, otherwise nginx can choose the wrong certificate before the admin domain vhost is considered.
 
 ## Server Requirements
 
