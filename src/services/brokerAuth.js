@@ -282,8 +282,9 @@ const postJson = async (url, body) => {
 
 export const loginManager = async (brokerInfo, { user, password, server }) => {
   try {
+    const backendUrl = resolveBrokerBackendUrl(brokerInfo, brokerInfo?.backend_url);
     return await postJson(
-      `${withAdminPort(brokerInfo.backend_url).replace(/\/+$/, '')}/api/v2/auth/login`,
+      `${withAdminPort(backendUrl).replace(/\/+$/, '')}/api/v2/auth/login`,
       { user, password, server }
     );
   } catch (error) {
@@ -293,8 +294,9 @@ export const loginManager = async (brokerInfo, { user, password, server }) => {
 
 export const loginAdmin = async (brokerInfo, { user, password, server }) => {
   try {
+    const backendUrl = resolveBrokerBackendUrl(brokerInfo, brokerInfo?.backend_url);
     return await postJson(
-      `${withAdminPort(brokerInfo.backend_url).replace(/\/+$/, '')}/api/v2/admin/login`,
+      `${withAdminPort(backendUrl).replace(/\/+$/, '')}/api/v2/admin/login`,
       { user, password, server: server || brokerInfo?.server_ip || brokerInfo?.broker_id }
     );
   } catch (error) {
@@ -336,7 +338,7 @@ export const getBrokerInfo = () => {
 };
 
 export const setBrokerInfo = (brokerInfo) => {
-  sessionStorage.setItem(BROKER_INFO_KEY, JSON.stringify(brokerInfo));
+  sessionStorage.setItem(BROKER_INFO_KEY, JSON.stringify(normalizeBrokerInfo(brokerInfo)));
   updateDynamicEndpoints();
 };
 

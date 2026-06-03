@@ -201,9 +201,10 @@ export const resolveBrokerBackendUrl = (brokerInfo = {}, fallbackUrl = '') => {
   const fallback = typeof brokerInfo === 'string' ? brokerInfo : fallbackUrl;
 
   const targetUrl = isDesktopBackendTarget() ? buildDesktopBackendUrl(info) : buildWebBackendUrl(info);
-  if (targetUrl) return targetUrl;
-
   const legacyUrl = resolveLegacyGtaBackendUrl(info, fallback);
+
+  if (legacyUrl && (!targetUrl || hasLegacyGtaMatch(targetUrl))) return legacyUrl;
+  if (targetUrl) return targetUrl;
   if (legacyUrl) return legacyUrl;
 
   return trimTrailingSlash(fallback);
