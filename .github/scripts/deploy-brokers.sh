@@ -321,6 +321,23 @@ configure_nginx() {
     printf '%s:443' "$connect_host"
   }
 
+  dump_nginx_ssl_debug() {
+    echo "Loaded nginx SSL/server-name lines:" >&2
+    as_root nginx -T 2>&1 | awk '
+      /^# configuration file / {
+        file = $0
+        next
+      }
+      /listen .*443|server_name |ssl_certificate/ {
+        if (file != last_file) {
+          print file
+          last_file = file
+        }
+        print "  " $0
+      }
+    ' >&2 || true
+  }
+
   write_http_conf() {
     http_listen="$(nginx_listen_directives 80)"
     tmp_conf="$(mktemp)"
@@ -573,6 +590,7 @@ NGINX
     echo "$cert_san"
     if ! printf '%s\n%s\n' "$cert_subject" "$cert_san" | grep -Fq "$DOMAIN"; then
       echo "Configured nginx listen host: ${NGINX_LISTEN_HOST:-wildcard}" >&2
+      dump_nginx_ssl_debug
       echo "Nginx is not serving a certificate for $DOMAIN." >&2
       exit 1
     fi
