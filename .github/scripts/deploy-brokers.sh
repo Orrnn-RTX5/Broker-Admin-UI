@@ -583,7 +583,7 @@ NGINX
     write_https_conf
     reload_nginx
 
-    cert_connect_target="$(openssl_connect_target "${NGINX_LISTEN_HOST:-127.0.0.1}")"
+    cert_connect_target="$(openssl_connect_target "${NGINX_LISTEN_HOST:-$DOMAIN}")"
     cert_subject="$(echo | openssl s_client -servername "$DOMAIN" -connect "$cert_connect_target" 2>/dev/null | openssl x509 -noout -subject 2>/dev/null || true)"
     cert_san="$(echo | openssl s_client -servername "$DOMAIN" -connect "$cert_connect_target" 2>/dev/null | openssl x509 -noout -ext subjectAltName 2>/dev/null || true)"
     echo "Loaded certificate subject for $DOMAIN via $cert_connect_target: $cert_subject"
