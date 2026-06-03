@@ -1,4 +1,5 @@
 import { getRuntimeValue } from '../config/runtimeConfig';
+import { isDesktopBackendTarget, resolveBrokerBackendUrl } from '../config/backendTarget';
 
 const BROKER_INFO_KEY = 'broker_info';
 const AUTH_KEY = 'auth';
@@ -28,30 +29,6 @@ export const RUNTIME_DEFAULT_MT5_SERVER =
   import.meta.env.VITE_DEFAULT_MT5_SERVER ||
   '';
 
-const hasProtocol = (value = '') => /^[a-z][a-z\d+.-]*:\/\//i.test(value);
-
-const mapIpToDomain = (urlStr) => {
-  if (!urlStr) return urlStr;
-  const trimmed = String(urlStr).trim();
-  if (trimmed.includes('103.91.186.142') || trimmed.includes('gta_broker')) {
-    return 'https://services.growtradingacademy.com';
-  }
-  return trimmed;
-};
-
-const getHostFromValue = (value = '') => {
-  const trimmed = String(value || '').trim();
-  if (!trimmed) return '';
-  if (/^https?:\/\//i.test(trimmed)) {
-    try {
-      return new URL(trimmed).hostname;
-    } catch {
-      return trimmed.replace(/^https?:\/\//i, '').split('/')[0].split(':')[0];
-    }
-  }
-  return trimmed.split(':')[0];
-};
-
 // ---------------------------------------------------------------------------
 // Mock broker list — mirrors what the real /api/v2/broker/servers returns.
 // Each entry must have: broker_id, name, status, backend_url, server_ip.
@@ -80,34 +57,32 @@ const MOCK_BROKER_LIST = [
 // ---------------------------------------------------------------------------
 const trimTrailingSlash = (value = '') => String(value || '').replace(/\/+$/, '');
 
+const upgradeHttpForHttpsPage = (url = '') => {
+  const trimmed = trimTrailingSlash(url);
+  const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
+
+  if (!isDesktopBackendTarget() && isHttpsPage && /^http:\/\//i.test(trimmed)) {
+    return trimmed.replace(/^http:\/\//i, 'https://');
+  }
+
+  return trimmed;
+};
+
 const buildBackendUrl = (info) => {
+  const targetUrl = resolveBrokerBackendUrl(info);
+  if (targetUrl) return upgradeHttpForHttpsPage(targetUrl);
+
   const explicitUrl = info.backend_url || info.api_url || info.server_url;
   if (explicitUrl) {
-    const mapped = mapIpToDomain(explicitUrl);
-    if (mapped !== explicitUrl) {
-      return mapped;
-    }
     // If it has protocol, keep it, but if it is http and the page is HTTPS, upgrade it to https!
-    const trimmed = trimTrailingSlash(explicitUrl);
-    if (/^http:\/\//i.test(trimmed)) {
-      const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
-      if (isHttpsPage) {
-        return trimmed.replace(/^http:\/\//i, 'https://');
-      }
-    }
-    return trimmed;
+    return upgradeHttpForHttpsPage(explicitUrl);
   }
 
   const host = info.server_ip || info.host;
   if (!host) return '';
 
   if (/^https?:\/\//i.test(host)) {
-    const trimmed = trimTrailingSlash(host);
-    const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
-    if (isHttpsPage && /^http:\/\//i.test(trimmed)) {
-      return trimmed.replace(/^http:\/\//i, 'https://');
-    }
-    return trimmed;
+    return upgradeHttpForHttpsPage(host);
   }
 
   const port = Number(info.server_port);
@@ -448,18 +423,9 @@ const normalizeBackendUrl = (server = '') => {
   const trimmed = String(server).trim();
   if (!trimmed) throw new Error('Server URL is required.');
 
-  const mapped = mapIpToDomain(trimmed);
-  if (mapped !== trimmed) {
-    return mapped;
-  }
-
   // If it already has protocol, return as-is (but upgrade to https if page is HTTPS)
   if (/^https?:\/\//i.test(trimmed)) {
-    const isHttpsPage = typeof window !== 'undefined' && window.location.protocol === 'https:';
-    if (isHttpsPage && /^http:\/\//i.test(trimmed)) {
-      return trimTrailingSlash(trimmed.replace(/^http:\/\//i, 'https://'));
-    }
-    return trimTrailingSlash(trimmed);
+    return upgradeHttpForHttpsPage(trimmed);
   }
 
   // Extract port if present

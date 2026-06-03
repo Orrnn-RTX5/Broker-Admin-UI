@@ -24,8 +24,13 @@ Manager login posts to `{broker_info.backend_url}/manager/api/v2/auth/login` wit
 Discovery is configured with:
 
 ```env
+VITE_BACKEND_TARGET=web
 VITE_DISCOVERY_BASE_URL=https://superbackend.orrnn.com
 VITE_USE_MOCK_DISCOVERY=true
 ```
+
+Use `VITE_BACKEND_TARGET=web` for the hosted web app so each selected broker uses its broker-list backend/API URL. Use `VITE_BACKEND_TARGET=desktop` for the desktop/electron app so each selected broker uses its broker-list server IP and broker port.
+
+Broker discovery entries should include a web URL field such as `backend_url`, `api_url`, `web_backend_url`, or `backend_domain`, plus a desktop field such as `server_ip`/`host` and `server_port`. Optional fields like `web_ext_api_url`, `desktop_backend_url`, and `ws_url` override the derived URLs when needed. A deployment `domain` is treated as the admin UI host, not the backend API URL.
 
 `VITE_USE_MOCK_DISCOVERY=true` uses the local `testorrnn` and `orrnn` broker map while the SuperAdmin discovery endpoint is pending. Set it to `false` when `/api/v1/brokers/{broker_id}` is available.

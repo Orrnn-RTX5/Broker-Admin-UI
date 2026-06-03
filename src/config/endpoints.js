@@ -1,18 +1,15 @@
 // Central place for all network endpoints.
 // Components should import from here instead of hardcoding a host.
 import { getRuntimeValue } from './runtimeConfig';
+import {
+  isDirectBrokerBackendUrl,
+  resolveBrokerBackendUrl,
+  resolveBrokerExtApiUrl,
+  resolveBrokerWsUrl,
+} from './backendTarget';
 
 const trimTrailingSlash = (value = '') => String(value || '').replace(/\/+$/, '');
 const hasProtocol = (value = '') => /^[a-z][a-z\d+.-]*:\/\//i.test(value);
-
-const mapIpToDomain = (urlStr) => {
-  if (!urlStr) return urlStr;
-  const trimmed = String(urlStr).trim();
-  if (trimmed.includes('103.91.186.142') || trimmed.includes('gta_broker')) {
-    return 'https://services.growtradingacademy.com';
-  }
-  return trimmed;
-};
 const withProtocol = (value = '') => (hasProtocol(value) ? value : `http://${value}`);
 
 const DEFAULTS = {
@@ -56,11 +53,6 @@ const getExplicitPort = (endpoint) => {
 const BROKER_HTTP_PORT = 8091;
 
 const normalizeBrokerBackendUrl = (backendUrl = '') => {
-  const mapped = mapIpToDomain(backendUrl);
-  if (mapped !== backendUrl) {
-    return mapped;
-  }
-
   const trimmed = trimTrailingSlash(backendUrl);
   if (!trimmed) return trimmed;
 
@@ -137,14 +129,15 @@ const resolveMt5Server = (brokerInfo, backendUrl) => {
 export const updateDynamicEndpoints = () => {
   try {
     const info = readBrokerInfo();
-    const rawUrl = trimTrailingSlash(info?.backend_url || '');
+    const rawUrl = trimTrailingSlash(info?.backend_url || info?.api_url || info?.server_url || '');
+    const targetUrl = resolveBrokerBackendUrl(info, rawUrl);
 
-    if (rawUrl) {
+    if (targetUrl) {
       // Normalize: force https:// on HTTPS pages, or http:// on HTTP pages for port 8091
-      const backendUrl = normalizeBrokerBackendUrl(rawUrl);
+      const backendUrl = normalizeBrokerBackendUrl(targetUrl);
       API_HOST = backendUrl;
-      WS_HOST = buildWsHost(backendUrl);
-      API_HOST_EXT = buildExtHost(backendUrl);
+      WS_HOST = resolveBrokerWsUrl(info) || buildWsHost(backendUrl);
+      API_HOST_EXT = resolveBrokerExtApiUrl(info, backendUrl) || buildExtHost(backendUrl);
       DEFAULT_MT5_SERVER = resolveMt5Server(info, backendUrl);
       return;
     }
@@ -180,7 +173,7 @@ export const buildManagerApiUrl = (endpoint = '') => {
 
   // For broker backend (103.91.186.142:8091), don't add /manager/ prefix
   // Just use the path directly (e.g., /GroupList, /ManagerOnline)
-  const isBrokerBackend = API_HOST && /103\.91\.186\.142|localhost.*:8091|services\.growtradingacademy\.com/.test(API_HOST);
+  const isBrokerBackend = API_HOST && isDirectBrokerBackendUrl(API_HOST, readBrokerInfo() || {});
 
   let managerPath;
   if (isBrokerBackend) {

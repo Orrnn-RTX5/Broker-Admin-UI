@@ -32,6 +32,8 @@ Do not commit real broker credentials. The checked-in `brokers.json` should cont
       "env_secret": "BROKER_ENV_GTA",
       "domain": "admin.growtradingacademy.com",
       "https": true,
+      "backend_url": "https://services.growtradingacademy.com",
+      "server_ip": "103.91.186.142",
       "backend_host": "127.0.0.1",
       "backend_port": 8091,
       "app_port": 8080
@@ -45,9 +47,10 @@ Do not commit real broker credentials. The checked-in `brokers.json` should cont
 `BROKER_ENV_GTA` is stored separately from `BROKERS_JSON` and must use Docker `--env-file` format:
 
 ```env
-API_HOST=https://admin.growtradingacademy.com
-API_HOST_EXT=https://admin.growtradingacademy.com/ext-api
-WS_HOST=wss://admin.growtradingacademy.com
+BACKEND_TARGET=web
+API_HOST=https://services.growtradingacademy.com
+API_HOST_EXT=https://services.growtradingacademy.com
+WS_HOST=wss://services.growtradingacademy.com
 DEFAULT_MT5_SERVER=103.91.186.142
 DISCOVERY_BASE_URL=https://superbackend.orrnn.com
 USE_MOCK_DISCOVERY=false
@@ -55,7 +58,7 @@ USE_MOCK_DISCOVERY=false
 
 Add another workflow env mapping if you create a new `env_secret` name for another broker.
 
-The host Nginx config proxies `/api/`, `/manager/`, `/Manager/`, `/ext-api/`, and `/ws/` to `backend_host:backend_port`, so browser traffic stays on HTTPS/WSS for `admin.growtradingacademy.com`.
+The broker `domain` is the deployed admin UI host. The frontend backend API should use `backend_url`/`API_HOST`, such as `https://services.growtradingacademy.com`. The host Nginx config can still proxy `/api/`, `/manager/`, `/Manager/`, `/ext-api/`, and `/ws/` to `backend_host:backend_port` when a broker uses its admin domain as the API origin.
 
 ## Server Requirements
 
