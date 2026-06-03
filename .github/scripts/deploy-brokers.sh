@@ -261,8 +261,12 @@ configure_nginx() {
 
   install_nginx_stack
 
-  tmp_conf="$(mktemp)"
-  cat > "$tmp_conf" <<NGINX
+  conf_path="/etc/nginx/conf.d/00-$CONTAINER_NAME.conf"
+  old_conf_path="/etc/nginx/conf.d/$CONTAINER_NAME.conf"
+
+  write_http_conf() {
+    tmp_conf="$(mktemp)"
+    cat > "$tmp_conf" <<NGINX
 server {
   listen 80;
   listen [::]:80;
@@ -330,9 +334,123 @@ server {
 }
 NGINX
 
-  conf_path="/etc/nginx/conf.d/$CONTAINER_NAME.conf"
-  as_root mkdir -p /etc/nginx/conf.d
-  as_root install -m 0644 "$tmp_conf" "$conf_path"
+    as_root mkdir -p /etc/nginx/conf.d
+    as_root install -m 0644 "$tmp_conf" "$conf_path"
+    rm -f "$tmp_conf"
+  }
+
+  write_https_conf() {
+    cert_path="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+    key_path="/etc/letsencrypt/live/$DOMAIN/privkey.pem"
+
+    if [ ! -f "$cert_path" ] || [ ! -f "$key_path" ]; then
+      echo "Expected certificate files for $DOMAIN were not found." >&2
+      exit 1
+    fi
+
+    ssl_options=""
+    if [ -f /etc/letsencrypt/options-ssl-nginx.conf ]; then
+      ssl_options="include /etc/letsencrypt/options-ssl-nginx.conf;"
+    fi
+
+    ssl_dhparam=""
+    if [ -f /etc/letsencrypt/ssl-dhparams.pem ]; then
+      ssl_dhparam="ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;"
+    fi
+
+    tmp_conf="$(mktemp)"
+    cat > "$tmp_conf" <<NGINX
+server {
+  listen 80;
+  listen [::]:80;
+  server_name $DOMAIN;
+
+  location /.well-known/acme-challenge/ {
+    root /var/www/html;
+  }
+
+  location / {
+    return 301 https://\$host\$request_uri;
+  }
+}
+
+server {
+  listen 443 ssl;
+  listen [::]:443 ssl;
+  server_name $DOMAIN;
+
+  ssl_certificate $cert_path;
+  ssl_certificate_key $key_path;
+  $ssl_options
+  $ssl_dhparam
+
+  client_max_body_size 20m;
+
+  location /api/ {
+    proxy_pass http://$BACKEND_HOST:$BACKEND_PORT;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+  }
+
+  location /manager/ {
+    proxy_pass http://$BACKEND_HOST:$BACKEND_PORT;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+  }
+
+  location /Manager/ {
+    proxy_pass http://$BACKEND_HOST:$BACKEND_PORT;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+  }
+
+  location /ext-api/ {
+    proxy_pass http://$BACKEND_HOST:$BACKEND_PORT/;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+  }
+
+  location /ws/ {
+    proxy_pass http://$BACKEND_HOST:$BACKEND_PORT;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_set_header Upgrade \$http_upgrade;
+    proxy_set_header Connection "upgrade";
+  }
+
+  location / {
+    proxy_pass http://127.0.0.1:$APP_PORT;
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_set_header Upgrade \$http_upgrade;
+    proxy_set_header Connection "upgrade";
+  }
+}
+NGINX
+
+    as_root install -m 0644 "$tmp_conf" "$conf_path"
+    rm -f "$tmp_conf"
+  }
+
+  write_http_conf
 
   if [ -d /etc/nginx/sites-available ] && [ -d /etc/nginx/sites-enabled ]; then
     as_root rm -f "/etc/nginx/sites-enabled/$CONTAINER_NAME.conf"
@@ -340,9 +458,9 @@ NGINX
     as_root rm -f /etc/nginx/sites-enabled/default
   fi
   as_root rm -f /etc/nginx/conf.d/default.conf
+  as_root rm -f "$old_conf_path"
   ensure_conf_d_include
 
-  rm -f "$tmp_conf"
   reload_nginx
 
   nginx_dump="$(mktemp)"
@@ -366,13 +484,13 @@ NGINX
       certbot_args="-m $SSL_EMAIL"
     fi
 
-    as_root certbot --nginx \
+    as_root certbot certonly --nginx \
       --non-interactive \
       --agree-tos \
-      --redirect \
       --keep-until-expiring \
       $certbot_args \
       -d "$DOMAIN"
+    write_https_conf
     reload_nginx
   fi
 }
