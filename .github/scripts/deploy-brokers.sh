@@ -257,7 +257,7 @@ configure_nginx() {
     exit 1
   fi
 
-  if [ -n "${NGINX_LISTEN_HOST:-}" ] && ! printf '%s' "$NGINX_LISTEN_HOST" | grep -Eq '^[A-Za-z0-9.:\[\]-]+$'; then
+  if [ -n "${NGINX_LISTEN_HOST:-}" ] && ! printf '%s' "$NGINX_LISTEN_HOST" | grep -Eq '^[A-Za-z0-9.:_-]+$'; then
     echo "NGINX_LISTEN_HOST contains invalid characters: $NGINX_LISTEN_HOST" >&2
     exit 1
   fi
