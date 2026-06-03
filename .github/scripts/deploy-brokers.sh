@@ -264,6 +264,19 @@ configure_nginx() {
   conf_path="/etc/nginx/conf.d/00-$CONTAINER_NAME.conf"
   old_conf_path="/etc/nginx/conf.d/$CONTAINER_NAME.conf"
 
+  remove_conflicting_domain_configs() {
+    for path in /etc/nginx/conf.d/*.conf /etc/nginx/sites-enabled/* /etc/nginx/sites-available/*; do
+      [ -e "$path" ] || continue
+      [ "$path" = "$conf_path" ] && continue
+
+      if as_root grep -Fq "$DOMAIN" "$path"; then
+        backup_path="$path.disabled.$(date +%s)"
+        echo "Disabling conflicting nginx config for $DOMAIN: $path -> $backup_path"
+        as_root mv "$path" "$backup_path"
+      fi
+    done
+  }
+
   write_http_conf() {
     tmp_conf="$(mktemp)"
     cat > "$tmp_conf" <<NGINX
@@ -450,6 +463,7 @@ NGINX
     rm -f "$tmp_conf"
   }
 
+  remove_conflicting_domain_configs
   write_http_conf
 
   if [ -d /etc/nginx/sites-available ] && [ -d /etc/nginx/sites-enabled ]; then
@@ -492,6 +506,15 @@ NGINX
       -d "$DOMAIN"
     write_https_conf
     reload_nginx
+
+    cert_subject="$(echo | openssl s_client -servername "$DOMAIN" -connect "127.0.0.1:443" 2>/dev/null | openssl x509 -noout -subject 2>/dev/null || true)"
+    cert_san="$(echo | openssl s_client -servername "$DOMAIN" -connect "127.0.0.1:443" 2>/dev/null | openssl x509 -noout -ext subjectAltName 2>/dev/null || true)"
+    echo "Loaded certificate subject for $DOMAIN: $cert_subject"
+    echo "$cert_san"
+    if ! printf '%s\n%s\n' "$cert_subject" "$cert_san" | grep -Fq "$DOMAIN"; then
+      echo "Nginx is not serving a certificate for $DOMAIN." >&2
+      exit 1
+    fi
   fi
 }
 
