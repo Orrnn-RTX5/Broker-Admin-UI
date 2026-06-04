@@ -25,8 +25,51 @@ import {
   setAuthSession,
   setBrokerInfo,
   validateBrokerCredentials,
+  RUNTIME_BROKER_ID,
   RUNTIME_DEFAULT_MT5_SERVER,
 } from '../../services/brokerAuth';
+
+const comparableHost = (value = '') => {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return '';
+
+  try {
+    return new URL(trimmed.includes('://') ? trimmed : `https://${trimmed}`).hostname.toLowerCase();
+  } catch {
+    return trimmed
+      .replace(/^[a-z][a-z\d+.-]*:\/\//i, '')
+      .split('/')[0]
+      .split(':')[0]
+      .toLowerCase();
+  }
+};
+
+const brokerMatchesRuntime = (broker) => {
+  const runtimeBrokerId = String(RUNTIME_BROKER_ID || '').trim().toLowerCase();
+  if (
+    runtimeBrokerId &&
+    [broker.broker_id, broker.id].some((value) => String(value || '').trim().toLowerCase() === runtimeBrokerId)
+  ) {
+    return true;
+  }
+
+  const runtimeServer = comparableHost(RUNTIME_DEFAULT_MT5_SERVER);
+  if (!runtimeServer) return false;
+
+  return [
+    broker.server_ip,
+    broker.host,
+    broker.server,
+    broker.server_url,
+    broker.backend_url,
+    broker.api_url,
+  ].some((value) => comparableHost(value) === runtimeServer);
+};
+
+const getDefaultBroker = (list = []) =>
+  list.find(brokerMatchesRuntime) ||
+  list.find((b) => b.broker_id === 'gta_broker' || b.broker_id === 'grow-trading-academy') ||
+  list[0];
 
 // ---------------------------------------------------------------------------
 // Shell & shared UI primitives
@@ -216,14 +259,7 @@ export const BrokerSelector = ({ navigate }) => {
         if (cancelled) return;
         setBrokerList(list);
         if (list.length > 0) {
-          const defaultBroker = list.find(
-            (b) =>
-              b.broker_id === 'gta_broker' ||
-              b.broker_id === 'grow-trading-academy' ||
-              (RUNTIME_DEFAULT_MT5_SERVER &&
-                (b.server_ip === RUNTIME_DEFAULT_MT5_SERVER || b.broker_id === RUNTIME_DEFAULT_MT5_SERVER))
-          );
-          setSelectedId(defaultBroker ? defaultBroker.broker_id : list[0].broker_id);
+          setSelectedId(getDefaultBroker(list)?.broker_id || list[0].broker_id);
         }
       })
       .catch((err) => {
@@ -244,14 +280,7 @@ export const BrokerSelector = ({ navigate }) => {
       .then((list) => {
         setBrokerList(list);
         if (list.length > 0) {
-          const defaultBroker = list.find(
-            (b) =>
-              b.broker_id === 'gta_broker' ||
-              b.broker_id === 'grow-trading-academy' ||
-              (RUNTIME_DEFAULT_MT5_SERVER &&
-                (b.server_ip === RUNTIME_DEFAULT_MT5_SERVER || b.broker_id === RUNTIME_DEFAULT_MT5_SERVER))
-          );
-          setSelectedId(defaultBroker ? defaultBroker.broker_id : list[0].broker_id);
+          setSelectedId(getDefaultBroker(list)?.broker_id || list[0].broker_id);
         }
       })
       .catch((err) => setListError(err.message || 'Failed to load brokers.'))

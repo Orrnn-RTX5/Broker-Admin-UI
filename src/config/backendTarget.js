@@ -79,6 +79,27 @@ export const trimTrailingSlash = (value = '') => String(value || '').replace(/\/
 
 const hasProtocol = (value = '') => /^[a-z][a-z\d+.-]*:\/\//i.test(value);
 
+const getRuntimeBrokerId = () =>
+  String(getRuntimeValue('BROKER_ID', 'VITE_BROKER_ID') || import.meta.env.VITE_BROKER_ID || '')
+    .trim()
+    .toLowerCase();
+
+const getRuntimeDefaultServer = () =>
+  String(
+    getRuntimeValue('DEFAULT_MT5_SERVER', 'VITE_DEFAULT_MT5_SERVER') ||
+      import.meta.env.VITE_DEFAULT_MT5_SERVER ||
+      ''
+  ).trim();
+
+const getRuntimeApiHost = () =>
+  trimTrailingSlash(getRuntimeValue('API_HOST', 'VITE_API_HOST') || import.meta.env.VITE_API_HOST || '');
+
+const getRuntimeApiHostExt = () =>
+  trimTrailingSlash(getRuntimeValue('API_HOST_EXT', 'VITE_API_HOST_EXT') || import.meta.env.VITE_API_HOST_EXT || '');
+
+const getRuntimeWsHost = () =>
+  trimTrailingSlash(getRuntimeValue('WS_HOST', 'VITE_WS_HOST') || import.meta.env.VITE_WS_HOST || '');
+
 export const getBackendTarget = () =>
   String(
     getRuntimeValue('BACKEND_TARGET', 'VITE_BACKEND_TARGET', 'BACKEND_MODE', 'VITE_BACKEND_MODE') ||
@@ -141,6 +162,47 @@ const getUrlHost = (value = '') => {
   }
 };
 
+const getComparableHost = (value = '') => {
+  const trimmed = trimTrailingSlash(value);
+  if (!trimmed) return '';
+
+  try {
+    return new URL(ensureUrl(trimmed)).hostname.toLowerCase();
+  } catch {
+    return trimmed
+      .replace(/^[a-z][a-z\d+.-]*:\/\//i, '')
+      .split('/')[0]
+      .split(':')[0]
+      .toLowerCase();
+  }
+};
+
+const brokerMatchesRuntimeDeployment = (brokerInfo = {}) => {
+  const runtimeBrokerId = getRuntimeBrokerId();
+  if (
+    runtimeBrokerId &&
+    [brokerInfo.broker_id, brokerInfo.id].some((value) => String(value || '').trim().toLowerCase() === runtimeBrokerId)
+  ) {
+    return true;
+  }
+
+  const runtimeServer = getComparableHost(getRuntimeDefaultServer());
+  if (!runtimeServer) return false;
+
+  return [
+    brokerInfo.server_ip,
+    brokerInfo.host,
+    brokerInfo.ip,
+    brokerInfo.backend_ip,
+    brokerInfo.backend_host,
+    brokerInfo.server,
+    brokerInfo.server_url,
+    brokerInfo.backend_url,
+    brokerInfo.api_url,
+    brokerInfo.market_api_url,
+  ].some((value) => getComparableHost(value) === runtimeServer);
+};
+
 const hasLegacyGtaMatch = (...values) =>
   values
     .filter((value) => value !== undefined && value !== null)
@@ -200,6 +262,11 @@ export const resolveBrokerBackendUrl = (brokerInfo = {}, fallbackUrl = '') => {
   const info = brokerInfo && typeof brokerInfo === 'object' ? brokerInfo : {};
   const fallback = typeof brokerInfo === 'string' ? brokerInfo : fallbackUrl;
 
+  if (!isDesktopBackendTarget() && brokerMatchesRuntimeDeployment(info)) {
+    const runtimeApiHost = getRuntimeApiHost();
+    if (runtimeApiHost) return ensureUrl(runtimeApiHost, 'https');
+  }
+
   const targetUrl = isDesktopBackendTarget() ? buildDesktopBackendUrl(info) : buildWebBackendUrl(info);
   const legacyUrl = resolveLegacyGtaBackendUrl(info, fallback);
 
@@ -211,6 +278,11 @@ export const resolveBrokerBackendUrl = (brokerInfo = {}, fallbackUrl = '') => {
 };
 
 export const resolveBrokerExtApiUrl = (brokerInfo = {}, backendUrl = '') => {
+  if (!isDesktopBackendTarget() && brokerMatchesRuntimeDeployment(brokerInfo)) {
+    const runtimeApiHostExt = getRuntimeApiHostExt();
+    if (runtimeApiHostExt) return ensureUrl(runtimeApiHostExt, 'https');
+  }
+
   const explicitUrl = getFirstValue(
     brokerInfo,
     isDesktopBackendTarget() ? DESKTOP_EXT_FIELDS : WEB_EXT_FIELDS
@@ -233,6 +305,14 @@ export const resolveBrokerExtApiUrl = (brokerInfo = {}, backendUrl = '') => {
 
 export const resolveBrokerWsUrl = (brokerInfo = {}) => {
   if (isDesktopBackendTarget()) return '';
+
+  if (brokerMatchesRuntimeDeployment(brokerInfo)) {
+    const runtimeWsHost = getRuntimeWsHost();
+    if (runtimeWsHost) {
+      const trimmed = trimTrailingSlash(runtimeWsHost);
+      return /^wss?:\/\//i.test(trimmed) ? trimmed : ensureUrl(trimmed, 'wss').replace(/^https?:/i, 'wss:');
+    }
+  }
 
   const explicitUrl = getFirstValue(brokerInfo, WS_FIELDS);
   if (!explicitUrl) return '';

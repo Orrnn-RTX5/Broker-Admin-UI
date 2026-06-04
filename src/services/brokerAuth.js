@@ -24,6 +24,11 @@ export const RUNTIME_API_HOST =
   import.meta.env.VITE_API_HOST ||
   '').replace(/\/+$/, '');
 
+export const RUNTIME_BROKER_ID =
+  (getRuntimeValue('BROKER_ID', 'VITE_BROKER_ID') ||
+  import.meta.env.VITE_BROKER_ID ||
+  '').trim().toLowerCase();
+
 export const RUNTIME_DEFAULT_MT5_SERVER =
   getRuntimeValue('DEFAULT_MT5_SERVER', 'VITE_DEFAULT_MT5_SERVER') ||
   import.meta.env.VITE_DEFAULT_MT5_SERVER ||
