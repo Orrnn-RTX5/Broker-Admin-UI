@@ -133,6 +133,9 @@ for ((i = 0; i < broker_count; i++)); do
   if [[ -z "$ssl_email" ]]; then
     ssl_email="${LETSENCRYPT_EMAIL:-}"
   fi
+  if [[ "${MANAGE_NGINX_ON_DEPLOY:-false}" != "true" ]]; then
+    enable_nginx="false"
+  fi
 
   if [[ -z "$host" ]]; then
     echo "Broker '$name' is missing host." >&2
