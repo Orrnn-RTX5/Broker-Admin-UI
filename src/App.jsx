@@ -10,7 +10,14 @@ import CreateGroupPopup from './components/RIGHTCLICKJPOPUPS/CreateGroupPopup';
 import { AdminLogin, BrokerSelector, ManagerLogin, ManualBrokerEntry } from './components/organisms/BrokerAuthScreens';
 import { TabBar } from './components/organisms/TabBar';
 import { HelpModal } from './components/organisms/HelpModal';
-import { expireAuthSession, normalizeTokenExpiresAt, SESSION_EXPIRED_EVENT, useAuthStore } from './store/authStore';
+import {
+  expireAuthSession,
+  isAuthStorageEvent,
+  normalizeTokenExpiresAt,
+  SESSION_EXPIRED_EVENT,
+  useAuthStore,
+  validateAuthSession,
+} from './store/authStore';
 import { useConnectionStore } from './store/connectionStore';
 import useSymbolStore from './store/useSymbolStore';
 import { useLocalStorage } from './lib/useLocalStorage';
@@ -112,13 +119,42 @@ const AppInner = () => {
   }, [isAuthenticated, navigate, pathname]);
 
   React.useEffect(() => {
-    const handleSessionExpired = () => {
-      navigate('/', { replace: true });
+    const handleSessionExpired = (event) => {
+      navigate(event.detail?.loginPath || '/', { replace: true });
     };
 
     window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
     return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
   }, [navigate]);
+
+  React.useEffect(() => {
+    if (!isAuthenticated) return undefined;
+
+    const checkAuthSession = () => {
+      validateAuthSession('auth_storage_invalid');
+    };
+
+    const handleStorage = (event) => {
+      if (isAuthStorageEvent(event)) checkAuthSession();
+    };
+    const handleFocus = () => checkAuthSession();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') checkAuthSession();
+    };
+
+    checkAuthSession();
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    const intervalId = window.setInterval(checkAuthSession, 2_000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.clearInterval(intervalId);
+    };
+  }, [isAuthenticated]);
 
   React.useEffect(() => {
     if (!isAuthenticated || !tokenExpiresAt) return undefined;

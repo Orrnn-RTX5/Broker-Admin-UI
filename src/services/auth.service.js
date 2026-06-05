@@ -1,5 +1,5 @@
 import { api } from '../lib/api';
-import { useAuthStore } from '../store/authStore';
+import { expireAuthSession, useAuthStore } from '../store/authStore';
 import { clearBrokerInfo } from './brokerAuth';
 
 export const AuthService = {
@@ -54,14 +54,7 @@ export const AuthService = {
   },
 
   logout: () => {
-    sessionStorage.removeItem('auth');
     clearBrokerInfo();
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('brokerLogin');
-    localStorage.removeItem('brokerId');
-    localStorage.removeItem('tokenExpiresAt');
-    localStorage.removeItem('token_expires_at');
-    useAuthStore.getState().logout();
+    expireAuthSession('logout');
   }
 };

@@ -1,11 +1,12 @@
 import axios from 'axios';
-import { expireAuthSession, isTokenExpired, useAuthStore } from '../store/authStore';
+import { expireAuthSession, isTokenExpired, useAuthStore, validateAuthSession } from '../store/authStore';
 import { useConnectionStore } from '../store/connectionStore';
 
 
 import { API_HOST, buildExtApiUrl, buildManagerApiUrl } from '../config/endpoints';
 
 const SECRET_KEY_RE = /(authorization|password|token|secret|api[_-]?key)/i;
+const AUTH_REJECTION_RE = /(token|session|auth|jwt|expired|unauthorized|unauthenticated|invalid credentials)/i;
 
 const redactForLog = (value, seen = new WeakSet()) => {
   if (!value || typeof value !== 'object') return value;
@@ -22,6 +23,23 @@ const redactForLog = (value, seen = new WeakSet()) => {
       SECRET_KEY_RE.test(key) ? '[REDACTED]' : redactForLog(entry, seen),
     ])
   );
+};
+
+const responseDataText = (data) => {
+  if (!data) return '';
+  if (typeof data === 'string') return data;
+  try {
+    return JSON.stringify(data);
+  } catch {
+    return String(data);
+  }
+};
+
+const isAuthRejectionError = (error) => {
+  const status = error.response?.status;
+  if (status === 401 || status === 419) return true;
+  if (status !== 403) return false;
+  return AUTH_REJECTION_RE.test(responseDataText(error.response?.data));
 };
 
 export const api = axios.create({
@@ -41,6 +59,10 @@ api.interceptors.request.use((config) => {
         config.url = `${API_HOST}${config.url}`;
       }
     }
+  }
+
+  if (validateAuthSession('auth_storage_invalid')) {
+    return Promise.reject(new Error('Session expired. Please log in again.'));
   }
 
   const authState = useAuthStore.getState();
@@ -88,7 +110,26 @@ api.interceptors.response.use((response) => {
     );
   }
 
+  if (isAuthRejectionError(error) && error.response?.status !== 401) {
+    expireAuthSession('token_rejected');
+    return Promise.reject(error);
+  }
+
+  if (error.response?.status === 401 && !originalRequest) {
+    expireAuthSession('token_rejected');
+    return Promise.reject(error);
+  }
+
+  if (error.response?.status === 401 && (originalRequest._retry || originalRequest._noRetry)) {
+    expireAuthSession('token_rejected');
+    return Promise.reject(error);
+  }
+
   if (error.response?.status === 401 && !originalRequest._retry && !originalRequest._noRetry) {
+    if (validateAuthSession('auth_storage_invalid')) {
+      return Promise.reject(error);
+    }
+
     originalRequest._retry = true;
     
     try {
@@ -104,6 +145,9 @@ api.interceptors.response.use((response) => {
 
       const access_token = res.data.token || res.data.access_token || res.data.session_token;
       const nextRefreshToken = res.data.refresh_token || refreshToken;
+      if (!access_token) {
+        throw new Error('Refresh response did not include access token');
+      }
       
       // Update store
       useAuthStore.getState().setToken(
@@ -114,6 +158,7 @@ api.interceptors.response.use((response) => {
       );
       
       // Retry original request
+      originalRequest.headers = originalRequest.headers || {};
       originalRequest.headers.Authorization = `Bearer ${access_token}`;
       return api(originalRequest);
     } catch (refreshError) {
