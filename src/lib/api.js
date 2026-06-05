@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useAuthStore } from '../store/authStore';
+import { expireAuthSession, isTokenExpired, useAuthStore } from '../store/authStore';
 import { useConnectionStore } from '../store/connectionStore';
 
 
@@ -43,7 +43,13 @@ api.interceptors.request.use((config) => {
     }
   }
 
-  const token = useAuthStore.getState().accessToken;
+  const authState = useAuthStore.getState();
+  const token = authState.accessToken;
+  if (token && isTokenExpired(authState.tokenExpiresAt)) {
+    expireAuthSession('token_expired');
+    return Promise.reject(new Error('Session expired. Please log in again.'));
+  }
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -96,17 +102,23 @@ api.interceptors.response.use((response) => {
         refresh_token: refreshToken
       });
 
-      const access_token = res.data.token || res.data.access_token;
+      const access_token = res.data.token || res.data.access_token || res.data.session_token;
+      const nextRefreshToken = res.data.refresh_token || refreshToken;
       
       // Update store
-      useAuthStore.getState().setToken(access_token, refreshToken);
+      useAuthStore.getState().setToken(
+        access_token,
+        nextRefreshToken,
+        res.data.expires_at || res.data.expiresAt || res.data.token_expires_at,
+        res.data.expires_in || res.data.expiresIn
+      );
       
       // Retry original request
       originalRequest.headers.Authorization = `Bearer ${access_token}`;
       return api(originalRequest);
     } catch (refreshError) {
       console.error('Session expired. Please log in again.');
-      useAuthStore.getState().logout();
+      expireAuthSession('refresh_failed');
       return Promise.reject(refreshError);
     }
   }

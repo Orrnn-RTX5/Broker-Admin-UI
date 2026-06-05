@@ -18,7 +18,12 @@ export const AuthService = {
       
       // Update store and parse user info directly from the Connect response
       if (access_token) {
-        useAuthStore.getState().setToken(access_token, refresh_token);
+        useAuthStore.getState().setToken(
+          access_token,
+          refresh_token,
+          response.data.expires_at || response.data.expiresAt || response.data.token_expires_at,
+          response.data.expires_in || response.data.expiresIn
+        );
         
         // Build user dynamically avoiding /me endpoint dependency
         const userInfo = {
@@ -55,6 +60,8 @@ export const AuthService = {
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('brokerLogin');
     localStorage.removeItem('brokerId');
+    localStorage.removeItem('tokenExpiresAt');
+    localStorage.removeItem('token_expires_at');
     useAuthStore.getState().logout();
   }
 };

@@ -10,7 +10,7 @@ import CreateGroupPopup from './components/RIGHTCLICKJPOPUPS/CreateGroupPopup';
 import { AdminLogin, BrokerSelector, ManagerLogin, ManualBrokerEntry } from './components/organisms/BrokerAuthScreens';
 import { TabBar } from './components/organisms/TabBar';
 import { HelpModal } from './components/organisms/HelpModal';
-import { useAuthStore } from './store/authStore';
+import { expireAuthSession, normalizeTokenExpiresAt, SESSION_EXPIRED_EVENT, useAuthStore } from './store/authStore';
 import { useConnectionStore } from './store/connectionStore';
 import useSymbolStore from './store/useSymbolStore';
 import { useLocalStorage } from './lib/useLocalStorage';
@@ -47,6 +47,7 @@ const useBrowserPath = () => {
 
 const AppInner = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const tokenExpiresAt = useAuthStore((state) => state.tokenExpiresAt);
   const setToken = useAuthStore((state) => state.setToken);
   const setUser = useAuthStore((state) => state.setUser);
   const connStatus = useConnectionStore((s) => s.status);
@@ -86,9 +87,11 @@ const AppInner = () => {
   const handleAuthSuccess = React.useCallback((session, redirectPath) => {
     const accessToken = session.token || session.session_token || session.access_token;
     const refreshToken = session.refresh_token || accessToken;
+    const expiresAt = session.expires_at || session.expiresAt || session.token_expires_at || session.tokenExpiresAt;
+    const expiresIn = session.expires_in || session.expiresIn;
 
     if (accessToken) {
-      setToken(accessToken, refreshToken);
+      setToken(accessToken, refreshToken, expiresAt, expiresIn);
       setUser({
         id: session.login || session.user || 'admin',
         login: session.login || session.user || '',
@@ -107,6 +110,35 @@ const AppInner = () => {
       navigate('/', { replace: true });
     }
   }, [isAuthenticated, navigate, pathname]);
+
+  React.useEffect(() => {
+    const handleSessionExpired = () => {
+      navigate('/', { replace: true });
+    };
+
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+  }, [navigate]);
+
+  React.useEffect(() => {
+    if (!isAuthenticated || !tokenExpiresAt) return undefined;
+
+    const expiryMs = normalizeTokenExpiresAt(tokenExpiresAt);
+    if (!expiryMs) return undefined;
+
+    const delay = expiryMs - Date.now();
+    if (delay <= 0) {
+      expireAuthSession('token_expired');
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(
+      () => expireAuthSession('token_expired'),
+      Math.min(delay, 2147483647)
+    );
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isAuthenticated, tokenExpiresAt]);
 
   // ── Theme (light/dark/system/auto-time) ──────────────────────────────────
   React.useEffect(() => {
