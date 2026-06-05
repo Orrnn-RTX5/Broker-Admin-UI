@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import {
-  terminalTableData,
   clientsAccountsTableData,
-  symbolsTableData,
-  managersTableData,
   paymentsTableData,
   automationsTableData,
   securityTableData
@@ -113,6 +110,9 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   const { data: positionsResponse, loading: positionsLoading, mutate: refetchPositions } = usePositions({ page: 1, limit: 100 }, true, 2000, viewType === 'Positions');
 
   const { data: groupsResponse, loading: groupsLoading, mutate: refetchGroups } = useGroups(true);
+  const groupsList = groupsResponse
+    ? (Array.isArray(groupsResponse) ? groupsResponse : groupsResponse.answer || [])
+    : [];
 
   React.useEffect(() => {
     if (!refreshTrigger) return;
@@ -397,25 +397,20 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
 
   if (viewType === 'Groups') {
     columns = groupColumns;
-    if (groupsResponse) {
-      const groupsList = Array.isArray(groupsResponse) ? groupsResponse : (groupsResponse.answer || []);
-      data = groupsList.map((g, idx) => ({
-        ...g,
-        id: g.name || idx,
-        group: g.name,
-        server: 'Main Trade Server',
-        company: g.description,
-        type: g.accountType,
-        auth: 'Normal',
-        risk: g.executionMode,
-        margin: `${g.marginCallLevel}% / ${g.stopOutLevel}%`,
-        leverage: `1 : ${g.leverage}`,
-        currency: g.currency,
-        iconType: 'group'
-      }));
-    } else {
-      data = terminalTableData; // Fallback to mock before loaded or if error
-    }
+    data = groupsList.map((g, idx) => ({
+      ...g,
+      id: g.name || idx,
+      group: g.name,
+      server: 'Main Trade Server',
+      company: g.description,
+      type: g.accountType,
+      auth: 'Normal',
+      risk: g.executionMode,
+      margin: `${g.marginCallLevel}% / ${g.stopOutLevel}%`,
+      leverage: `1 : ${g.leverage}`,
+      currency: g.currency,
+      iconType: 'group'
+    }));
     isLoading = groupsLoading;
   } else if (viewType === 'Clients & Accounts') {
     columns = clientsColumns;
@@ -535,27 +530,23 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     else data = securityTableData;
     isClientsViewTemp = true;
   } else {
-    // Check if the viewType matches a specific sub-group name inside the terminalTableData
-    let matchingSubGroupData = terminalTableData.filter(item => item.group === viewType);
+    const backendGroup = groupsList.find(g => g.name === viewType);
+    const matchingSubGroupData = backendGroup ? [{
+      id: backendGroup.name,
+      group: backendGroup.name,
+      server: 'Main Trade Server',
+      company: backendGroup.description,
+      type: backendGroup.accountType,
+      auth: 'Normal',
+      risk: backendGroup.executionMode,
+      margin: `${backendGroup.marginCallLevel}% / ${backendGroup.stopOutLevel}%`,
+      leverage: `1 : ${backendGroup.leverage}`,
+      currency: backendGroup.currency,
+      iconType: 'group'
+    }] : [];
 
-    if (matchingSubGroupData.length === 0 && groupsResponse) {
-      const groupsList = Array.isArray(groupsResponse) ? groupsResponse : (groupsResponse.answer || []);
-      const backendGroup = groupsList.find(g => g.name === viewType);
-      if (backendGroup) {
-        matchingSubGroupData = [{
-          id: backendGroup.name,
-          group: backendGroup.name,
-          server: 'Main Trade Server',
-          company: backendGroup.description,
-          type: backendGroup.accountType,
-          auth: 'Normal',
-          risk: backendGroup.executionMode,
-          margin: `${backendGroup.marginCallLevel}% / ${backendGroup.stopOutLevel}%`,
-          leverage: `1 : ${backendGroup.leverage}`,
-          currency: backendGroup.currency,
-          iconType: 'group'
-        }];
-      }
+    if (!groupsResponse && groupsLoading) {
+      isLoading = true;
     }
 
     if (matchingSubGroupData.length > 0) {
@@ -840,7 +831,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
       {/* Bottom Tab Bar (MT5 Style) */}
       <div className="h-7 bg-[color:var(--bg-surface-1)] border-t border-black/40 flex items-center px-1 gap-1">
         <div className="h-[22px] px-3 bg-[#3e3e3e] text-white text-[11px] flex items-center border border-black/40 rounded-sm shadow-sm cursor-default">
-          {viewType === 'Clients & Accounts' ? 'Clients & Accounts' : (viewType === 'Groups' ? 'Groups (127)' : viewType)}
+          {viewType === 'Clients & Accounts' ? 'Clients & Accounts' : (viewType === 'Groups' && totalCount > 0 ? `Groups (${totalCount})` : viewType)}
         </div>
         <div className="h-[22px] px-3 text-[#999999] hover:text-[color:var(--text-secondary)] text-[11px] flex items-center cursor-default transition-colors">
           All {viewType}

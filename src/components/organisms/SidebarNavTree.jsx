@@ -13,17 +13,15 @@ const SidebarNavTree = ({ onNodeSelect, onNodeDoubleClick, selectedNodeLabel }) 
         const newNode = { ...node };
 
         if (newNode.label === 'Groups') {
-          if (groupsResponse) {
-            const apiGroups = Array.isArray(groupsResponse)
-              ? groupsResponse
-              : groupsResponse.answer || [];
-            newNode.count = apiGroups.length;
-            newNode.children = apiGroups.map((g) => ({
-              label: g.name,
-              count: undefined,
-              icon: User,
-            }));
-          }
+          const apiGroups = groupsResponse
+            ? (Array.isArray(groupsResponse) ? groupsResponse : groupsResponse.answer || [])
+            : [];
+          newNode.count = groupsResponse ? apiGroups.length : undefined;
+          newNode.children = apiGroups.map((g) => ({
+            label: g.name,
+            count: undefined,
+            icon: User,
+          }));
         } else if (newNode.children) {
           newNode.children = cloneTree(newNode.children);
         }
