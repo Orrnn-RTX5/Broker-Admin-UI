@@ -178,17 +178,6 @@ const buildUrlFromHost = (hostValue = '', { protocol = 'https', port = 0 } = {})
   return `${protocol}://${authority}${portSuffix}${path}`;
 };
 
-const getUrlHost = (value = '') => {
-  const trimmed = trimTrailingSlash(value);
-  if (!trimmed) return '';
-
-  try {
-    return new URL(ensureUrl(trimmed)).hostname;
-  } catch {
-    return trimmed.replace(/^[a-z][a-z\d+.-]*:\/\//i, '').split('/')[0].split(':')[0];
-  }
-};
-
 const getComparableHost = (value = '') => {
   const trimmed = trimTrailingSlash(value);
   if (!trimmed) return '';
@@ -380,5 +369,5 @@ export const isDirectBrokerBackendUrl = (backendUrl = '', brokerInfo = {}) => {
     if (/localhost.*:8091/i.test(trimmed)) return true;
   }
 
-  return hasLegacyGtaMatch(trimmed, getUrlHost(trimmed));
+  return false;
 };

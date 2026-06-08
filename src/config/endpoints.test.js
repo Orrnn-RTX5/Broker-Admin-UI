@@ -57,3 +57,30 @@ test('dynamic endpoints use explicit broker ext API fields when supplied', async
     'http://203.0.113.21:8091/SessionOverrideSet'
   );
 });
+
+test('GTA web services host keeps manager API calls on the manager proxy namespace', async () => {
+  installWindow({
+    BACKEND_TARGET: 'web',
+    BROKER_ID: 'gta_broker',
+    API_HOST: 'https://services.growtradingacademy.com',
+    DEFAULT_MT5_SERVER: 'broker-server-2',
+  });
+  installStorage({
+    broker_info: JSON.stringify({
+      broker_id: 'gta_broker',
+      server: 'broker-server-2',
+      backend_url: 'https://services.growtradingacademy.com',
+    }),
+  });
+
+  const endpoints = await importFreshEndpoints();
+
+  assert.equal(
+    endpoints.buildManagerApiUrl('/manager/api/v2/auth/me'),
+    'https://services.growtradingacademy.com/manager/api/v2/auth/me'
+  );
+  assert.equal(
+    endpoints.buildManagerApiUrl('/api/v2/admin/login'),
+    'https://services.growtradingacademy.com/manager/api/v2/admin/login'
+  );
+});

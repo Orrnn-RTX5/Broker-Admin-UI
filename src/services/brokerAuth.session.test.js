@@ -204,7 +204,7 @@ test('loginAdmin sends the opaque server handle when discovery does not expose s
     { user: '1000', password: 'secret' }
   );
 
-  assert.equal(postedUrl, 'https://services.growtradingacademy.com/api/v2/admin/login');
+  assert.equal(postedUrl, 'https://services.growtradingacademy.com/manager/api/v2/admin/login');
   assert.deepEqual(postedBody, {
     user: '1000',
     password: 'secret',
@@ -271,7 +271,7 @@ test('loginManager sends the opaque server handle when discovery does not expose
     { user: '2000', password: 'secret' }
   );
 
-  assert.equal(postedUrl, 'https://services.growtradingacademy.com/api/v2/auth/login');
+  assert.equal(postedUrl, 'https://services.growtradingacademy.com/manager/api/v2/auth/login');
   assert.deepEqual(postedBody, {
     user: '2000',
     password: 'secret',
