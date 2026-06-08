@@ -127,7 +127,37 @@ test('fetchBrokerList maps GTA public SuperAdmin server to the broker server han
   assert.equal(list.length, 1);
   assert.equal(list[0].broker_id, 'gta_broker');
   assert.equal(list[0].server, 'broker-server-2');
+  assert.equal(brokerAuth.getBrokerDisplayServer(list[0]), '103.91.186.142');
   assert.equal(brokerAuth.getBrokerLoginServer(list[0]), 'broker-server-2');
+});
+
+test('fetchBrokerList keeps GTA local handle for login while displaying runtime server', async () => {
+  installBrowserGlobals({
+    BROKER_ID: 'gta_broker',
+    DEFAULT_MT5_SERVER: '103.91.186.142',
+    DISCOVERY_BASE_URL: 'https://services.growtradingacademy.com',
+  });
+  globalThis.fetch = async () => ({
+    ok: true,
+    status: 200,
+    text: async () => JSON.stringify({
+      servers: [
+        {
+          broker_id: 'gta_broker',
+          broker_name: 'Grow Trading Academy',
+          status: 'active',
+          server: 'broker-server-2',
+        },
+      ],
+    }),
+  });
+
+  const brokerAuth = await importFreshBrokerAuth();
+  const list = await brokerAuth.fetchBrokerList();
+
+  assert.equal(list[0].server, 'broker-server-2');
+  assert.equal(brokerAuth.getBrokerLoginServer(list[0]), 'broker-server-2');
+  assert.equal(brokerAuth.getBrokerDisplayServer(list[0]), '103.91.186.142');
 });
 
 test('fetchBrokerList does not use the selected broker backend as discovery host', async () => {

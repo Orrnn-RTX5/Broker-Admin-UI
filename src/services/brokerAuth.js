@@ -241,6 +241,29 @@ export const getBrokerLoginServer = (info = {}) => {
   return server;
 };
 
+export const getBrokerDisplayServer = (info = {}) => {
+  const runtimeDefaultServer = String(RUNTIME_DEFAULT_MT5_SERVER || '').trim();
+  const server = String(info.server || '').trim();
+
+  const displayServer = firstPresent(
+    info.display_server,
+    info.server_display,
+    info.original_server,
+    info.server_label,
+    info.server_url,
+    info.market_api_url,
+    info.server_ip,
+    info.host,
+    isOpaqueBrokerServerHandle(server) ? '' : server,
+    isGtaBrokerInfo(info) && !isOpaqueBrokerServerHandle(runtimeDefaultServer) ? runtimeDefaultServer : '',
+    info.backend_url,
+    info.api_url,
+    server
+  );
+
+  return String(displayServer || '').trim();
+};
+
 const resolveBrokerLoginServer = (brokerInfo = {}, server = '') =>
   getBrokerLoginServer(server ? { ...brokerInfo, server } : brokerInfo);
 

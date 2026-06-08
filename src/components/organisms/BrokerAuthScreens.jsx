@@ -18,6 +18,7 @@ import {
   clearBrokerInfo,
   discoverBrokerById,
   fetchBrokerList,
+  getBrokerDisplayServer,
   getBrokerLoginServer,
   getBrokerInfo,
   loginAdmin,
@@ -462,7 +463,7 @@ export const ManagerLogin = ({ navigate, onLoginSuccess }) => {
   const [brokerInfo] = React.useState(() => getBrokerInfo());
   const [user, setUser] = React.useState('');
   const [password, setPassword] = React.useState('');
-  const [server, setServer] = React.useState(() => getBrokerLoginServer(getBrokerInfo() || {}));
+  const [server, setServer] = React.useState(() => getBrokerDisplayServer(getBrokerInfo() || {}));
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
 
@@ -474,14 +475,15 @@ export const ManagerLogin = ({ navigate, onLoginSuccess }) => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!user || !password || !server) {
+    const loginServer = getBrokerLoginServer(brokerInfo || {});
+    if (!user || !password || !loginServer) {
       setError('Login, password, and broker server are required.');
       return;
     }
     setLoading(true);
     setError('');
     try {
-      const auth = await loginManager(brokerInfo, { user, password, server });
+      const auth = await loginManager(brokerInfo, { user, password, server: loginServer });
       const session = setAuthSession(auth, brokerInfo);
       onLoginSuccess(session, '/dashboard');
     } catch (err) {
@@ -519,7 +521,7 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
   const [brokerInfo] = React.useState(() => getBrokerInfo());
   const [user, setUser] = React.useState('');
   const [password, setPassword] = React.useState('');
-  const [server, setServer] = React.useState(() => getBrokerLoginServer(getBrokerInfo() || {}));
+  const [server, setServer] = React.useState(() => getBrokerDisplayServer(getBrokerInfo() || {}));
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
 
@@ -531,14 +533,15 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!user || !password || !server) {
+    const loginServer = getBrokerLoginServer(brokerInfo || {});
+    if (!user || !password || !loginServer) {
       setError('Login, password, and broker server are required.');
       return;
     }
     setLoading(true);
     setError('');
     try {
-      const auth = await loginAdmin(brokerInfo, { user, password, server });
+      const auth = await loginAdmin(brokerInfo, { user, password, server: loginServer });
       const session = setAuthSession(auth, brokerInfo);
       onLoginSuccess(session, '/admin-dashboard');
     } catch (err) {
