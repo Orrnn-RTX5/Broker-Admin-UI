@@ -1,10 +1,14 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, Copy, ToggleLeft, ToggleRight, Edit2, Loader2, ChevronDown, X } from 'lucide-react';
 import {
-  symbolList, symbolGet, symbolAdd, symbolUpdate, symbolEnable, symbolDisable,
+  symbolList, symbolAdd, symbolUpdate,
   symbolClone, symbolCategoryList,
 } from '../../../services/api';
+import { InstrumentsService } from '../../../services/instruments.service';
 import { buildFeedWsUrl } from '../../../config/endpoints';
+import { getApiErrorMessage } from '../../../utils/apiShapes';
+import { buildActionableErrorState } from '../../../utils/errorState';
+import ActionableErrorState from '../../atoms/ActionableErrorState';
 
 // ─── Add / Edit Modal ──────────────────────────────────────────────────────────
 const SymbolFormModal = ({ symbol: existing, categories, onClose, onSuccess }) => {
@@ -128,6 +132,8 @@ const CloneModal = ({ categories, onClose, onSuccess }) => {
   });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
+  const [wsError, setWsError] = useState(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   // Fetch symbol names from the FIX WebSocket feed.
   // Cache hit  → render instantly, refresh silently in background.
@@ -157,12 +163,22 @@ const CloneModal = ({ categories, onClose, onSuccess }) => {
       setLoadingSymbols(false);
       setRefreshing(false);
       writeSymbolCache(symbols);
+      if (symbols.length === 0) {
+        setWsError(buildActionableErrorState('No source symbols arrived from the feed within 3 seconds.', {
+          title: 'Source symbols unavailable',
+          actionLabel: 'Retry feed',
+        }));
+      }
       if (ws.readyState === WebSocket.OPEN) ws.close();
     }, 3000);
 
     ws.onerror = () => {
       setLoadingSymbols(false);
       setRefreshing(false);
+      setWsError(buildActionableErrorState('The feed WebSocket connection failed before source symbols were loaded.', {
+        title: 'Symbol feed failed',
+        actionLabel: 'Retry feed',
+      }));
     };
 
     return () => {
@@ -173,9 +189,15 @@ const CloneModal = ({ categories, onClose, onSuccess }) => {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadAttempt]);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const retryFeed = () => {
+    setWsError(null);
+    setLoadingSymbols(baseSymbols.length === 0);
+    setRefreshing(baseSymbols.length > 0);
+    setLoadAttempt(attempt => attempt + 1);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -232,6 +254,9 @@ const CloneModal = ({ categories, onClose, onSuccess }) => {
                   <option key={name} value={name}>{name}</option>
                 ))}
               </select>
+            )}
+            {wsError && (
+              <ActionableErrorState state={wsError} onAction={retryFeed} compact className="m-0" />
             )}
           </div>
           <div className="flex flex-col gap-1">
@@ -298,35 +323,54 @@ const SymbolsTab = () => {
   const [modal, setModal] = useState(null); // null | 'add' | 'edit' | 'clone'
   const [editTarget, setEditTarget] = useState(null);
   const [togglingSymbol, setTogglingSymbol] = useState(null);
+  const [loadError, setLoadError] = useState(null);
 
   const load = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const [symsResult, catsResult] = await Promise.allSettled([symbolList(), symbolCategoryList()]);
+      const failures = [];
       if (symsResult.status === 'fulfilled') {
         setSymbols(Array.isArray(symsResult.value) ? symsResult.value : []);
+      } else {
+        setSymbols([]);
+        failures.push(`Symbols: ${getApiErrorMessage(symsResult.reason, 'symbol list request failed')}`);
       }
       if (catsResult.status === 'fulfilled') {
         setCategories(Array.isArray(catsResult.value) ? catsResult.value : []);
+      } else {
+        setCategories([]);
+        failures.push(`Categories: ${getApiErrorMessage(catsResult.reason, 'category list request failed')}`);
+      }
+      if (failures.length > 0) {
+        setLoadError(buildActionableErrorState(failures.join(' '), {
+          title: symsResult.status === 'rejected' ? 'Symbols failed to load' : 'Symbols partially loaded',
+          actionLabel: 'Retry',
+        }));
       }
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const loadTimer = window.setTimeout(() => {
+      load();
+    }, 0);
+
+    return () => window.clearTimeout(loadTimer);
+  }, []);
 
   const handleToggle = async (sym) => {
     setTogglingSymbol(sym.symbol);
     try {
-      if (sym.enabled) {
-        await symbolDisable(sym.symbol);
-      } else {
-        await symbolEnable(sym.symbol);
-      }
-      setSymbols(prev => prev.map(s => s.symbol === sym.symbol ? { ...s, enabled: !s.enabled } : s));
+      const targetEnabled = !sym.enabled;
+      const result = await InstrumentsService.toggleInstrument(sym.symbol, targetEnabled);
+      const enabled = typeof result?.enabled === 'boolean' ? result.enabled : targetEnabled;
+      setSymbols(prev => prev.map(s => s.symbol === sym.symbol ? { ...s, enabled } : s));
     } catch (e) {
-      alert('Error: ' + e.message);
+      alert('Error: ' + getApiErrorMessage(e, 'instrument toggle failed'));
     } finally {
       setTogglingSymbol(null);
     }
@@ -374,6 +418,9 @@ const SymbolsTab = () => {
           <Plus size={13} /> Add Symbol
         </button>
       </div>
+      {loadError && (
+        <ActionableErrorState state={loadError} onAction={load} compact className="m-0 shrink-0" />
+      )}
 
       {/* Table */}
       <div className="ui-card flex-1 overflow-auto">

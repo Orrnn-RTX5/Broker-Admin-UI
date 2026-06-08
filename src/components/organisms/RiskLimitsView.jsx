@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { RiskManagementService } from '../../services/riskManagement.service';
 import { Plus, Trash2, Pencil } from 'lucide-react';
+import { buildRiskLimitPayload } from '../../utils/adminValidation';
+import { buildActionableErrorState } from '../../utils/errorState';
+import ActionableErrorState from '../atoms/ActionableErrorState';
 
 const SCOPE_TYPES = ['', 'account', 'group', 'symbol', 'global'];
 const LIMIT_TYPES = ['max_drawdown', 'max_volume', 'max_loss', 'max_margin', 'max_positions'];
@@ -18,17 +21,29 @@ const RiskLimitsView = () => {
   const [form, setForm] = useState(defaultForm);
   const [saving, setSaving] = useState(false);
   const [contextMenu, setContextMenu] = useState({ visible: false });
+  const [loadError, setLoadError] = useState(null);
 
-  const fetchLimits = async (scope) => {
+  const fetchLimits = useCallback(async (scope) => {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await RiskManagementService.listRiskLimits(scope || undefined);
       setData(Array.isArray(res) ? res : []);
-    } catch { setData([]); }
+    } catch (err) {
+      setData([]);
+      setLoadError(buildActionableErrorState(err, {
+        title: 'Risk limits failed to load',
+        actionLabel: 'Load again',
+        fallback: 'Could not load risk limits',
+      }));
+    }
     finally { setLoading(false); }
-  };
+  }, []);
 
-  useEffect(() => { fetchLimits(''); }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => fetchLimits(''), 0);
+    return () => clearTimeout(timer);
+  }, [fetchLimits]);
 
   const openCreate = () => { setEditing(null); setForm(defaultForm); setShowForm(true); };
   const openEdit = (row) => {
@@ -50,11 +65,7 @@ const RiskLimitsView = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      const body = {
-        ...form,
-        limit_value: parseFloat(form.limit_value),
-        alert_threshold: form.alert_threshold !== '' ? parseFloat(form.alert_threshold) : undefined,
-      };
+      const body = buildRiskLimitPayload(form);
       if (editing) {
         await RiskManagementService.updateRiskLimit(editing.id, body);
       } else {
@@ -111,6 +122,7 @@ const RiskLimitsView = () => {
       {/* Rows */}
       <div className="flex-1 overflow-auto">
         {loading ? <div className="flex items-center justify-center h-24 text-[#888] text-[11px]">Loading…</div>
+          : loadError ? <ActionableErrorState state={loadError} onAction={() => fetchLimits(scopeFilter)} />
           : data.length === 0 ? <div className="flex items-center justify-center h-24 text-[#555] text-[11px]">No risk limits configured</div>
           : data.map((row, i) => (
             <div key={row.id}

@@ -10,7 +10,16 @@ import { usePositions, useDealsSummary } from '../../hooks/usePositions';
 import { useInstruments } from '../../hooks/useInstruments';
 import { useAccounts } from '../../hooks/useAccounts';
 import { ManagerService } from '../../services/manager.service';
-import { Clock, CornerUpRight, Server, Calendar, Search, ChevronDown } from 'lucide-react';
+import { PositionsService } from '../../services/positions.service';
+import { useAuthStore } from '../../store/authStore';
+import { normalizeArrayResponse, getApiErrorMessage } from '../../utils/apiShapes';
+import {
+  getCloseAllActionState,
+  getCloseAllConfirmationPrompt,
+  isCloseAllConfirmationAccepted,
+} from '../../utils/closeAllAction';
+import { useToast } from '../ui/Toast';
+import { Clock, CornerUpRight, Server, Calendar, Search, ChevronDown, ShieldAlert } from 'lucide-react';
 
 import AdminContextMenu from './AdminContextMenu';
 import NetworkCluster from './NetworkCluster';
@@ -82,37 +91,271 @@ const OrangeSquareSIcon = (props) => (
   </svg>
 );
 
+const COMING_SOON_VIEWS = new Set([
+  'Orders', 'Ultency Matching Engine', 'Data Feeds', 'FCN', 'Routing',
+  'Funds & ETF', 'Plugins', 'Subscriptions', 'Charts & Ticks',
+  'Live Update', 'Mailbox',
+]);
+
+const SUPPORT_CENTER_VIEWS = new Set([
+  'Support Center', 'News', 'Articles', 'MetaQuotes Leads', 'Automation',
+  'Sponsored VPS', 'Platform Documentation', 'API Documentation', 'Workshops',
+  'Certification', 'Service Desk', 'Online Assistant', 'Search',
+]);
+
+const COMMUNICATIONS_VIEWS = new Set([
+  'Communications', 'Auto Notification Rules', 'Email Campaigns',
+  'Message Center', 'Push Notifications', 'SMS',
+]);
+
+const SECURITY_ACCESS_VIEWS = new Set([
+  'IP Restrictions', 'Connection Throttle', 'Log Management',
+  'Backup Schedules', 'Plugin Management',
+]);
+
+const SERVER_STATUS_VIEWS = new Set([
+  'Main Trade Server', 'Access Server', 'History Server',
+  'MainTrade Backup Server', 'Local Main Backup Server', 'Local Main Status Server',
+]);
+
+const IMPORTED_VIEW_TYPES = new Set([
+  'Market Overview',
+  'Swap-Free Configs',
+  'Leverages',
+  'LP Routing',
+  'Leverage Schedules',
+  'Market Depth',
+  'Holidays',
+  'Session Overrides',
+  'Spreads',
+  'Custom Fields',
+  'Feature Flags',
+  'Symbol Visibility',
+  'Trading Terminal Config',
+  'Exposure',
+  'Risk Events',
+  'Risk Limits',
+  'Suspicious Activity',
+  'Risk Reports',
+  'Client Analytics',
+  'Trading Analytics',
+  'Trader Rankings',
+  'Revenue Forecast',
+  'Data Exports',
+  'Regulatory Reports',
+  'Complaints',
+  'Server Config',
+  'Managers',
+  'Network Cluster',
+  'Allocations',
+  'Integrations',
+  'Anti DDoS Protection',
+  'Providers',
+  'Payment Methods',
+  'Deposits',
+  'Withdrawals',
+  'Transaction History',
+  'Payment Gateways',
+  'Reconciliation',
+  'Chargebacks',
+  'Gateways',
+]);
+
+const isDelegatedAdminView = (viewType) => (
+  COMING_SOON_VIEWS.has(viewType) ||
+  IMPORTED_VIEW_TYPES.has(viewType) ||
+  SUPPORT_CENTER_VIEWS.has(viewType) ||
+  COMMUNICATIONS_VIEWS.has(viewType) ||
+  SECURITY_ACCESS_VIEWS.has(viewType) ||
+  SERVER_STATUS_VIEWS.has(viewType)
+);
+
+const getGroupRow = (group, idx) => ({
+  ...group,
+  id: group.name || idx,
+  group: group.name,
+  server: 'Main Trade Server',
+  company: group.description,
+  type: group.accountType,
+  auth: 'Normal',
+  risk: group.executionMode,
+  margin: `${group.marginCallLevel}% / ${group.stopOutLevel}%`,
+  leverage: `1 : ${group.leverage}`,
+  currency: group.currency,
+  iconType: 'group'
+});
+
+const getRowsForCount = ({
+  viewType,
+  groupsList,
+  usersResponse,
+  accountsResponse,
+  symbolsResponse,
+  positionsResponse,
+  dealsResponse,
+}) => {
+  if (isDelegatedAdminView(viewType)) {
+    return [];
+  }
+
+  if (viewType === 'Groups') {
+    return groupsList.map(getGroupRow);
+  }
+
+  if (viewType === 'Clients & Accounts') {
+    return clientsAccountsTableData;
+  }
+
+  if (viewType === 'Clients') {
+    return normalizeArrayResponse(usersResponse, ['users', 'data', 'answer', 'items'])
+      .filter((user) => !user.is_admin && user.role !== 'manager')
+      .map((user, idx) => ({
+        id: user.id || user.login || user.email || idx,
+        iconType: 'user',
+        name: user.name || user.full_name || user.username || user.login || user.email || '-',
+        description: user.email || user.phone || user.group || '',
+      }));
+  }
+
+  if (viewType === 'Trading Accounts') {
+    return normalizeArrayResponse(accountsResponse, ['accounts', 'data', 'answer', 'items']).map((account, idx) => ({
+      id: account.login || account.account_login || idx,
+      login: account.login || account.account_login,
+      name: account.name || account.client_name || account.full_name || account.user_name || '',
+      group: account.group || account.group_name || account.account_group || '',
+      balance: account.balance,
+      equity: account.equity,
+      currency: account.currency,
+      status: account.status || (account.enabled === false ? 'disabled' : 'active'),
+    }));
+  }
+
+  if (viewType === 'Symbols') {
+    return normalizeArrayResponse(symbolsResponse, ['instruments', 'symbols', 'data', 'answer', 'items']).map((symbol, idx) => ({
+      id: symbol.id || symbol.symbol || idx,
+      symbol: symbol.symbol || symbol.name || '',
+      description: symbol.description || symbol.path || symbol.category || '',
+      digits: symbol.digits ?? symbol.digits_currency ?? '',
+      type: symbol.trade_mode || symbol.type || symbol.mode || '',
+      execution: symbol.enabled === false ? 'Disabled' : (symbol.execution || 'Enabled'),
+      expiration: symbol.expiration || 'GTC',
+      background: symbol.background || '',
+    }));
+  }
+
+  if (viewType === 'Positions') {
+    return normalizeArrayResponse(positionsResponse, ['data', 'positions', 'answer', 'items']).map((position, idx) => ({
+      id: position.ticket || idx,
+      ticket: position.ticket,
+      login: position.login,
+      time: position.timeCreateFormatted || '',
+      symbol: position.symbol,
+      side: position.side === 'buy' ? 'Buy' : 'Sell',
+      volume: position.volume,
+      open_price: position.priceOpen,
+      current_price: position.priceCurrent,
+      sl: position.priceSl,
+      tp: position.priceTp,
+      swap: position.swap,
+      profit: position.profit
+    }));
+  }
+
+  if (viewType === 'Deals') {
+    return normalizeArrayResponse(dealsResponse, ['data', 'deals', 'answer', 'items']).map((deal, idx) => ({
+      id: deal.ticket || idx,
+      ticket: deal.ticket,
+      orderTicker: deal.orderTicket,
+      time: deal.timeFormatted || '',
+      login: deal.login,
+      symbol: deal.symbol,
+      action: deal.action,
+      entry: deal.entry,
+      volume: deal.volume,
+      price: deal.price,
+      commission: deal.commission,
+      fee: deal.fee,
+      profit: deal.profit
+    }));
+  }
+
+  if (viewType === 'Payments') {
+    return paymentsTableData;
+  }
+
+  if (viewType === 'Automations') {
+    return automationsTableData;
+  }
+
+  if (viewType === 'Security') {
+    return securityTableData;
+  }
+
+  const backendGroup = groupsList.find((group) => group.name === viewType);
+  return backendGroup ? [getGroupRow(backendGroup, 0)] : [];
+};
+
+const getRenderedCounts = (args) => {
+  const rows = getRowsForCount(args);
+  const total = Array.isArray(rows) ? rows.length : 0;
+  if (!args.searchQuery || !total) {
+    return { total, filtered: total };
+  }
+
+  const query = args.searchQuery.toLowerCase();
+  const filtered = rows.filter((row) =>
+    Object.values(row).some((value) => value != null && String(value).toLowerCase().includes(query))
+  ).length;
+
+  return { total, filtered };
+};
+
+const TimePropertyRow = ({ idx, icon, label, value }) => (
+  <div className={`flex items-center text-[12px] border-b border-black/20 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-blue-600/20 cursor-default`}>
+    <div className="w-[320px] flex items-center gap-2 px-3 py-[3px] border-r border-black/20 shrink-0">
+      {React.createElement(icon, { size: 13, className: 'text-[#3B82F6]' })}
+      <span className="text-[color:var(--text-primary)]">{label}</span>
+    </div>
+    <div className="flex-1 px-3 py-[3px] text-[color:var(--text-primary)]">
+      {value}
+    </div>
+  </div>
+);
+
+const TimeGroupHeader = ({ title }) => (
+  <div className="flex border-b border-black/20 bg-[color:var(--bg-app)] cursor-default">
+    <div className="w-[320px] px-3 py-1 text-[11px] font-bold text-white border-r border-black/20 shrink-0">
+      {title}
+    </div>
+    <div className="flex-1"></div>
+  </div>
+);
+
 const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerTab, refreshTrigger, searchQuery = '', onCountChange }) => {
   const [contextMenu, setContextMenu] = useState({ x: 0, y: 0, visible: false });
   const [serverPopupData, setServerPopupData] = useState(null);
-
-  // Row count reporting. Hooks must run unconditionally, so we declare a ref
-  // at the top and a single post-render effect. The render body below writes
-  // counts into the ref right before the branch that returns JSX; the effect
-  // then forwards them to the parent only when they change.
-  const countsRef = React.useRef({ total: 0, filtered: 0 });
-  const lastSentRef = React.useRef({ total: -1, filtered: -1 });
-  React.useEffect(() => {
-    const c = countsRef.current;
-    if (c.total !== lastSentRef.current.total || c.filtered !== lastSentRef.current.filtered) {
-      lastSentRef.current = { ...c };
-      onCountChange?.(c);
-    }
+  const [closeAllSymbol, setCloseAllSymbol] = useState('');
+  const [closeAllBusy, setCloseAllBusy] = useState(false);
+  const [closeAllNotice, setCloseAllNotice] = useState(null);
+  const currentUser = useAuthStore((state) => state.user);
+  const { notify } = useToast();
+  const closeAllAction = getCloseAllActionState({
+    user: currentUser,
+    symbol: closeAllSymbol,
+    busy: closeAllBusy,
   });
 
-  // When a delegated view renders (early return below) it has no row count to
-  // report, so reset the ref so the parent breadcrumb clears its counter.
-  countsRef.current = { total: 0, filtered: 0 };
+  // Row count reporting is committed after render so delegated views can clear
+  // the breadcrumb counter without render-time ref writes.
+  const lastSentRef = React.useRef({ total: -1, filtered: -1 });
 
-  const { data: usersResponse, loading: usersLoading, mutate: refetchUsers } = useUsers(1, 100, '', '', viewType === 'Clients' || viewType === 'Managers');
-  const { data: accountsResponse, loading: accountsLoading, mutate: refetchAccounts } = useAccounts(1, 100, '', '', '', viewType === 'Trading Accounts');
-  const { data: symbolsResponse, loading: symbolsLoading, mutate: refetchSymbols } = useInstruments(1, 100, '', '', viewType === 'Symbols');
-  const { data: positionsResponse, loading: positionsLoading, mutate: refetchPositions } = usePositions({ page: 1, limit: 100 }, true, 2000, viewType === 'Positions');
+  const { data: usersResponse, loading: usersLoading, error: usersError, mutate: refetchUsers } = useUsers(1, 100, '', '', viewType === 'Clients' || viewType === 'Managers');
+  const { data: accountsResponse, loading: accountsLoading, error: accountsError, mutate: refetchAccounts } = useAccounts(1, 100, '', '', '', viewType === 'Trading Accounts');
+  const { data: symbolsResponse, loading: symbolsLoading, error: symbolsError, mutate: refetchSymbols } = useInstruments(1, 100, '', '', viewType === 'Symbols');
+  const { data: positionsResponse, loading: positionsLoading, error: positionsError, mutate: refetchPositions } = usePositions({ page: 1, limit: 100 }, true, 2000, viewType === 'Positions');
 
-  const { data: groupsResponse, loading: groupsLoading, mutate: refetchGroups } = useGroups(true);
-  const groupsList = groupsResponse
-    ? (Array.isArray(groupsResponse) ? groupsResponse : groupsResponse.answer || [])
-    : [];
+  const { data: groupsResponse, loading: groupsLoading, error: groupsError, mutate: refetchGroups } = useGroups(true);
+  const groupsList = normalizeArrayResponse(groupsResponse, ['answer', 'groups', 'data', 'items']);
 
   React.useEffect(() => {
     if (!refreshTrigger) return;
@@ -127,21 +370,60 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     map[viewType]?.();
   }, [refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [dealDateRange] = useState({
-    from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    to: new Date().toISOString()
+  const [dealDateRange] = useState(() => {
+    const now = Date.now();
+    return {
+      from: new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      to: new Date(now).toISOString()
+    };
   });
-  const { data: dealsResponse, loading: dealsLoading, mutate: refetchDeals } = useDealsSummary(dealDateRange.from, dealDateRange.to, '', '', viewType === 'Deals');
+  const { data: dealsResponse, loading: dealsLoading, error: dealsError, mutate: refetchDeals } = useDealsSummary(dealDateRange.from, dealDateRange.to, '', '', viewType === 'Deals');
 
   React.useEffect(() => {
     if (refreshTrigger && viewType === 'Deals') refetchDeals?.();
   }, [refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const renderedCounts = getRenderedCounts({
+    viewType,
+    searchQuery,
+    groupsList,
+    usersResponse,
+    accountsResponse,
+    symbolsResponse,
+    positionsResponse,
+    dealsResponse,
+  });
+  const { total: renderedTotalCount, filtered: renderedFilteredCount } = renderedCounts;
+
+  React.useEffect(() => {
+    if (renderedTotalCount !== lastSentRef.current.total || renderedFilteredCount !== lastSentRef.current.filtered) {
+      const nextCounts = { total: renderedTotalCount, filtered: renderedFilteredCount };
+      lastSentRef.current = nextCounts;
+      onCountChange?.(nextCounts);
+    }
+  }, [renderedTotalCount, renderedFilteredCount, onCountChange]);
+
 
   const [editingGroup, setEditingGroup] = useState(null);
 
   React.useEffect(() => {
-    setContextMenu({ visible: false });
+    const resetTimer = window.setTimeout(() => {
+      setContextMenu({ visible: false });
+    }, 0);
+
+    return () => window.clearTimeout(resetTimer);
+  }, [viewType]);
+
+  React.useEffect(() => {
+    if (viewType !== 'Positions') {
+      const resetTimer = window.setTimeout(() => {
+        setCloseAllSymbol('');
+        setCloseAllNotice(null);
+        setCloseAllBusy(false);
+      }, 0);
+
+      return () => window.clearTimeout(resetTimer);
+    }
   }, [viewType]);
 
   const handleContextMenu = (e, rowData) => {
@@ -169,15 +451,58 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     setContextMenu({ ...contextMenu, visible: false });
   };
 
+  const handleCloseAllBySymbol = async () => {
+    const action = getCloseAllActionState({
+      user: currentUser,
+      symbol: closeAllSymbol,
+      busy: closeAllBusy,
+    });
+
+    if (!action.canSubmit) {
+      setCloseAllNotice({ tone: 'error', message: action.disabledReason });
+      return;
+    }
+
+    const symbol = action.normalizedSymbol;
+    const promptMessage = [
+      getCloseAllConfirmationPrompt(symbol),
+      'This will close every open position for that symbol in your admin scope.',
+    ].join('\n\n');
+    const confirmation = typeof window !== 'undefined'
+      ? window.prompt(promptMessage, '')
+      : null;
+
+    if (!isCloseAllConfirmationAccepted(symbol, confirmation)) {
+      setCloseAllNotice({ tone: 'warning', message: 'Close-all cancelled. Symbol confirmation did not match.' });
+      return;
+    }
+
+    setCloseAllBusy(true);
+    setCloseAllNotice({ tone: 'info', message: `Closing all ${symbol} positions...` });
+
+    try {
+      const result = await PositionsService.closeAll({ symbol });
+      const closedCount = Number(result?.positions_closed ?? result?.closed ?? result?.count);
+      const message = Number.isFinite(closedCount)
+        ? `Closed ${closedCount} position${closedCount === 1 ? '' : 's'} for ${symbol}.`
+        : `Close-all completed for ${symbol}.`;
+
+      setCloseAllNotice({ tone: 'success', message });
+      notify({ tone: 'success', title: 'Close all complete', description: message });
+      refetchPositions?.();
+    } catch (err) {
+      const message = getApiErrorMessage(err, `Failed to close all positions for ${symbol}.`);
+      setCloseAllNotice({ tone: 'error', message });
+      notify({ tone: 'danger', title: 'Close all failed', description: message });
+    } finally {
+      setCloseAllBusy(false);
+    }
+  };
+
   // --- COMING SOON: sidebar views that have no backend yet ---
   // Renders a lightweight empty state so clicking these items doesn't show
   // a blank table. Remove an entry once that view gets wired to an API.
-  const COMING_SOON = new Set([
-    'Orders', 'Ultency Matching Engine', 'Data Feeds', 'FCN', 'Routing',
-    'Funds & ETF', 'Plugins', 'Subscriptions', 'Charts & Ticks',
-    'Live Update', 'Mailbox',
-  ]);
-  if (COMING_SOON.has(viewType)) {
+  if (COMING_SOON_VIEWS.has(viewType)) {
     return (
       <div className="flex-1 flex items-center justify-center bg-[color:var(--bg-app)] select-none">
         <div className="flex flex-col items-center gap-3 max-w-md text-center px-6">
@@ -303,8 +628,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   }
 
   // --- SUPPORT CENTER INJECTION ---
-  const supportCenterViews = ['Support Center', 'News', 'Articles', 'MetaQuotes Leads', 'Automation', 'Sponsored VPS', 'Platform Documentation', 'API Documentation', 'Workshops', 'Certification', 'Service Desk', 'Online Assistant', 'Search'];
-  if (supportCenterViews.includes(viewType)) {
+  if (SUPPORT_CENTER_VIEWS.has(viewType)) {
     return <SupportCenterView />;
   }
 
@@ -335,14 +659,12 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   }
 
   // --- COMMUNICATIONS INJECTION ---
-  const communicationsViews = ['Communications', 'Auto Notification Rules', 'Email Campaigns', 'Message Center', 'Push Notifications', 'SMS'];
-  if (communicationsViews.includes(viewType)) {
+  if (COMMUNICATIONS_VIEWS.has(viewType)) {
     return <CommunicationsView />;
   }
 
   // --- SECURITY & ACCESS INJECTION ---
-  const securityAccessViews = ['IP Restrictions', 'Connection Throttle', 'Log Management', 'Backup Schedules', 'Plugin Management'];
-  if (securityAccessViews.includes(viewType)) {
+  if (SECURITY_ACCESS_VIEWS.has(viewType)) {
     return <SecurityAccessView initialTab={viewType} />;
   }
 
@@ -356,7 +678,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   }
 
   // --- SERVER STATUS INJECTION ---
-  if (['Main Trade Server', 'Access Server', 'History Server', 'MainTrade Backup Server', 'Local Main Backup Server', 'Local Main Status Server'].includes(viewType)) {
+  if (SERVER_STATUS_VIEWS.has(viewType)) {
     return <ServerStatusPanel serverName={viewType} initialTab={initialServerTab} onDoubleClick={() => setServerPopupData({ isOpen: true, target: viewType, id: 'SRV-001' })} />;
   }
 
@@ -393,9 +715,11 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   let isSymbolsViewTemp = false;
   let isPositionsViewTemp = false;
   let isAccountsViewTemp = false;
+  let isGroupLookupViewTemp = false;
   let isLoading = false;
 
   if (viewType === 'Groups') {
+    isGroupLookupViewTemp = true;
     columns = groupColumns;
     data = groupsList.map((g, idx) => ({
       ...g,
@@ -418,12 +742,14 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     isClientsViewTemp = true;
   } else if (viewType === 'Clients') {
     columns = clientsColumns;
-    data = usersResponse?.users
-      ? usersResponse.users.filter(u => !u.is_admin && u.role !== 'manager').map(u => ({ id: u.id, iconType: 'user', name: u.name, description: u.email }))
-      : [];   
-
-
-      
+    data = normalizeArrayResponse(usersResponse, ['users', 'data', 'answer', 'items'])
+      .filter((u) => !u.is_admin && u.role !== 'manager')
+      .map((u, idx) => ({
+        id: u.id || u.login || u.email || idx,
+        iconType: 'user',
+        name: u.name || u.full_name || u.username || u.login || u.email || '-',
+        description: u.email || u.phone || u.group || '',
+      }));
     isClientsViewTemp = true;
     isLoading = usersLoading;
   } else if (viewType === 'Trading Accounts') {
@@ -436,19 +762,30 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
       { label: 'Currency', key: 'currency', width: 'w-24' },
       { label: 'Status', key: 'status', width: 'w-32' },
     ];
-    data = accountsResponse?.accounts
-      ? accountsResponse.accounts.map(a => ({
-        id: a.login, login: a.login, name: a.name, group: a.group,
-        balance: a.balance, equity: a.equity, currency: a.currency, status: a.status
-      }))
-      : [];
+    data = normalizeArrayResponse(accountsResponse, ['accounts', 'data', 'answer', 'items']).map((a, idx) => ({
+      id: a.login || a.account_login || idx,
+      login: a.login || a.account_login,
+      name: a.name || a.client_name || a.full_name || a.user_name || '',
+      group: a.group || a.group_name || a.account_group || '',
+      balance: a.balance,
+      equity: a.equity,
+      currency: a.currency,
+      status: a.status || (a.enabled === false ? 'disabled' : 'active'),
+    }));
     isAccountsViewTemp = true;
     isLoading = accountsLoading;
   } else if (viewType === 'Symbols') {
     columns = symbolsColumns;
-    data = symbolsResponse?.instruments
-      ? symbolsResponse.instruments.map((s, i) => ({ id: i, symbol: s.symbol, description: s.description, digits: s.digits, type: s.trade_mode, execution: s.enabled ? 'Enabled' : 'Disabled', expiration: 'GTC', background: '' }))
-      : [];
+    data = normalizeArrayResponse(symbolsResponse, ['instruments', 'symbols', 'data', 'answer', 'items']).map((s, i) => ({
+      id: s.id || s.symbol || i,
+      symbol: s.symbol || s.name || '',
+      description: s.description || s.path || s.category || '',
+      digits: s.digits ?? s.digits_currency ?? '',
+      type: s.trade_mode || s.type || s.mode || '',
+      execution: s.enabled === false ? 'Disabled' : (s.execution || 'Enabled'),
+      expiration: s.expiration || 'GTC',
+      background: s.background || '',
+    }));
     isSymbolsViewTemp = true;
     isLoading = symbolsLoading;
   } else if (viewType === 'Positions') {
@@ -467,8 +804,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
       { label: 'Profit', width: 'flex-1' }
     ];
     
-    // Support either array or paginated object structure
-    const dataList = Array.isArray(positionsResponse) ? positionsResponse : (positionsResponse?.data || []);
+    const dataList = normalizeArrayResponse(positionsResponse, ['data', 'positions', 'answer', 'items']);
     
     data = dataList.map((p, idx) => ({
       id: p.ticket || idx,
@@ -503,7 +839,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
       { label: 'Profit', width: 'flex-1' }
     ];
     
-    const dataList = Array.isArray(dealsResponse) ? dealsResponse : (dealsResponse?.data || []);
+    const dataList = normalizeArrayResponse(dealsResponse, ['data', 'deals', 'answer', 'items']);
     
     data = dataList.map((d, idx) => ({
       id: d.ticket || idx,
@@ -530,6 +866,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     else data = securityTableData;
     isClientsViewTemp = true;
   } else {
+    isGroupLookupViewTemp = true;
     const backendGroup = groupsList.find(g => g.name === viewType);
     const matchingSubGroupData = backendGroup ? [{
       id: backendGroup.name,
@@ -567,6 +904,18 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   const isSymbolsView = isSymbolsViewTemp;
   const isPositionsView = isPositionsViewTemp;
   const isAccountsView = isAccountsViewTemp;
+  const isGroupLookupView = isGroupLookupViewTemp;
+  const activeError = {
+    'Groups': groupsError,
+    'Clients': usersError,
+    'Trading Accounts': accountsError,
+    'Symbols': symbolsError,
+    'Positions': positionsError,
+    'Deals': dealsError,
+  }[viewType] || (isGroupLookupView && groupsError && !groupsLoading ? groupsError : null);
+  const activeErrorMessage = activeError
+    ? getApiErrorMessage(activeError, `Failed to load ${viewType}.`)
+    : '';
 
   // Client-side filter: matches the search query against any string/number field
   // on each row. Empty query → no filtering.
@@ -577,34 +926,20 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
       Object.values(row).some((v) => v != null && String(v).toLowerCase().includes(q))
     );
   }
-  const filteredCount = Array.isArray(data) ? data.length : 0;
 
-  // Update ref; the top-level effect forwards to parent post-commit.
-  countsRef.current = { total: totalCount, filtered: filteredCount };
+  const closeAllSymbolOptions = isPositionsView
+    ? Array.from(new Set(data.map((row) => row.symbol).filter(Boolean))).sort()
+    : [];
+
+  const closeAllNoticeClass = {
+    success: 'text-[#4ec9b0]',
+    error: 'text-[#f48771]',
+    warning: 'text-[#dcdcaa]',
+    info: 'text-[color:var(--text-secondary)]',
+  }[closeAllNotice?.tone] || 'text-[color:var(--text-secondary)]';
 
  
   if (viewType === 'Time') {
-    const PropertyRow = ({ idx, icon: Icon, label, value }) => (
-      <div className={`flex items-center text-[12px] border-b border-black/20 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-blue-600/20 cursor-default`}>
-        <div className="w-[320px] flex items-center gap-2 px-3 py-[3px] border-r border-black/20 shrink-0">
-          <Icon size={13} className="text-[#3B82F6]" />
-          <span className="text-[color:var(--text-primary)]">{label}</span>
-        </div>
-        <div className="flex-1 px-3 py-[3px] text-[color:var(--text-primary)]">
-          {value}
-        </div>
-      </div>
-    );
-
-    const GroupHeader = ({ title }) => (
-      <div className="flex border-b border-black/20 bg-[color:var(--bg-app)] cursor-default">
-        <div className="w-[320px] px-3 py-1 text-[11px] font-bold text-white border-r border-black/20 shrink-0">
-          {title}
-        </div>
-        <div className="flex-1"></div>
-      </div>
-    );
-
     return (
       <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative" onContextMenu={(e) => e.preventDefault()}>
         <div className="flex border-b border-black/40 bg-[color:var(--bg-surface-2)] sticky top-0 z-10 shadow-sm">
@@ -612,14 +947,14 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
           <div className="flex-1 px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)] cursor-default">Value</div>
         </div>
         <div className="flex-1 overflow-auto no-scrollbar bg-[color:var(--bg-app)]">
-          <GroupHeader title="Common settings" />
-          <PropertyRow idx={0} icon={Clock} label="Time zone" value="GMT+01:00" />
-          <PropertyRow idx={1} icon={CornerUpRight} label="Daylight Saving time correction" value="Yes" />
-          <PropertyRow idx={2} icon={Server} label="Time synchronization with" value="time.cloudflare.com, pool.ntp.org" />
+          <TimeGroupHeader title="Common settings" />
+          <TimePropertyRow idx={0} icon={Clock} label="Time zone" value="GMT+01:00" />
+          <TimePropertyRow idx={1} icon={CornerUpRight} label="Daylight Saving time correction" value="Yes" />
+          <TimePropertyRow idx={2} icon={Server} label="Time synchronization with" value="time.cloudflare.com, pool.ntp.org" />
 
-          <GroupHeader title="Day settings" />
+          <TimeGroupHeader title="Day settings" />
           {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, idx) => (
-            <PropertyRow key={day} idx={idx} icon={Calendar} label={day} value="00:00-24:00" />
+            <TimePropertyRow key={day} idx={idx} icon={Calendar} label={day} value="00:00-24:00" />
           ))}
 
           {/* Placeholder fill */}
@@ -705,6 +1040,49 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
           <button className="h-[22px] px-4 bg-transparent border border-[color:var(--border-strong)] rounded-[2px] text-[color:var(--text-primary)] hover:bg-white/10 hover:border-[#777777] transition-all">
             Request
           </button>
+
+          {viewType === 'Positions' && (
+            <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-[color:var(--border-strong)]">
+              <input
+                type="text"
+                value={closeAllSymbol}
+                onChange={(event) => {
+                  setCloseAllSymbol(event.target.value);
+                  setCloseAllNotice(null);
+                }}
+                disabled={!closeAllAction.hasClosePermission || closeAllBusy}
+                list="close-all-symbol-options"
+                aria-label="Close all positions symbol"
+                placeholder="Symbol"
+                className="bg-[color:var(--bg-app)] border border-[color:var(--border-strong)] text-[color:var(--text-primary)] text-[11px] h-[22px] px-2 rounded-[2px] outline-none w-[110px] focus:border-[#777777] disabled:opacity-50"
+                title={closeAllAction.hasClosePermission ? 'Symbol to close' : closeAllAction.disabledReason}
+              />
+              <datalist id="close-all-symbol-options">
+                {closeAllSymbolOptions.map((symbol) => (
+                  <option key={symbol} value={symbol} />
+                ))}
+              </datalist>
+              <button
+                type="button"
+                onClick={handleCloseAllBySymbol}
+                disabled={!closeAllAction.canSubmit}
+                title={closeAllAction.disabledReason || `Close all positions for ${closeAllAction.normalizedSymbol}`}
+                className="inline-flex items-center gap-1 h-[22px] px-2.5 bg-[#3a1f1f] border border-[#7f3b34] rounded-[2px] text-[#f48771] hover:bg-[#4a2727] hover:border-[#a44b42] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <ShieldAlert size={12} />
+                {closeAllBusy ? 'Closing' : 'Close All'}
+              </button>
+              {closeAllNotice && (
+                <span
+                  role={closeAllNotice.tone === 'error' ? 'alert' : 'status'}
+                  className={`max-w-[360px] truncate ${closeAllNoticeClass}`}
+                  title={closeAllNotice.message}
+                >
+                  {closeAllNotice.message}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -727,6 +1105,12 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
         {data.map((row, idx) => (
           <div
             key={row.id}
+            onClick={() => {
+              if (isPositionsView && row.symbol) {
+                setCloseAllSymbol(row.symbol);
+                setCloseAllNotice(null);
+              }
+            }}
             onDoubleClick={() => onRowDoubleClick && onRowDoubleClick(row)}
             onContextMenu={(e) => { e.stopPropagation(); handleContextMenu(e, row); }}
             className={`flex cursor-pointer group border-b border-black/10 transition-colors ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-blue-600/20`}
@@ -817,7 +1201,12 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
         {isLoading && data.length === 0 && (
           <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">Loading data...</div>
         )}
-        {!isLoading && data.length === 0 && (
+        {!isLoading && activeError && (
+          <div className="p-4 text-[#f48771] text-[12px] bg-[#f48771]/10 border-b border-[#f48771]/20">
+            {activeErrorMessage}
+          </div>
+        )}
+        {!isLoading && !activeError && data.length === 0 && (
           <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">No data available</div>
         )}
         {/* Placeholder Rows to fill screen */}

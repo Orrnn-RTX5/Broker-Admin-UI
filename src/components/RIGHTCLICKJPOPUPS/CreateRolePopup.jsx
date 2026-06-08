@@ -2,16 +2,23 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { ManagerService } from '../../services/manager.service';
+import { ROLE_PERMISSION_OPTIONS } from '../../utils/permissions';
+
+const MotionDiv = motion.div;
+
+const emptyPermissionMap = () =>
+  Object.fromEntries(ROLE_PERMISSION_OPTIONS.map(({ key }) => [key, false]));
 
 const CreateRolePopup = ({ onClose, onCreated }) => {
   const [roleName, setRoleName] = useState('');
   const [description, setDescription] = useState('');
-  const [manageAccounts, setManageAccounts] = useState(false);
-  const [manageGroups, setManageGroups] = useState(false);
-  const [executeDeals, setExecuteDeals] = useState(false);
-  const [viewReports, setViewReports] = useState(false);
+  const [permissions, setPermissions] = useState(() => emptyPermissionMap());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const togglePermission = (key, checked) => {
+    setPermissions((current) => ({ ...current, [key]: checked }));
+  };
 
   const handleSubmit = async () => {
     if (!roleName) {
@@ -25,12 +32,7 @@ const CreateRolePopup = ({ onClose, onCreated }) => {
       await ManagerService.createRole({
         role_name: roleName,
         description,
-        permissions: {
-          manage_accounts: manageAccounts,
-          manage_groups: manageGroups,
-          execute_deals: executeDeals,
-          view_reports: viewReports,
-        }
+        permissions,
       });
       if (onCreated) onCreated();
       onClose();
@@ -43,7 +45,7 @@ const CreateRolePopup = ({ onClose, onCreated }) => {
 
   return (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 font-sans">
-      <motion.div 
+      <MotionDiv
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
@@ -82,42 +84,17 @@ const CreateRolePopup = ({ onClose, onCreated }) => {
           <div className="flex items-start gap-3 mt-2">
             <label className="text-[12px] w-24 shrink-0 text-right">Permissions:</label>
             <div className="flex-1 flex flex-col gap-2">
-              <label className="flex items-center gap-2 cursor-pointer outline-none">
-                <input 
-                  type="checkbox" 
-                  checked={manageAccounts}
-                  onChange={(e) => setManageAccounts(e.target.checked)}
-                  className="accent-blue-500 w-3 h-3 cursor-pointer"
-                />
-                <span className="text-[12px]">Manage Accounts</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer outline-none">
-                <input 
-                  type="checkbox" 
-                  checked={manageGroups}
-                  onChange={(e) => setManageGroups(e.target.checked)}
-                  className="accent-blue-500 w-3 h-3 cursor-pointer"
-                />
-                <span className="text-[12px]">Manage Groups</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer outline-none">
-                <input 
-                  type="checkbox" 
-                  checked={executeDeals}
-                  onChange={(e) => setExecuteDeals(e.target.checked)}
-                  className="accent-blue-500 w-3 h-3 cursor-pointer"
-                />
-                <span className="text-[12px]">Execute Deals</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer outline-none">
-                <input 
-                  type="checkbox" 
-                  checked={viewReports}
-                  onChange={(e) => setViewReports(e.target.checked)}
-                  className="accent-blue-500 w-3 h-3 cursor-pointer"
-                />
-                <span className="text-[12px]">View Reports</span>
-              </label>
+              {ROLE_PERMISSION_OPTIONS.map(({ key, label }) => (
+                <label key={key} className="flex items-center gap-2 cursor-pointer outline-none">
+                  <input
+                    type="checkbox"
+                    checked={permissions[key]}
+                    onChange={(e) => togglePermission(key, e.target.checked)}
+                    className="accent-blue-500 w-3 h-3 cursor-pointer"
+                  />
+                  <span className="text-[12px]">{label}</span>
+                </label>
+              ))}
             </div>
           </div>
           
@@ -139,7 +116,7 @@ const CreateRolePopup = ({ onClose, onCreated }) => {
             Cancel
           </button>
         </div>
-      </motion.div>
+      </MotionDiv>
     </div>
   );
 };

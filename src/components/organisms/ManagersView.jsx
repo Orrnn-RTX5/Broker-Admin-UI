@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ManagerService } from '../../services/manager.service';
 import { UserPlus, ShieldPlus, RefreshCw, Wifi, Activity, Trash2, Edit2, X, AlertCircle, Check } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
+import { buildManagerCreatePayload, canGrantAdminRole } from '../../utils/adminValidation';
+import { ROLE_PERMISSION_OPTIONS } from '../../utils/permissions';
+import { buildActionableErrorState } from '../../utils/errorState';
+import ActionableErrorState from '../atoms/ActionableErrorState';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const BlueUserIcon = (props) => (
@@ -42,18 +47,19 @@ const PermBadges = ({ permissions }) => {
 };
 
 // ─── Create Role Modal ───────────────────────────────────────────────────────
-const PERMISSIONS = [
-  { key: 'manage_accounts', label: 'Manage Accounts' },
-  { key: 'manage_groups',   label: 'Manage Groups'   },
-  { key: 'execute_deals',   label: 'Execute Deals'   },
-  { key: 'view_reports',    label: 'View Reports'    },
-];
+const PERMISSIONS = ROLE_PERMISSION_OPTIONS;
+const emptyPermissionMap = () =>
+  Object.fromEntries(PERMISSIONS.map(({ key }) => [key, false]));
+const normalizeRolePermissionMap = (permissions = {}) =>
+  Object.fromEntries(
+    PERMISSIONS.map(({ key }) => [key, Boolean(permissions?.[key])])
+  );
 
 const CreateRoleModal = ({ onClose, onCreated }) => {
   const [form, setForm] = useState({
     role_name: '',
     description: '',
-    permissions: { manage_accounts: false, manage_groups: false, execute_deals: false, view_reports: false },
+    permissions: emptyPermissionMap(),
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -124,20 +130,14 @@ const CreateManagerModal = ({ roles, onClose, onCreated }) => {
   const [form, setForm] = useState({ login: '', name: '', password: '', is_admin: false, role_id: '', allowed_groups: '', ip_whitelist: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const currentUser = useAuthStore((state) => state.user);
+  const canCreateAdmin = canGrantAdminRole(currentUser);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true); setError(null);
     try {
-      const payload = {
-        login: Number(form.login),
-        name: form.name,
-        password: form.password,
-        is_admin: form.is_admin,
-        ...(form.role_id && { role_id: Number(form.role_id) }),
-        ...(form.allowed_groups.trim() && { allowed_groups: form.allowed_groups.split(',').map(s=>s.trim()).filter(Boolean) }),
-        ...(form.ip_whitelist.trim() && { ip_whitelist: form.ip_whitelist.split(',').map(s=>s.trim()).filter(Boolean) }),
-      };
+      const payload = buildManagerCreatePayload(form, { canGrantAdmin: canCreateAdmin });
       await ManagerService.createManager(payload);
       onCreated(); onClose();
     } catch (err) {
@@ -172,7 +172,7 @@ const CreateManagerModal = ({ roles, onClose, onCreated }) => {
           <div className="flex flex-col gap-1"><label className="text-[#ccc]">IP Whitelist (comma-sep)</label>
             <input value={form.ip_whitelist} onChange={e=>setForm(p=>({...p,ip_whitelist:e.target.value}))} placeholder="192.168.1.10" className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
           <div className="flex items-center gap-2 mt-1">
-            <input type="checkbox" id="is_admin" checked={form.is_admin} onChange={e=>setForm(p=>({...p,is_admin:e.target.checked}))} className="accent-[color:var(--accent-500)]"/>
+            <input type="checkbox" id="is_admin" checked={form.is_admin && canCreateAdmin} onChange={e=>setForm(p=>({...p,is_admin:canCreateAdmin && e.target.checked}))} disabled={!canCreateAdmin} className="accent-[color:var(--accent-500)] disabled:opacity-50"/>
             <label htmlFor="is_admin" className="text-[#ccc] cursor-pointer">Is Admin</label>
           </div>
           <div className="flex justify-end gap-2 pt-3 border-t border-[color:var(--border-default)]">
@@ -192,12 +192,7 @@ const EditRoleModal = ({ role, onClose, onSaved }) => {
   const [form, setForm] = useState({
     role_name:   role.role_name   || '',
     description: role.description || '',
-    permissions: {
-      manage_accounts: role.permissions?.manage_accounts ?? false,
-      manage_groups:   role.permissions?.manage_groups   ?? false,
-      execute_deals:   role.permissions?.execute_deals   ?? false,
-      view_reports:    role.permissions?.view_reports    ?? false,
-    },
+    permissions: normalizeRolePermissionMap(role.permissions),
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -322,6 +317,7 @@ const ManagersView = () => {
   const [roles, setRoles] = useState([]);
   const [online, setOnline] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadErrors, setLoadErrors] = useState({ managers: null, roles: null, online: null });
 
   const [isCreateRoleOpen, setIsCreateRoleOpen] = useState(false);
   const [isCreateManagerOpen, setIsCreateManagerOpen] = useState(false);
@@ -330,24 +326,57 @@ const ManagersView = () => {
   const [contextMenu, setContextMenu] = useState({ visible: false });
 
   const fetchManagers = useCallback(async () => {
+    setLoadErrors(prev => ({ ...prev, managers: null }));
     try {
       const res = await ManagerService.getManagerList();
       setManagers(Array.isArray(res) ? res : res?.data || []);
-    } catch { setManagers([]); }
+    } catch (err) {
+      setManagers([]);
+      setLoadErrors(prev => ({
+        ...prev,
+        managers: buildActionableErrorState(err, {
+          title: 'Managers failed to load',
+          actionLabel: 'Refresh',
+          fallback: 'Could not load manager accounts',
+        }),
+      }));
+    }
   }, []);
 
   const fetchRoles = useCallback(async () => {
+    setLoadErrors(prev => ({ ...prev, roles: null }));
     try {
       const res = await ManagerService.getRoleList();
       setRoles(Array.isArray(res) ? res : res?.data || []);
-    } catch { setRoles([]); }
+    } catch (err) {
+      setRoles([]);
+      setLoadErrors(prev => ({
+        ...prev,
+        roles: buildActionableErrorState(err, {
+          title: 'Roles failed to load',
+          actionLabel: 'Refresh',
+          fallback: 'Could not load manager roles',
+        }),
+      }));
+    }
   }, []);
 
   const fetchOnline = useCallback(async () => {
+    setLoadErrors(prev => ({ ...prev, online: null }));
     try {
       const res = await ManagerService.getManagerOnline();
       setOnline(Array.isArray(res) ? res : res?.data || []);
-    } catch { setOnline([]); }
+    } catch (err) {
+      setOnline([]);
+      setLoadErrors(prev => ({
+        ...prev,
+        online: buildActionableErrorState(err, {
+          title: 'Online managers failed to load',
+          actionLabel: 'Refresh',
+          fallback: 'Could not load online manager sessions',
+        }),
+      }));
+    }
   }, []);
 
   const refreshAll = useCallback(async () => {
@@ -386,6 +415,9 @@ const ManagersView = () => {
   };
 
   const tabs = ['Managers', 'Roles', 'Online'];
+  const renderLoadError = (state, onRetry) => (
+    <ActionableErrorState state={state} onAction={onRetry} />
+  );
 
   return (
     <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative"
@@ -432,7 +464,8 @@ const ManagersView = () => {
           </div>
           <div className="flex-1 overflow-auto bg-[color:var(--bg-app)]">
             {loading && <div className="p-4 text-[#888] italic text-[12px]">Loading...</div>}
-            {!loading && managers.length === 0 && <div className="p-4 text-[#888] italic text-[12px]">No managers found.</div>}
+            {!loading && loadErrors.managers && renderLoadError(loadErrors.managers, fetchManagers)}
+            {!loading && !loadErrors.managers && managers.length === 0 && <div className="p-4 text-[#888] italic text-[12px]">No managers found.</div>}
             {managers.map((row, idx) => (
               <div key={row.login} onContextMenu={e => handleContextMenu(e, row, 'manager')}
                 className={`flex cursor-default border-b border-black/10 hover:bg-blue-600/20 transition-colors ${idx%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}>
@@ -468,7 +501,8 @@ const ManagersView = () => {
           </div>
           <div className="flex-1 overflow-auto bg-[color:var(--bg-app)]">
             {loading && <div className="p-4 text-[#888] italic text-[12px]">Loading...</div>}
-            {!loading && roles.length === 0 && <div className="p-4 text-[#888] italic text-[12px]">No roles found.</div>}
+            {!loading && loadErrors.roles && renderLoadError(loadErrors.roles, fetchRoles)}
+            {!loading && !loadErrors.roles && roles.length === 0 && <div className="p-4 text-[#888] italic text-[12px]">No roles found.</div>}
             {roles.map((row, idx) => (
               <div key={row.id} onContextMenu={e => handleContextMenu(e, row, 'role')}
                 className={`flex cursor-default border-b border-black/10 hover:bg-blue-600/20 transition-colors items-center ${idx%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}>
@@ -502,7 +536,8 @@ const ManagersView = () => {
           </div>
           <div className="flex-1 overflow-auto bg-[color:var(--bg-app)]">
             {loading && <div className="p-4 text-[#888] italic text-[12px]">Loading...</div>}
-            {!loading && online.length === 0 && <div className="p-4 text-[#888] italic text-[12px]">No managers currently online.</div>}
+            {!loading && loadErrors.online && renderLoadError(loadErrors.online, fetchOnline)}
+            {!loading && !loadErrors.online && online.length === 0 && <div className="p-4 text-[#888] italic text-[12px]">No managers currently online.</div>}
             {online.map((row, idx) => (
               <div key={row.login} className={`flex cursor-default border-b border-black/10 hover:bg-blue-600/20 transition-colors ${idx%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}>
                 <div className="w-[80px]  px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10">

@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { ManagerService } from '../../services/manager.service';
+import { buildGroupRiskPayload } from '../../utils/adminValidation';
+
+const MotionDiv = motion.div;
 
 const CreateGroupPopup = ({ onClose, onCreated, initialData }) => {
   const [formData, setFormData] = useState(() => {
@@ -49,20 +52,7 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData }) => {
     setIsLoading(true);
     setError(null);
     try {
-      const payload = {
-        ...formData,
-        commissionRate: Number(formData.commissionRate),
-        leverage: Number(formData.leverage),
-        lotDivisor: Number(formData.lotDivisor),
-        marginCallLevel: Number(formData.marginCallLevel),
-        maxLotPerTrade: Number(formData.maxLotPerTrade),
-        maxTotalLots: Number(formData.maxTotalLots),
-        spreadMarkup: Number(formData.spreadMarkup),
-        stopOutLevel: Number(formData.stopOutLevel),
-        swapMultiplier: Number(formData.swapMultiplier),
-        symbolsAllowed: formData.symbolsAllowed ? formData.symbolsAllowed.split(',').map(s => s.trim()).filter(Boolean) : [],
-        symbolsBlocked: formData.symbolsBlocked ? formData.symbolsBlocked.split(',').map(s => s.trim()).filter(Boolean) : [],
-      };
+      const payload = buildGroupRiskPayload(formData);
 
       if (initialData) {
         await ManagerService.updateGroup(payload);
@@ -88,7 +78,7 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData }) => {
 
   return (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 font-sans">
-      <motion.div 
+      <MotionDiv
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
@@ -215,7 +205,7 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData }) => {
             Cancel
           </button>
         </div>
-      </motion.div>
+      </MotionDiv>
     </div>
   );
 };

@@ -11,11 +11,6 @@ export const AdminService = {
     return res.data;
   },
 
-  getUserById: async (id) => {
-    const res = await api.get(`/api/v2/admin/users/${id}`);
-    return res.data;
-  },
-
   updateUser: async (id, data) => {
     const res = await api.put(`/api/v2/admin/users/${id}`, data);
     return res.data;

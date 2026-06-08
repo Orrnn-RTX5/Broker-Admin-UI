@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { PaymentService } from '../../services/payment.service';
+import { parseMoneyAmount, parsePositiveInteger } from '../../utils/adminValidation';
+import { normalizeArrayResponse, getApiErrorMessage } from '../../utils/apiShapes';
 import { Plus, RefreshCw, X, CheckCircle, XCircle, PauseCircle } from 'lucide-react';
 
 const fmt = (v) => (v == null ? '—' : v);
@@ -17,6 +19,13 @@ const Badge = ({ status }) => {
 };
 
 // ── Add Withdrawal Popup ───────────────────────────────────────────────────
+const FormLabel = ({ t, req, children }) => (
+  <div className="flex flex-col gap-0.5">
+    <label className="text-[10px] text-[#888] uppercase tracking-wider">{t}{req && <span className="text-[#f48771] ml-0.5">*</span>}</label>
+    {children}
+  </div>
+);
+
 const AddWithdrawalPopup = ({ onClose, onSaved }) => {
   const [form, setForm] = useState({ login: '', amount: '', method_id: '', currency: 'USD', bank_details: '' });
   const [loading, setLoading] = useState(false);
@@ -26,10 +35,19 @@ const AddWithdrawalPopup = ({ onClose, onSaved }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.login || !form.amount) { setError('Login and Amount are required.'); return; }
+    if (!form.login) { setError('Login and Amount are required.'); return; }
+    let login;
+    let amount;
+    try {
+      login = parsePositiveInteger(form.login, 'Login');
+      amount = parseMoneyAmount(form.amount, 'Amount');
+    } catch (validationErr) {
+      setError(validationErr.message);
+      return;
+    }
     setLoading(true); setError('');
     try {
-      const payload = { login: parseInt(form.login), amount: parseFloat(form.amount), currency: form.currency };
+      const payload = { login, amount, currency: form.currency };
       if (form.method_id) payload.method_id = parseInt(form.method_id);
       if (form.bank_details) payload.bank_details = form.bank_details;
       await PaymentService.createWithdrawal(payload);
@@ -37,13 +55,6 @@ const AddWithdrawalPopup = ({ onClose, onSaved }) => {
     } catch (err) { setError(err.response?.data?.message || err.message); }
     finally { setLoading(false); }
   };
-
-  const Lbl = ({ t, req, children }) => (
-    <div className="flex flex-col gap-0.5">
-      <label className="text-[10px] text-[#888] uppercase tracking-wider">{t}{req && <span className="text-[#f48771] ml-0.5">*</span>}</label>
-      {children}
-    </div>
-  );
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" onClick={onClose}>
@@ -54,13 +65,13 @@ const AddWithdrawalPopup = ({ onClose, onSaved }) => {
         </div>
         <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3">
           <div className="grid grid-cols-3 gap-3">
-            <Lbl t="Account Login" req><input className={inp} type="number" value={form.login} onChange={e => set('login', e.target.value)} /></Lbl>
-            <Lbl t="Amount" req><input className={inp} type="number" step="0.01" value={form.amount} onChange={e => set('amount', e.target.value)} /></Lbl>
-            <Lbl t="Currency"><input className={inp} value={form.currency} onChange={e => set('currency', e.target.value)} /></Lbl>
+            <FormLabel t="Account Login" req><input className={inp} type="number" value={form.login} onChange={e => set('login', e.target.value)} /></FormLabel>
+            <FormLabel t="Amount" req><input className={inp} type="number" step="0.01" value={form.amount} onChange={e => set('amount', e.target.value)} /></FormLabel>
+            <FormLabel t="Currency"><input className={inp} value={form.currency} onChange={e => set('currency', e.target.value)} /></FormLabel>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Lbl t="Method ID"><input className={inp} type="number" value={form.method_id} onChange={e => set('method_id', e.target.value)} placeholder="optional" /></Lbl>
-            <Lbl t="Bank / Wallet Details"><input className={inp} value={form.bank_details} onChange={e => set('bank_details', e.target.value)} placeholder="IBAN / wallet address" /></Lbl>
+            <FormLabel t="Method ID"><input className={inp} type="number" value={form.method_id} onChange={e => set('method_id', e.target.value)} placeholder="optional" /></FormLabel>
+            <FormLabel t="Bank / Wallet Details"><input className={inp} value={form.bank_details} onChange={e => set('bank_details', e.target.value)} placeholder="IBAN / wallet address" /></FormLabel>
           </div>
           {error && <div className="text-[11px] text-[#f48771] bg-[color:var(--bg-surface-2)] px-3 py-1.5 rounded-[2px]">{error}</div>}
           <div className="flex justify-end gap-2 pt-1">
@@ -118,20 +129,37 @@ const WithdrawalsView = () => {
   const [rejectRow, setRejectRow] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
   const [contextMenu, setContextMenu] = useState({ visible: false });
+  const [error, setError] = useState('');
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
+    setError('');
     try {
       const params = {};
       if (filterLogin) params.login = parseInt(filterLogin);
       if (filterStatus) params.status = filterStatus;
       const res = await PaymentService.getWithdrawalList(params);
-      setData(Array.isArray(res) ? res : res?.data ?? []);
-    } catch (err) { console.error(err); setData([]); }
+      setData(normalizeArrayResponse(res, ['withdrawals', 'requests', 'data', 'answer', 'items']));
+    } catch (err) {
+      console.error(err);
+      setError(getApiErrorMessage(err, 'Failed to load withdrawal requests.'));
+      setData([]);
+    }
     finally { setLoading(false); }
-  };
+  }, [filterLogin, filterStatus]);
 
-  useEffect(() => { fetchData(); }, []);
+  const fetchDataRef = useRef(fetchData);
+
+  useEffect(() => {
+    fetchDataRef.current = fetchData;
+  }, [fetchData]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchDataRef.current();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   const doAction = async (action, row) => {
     setActionLoading(`${action}-${row.id}`);
@@ -214,7 +242,8 @@ const WithdrawalsView = () => {
           </div>
         ))}
         {loading && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">Loading…</div>}
-        {!loading && data.length === 0 && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">No withdrawal requests found.</div>}
+        {!loading && error && <div className="p-4 text-[#f48771] text-[12px] bg-[#f48771]/10 border-b border-[#f48771]/20">{error}</div>}
+        {!loading && !error && data.length === 0 && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">No withdrawal requests found.</div>}
         {[...Array(12)].map((_, i) => <div key={i} className={`flex border-b border-black/5 opacity-30 h-6 ${i%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}></div>)}
       </div>
 

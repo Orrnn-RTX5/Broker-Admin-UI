@@ -1,5 +1,6 @@
-import { getRuntimeValue } from './runtimeConfig';
+import { getRuntimeValue } from './runtimeConfig.js';
 
+const viteEnv = import.meta.env || {};
 const DEFAULT_BROKER_PORT = 8091;
 const DESKTOP_TARGETS = new Set(['desktop', 'electron', 'local']);
 
@@ -72,39 +73,48 @@ const GTA_LEGACY_MATCHES = [
   'services.growtradingacademy.com',
 ];
 
-const GTA_LEGACY_WEB_BACKEND_URL = 'https://services.growtradingacademy.com';
-const GTA_LEGACY_DESKTOP_BACKEND_URL = 'http://103.91.186.142:8091';
+const GTA_LEGACY_WEB_BACKEND_URL =
+  getRuntimeValue('GTA_LEGACY_WEB_BACKEND_URL', 'VITE_GTA_LEGACY_WEB_BACKEND_URL') ||
+  viteEnv.VITE_GTA_LEGACY_WEB_BACKEND_URL ||
+  'https://services.growtradingacademy.com';
+
+// Legacy desktop fallback. Operator-overridable via runtime/env so the plain-HTTP
+// IP is not the only option; the historical value remains the default.
+const GTA_LEGACY_DESKTOP_BACKEND_URL =
+  getRuntimeValue('GTA_LEGACY_DESKTOP_BACKEND_URL', 'VITE_GTA_LEGACY_DESKTOP_BACKEND_URL') ||
+  viteEnv.VITE_GTA_LEGACY_DESKTOP_BACKEND_URL ||
+  'http://103.91.186.142:8091';
 
 export const trimTrailingSlash = (value = '') => String(value || '').replace(/\/+$/, '');
 
 const hasProtocol = (value = '') => /^[a-z][a-z\d+.-]*:\/\//i.test(value);
 
 const getRuntimeBrokerId = () =>
-  String(getRuntimeValue('BROKER_ID', 'VITE_BROKER_ID') || import.meta.env.VITE_BROKER_ID || '')
+  String(getRuntimeValue('BROKER_ID', 'VITE_BROKER_ID') || viteEnv.VITE_BROKER_ID || '')
     .trim()
     .toLowerCase();
 
 const getRuntimeDefaultServer = () =>
   String(
     getRuntimeValue('DEFAULT_MT5_SERVER', 'VITE_DEFAULT_MT5_SERVER') ||
-      import.meta.env.VITE_DEFAULT_MT5_SERVER ||
+      viteEnv.VITE_DEFAULT_MT5_SERVER ||
       ''
   ).trim();
 
 const getRuntimeApiHost = () =>
-  trimTrailingSlash(getRuntimeValue('API_HOST', 'VITE_API_HOST') || import.meta.env.VITE_API_HOST || '');
+  trimTrailingSlash(getRuntimeValue('API_HOST', 'VITE_API_HOST') || viteEnv.VITE_API_HOST || '');
 
 const getRuntimeApiHostExt = () =>
-  trimTrailingSlash(getRuntimeValue('API_HOST_EXT', 'VITE_API_HOST_EXT') || import.meta.env.VITE_API_HOST_EXT || '');
+  trimTrailingSlash(getRuntimeValue('API_HOST_EXT', 'VITE_API_HOST_EXT') || viteEnv.VITE_API_HOST_EXT || '');
 
 const getRuntimeWsHost = () =>
-  trimTrailingSlash(getRuntimeValue('WS_HOST', 'VITE_WS_HOST') || import.meta.env.VITE_WS_HOST || '');
+  trimTrailingSlash(getRuntimeValue('WS_HOST', 'VITE_WS_HOST') || viteEnv.VITE_WS_HOST || '');
 
 export const getBackendTarget = () =>
   String(
     getRuntimeValue('BACKEND_TARGET', 'VITE_BACKEND_TARGET', 'BACKEND_MODE', 'VITE_BACKEND_MODE') ||
-      import.meta.env.VITE_BACKEND_TARGET ||
-      import.meta.env.VITE_BACKEND_MODE ||
+      viteEnv.VITE_BACKEND_TARGET ||
+      viteEnv.VITE_BACKEND_MODE ||
       'web'
   )
     .trim()
@@ -138,6 +148,23 @@ const ensureUrl = (value = '', protocol = 'https') => {
   if (!trimmed) return '';
   return hasProtocol(trimmed) ? trimmed : `${protocol}://${trimmed}`;
 };
+
+const inferProtocolForPort = (value = '', fallbackProtocol = 'https') => {
+  const trimmed = trimTrailingSlash(value);
+  if (hasProtocol(trimmed)) {
+    try {
+      const parsed = new URL(trimmed);
+      return parsed.protocol.replace(/:$/, '') || fallbackProtocol;
+    } catch {
+      return fallbackProtocol;
+    }
+  }
+
+  return /:8091(?:\/|$)/.test(trimmed) ? 'http' : fallbackProtocol;
+};
+
+const ensureExtUrl = (value = '', fallbackProtocol = 'https') =>
+  ensureUrl(value, inferProtocolForPort(value, fallbackProtocol));
 
 const buildUrlFromHost = (hostValue = '', { protocol = 'https', port = 0 } = {}) => {
   const trimmed = trimTrailingSlash(hostValue);
@@ -280,7 +307,7 @@ export const resolveBrokerBackendUrl = (brokerInfo = {}, fallbackUrl = '') => {
 export const resolveBrokerExtApiUrl = (brokerInfo = {}, backendUrl = '') => {
   if (!isDesktopBackendTarget() && brokerMatchesRuntimeDeployment(brokerInfo)) {
     const runtimeApiHostExt = getRuntimeApiHostExt();
-    if (runtimeApiHostExt) return ensureUrl(runtimeApiHostExt, 'https');
+    if (runtimeApiHostExt) return ensureExtUrl(runtimeApiHostExt, 'https');
   }
 
   const explicitUrl = getFirstValue(
@@ -288,7 +315,7 @@ export const resolveBrokerExtApiUrl = (brokerInfo = {}, backendUrl = '') => {
     isDesktopBackendTarget() ? DESKTOP_EXT_FIELDS : WEB_EXT_FIELDS
   );
 
-  if (explicitUrl) return ensureUrl(explicitUrl, isDesktopBackendTarget() ? 'http' : 'https');
+  if (explicitUrl) return ensureExtUrl(explicitUrl, isDesktopBackendTarget() ? 'http' : 'https');
 
   if (isDesktopBackendTarget()) {
     return resolveBrokerBackendUrl(brokerInfo, backendUrl);

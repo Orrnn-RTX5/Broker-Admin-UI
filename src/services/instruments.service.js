@@ -1,4 +1,5 @@
 import { api } from '../lib/api';
+import { buildInstrumentToggleRequest } from '../utils/serviceContracts';
 
 export const InstrumentsService = {
   getInstruments: async (params) => {
@@ -17,7 +18,11 @@ export const InstrumentsService = {
   },
 
   toggleInstrument: async (symbol, enabled) => {
-    const res = await api.post(`/api/v2/admin/instruments/${symbol}/toggle`, { enabled });
+    if (typeof enabled !== 'boolean') {
+      throw new Error('enabled boolean is required');
+    }
+    const request = buildInstrumentToggleRequest(symbol, enabled);
+    const res = await api.patch(request.url, request.data);
     return res.data;
   }
 };

@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Hash, AlertCircle } from 'lucide-react';
 import { ManagerService } from '../../services/manager.service';
+import { buildDynamicLeveragePayload } from '../../utils/adminValidation';
+
+const MotionDiv = motion.div;
 
 const CreateLeveragePopup = ({ onClose, onCreated }) => {
   const [formData, setFormData] = useState({
@@ -23,14 +26,7 @@ const CreateLeveragePopup = ({ onClose, onCreated }) => {
     setError(null);
 
     try {
-      const payload = {
-        ...formData,
-        leverage: Number(formData.leverage),
-        margin_rate: Number(formData.margin_rate),
-        priority: Number(formData.priority),
-        volume_from: Number(formData.volume_from),
-        volume_to: Number(formData.volume_to)
-      };
+      const payload = buildDynamicLeveragePayload(formData);
 
       await ManagerService.createDynamicLeverage(payload);
       if (onCreated) onCreated();
@@ -49,7 +45,7 @@ const CreateLeveragePopup = ({ onClose, onCreated }) => {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4">
-      <motion.div
+      <MotionDiv
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
@@ -198,7 +194,7 @@ const CreateLeveragePopup = ({ onClose, onCreated }) => {
             </button>
           </div>
         </form>
-      </motion.div>
+      </MotionDiv>
     </div>
   );
 };

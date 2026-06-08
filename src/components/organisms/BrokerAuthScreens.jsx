@@ -18,6 +18,7 @@ import {
   clearBrokerInfo,
   discoverBrokerById,
   fetchBrokerList,
+  getBrokerLoginServer,
   getBrokerInfo,
   loginAdmin,
   loginManager,
@@ -68,8 +69,18 @@ const brokerMatchesRuntime = (broker) => {
 
 const getDefaultBroker = (list = []) =>
   list.find(brokerMatchesRuntime) ||
-  list.find((b) => b.broker_id === 'gta_broker' || b.broker_id === 'grow-trading-academy') ||
   list[0];
+
+const getBrokerSecondaryLabel = (broker) => {
+  if (!broker) return 'No broker';
+
+  const brokerId = String(broker.broker_id || '').trim();
+  const server = String(broker.server || '').trim();
+  const host = String(broker.server_ip || broker.host || '').trim();
+  const detail = server && server !== brokerId ? server : host;
+
+  return detail ? `${brokerId} / ${detail}` : brokerId || server || 'No broker';
+};
 
 // ---------------------------------------------------------------------------
 // Shell & shared UI primitives
@@ -127,7 +138,7 @@ const SpinnerLabel = ({ children }) => (
   </>
 );
 
-const BrokerLogo = ({ broker, size = 32, fallback: Fallback = Building2 }) => {
+const BrokerLogo = ({ broker, size = 32, fallback = Building2 }) => {
   const [failed, setFailed] = React.useState(false);
   const src = broker?.logo_url;
 
@@ -152,7 +163,10 @@ const BrokerLogo = ({ broker, size = 32, fallback: Fallback = Building2 }) => {
       className="inline-flex shrink-0 items-center justify-center bg-[color:var(--accent-50)] text-[color:var(--accent-500)] border border-[color:var(--accent-100)]"
       style={{ width: size, height: size, borderRadius: 4 }}
     >
-      <Fallback size={Math.max(14, Math.round(size * 0.45))} aria-hidden="true" />
+      {React.createElement(fallback, {
+        size: Math.max(14, Math.round(size * 0.45)),
+        'aria-hidden': 'true',
+      })}
     </span>
   );
 };
@@ -190,8 +204,7 @@ const BrokerDropdown = ({ brokers, selectedId, disabled, onChange }) => {
             {selectedBroker?.name || 'Select broker'}
           </span>
           <span className="block truncate text-[10px] font-mono text-[color:var(--text-muted)]">
-            {selectedBroker?.broker_id || 'No broker'}
-            {selectedBroker?.server_ip ? ` / ${selectedBroker.server_ip}` : ''}
+            {getBrokerSecondaryLabel(selectedBroker)}
           </span>
         </span>
         <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-[color:var(--text-muted)]" aria-hidden="true" />
@@ -222,8 +235,7 @@ const BrokerDropdown = ({ brokers, selectedId, disabled, onChange }) => {
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[12px] font-medium text-[color:var(--text-primary)]">{broker.name}</span>
                   <span className="block truncate text-[10px] font-mono text-[color:var(--text-muted)]">
-                    {broker.broker_id}
-                    {broker.server_ip ? ` / ${broker.server_ip}` : ''}
+                    {getBrokerSecondaryLabel(broker)}
                   </span>
                 </span>
                 {selected && <Check size={13} className="text-[color:var(--accent-500)]" aria-hidden="true" />}
@@ -251,8 +263,6 @@ export const BrokerSelector = ({ navigate }) => {
   // Load broker list on mount
   React.useEffect(() => {
     let cancelled = false;
-    setListLoading(true);
-    setListError('');
 
     fetchBrokerList()
       .then((list) => {
@@ -449,27 +459,23 @@ export const BrokerSelector = ({ navigate }) => {
 // ManagerLogin
 // ---------------------------------------------------------------------------
 export const ManagerLogin = ({ navigate, onLoginSuccess }) => {
-  const [brokerInfo, setBrokerInfoState] = React.useState(() => getBrokerInfo());
+  const [brokerInfo] = React.useState(() => getBrokerInfo());
   const [user, setUser] = React.useState('');
   const [password, setPassword] = React.useState('');
-  const [server, setServer] = React.useState('');
+  const [server, setServer] = React.useState(() => getBrokerLoginServer(getBrokerInfo() || {}));
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
-    const storedBroker = getBrokerInfo();
-    if (!storedBroker) {
+    if (!brokerInfo) {
       navigate('/', { replace: true });
-      return;
     }
-    setBrokerInfoState(storedBroker);
-    setServer(storedBroker.server_ip || '');
-  }, [navigate]);
+  }, [brokerInfo, navigate]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!user || !password || !server) {
-      setError('Login, password, and server are required.');
+      setError('Login, password, and broker server are required.');
       return;
     }
     setLoading(true);
@@ -501,7 +507,7 @@ export const ManagerLogin = ({ navigate, onLoginSuccess }) => {
     >
       <Field id="manager-login" label="Login" type="number" icon={User} value={user} onChange={setUser} required />
       <PasswordField id="manager-password" value={password} onChange={setPassword} />
-      <Field id="manager-server" label="Server" icon={Server} value={server} onChange={setServer} readOnly required />
+      <Field id="manager-server" label="Broker Server" icon={Server} value={server} onChange={setServer} readOnly required />
     </LoginScreen>
   );
 };
@@ -510,27 +516,23 @@ export const ManagerLogin = ({ navigate, onLoginSuccess }) => {
 // AdminLogin
 // ---------------------------------------------------------------------------
 export const AdminLogin = ({ navigate, onLoginSuccess }) => {
-  const [brokerInfo, setBrokerInfoState] = React.useState(() => getBrokerInfo());
+  const [brokerInfo] = React.useState(() => getBrokerInfo());
   const [user, setUser] = React.useState('');
   const [password, setPassword] = React.useState('');
-  const [server, setServer] = React.useState('');
+  const [server, setServer] = React.useState(() => getBrokerLoginServer(getBrokerInfo() || {}));
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
-    const storedBroker = getBrokerInfo();
-    if (!storedBroker) {
+    if (!brokerInfo) {
       navigate('/', { replace: true });
-      return;
     }
-    setBrokerInfoState(storedBroker);
-    setServer(storedBroker.server_ip || storedBroker.broker_id || '');
-  }, [navigate]);
+  }, [brokerInfo, navigate]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!user || !password || !server) {
-      setError('Login, password, and server are required.');
+      setError('Login, password, and broker server are required.');
       return;
     }
     setLoading(true);
@@ -562,7 +564,7 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
     >
       <Field id="admin-login" label="Login" type="number" icon={User} value={user} onChange={setUser} required />
       <PasswordField id="admin-password" value={password} onChange={setPassword} />
-      <Field id="admin-server" label="Server" icon={Server} value={server} onChange={setServer} readOnly required />
+      <Field id="admin-server" label="Broker Server" icon={Server} value={server} onChange={setServer} readOnly required />
     </LoginScreen>
   );
 };
@@ -629,7 +631,7 @@ const Field = ({ id, label, icon: Icon, value, onChange, type = 'text', readOnly
     </label>
     <div className="relative">
       <span className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-[color:var(--text-muted)]">
-        <Icon size={14} aria-hidden="true" />
+        {React.createElement(Icon, { size: 14, 'aria-hidden': 'true' })}
       </span>
       <input
         id={id}
@@ -797,7 +799,7 @@ export const ManualBrokerEntry = ({ navigate, onLoginSuccess }) => {
               icon={Server}
               value={server}
               onChange={setServer}
-              placeholder="e.g., 103.91.186.142:8091 or https://broker.example.com"
+              placeholder="e.g., https://broker.example.com"
               required
             />
 

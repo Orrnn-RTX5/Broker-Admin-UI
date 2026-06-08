@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { RiskManagementService } from '../../services/riskManagement.service';
 import { Search, RefreshCw } from 'lucide-react';
+import { buildActionableErrorState } from '../../utils/errorState';
+import ActionableErrorState from '../atoms/ActionableErrorState';
 
 const TAB_BOOK = 'Book';
 const TAB_GROUP = 'By Group';
@@ -17,13 +19,25 @@ const ExposureView = () => {
   const [loading, setLoading] = useState(false);
   const [groupInput, setGroupInput] = useState('');
   const [loginInput, setLoginInput] = useState('');
+  const [loadErrors, setLoadErrors] = useState({ book: null, group: null, account: null });
 
   const fetchBook = async () => {
     setLoading(true);
+    setLoadErrors(prev => ({ ...prev, book: null }));
     try {
       const res = await RiskManagementService.getExposureBook();
       setBookData(Array.isArray(res) ? res : []);
-    } catch { setBookData([]); }
+    } catch (err) {
+      setBookData([]);
+      setLoadErrors(prev => ({
+        ...prev,
+        book: buildActionableErrorState(err, {
+          title: 'Exposure book failed to load',
+          actionLabel: 'Refresh',
+          fallback: 'Could not load exposure book',
+        }),
+      }));
+    }
     finally { setLoading(false); }
   };
 
@@ -33,10 +47,21 @@ const ExposureView = () => {
     e.preventDefault();
     if (!groupInput.trim()) return;
     setLoading(true);
+    setLoadErrors(prev => ({ ...prev, group: null }));
     try {
       const res = await RiskManagementService.getExposureByGroup(groupInput.trim());
       setGroupData(Array.isArray(res) ? res : []);
-    } catch { setGroupData([]); }
+    } catch (err) {
+      setGroupData([]);
+      setLoadErrors(prev => ({
+        ...prev,
+        group: buildActionableErrorState(err, {
+          title: 'Group exposure failed to load',
+          actionLabel: 'Load again',
+          fallback: 'Could not load exposure for this group',
+        }),
+      }));
+    }
     finally { setLoading(false); }
   };
 
@@ -44,10 +69,21 @@ const ExposureView = () => {
     e.preventDefault();
     if (!loginInput.trim()) return;
     setLoading(true);
+    setLoadErrors(prev => ({ ...prev, account: null }));
     try {
       const res = await RiskManagementService.getExposureByAccount(loginInput.trim());
       setAccountData(res);
-    } catch { setAccountData(null); }
+    } catch (err) {
+      setAccountData(null);
+      setLoadErrors(prev => ({
+        ...prev,
+        account: buildActionableErrorState(err, {
+          title: 'Account exposure failed to load',
+          actionLabel: 'Load again',
+          fallback: 'Could not load exposure for this account',
+        }),
+      }));
+    }
     finally { setLoading(false); }
   };
 
@@ -84,6 +120,7 @@ const ExposureView = () => {
           </div>
           <div className="flex-1 overflow-auto">
             {loading ? <div className="flex items-center justify-center h-24 text-[#888] text-[11px]">Loading…</div>
+              : loadErrors.book ? <ActionableErrorState state={loadErrors.book} onAction={fetchBook} />
               : bookData.length === 0 ? <div className="flex items-center justify-center h-24 text-[#555] text-[11px]">No exposure data</div>
               : bookData.map((row, i) => (
                 <div key={row.symbol} className={`flex items-center px-3 h-[22px] border-b border-black/20 select-none ${i % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-[#2a2d2e]`}>
@@ -120,6 +157,7 @@ const ExposureView = () => {
           </div>
           <div className="flex-1 overflow-auto">
             {loading ? <div className="flex items-center justify-center h-24 text-[#888] text-[11px]">Loading…</div>
+              : loadErrors.group ? <ActionableErrorState state={loadErrors.group} onAction={(event) => fetchByGroup(event)} />
               : groupData.length === 0 ? <div className="flex items-center justify-center h-24 text-[#555] text-[11px]">Enter a group and click Load</div>
               : groupData.map((row, i) => (
                 <div key={row.symbol} className={`flex items-center px-3 h-[22px] border-b border-black/20 select-none ${i % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-[#2a2d2e]`}>
@@ -151,6 +189,7 @@ const ExposureView = () => {
           </div>
           <div className="flex-1 overflow-auto p-4">
             {loading ? <div className="text-[#888] text-[11px]">Loading…</div>
+              : loadErrors.account ? <ActionableErrorState state={loadErrors.account} onAction={(event) => fetchByAccount(event)} className="m-0" />
               : !accountData ? <div className="text-[#555] text-[11px]">Enter a login and click Load</div>
               : (
                 <div className="flex flex-col gap-4 max-w-[600px]">

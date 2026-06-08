@@ -54,9 +54,9 @@ const MenuBar = ({
 
   const handleExit = () => {
     if (!window.confirm('Exit RTX 5 Admin?')) return;
-    try { window.close(); } catch { /* noop */ }
+    try { AuthService.logout(); } catch { /* noop */ }
     setTimeout(() => {
-      try { AuthService.logout(); } catch { /* noop */ }
+      try { window.close(); } catch { /* noop */ }
       window.location.reload();
     }, 150);
   };

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Plus, Trash2, Loader2, X } from 'lucide-react';
 import {
   commissionScheduleList, commissionScheduleCreate, commissionScheduleDelete,
@@ -6,6 +6,7 @@ import {
   swapFreeGroupList, swapFreeGroupSet, swapFreeGroupDelete,
 } from '../../../services/api';
 import { buildFeedWsUrl } from '../../../config/endpoints';
+import { parseNonNegativeNumber, parsePositiveInteger } from '../../../utils/adminValidation';
 
 // ─── Generic delete-capable table ─────────────────────────────────────────────
 const DeletableTable = ({ rows, columns, idKey, onDelete, deletingId, emptyMsg }) => (
@@ -52,13 +53,16 @@ const CommissionSection = ({ symbol }) => {
   const [deletingId, setDeletingId] = useState(null);
   const [err, setErr] = useState('');
 
-  const load = () => {
+  const load = useCallback(() => {
     if (!symbol) return;
     setLoading(true);
-    commissionScheduleList(symbol).then(d => setSchedules(Array.isArray(d) ? d : [])).catch(() => {}).finally(() => setLoading(false));
-  };
+    commissionScheduleList(symbol).then(d => setSchedules(Array.isArray(d) ? d : [])).catch(() => undefined).finally(() => setLoading(false));
+  }, [symbol]);
 
-  useEffect(() => { load(); }, [symbol]);
+  useEffect(() => {
+    const timer = setTimeout(load, 0);
+    return () => clearTimeout(timer);
+  }, [load]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -155,20 +159,34 @@ const DynamicLeverageSection = ({ symbol }) => {
   const [deletingId, setDeletingId] = useState(null);
   const [err, setErr] = useState('');
 
-  const load = () => {
+  const load = useCallback(() => {
     if (!symbol) return;
     setLoading(true);
-    dynamicLeverageList(symbol).then(d => setTiers(Array.isArray(d) ? d : [])).catch(() => {}).finally(() => setLoading(false));
-  };
+    dynamicLeverageList(symbol).then(d => setTiers(Array.isArray(d) ? d : [])).catch(() => undefined).finally(() => setLoading(false));
+  }, [symbol]);
 
-  useEffect(() => { load(); }, [symbol]);
+  useEffect(() => {
+    const timer = setTimeout(load, 0);
+    return () => clearTimeout(timer);
+  }, [load]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
     setSaving(true);
     setErr('');
     try {
-      await dynamicLeverageCreate({ ...form, symbol });
+      const volumeFrom = parseNonNegativeNumber(form.volumeFrom, 'Volume from');
+      const volumeTo = parseNonNegativeNumber(form.volumeTo, 'Volume to');
+      if (volumeTo < volumeFrom) {
+        throw new Error('Volume to must be greater than or equal to volume from.');
+      }
+      await dynamicLeverageCreate({
+        ...form,
+        leverage: parsePositiveInteger(form.leverage, 'Leverage'),
+        volumeFrom,
+        volumeTo,
+        symbol,
+      });
       setShowForm(false);
       setForm({ leverage: 500, volumeFrom: 0, volumeTo: 10 });
       load();
@@ -244,12 +262,15 @@ const SwapFreeSection = () => {
   const [deletingId, setDeletingId] = useState(null);
   const [err, setErr] = useState('');
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true);
-    swapFreeGroupList().then(d => setGroups(Array.isArray(d) ? d : [])).catch(() => {}).finally(() => setLoading(false));
-  };
+    swapFreeGroupList().then(d => setGroups(Array.isArray(d) ? d : [])).catch(() => undefined).finally(() => setLoading(false));
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const timer = setTimeout(load, 0);
+    return () => clearTimeout(timer);
+  }, [load]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -327,7 +348,6 @@ const CommissionSwapTab = () => {
   const [selectedSymbol, setSelectedSymbol] = useState('');
 
   useEffect(() => {
-    setLoadingSymbols(true);
     const ws = new WebSocket(buildFeedWsUrl());
     const symbolSet = new Set();
     
@@ -340,7 +360,9 @@ const CommissionSwapTab = () => {
           const msg = JSON.parse(messages[i]);
           if (msg.symbol) symbolSet.add(msg.symbol);
         }
-      } catch (err) {}
+      } catch {
+        /* Ignore malformed feed frames. */
+      }
     };
 
     const timer = setTimeout(() => {

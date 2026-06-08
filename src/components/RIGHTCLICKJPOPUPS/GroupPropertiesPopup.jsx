@@ -1,8 +1,59 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { X, Minus, Square, HelpCircle, Users, ChevronUp, ChevronDown, Plus, Pencil, Trash2, Save } from 'lucide-react';
 import SymbolPropertiesPopup from './SymbolPropertiesPopup';
 import { ManagerService } from '../../services/manager.service';
+
+const MotionDiv = motion.div;
+
+const Label = ({ children, width = "w-40" }) => (
+  <label className={`text-[11px] text-[color:var(--text-primary)] ${width} text-right shrink-0 select-none`}>{children}:</label>
+);
+
+const InputField = ({ label, value, type = "text", width = "w-full", labelWidth }) => (
+  <div className="flex items-center gap-3 mb-2">
+    <Label width={labelWidth}>{label}</Label>
+    <input
+      type={type}
+      defaultValue={value}
+      className={`${width} bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-2 py-0.5 text-[11px] text-[color:var(--text-primary)] focus:border-blue-500/50 focus:outline-none`}
+    />
+  </div>
+);
+
+const SelectField = ({ label, options, defaultValue, value, onChange, width = "w-full", labelWidth, disabled = false }) => (
+  <div className="flex items-center gap-3 mb-2">
+    <Label width={labelWidth}>{label}</Label>
+    <select
+      {...(value !== undefined ? { value } : { defaultValue })}
+      onChange={onChange}
+      disabled={disabled}
+      className={`${width} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-1 py-0.5 text-[11px] text-[color:var(--text-primary)] focus:border-blue-500/50 focus:outline-none appearance-none cursor-pointer`}
+      style={{ backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23808080\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.5rem center', backgroundSize: '0.75rem' }}
+    >
+      {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+    </select>
+  </div>
+);
+
+const CheckboxField = ({ label, checked, onChange, defaultChecked, ml = "ml-44", disabled = false }) => (
+  <div className={`flex items-start gap-2 mb-1.5 ${ml} ${disabled ? 'opacity-40' : ''}`}>
+    <input
+      type="checkbox"
+      {...(onChange ? { checked, onChange } : { defaultChecked: checked || defaultChecked })}
+      disabled={disabled}
+      className="mt-0.5 w-3.5 h-3.5 accent-blue-500 rounded-sm border-[color:var(--border-default)]"
+    />
+    <label className="text-[11px] text-[color:var(--text-primary)] leading-tight select-none cursor-default">{label}</label>
+  </div>
+);
+
+const SideButton = ({ icon: Icon, label, onClick }) => (
+  <button onClick={onClick} className="flex flex-col items-center justify-center w-20 py-1.5 bg-[#404040] hover:bg-[color:var(--bg-surface-3)] border border-black/40 rounded-sm mb-1.5 group transition-colors">
+    {Icon && <Icon size={14} className="text-[color:var(--text-muted)] group-hover:text-white" />}
+    {label && <span className="text-[10px] text-[color:var(--text-secondary)] font-medium uppercase mt-0.5">{label}</span>}
+  </button>
+);
 
 const GroupPropertiesPopup = ({ group, onClose }) => {
   const [activeTab, setActiveTab] = useState('Common');
@@ -54,7 +105,7 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
       };
       fetchStats();
     }
-  }, [activeTab, group]);
+  }, [activeTab, currentGroupName, stats]);
 
   React.useEffect(() => {
     if (activeTab === 'Symbols' && !hasFetchedSymbols) {
@@ -76,69 +127,13 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
       };
       fetchSymbols();
     }
-  }, [activeTab, group, hasFetchedSymbols]);
+  }, [activeTab, currentGroupName, hasFetchedSymbols]);
 
   const tabs = [
     'Common', 'Statistics', 'Company', 'News & Mail', 'Permissions', 'Margin', 'Symbols', 'Commissions', 'Reports'
   ];
 
-  // --- Helper Components ---
-  const Label = ({ children, width = "w-40" }) => (
-    <label className={`text-[11px] text-[color:var(--text-primary)] ${width} text-right shrink-0 select-none`}>{children}:</label>
-  );
-
-  const InputField = ({ label, value, type = "text", width = "w-full", labelWidth }) => (
-    <div className="flex items-center gap-3 mb-2">
-      <Label width={labelWidth}>{label}</Label>
-      <input 
-        type={type} 
-        defaultValue={value}
-        className={`${width} bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-2 py-0.5 text-[11px] text-[color:var(--text-primary)] focus:border-blue-500/50 focus:outline-none`}
-      />
-    </div>
-  );
-
-  const SelectField = ({ label, options, defaultValue, value, onChange, width = "w-full", labelWidth, disabled = false }) => (
-    <div className="flex items-center gap-3 mb-2">
-      <Label width={labelWidth}>{label}</Label>
-      <select 
-        {...(value !== undefined ? { value } : { defaultValue })}
-        onChange={onChange}
-        disabled={disabled}
-        className={`${width} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-1 py-0.5 text-[11px] text-[color:var(--text-primary)] focus:border-blue-500/50 focus:outline-none appearance-none cursor-pointer`}
-        style={{ backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23808080\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.5rem center', backgroundSize: '0.75rem' }}
-      >
-        {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-      </select>
-    </div>
-  );
-
-  const CheckboxField = ({ label, checked, onChange, defaultChecked, ml = "ml-44", disabled = false }) => (
-    <div className={`flex items-start gap-2 mb-1.5 ${ml} ${disabled ? 'opacity-40' : ''}`}>
-      <input 
-        type="checkbox" 
-        {...(onChange ? { checked, onChange } : { defaultChecked: checked || defaultChecked })}
-        disabled={disabled} 
-        className="mt-0.5 w-3.5 h-3.5 accent-blue-500 rounded-sm border-[color:var(--border-default)]" 
-      />
-      <label className="text-[11px] text-[color:var(--text-primary)] leading-tight select-none cursor-default">{label}</label>
-    </div>
-  );
-
-  const SideButton = ({ icon: Icon, label, onClick }) => (
-    <button onClick={onClick} className="flex flex-col items-center justify-center w-20 py-1.5 bg-[#404040] hover:bg-[color:var(--bg-surface-3)] border border-black/40 rounded-sm mb-1.5 group transition-colors">
-      {Icon && <Icon size={14} className="text-[color:var(--text-muted)] group-hover:text-white" />}
-      {label && <span className="text-[10px] text-[color:var(--text-secondary)] font-medium uppercase mt-0.5">{label}</span>}
-    </button>
-  );
-
-  React.useEffect(() => {
-    if (activeTab === 'Commissions') {
-      fetchCommissions();
-    }
-  }, [activeTab]);
-
-  const fetchCommissions = async () => {
+  const fetchCommissions = useCallback(async () => {
     try {
       const res = await ManagerService.getCommissionScheduleList();
       const list = Array.isArray(res) ? res : (res?.answer || []);
@@ -146,14 +141,19 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
     } catch (error) {
       console.error("Failed to fetch commissions", error);
     }
-  };
+  }, []);
+
+  React.useEffect(() => {
+    if (activeTab !== 'Commissions') return undefined;
+    const timer = setTimeout(fetchCommissions, 0);
+    return () => clearTimeout(timer);
+  }, [activeTab, fetchCommissions]);
 
   const handleDeleteCommission = async () => {
     if (!selectedCommission) return alert('Select a commission to delete');
     const deleteId = selectedCommission.schedule_id ?? selectedCommission.id ?? selectedCommission.Id;
     if (deleteId === undefined) {
-      console.log('Commission object:', selectedCommission);
-      return alert('Could not find schedule_id for this item. Check console.');
+      return alert('Could not find schedule_id for this item.');
     }
     
     try {
@@ -203,7 +203,7 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-[1px]">
-      <motion.div 
+      <MotionDiv
         drag
         dragControls={dragControls}
         dragListener={false}
@@ -267,7 +267,7 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
 
           {/* Tab Specific Views */}
           <AnimatePresence mode='wait'>
-            <motion.div key={activeTab} initial={{ opacity: 0, x: 5 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.15 }}>
+            <MotionDiv key={activeTab} initial={{ opacity: 0, x: 5 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.15 }}>
               
               {/* --- COMMON TAB --- */}
               {activeTab === 'Common' && (
@@ -624,7 +624,7 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
                   </div>
                 </div>
               )}
-            </motion.div>
+            </MotionDiv>
           </AnimatePresence>
         </div>
 
@@ -634,7 +634,7 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
            <button onClick={onClose} className="px-8 py-1.5 bg-[#404040] hover:bg-[color:var(--border-strong)] text-[12px] text-white border border-black/60 rounded-sm shadow-md transition-shadow active:shadow-none hover:border-black/80">Cancel</button>
            <button className="px-8 py-1.5 bg-[#404040] hover:bg-[color:var(--border-strong)] text-[12px] text-white border border-black/60 rounded-sm shadow-md transition-shadow active:shadow-none hover:border-black/80 ml-6">Help</button>
         </div>
-      </motion.div>
+      </MotionDiv>
 
       <style dangerouslySetInnerHTML={{ __html: `
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
@@ -644,21 +644,11 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
         .no-scrollbar::-webkit-scrollbar { display: none; }
       `}} />
 
-      {/* Render nested symbol popup if a symbol is selected */}
-      <AnimatePresence>
-        {selectedSymbol && (
-          <SymbolPropertiesPopup 
-            symbol={selectedSymbol} 
-            onClose={() => setSelectedSymbol(null)} 
-          />
-        )}
-      </AnimatePresence>
-
       {/* Add Commission Popup Overlay */}
       <AnimatePresence>
         {showAddCommission && (
           <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <motion.div 
+            <MotionDiv
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -723,7 +713,7 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
                    {isCreatingCommission ? "Saving..." : <><Save size={12}/> Save</>}
                  </button>
               </div>
-            </motion.div>
+            </MotionDiv>
           </div>
         )}
       </AnimatePresence>

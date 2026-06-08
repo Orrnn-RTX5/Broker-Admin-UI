@@ -22,7 +22,10 @@ import { useConnectionStore } from './store/connectionStore';
 import useSymbolStore from './store/useSymbolStore';
 import { useLocalStorage } from './lib/useLocalStorage';
 import { useKbStatus } from './lib/useKbStatus';
-import { Network, Globe } from 'lucide-react';
+import { canAccessView, requiredPermissionForView } from './utils/permissions';
+import { buildUserFromAuthPayload } from './utils/sessionUser';
+import { AuthService } from './services/auth.service';
+import { Network, Globe, ShieldAlert } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { TooltipProvider } from './components/ui/Tooltip';
 import { ToastProvider, ToastViewport, useToast } from './components/ui/Toast';
@@ -30,6 +33,27 @@ import { StatusDot } from './components/ui/Badge';
 
 const formatTime = (d) =>
   `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+
+// Shown in place of a view's content when the session lacks the required
+// permission. Client-side guard only; the backend remains the authority.
+const AccessDeniedPanel = ({ viewName, permission }) => (
+  <div className="flex-1 flex items-center justify-center bg-[color:var(--bg-app)] select-none">
+    <div className="flex flex-col items-center gap-3 max-w-md text-center px-6">
+      <ShieldAlert size={40} className="text-[color:var(--text-muted)]" aria-hidden="true" />
+      <div className="text-[14px] font-medium text-[color:var(--text-primary)]">{viewName}</div>
+      <p className="text-[12px] text-[color:var(--text-muted)]">
+        You do not have permission to view this section.
+        {permission ? (
+          <>
+            {' '}Requires the{' '}
+            <span className="font-mono text-[color:var(--text-secondary)]">{permission}</span>{' '}
+            permission.
+          </>
+        ) : null}
+      </p>
+    </div>
+  </div>
+);
 
 const AUTH_PATHS = new Set(['/', '/manager-login', '/admin-login', '/broker-manual-entry']);
 const SYMBOL_FEED_VIEWS = new Set(['Market Overview']);
@@ -54,6 +78,8 @@ const useBrowserPath = () => {
 
 const AppInner = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const currentUser = useAuthStore((state) => state.user);
   const tokenExpiresAt = useAuthStore((state) => state.tokenExpiresAt);
   const setToken = useAuthStore((state) => state.setToken);
   const setUser = useAuthStore((state) => state.setUser);
@@ -99,18 +125,29 @@ const AppInner = () => {
 
     if (accessToken) {
       setToken(accessToken, refreshToken, expiresAt, expiresIn);
-      setUser({
-        id: session.login || session.user || 'admin',
-        login: session.login || session.user || '',
-        name: `Agent ${session.login || session.user || ''}`.trim(),
-        role: session.is_admin ? 'admin' : 'manager',
-        is_admin: !!session.is_admin,
-        broker_id: session.broker_id || null,
-      });
+      setUser(buildUserFromAuthPayload(session));
     }
 
     navigate(redirectPath, { replace: true });
   }, [navigate, setToken, setUser]);
+
+  React.useEffect(() => {
+    if (!isAuthenticated || !accessToken) return undefined;
+
+    let cancelled = false;
+    AuthService.getMe().catch(() => {
+      if (!cancelled && currentUser) {
+        setUser({ ...currentUser, permissions: null });
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+    // Hydrate when the access token changes. currentUser is intentionally not
+    // a dependency; getMe updates it and would otherwise loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, accessToken, setUser]);
 
   React.useEffect(() => {
     if (!isAuthenticated && !AUTH_PATHS.has(pathname)) {
@@ -218,6 +255,15 @@ const AppInner = () => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Per-view RBAC guard (fe-admin-ui-05). Admins and sessions without a granular
+  // permission list are unrestricted; otherwise the active view must be allowed.
+  // Declared here, before every use (the breadcrumb count gate and the
+  // table/AccessDenied branch in JSX below), so it can never be read inside the
+  // component body before initialization — the temporal-dead-zone crash that the
+  // original placement caused on first authenticated render (admin-ui-NEW-01).
+  const canViewActive = canAccessView(currentUser, activeNode);
+  const activeViewPermission = requiredPermissionForView(activeNode);
 
   // ── Symbol Store WebSocket (feeds Market Overview counts & live bid/ask) ──
   React.useEffect(() => {
@@ -462,7 +508,12 @@ const AppInner = () => {
                 <Network size={12} className="text-[color:var(--text-muted)]" />
                 <span>{activeNode}</span>
               </div>
-              {rowCount.total > 0 && (
+              {/* Only show the row count when the view is actually rendered.
+                  On a permission-denied view AdminDataTable does not mount and
+                  reports no counts; deriving visibility from canViewActive here
+                  avoids showing a stale count without a set-state-in-effect
+                  render pass (admin-ui-NEW-02). */}
+              {canViewActive && rowCount.total > 0 && (
                 <span className="font-mono tracking-tight">
                   {searchQuery
                     ? `Showing ${rowCount.filtered} of ${rowCount.total}`
@@ -475,15 +526,19 @@ const AppInner = () => {
               </div>
             </div>
 
-            <AdminDataTable
-              onRowDoubleClick={handleRowDoubleClick}
-              viewType={activeNode}
-              onAddClick={handleAddClick}
-              initialServerTab={serverTargetTab}
-              refreshTrigger={refreshKey}
-              searchQuery={searchQuery}
-              onCountChange={setRowCount}
-            />
+            {canViewActive ? (
+              <AdminDataTable
+                onRowDoubleClick={handleRowDoubleClick}
+                viewType={activeNode}
+                onAddClick={handleAddClick}
+                initialServerTab={serverTargetTab}
+                refreshTrigger={refreshKey}
+                searchQuery={searchQuery}
+                onCountChange={setRowCount}
+              />
+            ) : (
+              <AccessDeniedPanel viewName={activeNode} permission={activeViewPermission} />
+            )}
           </div>
         </div>
 

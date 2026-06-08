@@ -1,2 +1,10 @@
-// Preload script — contextIsolation bridge (empty for now)
-window.addEventListener('DOMContentLoaded', () => {});
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('rtx5Electron', {
+  registerBrokerOrigins(origins = []) {
+    ipcRenderer.send('rtx5:register-broker-origins', Array.isArray(origins) ? origins : [origins]);
+  },
+  clearBrokerOrigins() {
+    ipcRenderer.send('rtx5:clear-broker-origins');
+  },
+});

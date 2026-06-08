@@ -1,4 +1,5 @@
 import { api } from '../lib/api';
+import { buildCloseAllRequest } from '../utils/serviceContracts';
 
 export const PositionsService = {
   getPositions: async (params) => {
@@ -12,7 +13,8 @@ export const PositionsService = {
   },
 
   closeAll: async (filters) => {
-    const res = await api.post('/api/v2/admin/close-all', filters);
+    const request = buildCloseAllRequest(filters);
+    const res = await api.post(request.url, request.data);
     return res.data;
   },
 

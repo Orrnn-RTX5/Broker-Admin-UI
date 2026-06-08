@@ -1,22 +1,22 @@
 // Central place for all network endpoints.
 // Components should import from here instead of hardcoding a host.
-import { getRuntimeValue } from './runtimeConfig';
+import { getRuntimeValue } from './runtimeConfig.js';
 import {
   isDirectBrokerBackendUrl,
   resolveBrokerBackendUrl,
   resolveBrokerExtApiUrl,
   resolveBrokerWsUrl,
-} from './backendTarget';
+} from './backendTarget.js';
+import { appendWsAuthParams, readWsAuthContext } from '../utils/wsAuth.js';
 
+const viteEnv = import.meta.env || {};
 const trimTrailingSlash = (value = '') => String(value || '').replace(/\/+$/, '');
-const hasProtocol = (value = '') => /^[a-z][a-z\d+.-]*:\/\//i.test(value);
-const withProtocol = (value = '') => (hasProtocol(value) ? value : `http://${value}`);
 
 const DEFAULTS = {
-  API_HOST: trimTrailingSlash(getRuntimeValue('API_HOST', 'VITE_API_HOST') || import.meta.env.VITE_API_HOST || ''),
-  WS_HOST: trimTrailingSlash(getRuntimeValue('WS_HOST', 'VITE_WS_HOST') || import.meta.env.VITE_WS_HOST || ''),
-  API_HOST_EXT: trimTrailingSlash(getRuntimeValue('API_HOST_EXT', 'VITE_API_HOST_EXT') || import.meta.env.VITE_API_HOST_EXT || ''),
-  DEFAULT_MT5_SERVER: getRuntimeValue('DEFAULT_MT5_SERVER', 'VITE_DEFAULT_MT5_SERVER') || import.meta.env.VITE_DEFAULT_MT5_SERVER || '',
+  API_HOST: trimTrailingSlash(getRuntimeValue('API_HOST', 'VITE_API_HOST') || viteEnv.VITE_API_HOST || ''),
+  WS_HOST: trimTrailingSlash(getRuntimeValue('WS_HOST', 'VITE_WS_HOST') || viteEnv.VITE_WS_HOST || ''),
+  API_HOST_EXT: trimTrailingSlash(getRuntimeValue('API_HOST_EXT', 'VITE_API_HOST_EXT') || viteEnv.VITE_API_HOST_EXT || ''),
+  DEFAULT_MT5_SERVER: getRuntimeValue('DEFAULT_MT5_SERVER', 'VITE_DEFAULT_MT5_SERVER') || viteEnv.VITE_DEFAULT_MT5_SERVER || '',
 };
 
 export let API_HOST = DEFAULTS.API_HOST;
@@ -30,18 +30,10 @@ const readBrokerInfo = () => {
   const raw = sessionStorage.getItem('broker_info');
   if (!raw) return null;
 
-  return JSON.parse(raw);
-};
-
-const getExplicitPort = (endpoint) => {
-  const trimmed = trimTrailingSlash(endpoint);
-  if (!trimmed) return '';
-
   try {
-    return new URL(withProtocol(trimmed)).port;
+    return JSON.parse(raw);
   } catch {
-    const match = trimmed.match(/:(\d+)(?:\/|$)/);
-    return match?.[1] || '';
+    return null;
   }
 };
 
@@ -102,19 +94,6 @@ const buildWsHost = (backendUrl) => {
   }
 };
 
-const buildExtHost = (backendUrl) => {
-  const trimmed = trimTrailingSlash(backendUrl);
-  const extPort = getExplicitPort(DEFAULTS.API_HOST_EXT);
-
-  try {
-    const url = new URL(trimmed);
-    if (extPort) return `${url.protocol}//${url.hostname}:${extPort}`;
-    return trimTrailingSlash(url.origin);
-  } catch {
-    return trimmed;
-  }
-};
-
 const resolveMt5Server = (brokerInfo, backendUrl) => {
   if (brokerInfo?.server_ip) return brokerInfo.server_ip;
   if (brokerInfo?.host) return brokerInfo.host;
@@ -137,7 +116,7 @@ export const updateDynamicEndpoints = () => {
       const backendUrl = normalizeBrokerBackendUrl(targetUrl);
       API_HOST = backendUrl;
       WS_HOST = resolveBrokerWsUrl(info) || buildWsHost(backendUrl);
-      API_HOST_EXT = resolveBrokerExtApiUrl(info, backendUrl) || buildExtHost(backendUrl);
+      API_HOST_EXT = resolveBrokerExtApiUrl(info, backendUrl);
       DEFAULT_MT5_SERVER = resolveMt5Server(info, backendUrl);
       return;
     }
@@ -166,6 +145,8 @@ const joinUrl = (base, path = '') => {
 export const buildManagerApiUrl = (endpoint = '') => {
   const raw = String(endpoint || '');
   if (/^https?:\/\//i.test(raw)) return raw;
+
+  updateDynamicEndpoints();
 
   const path = raw
     .replace(/^\/api\/manager(?=\/|\?|$)/, '')
@@ -205,10 +186,17 @@ const getBaseWsHost = () => trimTrailingSlash(WS_HOST || buildWsHost(API_HOST));
 
 export const buildFeedWsUrl = () => {
   const base = getBaseWsHost();
-  if (!base) return '/ws/feed';
-  if (base.endsWith('/ws/feed')) return base;
-  return `${base}/ws/feed`;
+  const url = !base ? '/ws/feed' : (base.endsWith('/ws/feed') ? base : `${base}/ws/feed`);
+  return appendWsAuthParams(url, readWsAuthContext());
 };
 
-export const buildMetricsWsUrl = (token, login) =>
-  `${getBaseWsHost()}/manager/OnAccountMetrics?id=${token}&login=${login}`;
+export const buildMetricsWsUrl = (token, login) => {
+  const authContext = readWsAuthContext();
+  return appendWsAuthParams(`${getBaseWsHost()}/manager/OnAccountMetrics`, {
+    token: token || authContext.token,
+    brokerId: null,
+    tokenParam: 'id',
+    brokerIdParam: null,
+    extraParams: { login },
+  });
+};

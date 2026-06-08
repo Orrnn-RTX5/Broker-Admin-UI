@@ -1,18 +1,76 @@
-import { app, BrowserWindow, session, dialog } from 'electron';
+import { app, BrowserWindow, session, dialog, ipcMain } from 'electron';
+import process from 'node:process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import pkg from 'electron-updater';
+import {
+  collectBrokerOrigins,
+  createCorsHeaders,
+  getExtApiRedirectUrl,
+  loadElectronEnv,
+  normalizeOrigin,
+  shouldApplyCorsHeaders,
+} from './corsConfig.js';
 const { autoUpdater } = pkg;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 
 const DEV_SERVER = 'http://localhost:5173';
-const API_ORIGIN = 'http://69.197.178.27';       
-const EXT_ORIGIN = 'http://69.197.178.27:8091';  
+
+loadElectronEnv({
+  appRoot: path.join(__dirname, '..'),
+  resourcesPath: process.resourcesPath,
+  exePath: process.execPath,
+});
+
+// Broker origins are operator-supplied via env so the packaged build is not
+// pinned to a single hardcoded plain-HTTP IP. Defaults preserve the historical
+// fallback for existing desktop deployments that have no env override.
+const API_ORIGIN =
+  normalizeOrigin(process.env.RTX5_API_ORIGIN || process.env.API_HOST || process.env.VITE_API_HOST) ||
+  'http://69.197.178.27';
+const EXT_ORIGIN =
+  normalizeOrigin(process.env.RTX5_EXT_ORIGIN || process.env.API_HOST_EXT || process.env.VITE_API_HOST_EXT) ||
+  'http://69.197.178.27:8091';
+const CONFIGURED_BROKER_ORIGINS = new Set(collectBrokerOrigins(process.env, [API_ORIGIN, EXT_ORIGIN]));
+const dynamicBrokerOrigins = new Set();
 
 const isDev = !app.isPackaged;
+// DevTools is always available in dev. In a packaged build it stays closed and
+// the in-app toggle is disabled unless an operator explicitly opts in via
+// RTX5_ENABLE_DEVTOOLS=1, so a shipped terminal does not expose DevTools (and
+// the renderer's network/auth surface) to end users by default (fe-admin-ui-09).
+const DEVTOOLS_ENABLED =
+  isDev || /^(1|true|yes)$/i.test(String(process.env.RTX5_ENABLE_DEVTOOLS || '').trim());
+const SECRET_QUERY_RE = /([?&](?:id|token|access_token|refresh_token|session|session_token|auth|authorization|jwt)=)[^&#\s]+/gi;
+const BEARER_VALUE_RE = /\bBearer\s+[-._~+/=A-Za-z0-9]+/gi;
 
+const redactUrlForLog = (value = '') =>
+  String(value || '')
+    .replace(BEARER_VALUE_RE, 'Bearer [REDACTED]')
+    .replace(SECRET_QUERY_RE, '$1[REDACTED]');
+
+const registerBrokerCorsOrigins = (origins = []) => {
+  collectBrokerOrigins({}, Array.isArray(origins) ? origins : [origins]).forEach((origin) => {
+    if (/^https?:\/\//i.test(origin)) dynamicBrokerOrigins.add(origin);
+  });
+};
+
+const getAllowedBrokerOrigins = () => [
+  ...CONFIGURED_BROKER_ORIGINS,
+  ...dynamicBrokerOrigins,
+];
+
+function setupBrokerOriginRegistration() {
+  ipcMain.on('rtx5:register-broker-origins', (_event, origins = []) => {
+    registerBrokerCorsOrigins(origins);
+  });
+
+  ipcMain.on('rtx5:clear-broker-origins', () => {
+    dynamicBrokerOrigins.clear();
+  });
+}
 
 function setupAutoUpdater() {
   autoUpdater.autoDownload = true;
@@ -54,24 +112,30 @@ function setupProductionInterceptors() {
 
   
   ses.webRequest.onBeforeRequest(
-    { urls: [`${API_ORIGIN}/ext-api/*`] },
+    { urls: ['http://*/*', 'https://*/*'] },
     (details, callback) => {
-      const redirectURL = details.url.replace(`${API_ORIGIN}/ext-api`, EXT_ORIGIN);
-      callback({ redirectURL });
+      const redirectURL = getExtApiRedirectUrl(details.url, API_ORIGIN, EXT_ORIGIN);
+      callback(redirectURL ? { redirectURL } : {});
     }
   );
 
-  
-  ses.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        'Access-Control-Allow-Origin':  ['*'],
-        'Access-Control-Allow-Headers': ['*'],
-        'Access-Control-Allow-Methods': ['GET, POST, PUT, DELETE, OPTIONS'],
-      },
-    });
-  });
+  // CORS shim - scoped to configured broker origins plus the selected broker
+  // origin registered through the preload bridge. The packaged renderer loads
+  // from file://, so its browser Origin is "null"; we grant only that origin
+  // and do not enable credentialed wildcard access.
+  ses.webRequest.onHeadersReceived(
+    { urls: ['http://*/*', 'https://*/*'] },
+    (details, callback) => {
+      if (!shouldApplyCorsHeaders(details, getAllowedBrokerOrigins())) {
+        callback({});
+        return;
+      }
+
+      callback({
+        responseHeaders: createCorsHeaders(details.responseHeaders),
+      });
+    }
+  );
 }
 
 function createWindow() {
@@ -103,13 +167,14 @@ function createWindow() {
 
   win.webContents.on('render-process-gone', (_e, details) => {
     console.error('[renderer crashed]', details);
-    win.webContents.openDevTools({ mode: 'detach' });
+    if (DEVTOOLS_ENABLED) win.webContents.openDevTools({ mode: 'detach' });
   });
   win.webContents.on('did-fail-load', (_e, code, desc, url) => {
-    console.error('[did-fail-load]', code, desc, url);
-    win.webContents.openDevTools({ mode: 'detach' });
+    console.error('[did-fail-load]', code, desc, redactUrlForLog(url));
+    if (DEVTOOLS_ENABLED) win.webContents.openDevTools({ mode: 'detach' });
   });
   win.webContents.on('before-input-event', (_e, input) => {
+    if (!DEVTOOLS_ENABLED) return;
     const isToggle =
       (input.control && input.shift && input.key.toLowerCase() === 'i') ||
       input.key === 'F12';
@@ -123,6 +188,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   if (!isDev) {
+    setupBrokerOriginRegistration();
     setupProductionInterceptors();
     setupAutoUpdater();
   }

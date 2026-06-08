@@ -4,6 +4,9 @@ import { X, GitBranch, AlertCircle, Plus, Trash2, Loader2 } from 'lucide-react';
 import { RoutingService } from '../../services/routing.service';
 import { ManagerService } from '../../services/manager.service';
 import { gatewayGetRoutingOptions } from '../../services/gateway.service';
+import { validateDispatchDelay, validateHiddenMarkup, validateLpRouteForm } from '../../utils/adminValidation';
+
+const MotionDiv = motion.div;
 
 const ROUTING_MODES = [
   { value: 'a_book', label: 'A-Book (External LP)' },
@@ -90,7 +93,8 @@ const DispatchDelaySection = () => {
   }, []);
 
   useEffect(() => {
-    fetchDelay();
+    const timer = setTimeout(fetchDelay, 0);
+    return () => clearTimeout(timer);
   }, [fetchDelay]);
 
   const handleSave = async () => {
@@ -99,7 +103,8 @@ const DispatchDelaySection = () => {
     setError('');
     setSuccess('');
     try {
-      await ManagerService.setLPDispatchDelay(delayMs);
+      const nextDelayMs = validateDispatchDelay(delayMs);
+      await ManagerService.setLPDispatchDelay(nextDelayMs);
       setSuccess('Delay updated successfully');
       setTimeout(() => setSuccess(''), 3000);
       await fetchDelay();
@@ -165,8 +170,10 @@ const HiddenMarkupSection = ({ initialGroup, groups }) => {
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
-    if (initialGroup && !selectedGroup) setSelectedGroup(initialGroup);
-  }, [initialGroup]);
+    if (!initialGroup || selectedGroup) return undefined;
+    const timer = setTimeout(() => setSelectedGroup(initialGroup), 0);
+    return () => clearTimeout(timer);
+  }, [initialGroup, selectedGroup]);
 
   const fetchMarkups = useCallback(async () => {
     if (!selectedGroup) {
@@ -187,18 +194,20 @@ const HiddenMarkupSection = ({ initialGroup, groups }) => {
   }, [selectedGroup]);
 
   useEffect(() => {
-    fetchMarkups();
+    const timer = setTimeout(fetchMarkups, 0);
+    return () => clearTimeout(timer);
   }, [fetchMarkups]);
 
   const handleAdd = async () => {
     if (!selectedGroup) return alert('Select a group name first');
     if (!newAcc || !newMarkup) return;
-    setAdding(true);
     try {
+      const hiddenMarkup = validateHiddenMarkup(newMarkup);
+      setAdding(true);
       await ManagerService.setHiddenMarkup({
         group_name: selectedGroup,
         account_number: newAcc,
-        hidden_markup: parseFloat(newMarkup)
+        hidden_markup: hiddenMarkup
       });
       setNewAcc('*');
       setNewMarkup('0.00000');
@@ -330,13 +339,13 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
         const list = Array.isArray(data) ? data : (data?.answer ?? []);
         setGroups(list);
       })
-      .catch(() => {});
+      .catch(() => undefined);
 
     gatewayGetRoutingOptions()
       .then(res => {
         setLpOptions(res.items || []);
       })
-      .catch(() => {});
+      .catch(() => undefined);
   }, []);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
@@ -350,7 +359,7 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
     setSubmitting(true);
     setError(null);
     try {
-      const payload = { ...form, priority: Number(form.priority), max_volume: Number(form.max_volume) };
+      const payload = validateLpRouteForm(form);
       if (isEdit) {
         await RoutingService.updateRoute({ id: initialData.id, ...payload });
       } else {
@@ -367,7 +376,7 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/50 flex justify-end">
-      <motion.div
+      <MotionDiv
         initial={{ x: '100%' }}
         animate={{ x: 0 }}
         exit={{ x: '100%' }}
@@ -651,7 +660,7 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
             </div>
           </div>
         </form>
-      </motion.div>
+      </MotionDiv>
     </div>
   );
 };

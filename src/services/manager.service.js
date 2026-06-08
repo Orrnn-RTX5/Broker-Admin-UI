@@ -1,220 +1,184 @@
 import { api } from '../lib/api';
-import { useAuthStore } from '../store/authStore';
 export const ManagerService = {
   getGroupList: async () => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/GroupList?id=${token}`);
+    const res = await api.get('/manager/GroupList');
     return res.data;
   },
 
   getGroupRoutingOverviewList: async () => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/GroupRoutingOverviewList?id=${token}`);
+    const res = await api.get('/manager/GroupRoutingOverviewList');
     return res.data;
   },
 
   createGroup: async (groupData) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.post(`/manager/GroupCreate?id=${token}`, groupData);
+    const res = await api.post('/manager/GroupCreate', groupData);
     return res.data;
   },
 
   updateGroup: async (groupData) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.post(`/manager/GroupUpdate`, groupData, {
-      params: { id: token, group_name: groupData.name }
+    const res = await api.post('/manager/GroupUpdate', groupData, {
+      params: { group_name: groupData.name }
     });
     return res.data;
   },
 
   deleteGroup: async (groupName) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/GroupDelete`, {
-      params: { id: token, group: groupName }
+    const res = await api.get('/manager/GroupDelete', {
+      params: { group: groupName }
     });
     return res.data;
   },
 
   getGroupStats: async (groupName) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/GroupStats`, {
-      params: { id: token, group: groupName }
+    const res = await api.get('/manager/GroupStats', {
+      params: { group: groupName }
     });
     return res.data;
   },
 
   addSymbol: async (symbolData) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/SymbolAdd`, {
-      params: { id: token, ...symbolData }
+    const res = await api.get('/manager/SymbolAdd', {
+      params: symbolData
     });
     return res.data;
   },
 
   disableSymbol: async (symbol) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/SymbolDisable`, { params: { id: token, symbol } });
+    const res = await api.get('/manager/SymbolDisable', { params: { symbol } });
     return res.data;
   },
 
   enableSymbol: async (symbol) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/SymbolEnable`, { params: { id: token, symbol } });
+    const res = await api.get('/manager/SymbolEnable', { params: { symbol } });
     return res.data;
   },
 
   updateSymbol: async (updates) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/SymbolUpdate`, {
-      params: { id: token, ...updates }
+    const res = await api.get('/manager/SymbolUpdate', {
+      params: updates
     });
     return res.data;
   },
 
   getSymbolSession: async (symbol) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/SymbolSessionGet`, { params: { id: token, symbol } });
+    const res = await api.get('/manager/SymbolSessionGet', { params: { symbol } });
     return res.data;
   },
   getSymbolSet: async (groupName, symbol) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/GroupSymbolSet`, { params: { id: token, group: groupName, symbol } });
+    const res = await api.get('/manager/GroupSymbolSet', { params: { group: groupName, symbol } });
     return res.data;
   },
 
   setSymbolSession: async (symbol, sessions) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.post(`/manager/GroupSymbolSet?id=${token}&group=${symbol}`, sessions);
+    const res = await api.post('/manager/GroupSymbolSet', sessions, {
+      params: { group: symbol }
+    });
     return res.data;
   },
 
   getGroupSymbols: async (groupName) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/GroupSymbolList`, { params: { id: token, group: groupName } });
+    const res = await api.get('/manager/GroupSymbolList', { params: { group: groupName } });
     return res.data;
   },
 
   toggleGroupSymbol: async (group, symbol, enabled) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/GroupSymbolToggle`, {
-      params: { id: token, group, symbol, enabled }
+    const res = await api.get('/manager/GroupSymbolToggle', {
+      params: { group, symbol, enabled }
     });
     return res.data;
   },
 
   getSymbolList: async (group) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/SymbolList`, { params: { id: token, group } });
+    const res = await api.get('/manager/SymbolList', { params: { group } });
     return res.data;
   },
 
   getSwapFreeGroups: async () => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/SwapFreeGroupList`, { params: { id: token } });
+    const res = await api.get('/manager/SwapFreeGroupList');
     return res.data;
   },
 
   setSwapFreeGroup: async (data) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.post(`/manager/SwapFreeGroupSet?id=${token}`, data);
+    const res = await api.post('/manager/SwapFreeGroupSet', data);
     return res.data;
   },
 
   deleteSwapFreeGroup: async (groupId) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/SwapFreeGroupDelete`, { params: { id: token, group_id: groupId } });
+    const res = await api.get('/manager/SwapFreeGroupDelete', { params: { group_id: groupId } });
     return res.data;
   },
 
   getRoleList: async () => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/ManagerRoleList?id=${token}`);
+    const res = await api.get('/manager/ManagerRoleList');
     return res.data;
   },
 
   createRole: async (roleData) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.post(`/manager/ManagerRoleCreate?id=${token}`, roleData);
+    const res = await api.post('/manager/ManagerRoleCreate', roleData);
     return res.data;
   },
 
   createManager: async (managerData) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.post(`/manager/ManagerCreate?id=${token}`, managerData);
+    const res = await api.post('/manager/ManagerCreate', managerData);
     return res.data;
   },
 
   updateManagerRole: async (managerLogin, roleId) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/ManagerUpdate`, {
-      params: { id: token, manager_login: managerLogin, role_id: roleId }
+    const res = await api.get('/manager/ManagerUpdate', {
+      params: { manager_login: managerLogin, role_id: roleId }
     });
     return res.data;
   },
 
   createCommissionSchedule: async (data) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.post(`/manager/CommissionScheduleCreate?id=${token}`, data);
+    const res = await api.post('/manager/CommissionScheduleCreate', data);
     return res.data;
   },
 
   deleteCommissionSchedule: async (scheduleId) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/CommissionScheduleDelete`, {
-      params: { id: token, schedule_id: scheduleId }
+    const res = await api.get('/manager/CommissionScheduleDelete', {
+      params: { schedule_id: scheduleId }
     });
     return res.data;
   },
 
   getCommissionScheduleList: async () => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/CommissionScheduleList?id=${token}`);
+    const res = await api.get('/manager/CommissionScheduleList');
     return res.data;
   },
 
   // --- DYNAMIC LEVERAGE ---
   createDynamicLeverage: async (data) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.post(`/manager/DynamicLeverageCreate?id=${token}`, data);
+    const res = await api.post('/manager/DynamicLeverageCreate', data);
     return res.data;
   },
 
   getDynamicLeverageList: async () => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/DynamicLeverageList`, { params: { id: token } });
+    const res = await api.get('/manager/DynamicLeverageList');
     return res.data;
   },
 
   deleteDynamicLeverage: async (ruleId) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/DynamicLeverageDelete`, {
-      params: { id: token, rule_id: ruleId }
+    const res = await api.get('/manager/DynamicLeverageDelete', {
+      params: { rule_id: ruleId }
     });
-    return res.data;
-  },
-
-  getLeverageScheduleList: async (id) => {
-    const res = await api.get(`/manager/LeverageScheduleList`, { params: { id } });
     return res.data;
   },
 
   // --- HOLIDAYS ---
   createHoliday: async (data) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.post(`/manager/HolidayCreate?id=${token}`, data);
+    const res = await api.post('/manager/HolidayCreate', data);
     return res.data;
   },
 
   getHolidayList: async () => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/HolidayListExt?id=${token}`);
+    const res = await api.get('/manager/HolidayListExt');
     return res.data;
   },
 
   deleteHoliday: async (holidayId) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/HolidayDelete`, {
-      params: { id: token, holiday_id: holidayId }
+    const res = await api.get('/manager/HolidayDelete', {
+      params: { holiday_id: holidayId }
     });
     return res.data;
   },
@@ -292,47 +256,32 @@ export const ManagerService = {
 
   // --- HIDDEN MARKUP ---
   getHiddenMarkupList: async () => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/HiddenMarkupList`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const res = await api.get('/manager/HiddenMarkupList');
     return res.data;
   },
 
   setHiddenMarkup: async (data) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.post(`/manager/HiddenMarkupSet`, data, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const res = await api.post('/manager/HiddenMarkupSet', data);
     return res.data;
   },
 
   deleteHiddenMarkup: async (groupName, accountNumber) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.post(`/manager/HiddenMarkupDelete`, {
+    const res = await api.post('/manager/HiddenMarkupDelete', {
       group_name: groupName,
       account_number: accountNumber
-    }, {
-      headers: { Authorization: `Bearer ${token}` }
     });
     return res.data;
   },
 
   // --- LP DISPATCH DELAY ---
   getLPDispatchDelay: async () => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/LPDispatchDelayGet`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const res = await api.get('/manager/LPDispatchDelayGet');
     return res.data;
   },
 
   setLPDispatchDelay: async (delayMs) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.post(`/manager/LPDispatchDelaySet`, {
+    const res = await api.post('/manager/LPDispatchDelaySet', {
       dispatch_delay_ms: Number(delayMs)
-    }, {
-      headers: { Authorization: `Bearer ${token}` }
     });
     return res.data;
   },
@@ -340,17 +289,14 @@ export const ManagerService = {
   // --- TRADING / EXECUTION ---
 
   getPositionsAll: async (page = 1, limit = 50) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/PositionsAll`, {
-      params: { id: token, page, limit }
+    const res = await api.get('/manager/PositionsAll', {
+      params: { page, limit }
     });
     return res.data;
   },
 
   getPositions: async (logins = [], page = 1, limit = 50) => {
-    const token = useAuthStore.getState().accessToken;
     const params = new URLSearchParams();
-    params.append('id', token);
     params.append('page', page);
     params.append('limit', limit);
     logins.forEach(l => params.append('logins[]', l));
@@ -360,17 +306,14 @@ export const ManagerService = {
   },
 
   getBrokerOrders: async (page = 1, limit = 50) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/BrokerOrders`, {
-      params: { id: token, page, limit }
+    const res = await api.get('/manager/BrokerOrders', {
+      params: { page, limit }
     });
     return res.data;
   },
 
   getOrders: async (logins = []) => {
-    const token = useAuthStore.getState().accessToken;
     const params = new URLSearchParams();
-    params.append('id', token);
     logins.forEach(l => params.append('logins[]', l));
 
     const res = await api.get(`/manager/Orders?${params.toString()}`);
@@ -378,93 +321,82 @@ export const ManagerService = {
   },
 
   getOrderHistory: async (login, from, to) => {
-    const token = useAuthStore.getState().accessToken;
-    const params = { id: token, login };
+    const params = { login };
     if (from) params.from = from;
     if (to) params.to = to;
 
-    const res = await api.get(`/manager/OrderHistory`, { params });
+    const res = await api.get('/manager/OrderHistory', { params });
     return res.data;
   },
 
   getPendingOrderHistory: async (login, from, to) => {
-    const token = useAuthStore.getState().accessToken;
-    const params = { id: token, login };
+    const params = { login };
     if (from) params.from = from;
     if (to) params.to = to;
 
-    const res = await api.get(`/manager/PendingOrderHistory`, { params });
+    const res = await api.get('/manager/PendingOrderHistory', { params });
     return res.data;
   },
 
   getBrokerDeals: async (page = 1, limit = 50) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/BrokerDeals`, {
-      params: { id: token, page, limit }
+    const res = await api.get('/manager/BrokerDeals', {
+      params: { page, limit }
     });
     return res.data;
   },
 
   // --- RBAC: ROLES ---
   updateRole: async (roleId, data) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.post(`/manager/ManagerRoleUpdate?id=${token}`, data, {
+    const res = await api.post('/manager/ManagerRoleUpdate', data, {
       params: { role_id: roleId }
     });
     return res.data;
   },
 
   deleteRole: async (roleId) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/ManagerRoleDelete`, {
-      params: { id: token, role_id: roleId }
+    const res = await api.get('/manager/ManagerRoleDelete', {
+      params: { role_id: roleId }
     });
     return res.data;
   },
 
   // --- MANAGER ACCOUNTS ---
   getManagerList: async () => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/ManagerList?id=${token}`);
+    const res = await api.get('/manager/ManagerList');
     return res.data;
   },
 
   getManagerDetail: async (login) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/ManagerGet`, {
-      params: { id: token, manager_login: login }
+    const res = await api.get('/manager/ManagerGet', {
+      params: { manager_login: login }
     });
     return res.data;
   },
 
   updateManager: async (login, params) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/ManagerUpdate`, {
-      params: { id: token, manager_login: login, ...params }
+    const res = await api.get('/manager/ManagerUpdate', {
+      params: { manager_login: login, ...params }
     });
     return res.data;
   },
 
   deleteManager: async (login) => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/ManagerDelete`, {
-      params: { id: token, manager_login: login }
+    const res = await api.get('/manager/ManagerDelete', {
+      params: { manager_login: login }
     });
     return res.data;
   },
 
   getManagerActivityLog: async (login, from, to) => {
-    const token = useAuthStore.getState().accessToken;
-    const params = { id: token, manager_login: login };
+    const params = { manager_login: login };
     if (from) params.from = from;
     if (to) params.to = to;
-    const res = await api.get(`/manager/ManagerActivityLog`, { params });
+    const res = await api.get('/manager/ManagerActivityLog', { params });
     return res.data;
   },
 
   getManagerOnline: async () => {
-    const token = useAuthStore.getState().accessToken;
-    const res = await api.get(`/manager/ManagerOnline?id=${token}`);
+    const res = await api.get('/manager/ManagerOnline');
     return res.data;
   },
 };

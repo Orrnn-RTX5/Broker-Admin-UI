@@ -3,6 +3,10 @@ import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { ManagerService } from '../../services/manager.service';
 import { useRoles } from '../../hooks/useManager';
+import { useAuthStore } from '../../store/authStore';
+import { buildManagerCreatePayload, canGrantAdminRole } from '../../utils/adminValidation';
+
+const MotionDiv = motion.div;
 
 const CreateManagerPopup = ({ onClose, onCreated }) => {
   const [login, setLogin] = useState('');
@@ -15,27 +19,29 @@ const CreateManagerPopup = ({ onClose, onCreated }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const currentUser = useAuthStore((state) => state.user);
+  const canCreateAdmin = canGrantAdminRole(currentUser);
   const { data: rolesResponse } = useRoles();
   const roles = rolesResponse?.roles || [];
 
   const handleSubmit = async () => {
-    if (!login || !name || !password || !roleId) {
-      setError('Login, Name, Password, and Role are required.');
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
     try {
-      await ManagerService.createManager({
-        login: parseInt(login, 10),
+      const payload = buildManagerCreatePayload({
+        login,
         name,
         password,
         is_admin: isAdmin,
-        role_id: parseInt(roleId, 10),
-        allowed_groups: allowedGroups ? allowedGroups.split(',').map(s => s.trim()) : [],
-        ip_whitelist: ipWhitelist ? ipWhitelist.split(',').map(s => s.trim()) : []
+        role_id: roleId,
+        allowed_groups: allowedGroups,
+        ip_whitelist: ipWhitelist,
+      }, {
+        requireRole: true,
+        includeEmptyLists: true,
+        canGrantAdmin: canCreateAdmin,
       });
+      await ManagerService.createManager(payload);
       if (onCreated) onCreated();
       onClose();
     } catch (err) {
@@ -47,7 +53,7 @@ const CreateManagerPopup = ({ onClose, onCreated }) => {
 
   return (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 font-sans">
-      <motion.div 
+      <MotionDiv
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
@@ -134,9 +140,10 @@ const CreateManagerPopup = ({ onClose, onCreated }) => {
             <label className="flex items-center gap-2 cursor-pointer outline-none pl-1">
               <input 
                 type="checkbox" 
-                checked={isAdmin}
-                onChange={(e) => setIsAdmin(e.target.checked)}
-                className="accent-blue-500 w-3 h-3 cursor-pointer"
+                checked={isAdmin && canCreateAdmin}
+                onChange={(e) => setIsAdmin(canCreateAdmin && e.target.checked)}
+                disabled={!canCreateAdmin}
+                className="accent-blue-500 w-3 h-3 cursor-pointer disabled:opacity-50"
               />
               <span className="text-[11px] text-[color:var(--text-muted)] italic">Requires full privileges</span>
             </label>
@@ -160,7 +167,7 @@ const CreateManagerPopup = ({ onClose, onCreated }) => {
             Cancel
           </button>
         </div>
-      </motion.div>
+      </MotionDiv>
     </div>
   );
 };

@@ -1,27 +1,63 @@
 import axios from 'axios';
-import { expireAuthSession, isTokenExpired, useAuthStore, validateAuthSession } from '../store/authStore';
-import { useConnectionStore } from '../store/connectionStore';
+import { expireAuthSession, isTokenExpired, useAuthStore, validateAuthSession } from '../store/authStore.js';
+import { useConnectionStore } from '../store/connectionStore.js';
+import { redactForLog, redactUrlForLog } from './logRedaction.js';
 
 
-import { API_HOST, buildExtApiUrl, buildManagerApiUrl } from '../config/endpoints';
+import { API_HOST, buildExtApiUrl, buildManagerApiUrl } from '../config/endpoints.js';
 
-const SECRET_KEY_RE = /(authorization|password|token|secret|api[_-]?key)/i;
 const AUTH_REJECTION_RE = /(token|session|auth|jwt|expired|unauthorized|unauthenticated|invalid credentials)/i;
+const AUTH_QUERY_PARAM_RE = /^(token|access_token|refresh_token|session|session_token|auth|authorization|jwt)$/i;
 
-const redactForLog = (value, seen = new WeakSet()) => {
-  if (!value || typeof value !== 'object') return value;
-  if (seen.has(value)) return '[Circular]';
-  seen.add(value);
+const isCurrentTokenValue = (value, token) =>
+  !!token && String(value || '') === String(token);
 
-  if (Array.isArray(value)) {
-    return value.map((item) => redactForLog(item, seen));
+const shouldRemoveAuthQueryParam = (key, value, token) =>
+  AUTH_QUERY_PARAM_RE.test(key) || (String(key).toLowerCase() === 'id' && isCurrentTokenValue(value, token));
+
+const stripAuthQueryFromUrl = (url, token) => {
+  if (!url || !token) return url;
+
+  try {
+    const raw = String(url);
+    const isAbsolute = /^[a-z][a-z\d+.-]*:\/\//i.test(raw);
+    const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
+    const parsed = new URL(raw, base);
+    const keysToDelete = [];
+
+    parsed.searchParams.forEach((value, key) => {
+      if (shouldRemoveAuthQueryParam(key, value, token)) {
+        keysToDelete.push(key);
+      }
+    });
+
+    keysToDelete.forEach((key) => parsed.searchParams.delete(key));
+
+    return isAbsolute
+      ? parsed.toString()
+      : `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return url;
+  }
+};
+
+const stripAuthQueryFromParams = (params, token) => {
+  if (!params || !token) return params;
+
+  if (params instanceof URLSearchParams) {
+    const next = new URLSearchParams(params);
+    Array.from(next.entries()).forEach(([key, value]) => {
+      if (shouldRemoveAuthQueryParam(key, value, token)) {
+        next.delete(key);
+      }
+    });
+    return next;
   }
 
+  if (typeof params !== 'object') return params;
+
   return Object.fromEntries(
-    Object.entries(value).map(([key, entry]) => [
-      key,
-      SECRET_KEY_RE.test(key) ? '[REDACTED]' : redactForLog(entry, seen),
-    ])
+    Object.entries(params).filter(([key, value]) => !shouldRemoveAuthQueryParam(key, value, token))
   );
 };
 
@@ -74,34 +110,39 @@ api.interceptors.request.use((config) => {
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    if (!config._preserveAuthQuery) {
+      config.url = stripAuthQueryFromUrl(config.url, token);
+      config.params = stripAuthQueryFromParams(config.params, token);
+    }
   }
 
-  console.log(`%c[API Request] ${config.method?.toUpperCase()} ${config.url}`, 'color: #00bcd4; font-weight: bold;', {
+  console.log(`%c[API Request] ${config.method?.toUpperCase()} ${redactUrlForLog(config.url)}`, 'color: #00bcd4; font-weight: bold;', {
     headers: redactForLog(config.headers),
+    params: redactForLog(config.params),
     data: redactForLog(config.data)
   });
 
   return config;
 }, (error) => {
-  console.error('[API Request Error]', error);
+  console.error('[API Request Error]', redactForLog(error));
   return Promise.reject(error);
 });
 
 api.interceptors.response.use((response) => {
   useConnectionStore.getState().markOk();
-  console.log(`%c[API Response Success] ${response.config.method?.toUpperCase()} ${response.config.url}`, 'color: #4caf50; font-weight: bold;', {
+  console.log(`%c[API Response Success] ${response.config.method?.toUpperCase()} ${redactUrlForLog(response.config.url)}`, 'color: #4caf50; font-weight: bold;', {
     status: response.status,
-    data: response.data
+    data: redactForLog(response.data)
   });
   return response;
 }, async (error) => {
   const originalRequest = error.config;
 
-  console.error(`%c[API Response Error] ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url}`, 'color: #f44336; font-weight: bold;', {
+  console.error(`%c[API Response Error] ${originalRequest?.method?.toUpperCase()} ${redactUrlForLog(originalRequest?.url)}`, 'color: #f44336; font-weight: bold;', {
     status: error.response?.status,
     statusText: error.response?.statusText,
-    data: error.response?.data,
-    message: error.message
+    data: redactForLog(error.response?.data),
+    message: redactForLog(error.message)
   });
 
   if (!error.response || error.response.status >= 500) {

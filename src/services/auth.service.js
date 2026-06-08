@@ -1,60 +1,41 @@
-import { api } from '../lib/api';
-import { expireAuthSession, useAuthStore } from '../store/authStore';
-import { clearBrokerInfo } from './brokerAuth';
+import { api } from '../lib/api.js';
+import { expireAuthSession, useAuthStore } from '../store/authStore.js';
+import { clearBrokerInfo } from './brokerAuth.js';
+import { buildUserFromAuthPayload } from '../utils/sessionUser.js';
+import { buildDisconnectRequest } from '../utils/serviceContracts.js';
+
+const notifyBackendDisconnect = async (token) => {
+  if (!token) return;
+
+  try {
+    const request = buildDisconnectRequest(token);
+    await api.get(request.url, request.config);
+  } catch {
+    // Logout must still clear local state if the backend session is slow or gone.
+  }
+};
 
 export const AuthService = {
-  login: async (user, password, server) => {
-    try {
-      const response = await api.post(`/manager/api/v2/admin/login`, {
-        user,
-        password,
-        server
-      });
-      
-      // Handle the session token parsing depending on backend response format
-      // It might be { session_token: ... }, { token: ... }, or just a raw string
-      const access_token = response.data.session_token || response.data.token || response.data.access_token || (typeof response.data === 'string' ? response.data : null);
-      const refresh_token = response.data.refresh_token || access_token; //Fallback to same token if no refresh token
-      
-      // Update store and parse user info directly from the Connect response
-      if (access_token) {
-        useAuthStore.getState().setToken(
-          access_token,
-          refresh_token,
-          response.data.expires_at || response.data.expiresAt || response.data.token_expires_at,
-          response.data.expires_in || response.data.expiresIn
-        );
-        
-        // Build user dynamically avoiding /me endpoint dependency
-        const userInfo = {
-           id: response.data.login || user,
-           login: response.data.login || user,
-           name: `Agent ${response.data.login || user}`,
-           role: response.data.is_admin ? 'manager' : 'user',
-           is_admin: !!response.data.is_admin,
-           broker_id: response.data.broker_id || null,
-        };
-        useAuthStore.getState().setUser(userInfo);
-      }
-      
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { message: 'Login failed' };
-    }
-  },
-
   getMe: async () => {
     try {
-      const response = await api.get('/api/v2/auth/me');
-      useAuthStore.getState().setUser(response.data);
-      return response.data;
+      const response = await api.get('/manager/api/v2/auth/me');
+      const user = buildUserFromAuthPayload(response.data);
+      useAuthStore.getState().setUser(user);
+      return user;
     } catch (error) {
       throw error.response?.data || { message: 'Failed to fetch user data' };
     }
   },
 
-  logout: () => {
+  logout: ({ waitForDisconnect = false } = {}) => {
+    const token = useAuthStore.getState().accessToken;
     clearBrokerInfo();
     expireAuthSession('logout');
+
+    const disconnectPromise = notifyBackendDisconnect(token);
+    if (waitForDisconnect) return disconnectPromise;
+
+    disconnectPromise.catch(() => {});
+    return Promise.resolve();
   }
 };

@@ -1,25 +1,11 @@
 import { api } from '../lib/api';
-import { useAuthStore } from '../store/authStore';
 
 const DEFAULT_BASE_URL = '/manager';
 
 const apiClient = {
   async request(endpoint, options = {}) {
     let url = endpoint.startsWith('http') ? endpoint : `${DEFAULT_BASE_URL}${endpoint}`;
-    
-   
-    const token = useAuthStore.getState().accessToken;
-    if (token) {
-      try {
-        
-        const urlObj = new URL(url, window.location.origin);
-        urlObj.searchParams.set('id', token);
-        url = urlObj.pathname + urlObj.search;
-      } catch (e) {
-        
-      }
-    }
-    
+
     try {
       const response = await api({
         url,

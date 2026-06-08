@@ -95,7 +95,7 @@ export const getPositions = async () => {
 
 export const getPositionHistory = async (loginId) => {
   if (!loginId) return [];
-  const data = await apiClient.get(`/PositionHistoryMT4Format?logins[]=${loginId}`);
+  const data = await apiClient.get(`/PositionHistoryMT4Format?logins[]=${encodeURIComponent(loginId)}`);
   const records = Array.isArray(data) ? data : data.answer || [];
 
   return records.map(p => ({
@@ -119,7 +119,7 @@ export const getPositionHistory = async (loginId) => {
 
 export const getOpenedOrders = async (login) => {
   if (!login) return [];
-  const data = await apiClient.get(`/OpenedOrders?logins[]=${login}`);
+  const data = await apiClient.get(`/OpenedOrders?logins[]=${encodeURIComponent(login)}`);
   const records = Array.isArray(data) ? data : data.answer || [];
 
   return records.map(p => ({
@@ -218,20 +218,20 @@ export const getAdvertisingCampaigns = async () => {
 
 // ─── IB Management ───────────────────────────────────────────────────────────
 export const ibList = () => apiClient.get('/IBList');
-export const ibGet = (login) => apiClient.get(`/IBGet?login=${login}`);
+export const ibGet = (login) => apiClient.get(`/IBGet?login=${encodeURIComponent(login)}`);
 export const ibCreate = (body) => apiClient.post('/IBCreate', body);
 export const ibUpdate = (body) => apiClient.post('/IBUpdate', body);
 export const ibDelete = (login) => apiClient.post('/IBDelete', { login });
 export const ibLinkClient = (body) => apiClient.post('/IBLinkClient', body);
 export const ibUnlinkClient = (body) => apiClient.post('/IBUnlinkClient', body);
-export const ibClientList = (login) => apiClient.get(`/IBClientList?login=${login}`);
-export const ibClientListAll = (login) => apiClient.get(`/IBClientListAll?login=${login}`);
+export const ibClientList = (login) => apiClient.get(`/IBClientList?login=${encodeURIComponent(login)}`);
+export const ibClientListAll = (login) => apiClient.get(`/IBClientListAll?login=${encodeURIComponent(login)}`);
 export const ibPlanCreate = (body) => apiClient.post('/IBPlanCreate', body);
-export const ibPlanList = (login) => apiClient.get(`/IBPlanList?login=${login}`);
+export const ibPlanList = (login) => apiClient.get(`/IBPlanList?login=${encodeURIComponent(login)}`);
 export const ibCommissions = (params) => apiClient.get(`/IBCommissions?${new URLSearchParams(params).toString()}`);
 export const ibCommissionPay = (body) => apiClient.post('/IBCommissionPay', body);
 export const ibStats = (params) => apiClient.get(`/IBStats?${new URLSearchParams(params).toString()}`);
-export const ibTree = (login) => apiClient.get(`/IBTree?login=${login}`);
+export const ibTree = (login) => apiClient.get(`/IBTree?login=${encodeURIComponent(login)}`);
 
 // ─── Symbol Management ────────────────────────────────────────────────────────
 export const symbolsList = () => apiClient.get('/SymbolsList');
@@ -289,21 +289,21 @@ export const symbolMappingCreate = (body) => apiClient.post('/SymbolMappingCreat
 
 export const sessionOverrideList = (params) => apiClient.get(`/SessionOverrideList?${new URLSearchParams(params).toString()}`);
 export const sessionOverrideSet = (params, body) => apiClient.post(`/SessionOverrideSet?${new URLSearchParams(params).toString()}`, body);
-export const sessionOverrideDelete = (overrideId) => apiClient.get(`/SessionOverrideDelete?override_id=${overrideId}`);
+export const sessionOverrideDelete = (overrideId) => apiClient.get(`/SessionOverrideDelete?override_id=${encodeURIComponent(overrideId)}`);
 export const symbolSessionGet = (symbol) => apiClient.get(`/SymbolSessionGet?symbol=${encodeURIComponent(symbol)}`);
 export const symbolSessionSet = (body) => apiClient.post('/SymbolSessionSet', body);
 
 export const dynamicLeverageList = (symbol) => apiClient.get(`/DynamicLeverageList?symbol=${encodeURIComponent(symbol)}`);
 export const dynamicLeverageCreate = (body) => apiClient.post('/DynamicLeverageCreate', body);
-export const dynamicLeverageDelete = (tierId) => apiClient.get(`/DynamicLeverageDelete?tier_id=${tierId}`);
+export const dynamicLeverageDelete = (tierId) => apiClient.get(`/DynamicLeverageDelete?tier_id=${encodeURIComponent(tierId)}`);
 
 export const commissionScheduleList = (symbol) => apiClient.get(`/CommissionScheduleList?symbol=${encodeURIComponent(symbol)}`);
 export const commissionScheduleCreate = (body) => apiClient.post('/CommissionScheduleCreate', body);
-export const commissionScheduleDelete = (scheduleId) => apiClient.get(`/CommissionScheduleDelete?schedule_id=${scheduleId}`);
+export const commissionScheduleDelete = (scheduleId) => apiClient.get(`/CommissionScheduleDelete?schedule_id=${encodeURIComponent(scheduleId)}`);
 
 export const swapFreeGroupList = () => apiClient.get('/SwapFreeGroupList');
 export const swapFreeGroupSet = (body) => apiClient.post('/SwapFreeGroupSet', body);
-export const swapFreeGroupDelete = (groupId) => apiClient.get(`/SwapFreeGroupDelete?group_id=${groupId}`);
+export const swapFreeGroupDelete = (groupId) => apiClient.get(`/SwapFreeGroupDelete?group_id=${encodeURIComponent(groupId)}`);
 
 export const marketDepthConfigGet = (symbol) => apiClient.get(`/MarketDepthConfigGet?symbol=${encodeURIComponent(symbol)}`);
 export const marketDepthConfigSet = (body) => apiClient.post('/MarketDepthConfigSet', body);

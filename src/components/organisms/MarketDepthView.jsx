@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ManagerService } from '../../services/manager.service';
 import { Search, Save, Database, AlertCircle, Check, Plus } from 'lucide-react';
+import { buildMarketDepthPayload } from '../../utils/adminValidation';
 
 const MarketDepthView = () => {
   const [searchSymbol, setSearchSymbol] = useState('');
@@ -64,14 +65,7 @@ const MarketDepthView = () => {
     setSuccess(false);
 
     try {
-      const payload = {
-        symbol: config.symbol || searchSymbol.trim(),
-        aggregation: config.aggregation,
-        depth_levels: Number(config.depth_levels),
-        enabled: Boolean(config.enabled),
-        spread_markup: Number(config.spread_markup),
-        volume_filter: Number(config.volume_filter)
-      };
+      const payload = buildMarketDepthPayload(config, searchSymbol);
 
       await ManagerService.setMarketDepthConfig(payload);
       setSuccess(true);
