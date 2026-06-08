@@ -736,8 +736,7 @@ export const ManualBrokerEntry = ({ navigate, onLoginSuccess }) => {
       if (!brokerInfo) {
         throw new Error('Broker info not found. Please restart.');
       }
-      // Note: server parameter in login request should be broker_id, not the IP/URL
-      const auth = await loginManager(brokerInfo, { user, password, server: brokerInfo.broker_id });
+      const auth = await loginManager(brokerInfo, { user, password, server: getBrokerLoginServer(brokerInfo) });
       const session = setAuthSession(auth, brokerInfo);
       onLoginSuccess(session, '/dashboard');
     } catch (err) {

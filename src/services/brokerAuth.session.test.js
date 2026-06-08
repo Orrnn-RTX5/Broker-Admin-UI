@@ -102,6 +102,34 @@ test('fetchBrokerList uses v2 discovery and keeps sanitized broker server handle
   assert.equal(brokerAuth.getBrokerLoginServer(list[0]), 'broker-server-42');
 });
 
+test('fetchBrokerList maps GTA public SuperAdmin server to the broker server handle', async () => {
+  installBrowserGlobals({ DISCOVERY_BASE_URL: 'https://superbackend.orrnn.com' });
+  globalThis.fetch = async () => ({
+    ok: true,
+    status: 200,
+    text: async () => JSON.stringify({
+      servers: [
+        {
+          broker_id: 'gta_broker',
+          broker_name: 'Grow Trading Academy',
+          status: 'active',
+          server: 'services.growtradingacademy.com:443',
+          server_ip: '103.91.186.142',
+          backend_url: 'https://services.growtradingacademy.com',
+        },
+      ],
+    }),
+  });
+
+  const brokerAuth = await importFreshBrokerAuth();
+  const list = await brokerAuth.fetchBrokerList();
+
+  assert.equal(list.length, 1);
+  assert.equal(list[0].broker_id, 'gta_broker');
+  assert.equal(list[0].server, 'broker-server-2');
+  assert.equal(brokerAuth.getBrokerLoginServer(list[0]), 'broker-server-2');
+});
+
 test('fetchBrokerList does not use the selected broker backend as discovery host', async () => {
   installBrowserGlobals({ API_HOST: 'https://testbrokerbackend.orrnn.com' });
   let requestedUrl = '';
@@ -153,6 +181,38 @@ test('loginAdmin sends the opaque server handle when discovery does not expose s
     server: 'broker-server-42',
   });
   assert.equal(response.token, 'admin-token');
+});
+
+test('loginAdmin maps GTA stale public server values to the accepted broker server handle', async () => {
+  installBrowserGlobals();
+  let postedBody = null;
+  globalThis.fetch = async (url, options) => {
+    postedBody = JSON.parse(options.body);
+
+    return {
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ token: 'admin-token', broker_id: 'gta_broker' }),
+    };
+  };
+
+  const brokerAuth = await importFreshBrokerAuth();
+  await brokerAuth.loginAdmin(
+    {
+      broker_id: 'gta_broker',
+      name: 'Grow Trading Academy',
+      server: 'services.growtradingacademy.com:443',
+      server_ip: '103.91.186.142',
+      backend_url: 'https://services.growtradingacademy.com',
+    },
+    { user: '1000', password: 'secret', server: '103.91.186.142' }
+  );
+
+  assert.deepEqual(postedBody, {
+    user: '1000',
+    password: 'secret',
+    server: 'broker-server-2',
+  });
 });
 
 test('loginManager sends the opaque server handle when discovery does not expose server_ip', async () => {

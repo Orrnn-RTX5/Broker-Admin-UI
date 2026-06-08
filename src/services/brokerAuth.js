@@ -11,6 +11,13 @@ const RECENT_BROKERS_KEY = 'recent_brokers';
 const ADMIN_LOGIN_PORT = 8091;
 const DEFAULT_DISCOVERY_BASE_URL = 'https://backend.orrnn.com';
 export const BROKER_DISCOVERY_PATH = '/api/v2/broker/servers';
+const GTA_LOGIN_SERVER_HANDLE = 'broker-server-2';
+const GTA_BROKER_ALIASES = new Set(['gta_broker', 'grow-trading-academy']);
+const GTA_LOGIN_SERVER_MARKERS = [
+  '103.91.186.142',
+  'services.growtradingacademy.com',
+  'grow trading academy',
+];
 
 export const RUNTIME_API_HOST =
   (getRuntimeValue('API_HOST', 'VITE_API_HOST') ||
@@ -178,8 +185,41 @@ const firstPresent = (...values) =>
 export const getBrokerRecordId = (info = {}) =>
   String(firstPresent(info.broker_id, info.brokerId, info.id, info.server, info.server_id, '') || '').trim();
 
-export const getBrokerLoginServer = (info = {}) =>
-  String(
+const normalizeLoginServerValue = (value = '') =>
+  String(value || '').trim().toLowerCase();
+
+const isOpaqueBrokerServerHandle = (value = '') =>
+  /^broker-server-\d+$/i.test(String(value || '').trim());
+
+const isGtaBrokerInfo = (info = {}) => {
+  const idValues = [info.broker_id, info.brokerId, info.id]
+    .map(normalizeLoginServerValue)
+    .filter(Boolean);
+
+  if (idValues.some((value) => GTA_BROKER_ALIASES.has(value))) return true;
+
+  return [
+    info.name,
+    info.broker_name,
+    info.brokerName,
+    info.server,
+    info.server_handle,
+    info.server_id,
+    info.login_server,
+    info.server_ip,
+    info.host,
+    info.backend_url,
+    info.api_url,
+    info.server_url,
+    info.public_backend_url,
+    info.public_api_url,
+  ]
+    .map(normalizeLoginServerValue)
+    .some((value) => GTA_LOGIN_SERVER_MARKERS.some((marker) => value.includes(marker)));
+};
+
+export const getBrokerLoginServer = (info = {}) => {
+  const server = String(
     firstPresent(
       info.server,
       info.server_handle,
@@ -193,6 +233,16 @@ export const getBrokerLoginServer = (info = {}) =>
       ''
     ) || ''
   ).trim();
+
+  if (isGtaBrokerInfo(info) && !isOpaqueBrokerServerHandle(server)) {
+    return GTA_LOGIN_SERVER_HANDLE;
+  }
+
+  return server;
+};
+
+const resolveBrokerLoginServer = (brokerInfo = {}, server = '') =>
+  getBrokerLoginServer(server ? { ...brokerInfo, server } : brokerInfo);
 
 const normalizeBrokerInfo = (info) => {
   const safeInfo = stripLicenseSecrets(info || {});
@@ -373,7 +423,7 @@ export const loginManager = async (brokerInfo, { user, password, server }) => {
     const backendUrl = resolveBrokerBackendUrl(normalizedBrokerInfo, normalizedBrokerInfo?.backend_url);
     if (!backendUrl) throw new Error('Broker backend URL is not configured.');
     setBrokerInfo(normalizedBrokerInfo);
-    const loginServer = server || getBrokerLoginServer(brokerInfo);
+    const loginServer = resolveBrokerLoginServer(normalizedBrokerInfo, server);
     return await postJson(
       buildManagerApiUrl('/api/v2/auth/login'),
       { user, password, server: loginServer }
@@ -389,7 +439,7 @@ export const loginAdmin = async (brokerInfo, { user, password, server }) => {
     const backendUrl = resolveBrokerBackendUrl(normalizedBrokerInfo, normalizedBrokerInfo?.backend_url);
     if (!backendUrl) throw new Error('Broker backend URL is not configured.');
     setBrokerInfo(normalizedBrokerInfo);
-    const loginServer = server || getBrokerLoginServer(brokerInfo);
+    const loginServer = resolveBrokerLoginServer(normalizedBrokerInfo, server);
     return await postJson(
       buildManagerApiUrl('/api/v2/admin/login'),
       { user, password, server: loginServer }

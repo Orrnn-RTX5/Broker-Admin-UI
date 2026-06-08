@@ -20,8 +20,8 @@
                 "API_HOST": "https://services.growtradingacademy.com",
                 "API_HOST_EXT": "https://services.growtradingacademy.com",
                 "WS_HOST": "wss://services.growtradingacademy.com",
-                "DEFAULT_MT5_SERVER": "103.91.186.142",
-                "DISCOVERY_BASE_URL": "https://superbackend.orrnn.com",
+                "DEFAULT_MT5_SERVER": "broker-server-2",
+                "DISCOVERY_BASE_URL": "https://services.growtradingacademy.com",
                 "USE_MOCK_DISCOVERY": "false"
             }
         }
