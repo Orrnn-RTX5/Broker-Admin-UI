@@ -390,7 +390,7 @@ export const BrokerSelector = ({ navigate }) => {
         {!listLoading && !listError && (
           <form
             className="mt-2 flex flex-col gap-4"
-            onSubmit={(e) => { e.preventDefault(); submit('manager'); }}
+            onSubmit={(e) => { e.preventDefault(); submit('admin'); }}
           >
             <div className="flex flex-col gap-1.5">
               <label htmlFor="broker-select" className="text-[11px] text-[color:var(--text-muted)]">
@@ -422,19 +422,11 @@ export const BrokerSelector = ({ navigate }) => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div>
               <button
                 type="submit"
                 disabled={!!loadingRole || brokerList.length === 0}
-                className="h-8 inline-flex items-center justify-center gap-2 bg-[color:var(--accent-500)] text-[color:var(--accent-contrast)] text-[12px] font-medium rounded-[3px] disabled:opacity-50"
-              >
-                {loadingRole === 'manager' ? <SpinnerLabel>Checking</SpinnerLabel> : 'Continue as Manager'}
-              </button>
-              <button
-                type="button"
-                disabled={!!loadingRole || brokerList.length === 0}
-                onClick={() => submit('admin')}
-                className="h-8 inline-flex items-center justify-center gap-2 bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] text-[color:var(--text-primary)] text-[12px] font-medium rounded-[3px] disabled:opacity-50"
+                className="h-8 w-full inline-flex items-center justify-center gap-2 bg-[color:var(--accent-500)] text-[color:var(--accent-contrast)] text-[12px] font-medium rounded-[3px] disabled:opacity-50"
               >
                 {loadingRole === 'admin' ? <SpinnerLabel>Checking</SpinnerLabel> : 'Continue as Admin'}
               </button>
@@ -562,8 +554,6 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
       loading={loading}
       onSubmit={handleSubmit}
       onSwitchBroker={() => { clearBrokerInfo(); navigate('/', { replace: true }); }}
-      switchToLabel="Manager login"
-      onSwitchRole={() => navigate('/manager-login')}
     >
       <Field id="admin-login" label="Login" type="number" icon={User} value={user} onChange={setUser} required />
       <PasswordField id="admin-password" value={password} onChange={setPassword} />
@@ -612,13 +602,15 @@ const LoginScreen = ({
         <button type="button" onClick={onSwitchBroker} className="text-[12px] text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]">
           &larr; Switch broker
         </button>
-        <button
-          type="button"
-          onClick={onSwitchRole}
-          className="inline-flex items-center gap-1 text-[12px] text-[color:var(--accent-500)] hover:text-[color:var(--accent-700)]"
-        >
-          {switchToLabel} <ArrowRight size={13} aria-hidden="true" />
-        </button>
+        {switchToLabel && onSwitchRole && (
+          <button
+            type="button"
+            onClick={onSwitchRole}
+            className="inline-flex items-center gap-1 text-[12px] text-[color:var(--accent-500)] hover:text-[color:var(--accent-700)]"
+          >
+            {switchToLabel} <ArrowRight size={13} aria-hidden="true" />
+          </button>
+        )}
       </div>
     </div>
   </AuthShell>
