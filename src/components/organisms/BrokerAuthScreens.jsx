@@ -24,6 +24,7 @@ import {
   loginAdmin,
   loginManager,
   rememberBroker,
+  requireAdminAuthSessionToken,
   setAuthSession,
   setBrokerInfo,
   validateBrokerCredentials,
@@ -525,16 +526,16 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const loginServer = getBrokerLoginServer(brokerInfo || {});
-    if (!user || !password || !loginServer) {
-      setError('Login, password, and broker server are required.');
+    if (!user || !password) {
+      setError('Login and password are required.');
       return;
     }
     setLoading(true);
     setError('');
     try {
-      const auth = await loginAdmin(brokerInfo, { user, password, server: loginServer });
+      const auth = await loginAdmin(brokerInfo, { user, password });
       const session = setAuthSession(auth, brokerInfo);
+      requireAdminAuthSessionToken(session);
       onLoginSuccess(session, '/admin-dashboard');
     } catch (err) {
       setError(err.message || 'Login failed.');
@@ -557,7 +558,7 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
     >
       <Field id="admin-login" label="Login" type="number" icon={User} value={user} onChange={setUser} required />
       <PasswordField id="admin-password" value={password} onChange={setPassword} />
-      <Field id="admin-server" label="Broker Server" icon={Server} value={server} onChange={setServer} readOnly required />
+      <Field id="admin-server" label="Broker Server" icon={Server} value={server} onChange={setServer} readOnly />
     </LoginScreen>
   );
 };

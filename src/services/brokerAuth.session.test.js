@@ -178,7 +178,7 @@ test('fetchBrokerList does not use the selected broker backend as discovery host
   assert.equal(requestedUrl, 'https://backend.orrnn.com/api/v2/broker/servers');
 });
 
-test('loginAdmin sends the opaque server handle when discovery does not expose server_ip', async () => {
+test('loginAdmin omits server when the caller does not explicitly supply one', async () => {
   installBrowserGlobals();
   let postedUrl = '';
   let postedBody = null;
@@ -208,7 +208,6 @@ test('loginAdmin sends the opaque server handle when discovery does not expose s
   assert.deepEqual(postedBody, {
     user: '1000',
     password: 'secret',
-    server: 'broker-server-42',
   });
   assert.equal(response.token, 'admin-token');
 });
@@ -365,4 +364,36 @@ test('setAuthSession strips license secrets before writing auth session storage'
   assert.equal(auth.nested.licenceSecret, undefined);
   assert.equal(stored.licenseKey, undefined);
   assert.equal(stored.nested.licenceSecret, undefined);
+});
+
+test('requireAdminAuthSessionToken accepts recognized admin token fields', async () => {
+  installBrowserGlobals();
+  const brokerAuth = await importFreshBrokerAuth();
+
+  assert.equal(brokerAuth.requireAdminAuthSessionToken({ token: 'token-value' }).token, 'token-value');
+  assert.equal(
+    brokerAuth.requireAdminAuthSessionToken({ access_token: 'access-token-value' }).access_token,
+    'access-token-value'
+  );
+  assert.equal(
+    brokerAuth.requireAdminAuthSessionToken({ session_token: 'session-token-value' }).session_token,
+    'session-token-value'
+  );
+});
+
+test('requireAdminAuthSessionToken rejects setAuthSession results without a usable token', async () => {
+  installBrowserGlobals();
+  const brokerAuth = await importFreshBrokerAuth();
+
+  const emptySession = brokerAuth.setAuthSession({}, { broker_id: 'gta_broker' });
+  const blankSession = brokerAuth.setAuthSession({ token: '   ' }, { broker_id: 'gta_broker' });
+
+  assert.throws(
+    () => brokerAuth.requireAdminAuthSessionToken(emptySession),
+    /did not return an access token/
+  );
+  assert.throws(
+    () => brokerAuth.requireAdminAuthSessionToken(blankSession),
+    /did not return an access token/
+  );
 });

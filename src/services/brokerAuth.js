@@ -182,6 +182,19 @@ const buildBackendUrl = (info) => {
 const firstPresent = (...values) =>
   values.find((value) => value !== undefined && value !== null && String(value).trim() !== '');
 
+export const ADMIN_MISSING_AUTH_TOKEN_ERROR = 'Login failed: the broker did not return an access token.';
+
+export const hasUsableAuthSessionToken = (session = {}) =>
+  Boolean(firstPresent(session?.token, session?.access_token, session?.session_token));
+
+export const requireAdminAuthSessionToken = (session = {}) => {
+  if (!hasUsableAuthSessionToken(session)) {
+    throw new Error(ADMIN_MISSING_AUTH_TOKEN_ERROR);
+  }
+
+  return session;
+};
+
 export const getBrokerRecordId = (info = {}) =>
   String(firstPresent(info.broker_id, info.brokerId, info.id, info.server, info.server_id, '') || '').trim();
 
@@ -462,10 +475,13 @@ export const loginAdmin = async (brokerInfo, { user, password, server }) => {
     const backendUrl = resolveBrokerBackendUrl(normalizedBrokerInfo, normalizedBrokerInfo?.backend_url);
     if (!backendUrl) throw new Error('Broker backend URL is not configured.');
     setBrokerInfo(normalizedBrokerInfo);
-    const loginServer = resolveBrokerLoginServer(normalizedBrokerInfo, server);
+    const body = { user, password };
+    if (String(server || '').trim()) {
+      body.server = resolveBrokerLoginServer(normalizedBrokerInfo, server);
+    }
     return await postJson(
       buildManagerApiUrl('/api/v2/admin/login'),
-      { user, password, server: loginServer }
+      body
     );
   } catch (error) {
     throw new Error(mapAdminLoginError(error.message));
