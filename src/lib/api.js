@@ -6,7 +6,7 @@ import { redactForLog, redactUrlForLog } from './logRedaction.js';
 
 import { API_HOST, buildExtApiUrl, buildManagerApiUrl } from '../config/endpoints.js';
 
-const AUTH_REJECTION_RE = /(token|session|auth|jwt|expired|unauthorized|unauthenticated|invalid credentials)/i;
+const AUTH_REJECTION_RE = /\b(not authenticated|unauthenticated|unauthorized|missing authorization|missing bearer|invalid token|token expired|expired token|invalid session|session expired|invalid jwt|jwt expired)\b/i;
 const AUTH_QUERY_PARAM_RE = /^(token|access_token|refresh_token|session|session_token|auth|authorization|jwt)$/i;
 
 const isCurrentTokenValue = (value, token) =>
@@ -71,7 +71,7 @@ const responseDataText = (data) => {
   }
 };
 
-const isAuthRejectionError = (error) => {
+export const isAuthRejectionError = (error) => {
   const status = error.response?.status;
   if (status === 401 || status === 419) return true;
   if (status !== 403) return false;
