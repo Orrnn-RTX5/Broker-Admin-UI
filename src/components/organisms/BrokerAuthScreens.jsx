@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   User,
 } from 'lucide-react';
+import authTradingVisual from '../../assets/auth-trading-visual.png';
 import {
   clearBrokerInfo,
   discoverBrokerById,
@@ -73,24 +74,27 @@ const getDefaultBroker = (list = []) =>
   list.find(brokerMatchesRuntime) ||
   list[0];
 
-const getBrokerSecondaryLabel = (broker) => {
-  if (!broker) return 'No broker';
-
-  const brokerId = String(broker.broker_id || '').trim();
-  const server = String(broker.server || '').trim();
-  const host = String(broker.server_ip || broker.host || '').trim();
-  const detail = server && server !== brokerId ? server : host;
-
-  return detail ? `${brokerId} / ${detail}` : brokerId || server || 'No broker';
-};
-
 // ---------------------------------------------------------------------------
 // Shell & shared UI primitives
 // ---------------------------------------------------------------------------
 const AuthShell = ({ children }) => (
-  <div className="fixed inset-0 z-[9999] bg-[color:var(--bg-app)] flex items-center justify-center font-sans px-4">
-    <div className="w-full max-w-[380px] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] shadow-lg rounded-[6px]">
-      {children}
+  <div className="fixed inset-0 z-[9999] grid min-h-screen bg-[#f4f7fb] font-sans lg:grid-cols-[60%_40%]">
+    <div className="relative hidden min-h-0 overflow-hidden bg-slate-950 lg:block">
+      <img
+        src={authTradingVisual}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,6,23,0.08),rgba(2,6,23,0.02)_48%,rgba(2,6,23,0.38))]" />
+      <div className="absolute inset-y-0 right-0 w-28 bg-[linear-gradient(90deg,rgba(2,6,23,0),rgba(15,23,42,0.42))]" />
+    </div>
+
+    <div className="relative flex min-h-screen min-w-0 items-center justify-center overflow-hidden bg-[#f7f9fc] px-4 py-8 sm:px-8">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(37,99,235,0.08),transparent_28%),linear-gradient(180deg,#ffffff_0%,#f6f8fb_100%)]" />
+      <div className="relative w-full max-w-[472px] rounded-[8px] border border-[#dfe5ee] bg-white px-8 py-9 shadow-[0_28px_80px_-46px_rgba(15,23,42,0.55)] sm:px-9 sm:py-10">
+        {children}
+      </div>
     </div>
   </div>
 );
@@ -100,20 +104,20 @@ const Header = ({ icon, title, subtitle, tone = 'manager', broker }) => {
   const isAdmin = tone === 'admin';
 
   return (
-    <div className="p-5 border-b border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-2)] rounded-t-[6px]">
-      <div className="flex items-center gap-3">
+    <div className="pb-8">
+      <div className="flex items-center gap-4">
         <div
           className={
             isAdmin
-              ? 'h-9 w-9 rounded-[4px] flex items-center justify-center bg-blue-50 text-blue-700 border border-blue-100'
-              : 'h-9 w-9 rounded-[4px] flex items-center justify-center bg-[color:var(--accent-50)] text-[color:var(--accent-500)] border border-[color:var(--accent-100)]'
+              ? 'h-12 w-12 rounded-[8px] flex items-center justify-center bg-[#f7fbff] text-blue-700 border border-[#d8e2ef] shadow-[0_8px_18px_-14px_rgba(15,23,42,0.65)]'
+              : 'h-12 w-12 rounded-[8px] flex items-center justify-center bg-[color:var(--accent-50)] text-[color:var(--accent-500)] border border-[color:var(--accent-100)] shadow-[0_8px_18px_-14px_rgba(15,23,42,0.65)]'
           }
         >
-          {broker ? <BrokerLogo broker={broker} size={36} fallback={Icon} /> : <Icon size={18} aria-hidden="true" />}
+          {broker ? <BrokerLogo broker={broker} size={44} fallback={Icon} /> : <Icon size={26} aria-hidden="true" />}
         </div>
         <div className="min-w-0">
-          <h1 className="text-[15px] font-semibold text-[color:var(--text-primary)] truncate">{title}</h1>
-          <p className="text-[12px] text-[color:var(--text-muted)]">{subtitle}</p>
+          <h1 className="text-[20px] font-semibold leading-6 text-[color:var(--text-primary)] truncate">{title}</h1>
+          <p className="mt-0.5 text-[14px] leading-5 text-[color:var(--text-muted)]">{subtitle}</p>
         </div>
       </div>
     </div>
@@ -196,27 +200,24 @@ const BrokerDropdown = ({ brokers, selectedId, disabled, onChange }) => {
         type="button"
         disabled={disabled}
         onClick={() => setOpen((value) => !value)}
-        className="w-full min-h-10 bg-[color:var(--bg-app)] border border-[color:var(--border-default)] text-[color:var(--text-primary)] px-2 pr-7 py-1.5 outline-none focus:border-[color:var(--accent-500)] rounded-[3px] disabled:opacity-50 cursor-pointer flex items-center gap-2 text-left"
+        className="w-full min-h-11 min-w-0 bg-white border border-[#d5dbe5] text-[color:var(--text-primary)] px-3 pr-9 py-2 outline-none focus:border-[color:var(--accent-500)] focus:ring-2 focus:ring-blue-100 rounded-[6px] disabled:opacity-50 cursor-pointer flex items-center gap-3 text-left shadow-[0_1px_0_rgba(15,23,42,0.03)]"
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <BrokerLogo broker={selectedBroker} size={28} />
+        <BrokerLogo broker={selectedBroker} size={30} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[12px] font-medium">
+          <span className="block truncate text-[14px] font-semibold leading-5">
             {selectedBroker?.name || 'Select broker'}
           </span>
-          <span className="block truncate text-[10px] font-mono text-[color:var(--text-muted)]">
-            {getBrokerSecondaryLabel(selectedBroker)}
-          </span>
         </span>
-        <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-[color:var(--text-muted)]" aria-hidden="true" />
+        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--text-muted)]" aria-hidden="true" />
       </button>
 
       {open && (
         <div
           role="listbox"
           aria-labelledby="broker-select"
-          className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 max-h-64 overflow-y-auto rounded-[4px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] shadow-lg"
+          className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-64 overflow-y-auto rounded-[6px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] shadow-lg"
         >
           {brokers.map((broker) => {
             const selected = broker.broker_id === selectedId;
@@ -230,15 +231,12 @@ const BrokerDropdown = ({ brokers, selectedId, disabled, onChange }) => {
                   onChange(broker.broker_id);
                   setOpen(false);
                 }}
-                className="w-full flex items-center gap-2 px-2 py-2 text-left hover:bg-[color:var(--bg-surface-2)]"
+                className="w-full flex items-center gap-2 px-2.5 py-2 text-left hover:bg-[color:var(--bg-surface-2)]"
                 style={{ background: selected ? 'var(--bg-surface-2)' : undefined }}
               >
-                <BrokerLogo broker={broker} size={28} />
+                <BrokerLogo broker={broker} size={30} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[12px] font-medium text-[color:var(--text-primary)]">{broker.name}</span>
-                  <span className="block truncate text-[10px] font-mono text-[color:var(--text-muted)]">
-                    {getBrokerSecondaryLabel(broker)}
-                  </span>
+                  <span className="block truncate text-[14px] font-semibold text-[color:var(--text-primary)]">{broker.name}</span>
                 </span>
                 {selected && <Check size={13} className="text-[color:var(--accent-500)]" aria-hidden="true" />}
               </button>
@@ -511,21 +509,122 @@ export const ManagerLogin = ({ navigate, onLoginSuccess }) => {
 // AdminLogin
 // ---------------------------------------------------------------------------
 export const AdminLogin = ({ navigate, onLoginSuccess }) => {
-  const [brokerInfo] = React.useState(() => getBrokerInfo());
+  const initialBrokerInfo = React.useMemo(() => getBrokerInfo(), []);
+  const [brokerList, setBrokerList] = React.useState(() => (initialBrokerInfo ? [initialBrokerInfo] : []));
+  const [selectedId, setSelectedId] = React.useState(() => initialBrokerInfo?.broker_id || '');
+  const [selectedBroker, setSelectedBroker] = React.useState(() => initialBrokerInfo);
+  const [listError, setListError] = React.useState('');
+  const [listLoading, setListLoading] = React.useState(!initialBrokerInfo);
   const [user, setUser] = React.useState('');
   const [password, setPassword] = React.useState('');
-  const [server, setServer] = React.useState(() => getBrokerDisplayServer(getBrokerInfo() || {}));
+  const [server, setServer] = React.useState(() => getBrokerDisplayServer(initialBrokerInfo || {}));
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
-    if (!brokerInfo) {
-      navigate('/', { replace: true });
+    let cancelled = false;
+
+    setListLoading(true);
+    setListError('');
+
+    fetchBrokerList()
+      .then((list) => {
+        if (cancelled) return;
+
+        setBrokerList(list);
+
+        const preferredBroker =
+          (initialBrokerInfo?.broker_id && list.find((broker) => broker.broker_id === initialBrokerInfo.broker_id)) ||
+          getDefaultBroker(list);
+
+        if (preferredBroker) {
+          setSelectedId(preferredBroker.broker_id);
+          setSelectedBroker(preferredBroker);
+          setServer(getBrokerDisplayServer(preferredBroker));
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+
+        if (initialBrokerInfo) {
+          setBrokerList([initialBrokerInfo]);
+          setSelectedId(initialBrokerInfo.broker_id);
+          setSelectedBroker(initialBrokerInfo);
+          setServer(getBrokerDisplayServer(initialBrokerInfo));
+          return;
+        }
+
+        setListError(err.message || 'Failed to load brokers.');
+      })
+      .finally(() => {
+        if (!cancelled) setListLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [initialBrokerInfo]);
+
+  const retryLoad = () => {
+    setListLoading(true);
+    setListError('');
+
+    fetchBrokerList()
+      .then((list) => {
+        setBrokerList(list);
+
+        const preferredBroker = getDefaultBroker(list);
+        if (preferredBroker) {
+          setSelectedId(preferredBroker.broker_id);
+          setSelectedBroker(preferredBroker);
+          setServer(getBrokerDisplayServer(preferredBroker));
+        }
+      })
+      .catch((err) => setListError(err.message || 'Failed to load brokers.'))
+      .finally(() => setListLoading(false));
+  };
+
+  const handleBrokerChange = (brokerId) => {
+    try {
+      const nextBroker = discoverBrokerById(brokerList, brokerId);
+      setSelectedId(nextBroker.broker_id);
+      setSelectedBroker(nextBroker);
+      setServer(getBrokerDisplayServer(nextBroker));
+      setBrokerInfo(nextBroker);
+      rememberBroker(nextBroker.broker_id);
+      setError('');
+    } catch (err) {
+      setError(err.message || 'Broker not found');
     }
-  }, [brokerInfo, navigate]);
+  };
+
+  const handleSwitchBroker = () => {
+    clearBrokerInfo();
+    setSelectedId('');
+    setSelectedBroker(null);
+    setServer('');
+    setError('');
+    navigate('/', { replace: true });
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    if (!selectedId) {
+      setError('Please select a broker.');
+      return;
+    }
+
+    let brokerInfo;
+    try {
+      brokerInfo = selectedBroker || discoverBrokerById(brokerList, selectedId);
+    } catch (err) {
+      setError(err.message || 'Broker not found');
+      return;
+    }
+
+    if (!brokerInfo) {
+      setError('Please select a broker.');
+      return;
+    }
     if (!user || !password) {
       setError('Login and password are required.');
       return;
@@ -533,6 +632,8 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
     setLoading(true);
     setError('');
     try {
+      setBrokerInfo(brokerInfo);
+      rememberBroker(brokerInfo.broker_id);
       const auth = await loginAdmin(brokerInfo, { user, password });
       const session = setAuthSession(auth, brokerInfo);
       requireAdminAuthSessionToken(session);
@@ -544,18 +645,49 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
     }
   };
 
-  if (!brokerInfo) return null;
-
   return (
     <LoginScreen
-      brokerInfo={brokerInfo}
+      brokerInfo={selectedBroker}
       subtitle="Admin Login"
       tone="admin"
       error={error}
       loading={loading}
+      submitDisabled={listLoading || !!listError || brokerList.length === 0 || !selectedId}
       onSubmit={handleSubmit}
-      onSwitchBroker={() => { clearBrokerInfo(); navigate('/', { replace: true }); }}
+      onSwitchBroker={handleSwitchBroker}
+      onRegisterBroker={() => navigate('/broker-manual-entry')}
     >
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="broker-select" className="text-[13px] font-medium leading-5 text-[color:var(--text-muted)]">
+          Broker
+        </label>
+        {listLoading && (
+          <div className="flex h-11 items-center gap-2 rounded-[6px] border border-[#d8dee8] bg-white px-3 text-[13px] text-[color:var(--text-muted)]">
+            <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+            Loading brokers...
+          </div>
+        )}
+        {!listLoading && listError && (
+          <div className="space-y-2">
+            <InlineError>{listError}</InlineError>
+            <button
+              type="button"
+              onClick={retryLoad}
+              className="inline-flex items-center gap-1.5 text-[11px] text-[color:var(--accent-500)] hover:text-[color:var(--accent-700)]"
+            >
+              <RefreshCw size={11} aria-hidden="true" /> Retry
+            </button>
+          </div>
+        )}
+        {!listLoading && !listError && (
+          <BrokerDropdown
+            brokers={brokerList}
+            selectedId={selectedId}
+            disabled={loading}
+            onChange={handleBrokerChange}
+          />
+        )}
+      </div>
       <Field id="admin-login" label="Login" type="number" icon={User} value={user} onChange={setUser} required />
       <PasswordField id="admin-password" value={password} onChange={setPassword} />
       <Field id="admin-server" label="Broker Server" icon={Server} value={server} onChange={setServer} readOnly />
@@ -572,37 +704,48 @@ const LoginScreen = ({
   tone,
   error,
   loading,
+  submitDisabled = false,
   onSubmit,
   onSwitchBroker,
+  onRegisterBroker,
   switchToLabel,
   onSwitchRole,
   children,
 }) => (
   <AuthShell>
     <Header
-      icon={tone === 'admin' ? ShieldCheck : Lock}
-      title={brokerInfo.name || brokerInfo.broker_id}
+      icon={tone === 'admin' ? Building2 : Lock}
+      title={brokerInfo?.name || brokerInfo?.broker_id || 'Alpha FX Markets'}
       subtitle={subtitle}
       tone={tone}
       broker={brokerInfo}
     />
-    <div className="p-5">
+    <div>
       <InlineError>{error}</InlineError>
-      <form onSubmit={onSubmit} className="mt-4 flex flex-col gap-4">
+      <form onSubmit={onSubmit} className="mt-1 flex flex-col gap-4">
         {children}
         <button
           type="submit"
-          disabled={loading}
-          className="mt-2 h-8 inline-flex items-center justify-center gap-2 bg-[color:var(--accent-500)] text-[color:var(--accent-contrast)] text-[12px] font-medium rounded-[3px] disabled:opacity-50"
+          disabled={loading || submitDisabled}
+          className="mt-3 h-11 inline-flex items-center justify-center gap-2 bg-[color:var(--accent-500)] text-[color:var(--accent-contrast)] text-[14px] font-semibold rounded-[6px] shadow-[0_14px_28px_-18px_rgba(37,99,235,0.95)] transition-colors hover:bg-[color:var(--accent-600)] focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:opacity-50 disabled:hover:bg-[color:var(--accent-500)]"
         >
           {loading ? <SpinnerLabel>Signing in</SpinnerLabel> : 'Sign in'}
         </button>
       </form>
 
-      <div className="mt-5 pt-4 border-t border-[color:var(--border-subtle)] flex items-center justify-between">
-        <button type="button" onClick={onSwitchBroker} className="text-[12px] text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]">
+      <div className="mt-7 border-t border-[color:var(--border-subtle)] pt-5 flex flex-wrap items-center justify-between gap-3">
+        <button type="button" onClick={onSwitchBroker} className="text-[13px] font-medium text-[color:var(--accent-500)] hover:text-[color:var(--accent-700)]">
           &larr; Switch broker
         </button>
+        {onRegisterBroker && (
+          <button
+            type="button"
+            onClick={onRegisterBroker}
+            className="text-[13px] font-medium text-[color:var(--accent-500)] hover:text-[color:var(--accent-700)]"
+          >
+            + Register new broker
+          </button>
+        )}
         {switchToLabel && onSwitchRole && (
           <button
             type="button"
@@ -622,12 +765,12 @@ const LoginScreen = ({
 // ---------------------------------------------------------------------------
 const Field = ({ id, label, icon: Icon, value, onChange, type = 'text', readOnly = false, required = false, placeholder = '' }) => (
   <div className="flex flex-col gap-1.5">
-    <label htmlFor={id} className="text-[11px] text-[color:var(--text-muted)]">
+    <label htmlFor={id} className="text-[13px] font-medium leading-5 text-[color:var(--text-muted)]">
       {label}
     </label>
     <div className="relative">
-      <span className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-[color:var(--text-muted)]">
-        {React.createElement(Icon, { size: 14, 'aria-hidden': 'true' })}
+      <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[color:var(--text-muted)]">
+        {React.createElement(Icon, { size: 18, 'aria-hidden': 'true' })}
       </span>
       <input
         id={id}
@@ -637,7 +780,7 @@ const Field = ({ id, label, icon: Icon, value, onChange, type = 'text', readOnly
         readOnly={readOnly}
         required={required}
         placeholder={placeholder}
-        className="w-full h-8 bg-[color:var(--bg-app)] border border-[color:var(--border-default)] text-[color:var(--text-primary)] text-[12px] pl-8 pr-2 outline-none focus:border-[color:var(--accent-500)] rounded-[3px] placeholder:text-[color:var(--text-muted)]"
+        className="w-full h-11 bg-white border border-[#d5dbe5] text-[color:var(--text-primary)] text-[14px] pl-11 pr-3 outline-none focus:border-[color:var(--accent-500)] focus:ring-2 focus:ring-blue-100 rounded-[6px] placeholder:text-[color:var(--text-muted)] read-only:bg-[#f8fafc] shadow-[0_1px_0_rgba(15,23,42,0.03)]"
       />
     </div>
   </div>
@@ -648,12 +791,12 @@ const PasswordField = ({ id, value, onChange }) => {
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-[11px] text-[color:var(--text-muted)]">
+      <label htmlFor={id} className="text-[13px] font-medium leading-5 text-[color:var(--text-muted)]">
         Password
       </label>
       <div className="relative">
-        <span className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-[color:var(--text-muted)]">
-          <Lock size={14} aria-hidden="true" />
+        <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[color:var(--text-muted)]">
+          <Lock size={18} aria-hidden="true" />
         </span>
         <input
           id={id}
@@ -661,16 +804,16 @@ const PasswordField = ({ id, value, onChange }) => {
           value={value}
           onChange={(event) => onChange(event.target.value)}
           required
-          className="w-full h-8 bg-[color:var(--bg-app)] border border-[color:var(--border-default)] text-[color:var(--text-primary)] text-[12px] pl-8 pr-8 outline-none focus:border-[color:var(--accent-500)] rounded-[3px]"
+          className="w-full h-11 bg-white border border-[#d5dbe5] text-[color:var(--text-primary)] text-[14px] pl-11 pr-11 outline-none focus:border-[color:var(--accent-500)] focus:ring-2 focus:ring-blue-100 rounded-[6px] shadow-[0_1px_0_rgba(15,23,42,0.03)]"
         />
         <button
           type="button"
           onClick={() => setShowPassword((v) => !v)}
-          className="absolute inset-y-0 right-0 pr-2 flex items-center text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]"
+          className="absolute inset-y-0 right-0 pr-3 flex items-center text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]"
           tabIndex={-1}
           aria-label={showPassword ? 'Hide password' : 'Show password'}
         >
-          {showPassword ? <EyeOff size={14} aria-hidden="true" /> : <Eye size={14} aria-hidden="true" />}
+          {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
         </button>
       </div>
     </div>

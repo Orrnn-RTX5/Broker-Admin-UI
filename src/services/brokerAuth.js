@@ -9,7 +9,7 @@ const BROKER_INFO_KEY = 'broker_info';
 const AUTH_KEY = 'auth';
 const RECENT_BROKERS_KEY = 'recent_brokers';
 const ADMIN_LOGIN_PORT = 8091;
-const DEFAULT_DISCOVERY_BASE_URL = 'https://backend.orrnn.com';
+const DEFAULT_DISCOVERY_BASE_URL = 'https://superbackend.orrnn.com';
 export const BROKER_DISCOVERY_PATH = '/api/v2/broker/servers';
 const GTA_LOGIN_SERVER_HANDLE = 'broker-server-2';
 const GTA_BROKER_ALIASES = new Set(['gta_broker', 'grow-trading-academy']);
@@ -27,7 +27,7 @@ export const RUNTIME_API_HOST =
 const normalizeDiscoveryBaseUrl = (value = '') => {
   const trimmed = String(value || '').replace(/\/+$/, '');
   if (!trimmed) return DEFAULT_DISCOVERY_BASE_URL;
-  if (/testbrokerbackend\.orrnn\.com|brokerbackend|:8091(?:\/|$)/i.test(trimmed)) {
+  if (/backend\.orrnn\.com|brokerbackend|:8091(?:\/|$)/i.test(trimmed)) {
     return DEFAULT_DISCOVERY_BASE_URL;
   }
   return trimmed;
@@ -36,7 +36,7 @@ const normalizeDiscoveryBaseUrl = (value = '') => {
 export const DISCOVERY_BASE_URL = normalizeDiscoveryBaseUrl(
   getRuntimeValue('DISCOVERY_BASE_URL', 'VITE_DISCOVERY_BASE_URL') ||
   viteEnv.VITE_DISCOVERY_BASE_URL ||
-  RUNTIME_API_HOST
+  DEFAULT_DISCOVERY_BASE_URL
 );
 
 // Set VITE_USE_MOCK_DISCOVERY=true in .env only when local mock data is needed.
@@ -323,6 +323,27 @@ const getResponseMessage = (data) =>
   data?.title ||
   '';
 
+const extractBrokerRecords = (data) => {
+  if (Array.isArray(data)) return data;
+
+  return (
+    data?.servers ??
+    data?.brokers ??
+    data?.data ??
+    data?.value ??
+    data?.items ??
+    data?.results ??
+    []
+  );
+};
+
+const isActiveBrokerRecord = (broker = {}) => {
+  const status = String(broker?.status || '').trim().toLowerCase();
+  if (status && status !== 'active') return false;
+  if (broker?.enabled === false) return false;
+  return true;
+};
+
 export const withAdminPort = (backendUrl = '') => {
   const trimmed = trimTrailingSlash(backendUrl);
   if (!trimmed) return '';
@@ -397,10 +418,10 @@ export const fetchBrokerList = async () => {
     data: redactForLog(data)
   });
 
-  // API may return an array directly or wrapped: { servers: [...] } / { brokers: [...] } / { data: [...] }
-  const list = Array.isArray(data) ? data : (data?.servers ?? data?.brokers ?? data?.data ?? []);
+  // API may return an array directly or wrapped: { servers: [...] } / { brokers: [...] } / { data: [...] } / { value: [...] }
+  const list = extractBrokerRecords(data);
   return list
-    .filter((b) => !b.status || b.status === 'active')
+    .filter(isActiveBrokerRecord)
     .map(normalizeBrokerInfo)
     .filter((broker) => broker.broker_id && broker.server);
 };

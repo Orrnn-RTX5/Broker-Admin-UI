@@ -70,17 +70,18 @@ test('fetchBrokerList uses v2 discovery and keeps sanitized broker server handle
       ok: true,
       status: 200,
       text: async () => JSON.stringify({
-        servers: [
+        value: [
           {
             broker_id: 'gta_broker',
             broker_name: 'Grow Trading Academy',
             status: 'active',
             server: 'broker-server-42',
             backend_url: 'https://services.growtradingacademy.com',
+            logo_url: 'https://superbackend.orrnn.com/api/v1/brokers/gta_broker/logo',
           },
           {
             broker_id: 'disabled',
-            status: 'disabled',
+            enabled: false,
             server: 'broker-server-99',
             backend_url: 'https://disabled.example.com',
           },
@@ -92,10 +93,11 @@ test('fetchBrokerList uses v2 discovery and keeps sanitized broker server handle
   const brokerAuth = await importFreshBrokerAuth();
   const list = await brokerAuth.fetchBrokerList();
 
-  assert.equal(requestedUrl, 'https://backend.orrnn.com/api/v2/broker/servers');
+  assert.equal(requestedUrl, 'https://superbackend.orrnn.com/api/v2/broker/servers');
   assert.equal(list.length, 1);
   assert.equal(list[0].broker_id, 'gta_broker');
   assert.equal(list[0].name, 'Grow Trading Academy');
+  assert.equal(list[0].logo_url, 'https://superbackend.orrnn.com/api/v1/brokers/gta_broker/logo');
   assert.equal(list[0].server, 'broker-server-42');
   assert.equal(list[0].backend_url, 'https://services.growtradingacademy.com');
   assert.equal(list[0].server_ip, '');
@@ -175,7 +177,7 @@ test('fetchBrokerList does not use the selected broker backend as discovery host
   const brokerAuth = await importFreshBrokerAuth();
   await brokerAuth.fetchBrokerList();
 
-  assert.equal(requestedUrl, 'https://backend.orrnn.com/api/v2/broker/servers');
+  assert.equal(requestedUrl, 'https://superbackend.orrnn.com/api/v2/broker/servers');
 });
 
 test('loginAdmin omits server when the caller does not explicitly supply one', async () => {

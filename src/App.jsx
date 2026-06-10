@@ -7,7 +7,7 @@ import GroupPropertiesPopup from './components/RIGHTCLICKJPOPUPS/GroupProperties
 import ManagerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ManagerPropertiesPopup';
 import ServerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ServerPropertiesPopup';
 import CreateGroupPopup from './components/RIGHTCLICKJPOPUPS/CreateGroupPopup';
-import { AdminLogin, BrokerSelector, ManagerLogin, ManualBrokerEntry } from './components/organisms/BrokerAuthScreens';
+import { AdminLogin, ManagerLogin, ManualBrokerEntry } from './components/organisms/BrokerAuthScreens';
 import { TabBar } from './components/organisms/TabBar';
 import { HelpModal } from './components/organisms/HelpModal';
 import {
@@ -449,7 +449,7 @@ const AppInner = () => {
       return <ManualBrokerEntry navigate={navigate} onLoginSuccess={handleAuthSuccess} />;
     }
 
-    return <BrokerSelector navigate={navigate} />;
+    return <AdminLogin navigate={navigate} onLoginSuccess={handleAuthSuccess} />;
   }
 
   return (
