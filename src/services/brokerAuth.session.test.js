@@ -180,6 +180,28 @@ test('fetchBrokerList does not use the selected broker backend as discovery host
   assert.equal(requestedUrl, 'https://superbackend.orrnn.com/api/v2/broker/servers');
 });
 
+test('fetchBrokerList ignores runtime discovery when it points at selected broker services host', async () => {
+  installBrowserGlobals({
+    API_HOST: 'https://services.growtradingacademy.com',
+    API_HOST_EXT: 'https://services.growtradingacademy.com',
+    DISCOVERY_BASE_URL: 'https://services.growtradingacademy.com',
+  });
+  let requestedUrl = '';
+  globalThis.fetch = async (url) => {
+    requestedUrl = url;
+    return {
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ servers: [] }),
+    };
+  };
+
+  const brokerAuth = await importFreshBrokerAuth();
+  await brokerAuth.fetchBrokerList();
+
+  assert.equal(requestedUrl, 'https://superbackend.orrnn.com/api/v2/broker/servers');
+});
+
 test('loginAdmin omits server when the caller does not explicitly supply one', async () => {
   installBrowserGlobals();
   let postedUrl = '';

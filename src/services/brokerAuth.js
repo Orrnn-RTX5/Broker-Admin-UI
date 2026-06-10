@@ -24,9 +24,33 @@ export const RUNTIME_API_HOST =
   viteEnv.VITE_API_HOST ||
   '').replace(/\/+$/, '');
 
+export const RUNTIME_API_HOST_EXT =
+  (getRuntimeValue('API_HOST_EXT', 'VITE_API_HOST_EXT') ||
+  viteEnv.VITE_API_HOST_EXT ||
+  '').replace(/\/+$/, '');
+
+const comparableOrigin = (value = '') => {
+  const trimmed = String(value || '').replace(/\/+$/, '');
+  if (!trimmed) return '';
+
+  try {
+    const url = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    return new URL(url).origin.toLowerCase();
+  } catch {
+    return trimmed.toLowerCase();
+  }
+};
+
 const normalizeDiscoveryBaseUrl = (value = '') => {
   const trimmed = String(value || '').replace(/\/+$/, '');
   if (!trimmed) return DEFAULT_DISCOVERY_BASE_URL;
+  const discoveryOrigin = comparableOrigin(trimmed);
+  const brokerApiOrigins = [RUNTIME_API_HOST, RUNTIME_API_HOST_EXT]
+    .map(comparableOrigin)
+    .filter(Boolean);
+  if (brokerApiOrigins.includes(discoveryOrigin)) {
+    return DEFAULT_DISCOVERY_BASE_URL;
+  }
   if (/backend\.orrnn\.com|brokerbackend|:8091(?:\/|$)/i.test(trimmed)) {
     return DEFAULT_DISCOVERY_BASE_URL;
   }

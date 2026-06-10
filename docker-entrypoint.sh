@@ -11,10 +11,23 @@ api_host="${API_HOST:-${VITE_API_HOST:-}}"
 ws_host="${WS_HOST:-${VITE_WS_HOST:-}}"
 api_host_ext="${API_HOST_EXT:-${VITE_API_HOST_EXT:-}}"
 default_mt5_server="${DEFAULT_MT5_SERVER:-${VITE_DEFAULT_MT5_SERVER:-}}"
-discovery_base_url="${DISCOVERY_BASE_URL:-${VITE_DISCOVERY_BASE_URL:-}}"
+default_discovery_base_url="${DEFAULT_DISCOVERY_BASE_URL:-${VITE_DEFAULT_DISCOVERY_BASE_URL:-https://superbackend.orrnn.com}}"
+discovery_base_url="${DISCOVERY_BASE_URL:-${VITE_DISCOVERY_BASE_URL:-$default_discovery_base_url}}"
 use_mock_discovery="${USE_MOCK_DISCOVERY:-${VITE_USE_MOCK_DISCOVERY:-false}}"
 backend_target="${BACKEND_TARGET:-${VITE_BACKEND_TARGET:-${BACKEND_MODE:-${VITE_BACKEND_MODE:-web}}}}"
 broker_id="${BROKER_ID:-${VITE_BROKER_ID:-}}"
+
+normalize_origin() {
+  printf '%s' "${1:-}" | sed -e 's#/*$##' -e 's#^http://##' -e 's#^https://##' | tr '[:upper:]' '[:lower:]'
+}
+
+discovery_origin="$(normalize_origin "$discovery_base_url")"
+api_origin="$(normalize_origin "$api_host")"
+api_ext_origin="$(normalize_origin "$api_host_ext")"
+
+if [ -z "$discovery_origin" ] || [ "$discovery_origin" = "$api_origin" ] || [ "$discovery_origin" = "$api_ext_origin" ]; then
+  discovery_base_url="$default_discovery_base_url"
+fi
 
 cat > "$CONFIG_FILE" <<EOF
 window.__RTX5_RUNTIME_CONFIG__ = {
