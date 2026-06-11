@@ -181,6 +181,7 @@ export const VIEW_PERMISSIONS = Object.freeze({
   'Groups': PERMISSION_KEYS.MANAGE_GROUPS,
   'LP Routing': PERMISSION_KEYS.MANAGE_GROUPS,
   'Gateways': PERMISSION_KEYS.SERVER_ADMIN,
+  'Feed Tenants': PERMISSION_KEYS.SERVER_ADMIN,
   'Managers': PERMISSION_KEYS.MANAGE_MANAGERS,
 
   // Order and position surfaces

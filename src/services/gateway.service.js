@@ -40,3 +40,18 @@ export const gatewayDisconnect = (role = 'both') =>
 
 export const gatewayGetRoutingOptions = () =>
   api.get(`${BASE}/routing-options`).then(extractData).catch(handleError);
+
+// ─── Market-data feed provider config (manager /gateway/feed contract) ────────
+// GET  …/gateway/feed/config        → { feed_provider, enabled, cserver:{…}, password_set, updated_at }
+// POST …/gateway/feed/config        → persists config (optional write-only "password")
+// POST …/gateway/feed/config/apply  → hot-applies the provider on the bridge
+const FEED_BASE = '/api/v1/manager/gateway/feed';
+
+export const gatewayGetFeedConfig = () =>
+  api.get(`${FEED_BASE}/config`, { _noRetry: true }).then(extractData).catch(handleError);
+
+export const gatewaySaveFeedConfig = (payload) =>
+  api.post(`${FEED_BASE}/config`, payload).then(extractData).catch(handleError);
+
+export const gatewayApplyFeedConfig = () =>
+  api.post(`${FEED_BASE}/config/apply`).then(extractData).catch(handleError);

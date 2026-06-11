@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React from 'react';
 import { 
   Server, 
@@ -39,7 +40,8 @@ import {
   BarChart2,
   PieChart,
   TrendingDown,
-  Download
+  Download,
+  Rss
 } from 'lucide-react';
 
 const BlueBookRedBookmarkIcon = (props) => (
@@ -380,6 +382,7 @@ export const sidebarData = [
                 ]
               },
               { label: "Gateways", icon: Link },
+              { label: "Feed Tenants", icon: Rss },
               { label: "Utency Matching Engine", icon: Zap },
               { label: "Data Feeds", icon: Activity },
               { label: "Plugins", icon: HardDrive },

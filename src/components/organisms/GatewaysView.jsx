@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Wifi, WifiOff, Loader2, X, Plus, RefreshCw, ChevronDown, ChevronUp, AlertCircle, Save, ShieldCheck, Activity } from 'lucide-react';
+import { Wifi, WifiOff, Loader2, X, Plus, RefreshCw, ChevronDown, ChevronUp, AlertCircle, Save, ShieldCheck, Activity, Rss, Zap, ClipboardPaste } from 'lucide-react';
 import {
   gatewayGetStatus,
   gatewayConnect,
   gatewayDisconnect,
   gatewayGetCentralConfig,
   gatewaySaveCentralConfig,
+  gatewayGetFeedConfig,
+  gatewaySaveFeedConfig,
+  gatewayApplyFeedConfig,
 } from '../../services/gateway.service';
+import { buildFeedConfigPayload, normalizeFeedProvider, parseFeedConfigImport } from '../../lib/feedConfigPayload';
+import { useToast } from '../ui/Toast';
 
 // ─── Shared field components ───────────────────────────────────────────────────
 const F = ({ label, required, children }) => (
@@ -26,6 +31,16 @@ const Input = ({ type = 'text', value, onChange, placeholder, required, disabled
     onChange={onChange}
     placeholder={placeholder}
     required={required}
+    disabled={disabled}
+  />
+);
+
+const Textarea = ({ value, onChange, placeholder, disabled }) => (
+  <textarea
+    className="ui-textarea ui-input-sm min-h-[104px] resize-y font-mono text-[11px]"
+    value={value}
+    onChange={onChange}
+    placeholder={placeholder}
     disabled={disabled}
   />
 );
@@ -254,8 +269,23 @@ const CentralLpConfigPanel = () => {
     }
   }, []);
 
-  useEffect(() => { loadConfig(); }, [loadConfig]);
-  useEffect(() => { loadStatus(); }, [loadStatus]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      await Promise.resolve();
+      if (!cancelled) await loadConfig();
+    })();
+    return () => { cancelled = true; };
+  }, [loadConfig]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      await Promise.resolve();
+      if (!cancelled) await loadStatus();
+    })();
+    return () => { cancelled = true; };
+  }, [loadStatus]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -295,7 +325,7 @@ const CentralLpConfigPanel = () => {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Central LP</span>
+              <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Central LP Order Routing</span>
               {loading && <Loader2 size={11} className="animate-spin" style={{ color: 'var(--muted)' }} />}
             </div>
             <div className="flex items-center gap-2 mt-0.5">
@@ -337,7 +367,7 @@ const CentralLpConfigPanel = () => {
           </F>
         </div>
 
-        <SectionLabel>Upstream Feed</SectionLabel>
+        <SectionLabel>Legacy WebSocket Feed</SectionLabel>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <F label="WebSocket URL" required>
             <Input value={form.upstream_ws_url} onChange={setField('upstream_ws_url')} placeholder="wss://superadmin.example.com/ws/feed?broker_id=gta_broker" required disabled={disabled} />
@@ -411,22 +441,422 @@ const CentralLpConfigPanel = () => {
   );
 };
 
+// ─── Market Data Feed provider (manager /gateway/feed contract) ────────────────
+const FEED_PROVIDER_OPTIONS = [
+  { value: 'rtxmd', label: 'RTX Market Data FIX' },
+  { value: 't4b', label: 'T4B' },
+  { value: 'equinix', label: 'Equinix FIX 4.4' },
+];
+
+const FEED_PROVIDER_LABELS = FEED_PROVIDER_OPTIONS.reduce((acc, provider) => {
+  acc[provider.value] = provider.label;
+  return acc;
+}, {});
+
+const providerLabel = (provider) => {
+  const normalized = normalizeFeedProvider(provider);
+  return FEED_PROVIDER_LABELS[normalized] || normalized || '-';
+};
+
+const DEFAULT_FEED_FORM = {
+  feed_provider: 'rtxmd',
+  enabled: false,
+  host: '',
+  port: '',
+  sender_comp_id: '',
+  target_comp_id: '',
+  username: '',
+  password: '',
+  use_ssl: true,
+  all_symbols: true,
+  symbols: '',
+  catalog_file: '',
+};
+
+const feedSymbolsToText = (symbols) => {
+  if (Array.isArray(symbols)) return symbols.join(', ');
+  if (typeof symbols === 'string') return symbols;
+  return '';
+};
+
+const normalizeFeedForm = (data) => {
+  const cserver = data?.cserver || {};
+  const symbols = feedSymbolsToText(cserver.symbols);
+  return {
+    feed_provider: normalizeFeedProvider(data?.feed_provider) || DEFAULT_FEED_FORM.feed_provider,
+    enabled: Boolean(data?.enabled),
+    host: cserver.host || '',
+    port: (cserver.port ?? '') === 0 ? '' : String(cserver.port ?? ''),
+    sender_comp_id: cserver.sender_comp_id || '',
+    target_comp_id: cserver.target_comp_id || '',
+    username: cserver.username || '',
+    password: '',
+    use_ssl: cserver.use_ssl ?? true,
+    all_symbols: symbols.trim() === '',
+    symbols,
+    catalog_file: cserver.catalog_file || '',
+  };
+};
+
+const getFeedStatusCounts = (status) => {
+  const providers = Array.isArray(status?.providers) ? status.providers : [];
+  return {
+    activeSource: typeof status?.feed_active_source === 'string' ? status.feed_active_source : '',
+    lpProvider: typeof status?.feed_provider === 'string' ? status.feed_provider : '',
+    connected: providers.filter((provider) => provider?.connected).length,
+    total: providers.length,
+    streaming: providers.reduce((sum, provider) => sum + (Number(provider?.symbols_streaming) || 0), 0),
+  };
+};
+
+// Payload shape (CSV-string symbols, write-only password) is pinned by
+// src/lib/feedConfigPayload.test.js against the manager feed-config contract.
+
+// formatUpdatedAt renders the feed-config updated_at (epoch SECONDS from the
+// manager) as a locale string, guarding null/0/non-numeric → '' (caller hides
+// the badge). Mirrors FeedTenantsView's formatWhen guard, but multiplies by
+// 1000 because this field is seconds, not millis.
+const formatUpdatedAt = (updatedAt) => {
+  const seconds = Number(updatedAt);
+  if (!seconds || Number.isNaN(seconds)) return '';
+  const date = new Date(seconds * 1000);
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleString();
+};
+
+const FeedProviderConfigPanel = () => {
+  const { notify } = useToast();
+  const [form, setForm] = useState(DEFAULT_FEED_FORM);
+  const [importText, setImportText] = useState('');
+  const [passwordSet, setPasswordSet] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState(null);
+  const [lpStatus, setLpStatus] = useState(null);
+  // null = probing; false = manager lacks the endpoint (404) → hide the panel.
+  const [supported, setSupported] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [statusLoading, setStatusLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [err, setErr] = useState('');
+  const [notice, setNotice] = useState('');
+
+  const setField = (key) => (event) => {
+    const { type, checked, value } = event.target;
+    setForm((current) => {
+      const next = { ...current, [key]: type === 'checkbox' ? checked : value };
+      if (key === 'all_symbols' && checked) next.symbols = '';
+      return next;
+    });
+    setNotice('');
+  };
+
+  const loadConfig = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
+    setErr('');
+    try {
+      const data = await gatewayGetFeedConfig();
+      setForm(normalizeFeedForm(data));
+      setPasswordSet(Boolean(data?.password_set));
+      setUpdatedAt(data?.updated_at || null);
+      setSupported(true);
+      return data;
+    } catch (error) {
+      if (error?.status === 404) {
+        // Older manager backend without the feed-config API: hide silently.
+        setSupported(false);
+      } else {
+        setSupported(true);
+        setErr(error.message || 'Failed to load feed provider config');
+      }
+      return null;
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, []);
+
+  const loadLpStatus = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setStatusLoading(true);
+    try {
+      const data = await gatewayGetStatus();
+      setLpStatus(data);
+      return data;
+    } catch (error) {
+      if (isGatewayDisconnectedError(error)) {
+        setLpStatus(DISCONNECTED_STATUS);
+      } else {
+        setErr(error.message || 'Failed to fetch LP gateway status');
+      }
+      return null;
+    } finally {
+      if (!silent) setStatusLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      await Promise.resolve(); // defer past the effect's synchronous phase
+      if (!cancelled) {
+        await loadConfig();
+        await loadLpStatus({ silent: true });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [loadConfig, loadLpStatus]);
+
+  const refreshAll = () => {
+    loadConfig();
+    loadLpStatus();
+  };
+
+  const handleImport = () => {
+    setErr('');
+    setNotice('');
+    const imported = parseFeedConfigImport(importText);
+    if (Object.keys(imported).length === 0) {
+      setErr('No recognized RTX market-data FIX fields found in the pasted config.');
+      return;
+    }
+
+    setForm((current) => ({
+      ...current,
+      ...imported,
+      feed_provider: imported.feed_provider || 'rtxmd',
+      password: imported.password ?? current.password,
+    }));
+    setNotice('SuperAdmin RTX Market Data FIX config imported. Review and save to apply it.');
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setErr('');
+    setNotice('');
+
+    if (form.port && !Number.isInteger(Number(form.port))) {
+      setErr('cServer port must be a whole number.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const payload = buildFeedConfigPayload(form);
+      await gatewaySaveFeedConfig(payload);
+      if (payload.password) setPasswordSet(true);
+      setForm((current) => ({ ...current, password: '' }));
+      setNotice(`${providerLabel(payload.feed_provider)} config saved.`);
+      await loadConfig({ silent: true });
+      await loadLpStatus({ silent: true });
+    } catch (error) {
+      setErr(error.message || 'Failed to save feed provider config');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleApply = async () => {
+    setErr('');
+    setNotice('');
+    setApplying(true);
+    try {
+      const result = await gatewayApplyFeedConfig();
+      // Report the server-confirmed active provider only — never the local
+      // (possibly unsaved/dirty) form value — so the success notice cannot
+      // claim a provider the apply did not actually activate.
+      const applied = result?.feed_provider || result?.provider;
+      const appliedLabel = applied ? providerLabel(applied) : 'feed config';
+      setNotice(`Feed provider applied: ${appliedLabel}`);
+      notify({ title: 'Feed provider applied', description: `Active provider: ${appliedLabel}`, tone: 'success' });
+      await loadLpStatus({ silent: true });
+    } catch (error) {
+      const message = error.message || 'Failed to apply feed provider';
+      setErr(message);
+      notify({ title: 'Apply failed', description: message, tone: 'danger' });
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  if (supported === false) return null;
+
+  const disabled = loading || saving || applying;
+  const statusCounts = getFeedStatusCounts(lpStatus);
+
+  return (
+    <div className="rounded-xl border overflow-hidden" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
+      <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--border-3)' }}>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-sky-500/10">
+            <Rss size={16} className="text-sky-400" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>RTX Market Data FIX Upstream</span>
+              {(loading || statusLoading) && <Loader2 size={11} className="animate-spin" style={{ color: 'var(--muted)' }} />}
+            </div>
+            <div className="flex items-center gap-2 mt-0.5">
+              <FeedProviderBadge provider={form.feed_provider} />
+              {formatUpdatedAt(updatedAt) && (
+                <span className="text-[10px]" style={{ color: 'var(--text-3)' }}>updated {formatUpdatedAt(updatedAt)}</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={refreshAll} disabled={disabled} title="Refresh feed config"
+            className="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm">
+            <RefreshCw size={13} className={loading || statusLoading ? 'animate-spin' : ''} />
+          </button>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-4">
+        <ErrBox msg={err} />
+        {notice && (
+          <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
+            style={{ background: 'rgba(34,197,94,0.1)', color: '#4ade80', border: '1px solid rgba(34,197,94,0.25)' }}>
+            <Activity size={12} className="shrink-0" /> {notice}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+          {[
+            { label: 'Saved Provider', value: providerLabel(form.feed_provider), color: '#60a5fa' },
+            { label: 'LP Provider', value: statusCounts.lpProvider ? providerLabel(statusCounts.lpProvider) : '-', color: 'var(--text)' },
+            { label: 'Active Source', value: statusCounts.activeSource || '-', color: statusCounts.activeSource ? '#4ade80' : 'var(--muted)' },
+            {
+              label: 'Streaming',
+              value: statusCounts.total ? `${statusCounts.streaming} symbols / ${statusCounts.connected}/${statusCounts.total}` : '-',
+              color: statusCounts.streaming > 0 ? '#4ade80' : 'var(--muted)',
+            },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="rounded-lg p-3 flex flex-col gap-1"
+              style={{ background: 'var(--surface-2)', border: '1px solid var(--border-3)' }}>
+              <span className="text-[10px] uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>{label}</span>
+              <span className="text-xs font-mono font-semibold truncate" style={{ color }}>{value}</span>
+            </div>
+          ))}
+        </div>
+
+        <FeedHealthPanel status={lpStatus} />
+
+        <SectionLabel>Import SuperAdmin Config</SectionLabel>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3 items-end">
+          <F label="Paste Config">
+            <Textarea
+              value={importText}
+              onChange={(event) => setImportText(event.target.value)}
+              placeholder={'FEED_PROVIDER=rtxmd\nCSERVER_HOST=md.example.com\nCSERVER_PORT=5211\nCSERVER_SENDER_COMP_ID=BROKER_MD\nCSERVER_PASSWORD=...'}
+              disabled={disabled}
+            />
+          </F>
+          <div className="flex lg:flex-col gap-2">
+            <button type="button" onClick={handleImport} disabled={disabled || !importText.trim()} className="ui-btn ui-btn-secondary ui-btn-sm gap-1.5">
+              <ClipboardPaste size={12} /> Import Paste
+            </button>
+            <button type="button" onClick={() => setImportText('')} disabled={disabled || !importText} className="ui-btn ui-btn-ghost ui-btn-sm gap-1.5">
+              <X size={12} /> Clear
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+          <F label="Provider">
+            <select
+              className="ui-select ui-input-sm"
+              value={form.feed_provider}
+              onChange={setField('feed_provider')}
+              disabled={disabled}
+            >
+              {FEED_PROVIDER_OPTIONS.map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </F>
+          <F label="Enabled">
+            <ToggleField label="cServer feed enabled" checked={form.enabled} onChange={setField('enabled')} disabled={disabled} />
+          </F>
+          <F label="Use SSL">
+            <ToggleField label="Enable SSL / TLS" checked={form.use_ssl} onChange={setField('use_ssl')} disabled={disabled} />
+          </F>
+          <F label="Symbols Mode">
+            <ToggleField label="All symbols" checked={form.all_symbols} onChange={setField('all_symbols')} disabled={disabled} />
+          </F>
+        </div>
+
+        <SectionLabel>FIX 4.4 Quote Session</SectionLabel>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <F label="Host">
+            <Input value={form.host} onChange={setField('host')} placeholder="cserver.example.com" disabled={disabled} />
+          </F>
+          <F label="Port">
+            <Input type="number" value={form.port} onChange={setField('port')} placeholder="5211" disabled={disabled} />
+          </F>
+          <F label="Sender CompID">
+            <Input value={form.sender_comp_id} onChange={setField('sender_comp_id')} placeholder="SenderCompID" disabled={disabled} />
+          </F>
+          <F label="Target CompID">
+            <Input value={form.target_comp_id} onChange={setField('target_comp_id')} placeholder="cServer" disabled={disabled} />
+          </F>
+          <F label="Username">
+            <Input value={form.username} onChange={setField('username')} placeholder="Username" disabled={disabled} />
+          </F>
+          <F label="Password">
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <Input
+                  type="password"
+                  value={form.password}
+                  onChange={setField('password')}
+                  placeholder={passwordSet ? 'Configured - enter replacement password' : 'Password'}
+                  disabled={disabled}
+                />
+              </div>
+              <ConfiguredBadge show={passwordSet} />
+            </div>
+          </F>
+          <F label="Symbols">
+            <Input
+              value={form.symbols}
+              onChange={setField('symbols')}
+              placeholder={form.all_symbols ? 'All symbols - saved as empty symbols' : 'EURUSD, GBPUSD, XAUUSD'}
+              disabled={disabled || form.all_symbols}
+            />
+          </F>
+          <F label="Catalog File">
+            <Input value={form.catalog_file} onChange={setField('catalog_file')} placeholder="Optional symbol catalog path" disabled={disabled} />
+          </F>
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={handleApply} disabled={disabled} className="ui-btn ui-btn-secondary ui-btn-sm gap-1.5">
+            {applying ? <><Loader2 size={12} className="animate-spin" /> Applying</> : <><Zap size={12} /> Apply now</>}
+          </button>
+          <button type="submit" disabled={disabled} className="ui-btn ui-btn-primary ui-btn-sm gap-1.5">
+            {saving ? <><Loader2 size={12} className="animate-spin" /> Saving</> : <><Save size={12} /> Save Feed Config</>}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
 // ─── Connect Modal ─────────────────────────────────────────────────────────────
 const ConnectModal = ({ onClose, onConnected }) => {
   const [role, setRole]       = useState('quote');
+  // No default credentials are shipped in source; the operator supplies them.
   const [form, setForm]       = useState({
-    name:                 'T4B',
-    provider:             'Tools for Brokers',
-    host:                 'achiever.tp.t4b.app',
-    port:                 '12333',
-    sender_comp_id:       'TIGER-50071-QUOTES',
-    target_comp_id:       'TIGER',
-    username:             'TIGER-50071-QUOTES',
-    password:             'TIGER@50071$$$$',
-    account:              '50071',
+    name:                 '',
+    provider:             '',
+    host:                 '',
+    port:                 '',
+    sender_comp_id:       '',
+    target_comp_id:       '',
+    username:             '',
+    password:             '',
+    account:              '',
     use_ssl:              false,
-    trade_sender_comp_id: 'TIGER-50071-TRADE',
-    trade_username:       'TIGER-50071-TRADE',
+    trade_sender_comp_id: '',
+    trade_username:       '',
     trade_password:       '',
   });
   const [saving, setSaving]   = useState(false);
@@ -502,25 +932,25 @@ const ConnectModal = ({ onClose, onConnected }) => {
           <SectionLabel>Connection</SectionLabel>
           <div className="grid grid-cols-2 gap-3">
             <F label="Host" required>
-              <Input value={form.host} onChange={sf('host')} placeholder="live-achiever.tp-t4b.app" required />
+              <Input value={form.host} onChange={sf('host')} placeholder="fix.gateway.example.com" required />
             </F>
             <F label="Port" required>
-              <Input value={form.port} onChange={sf('port')} placeholder="12333" required />
+              <Input value={form.port} onChange={sf('port')} placeholder="Port" required />
             </F>
             <F label="Sender CompID" required>
-              <Input value={form.sender_comp_id} onChange={sf('sender_comp_id')} placeholder="TIGER-50071-QUOTES" required />
+              <Input value={form.sender_comp_id} onChange={sf('sender_comp_id')} placeholder="SenderCompID" required />
             </F>
             <F label="Target CompID" required>
-              <Input value={form.target_comp_id} onChange={sf('target_comp_id')} placeholder="achiever.tp.t4b.app" required />
+              <Input value={form.target_comp_id} onChange={sf('target_comp_id')} placeholder="TargetCompID" required />
             </F>
             <F label="Username" required>
-              <Input value={form.username} onChange={sf('username')} placeholder="TIGER-50071-QUOTES" required />
+              <Input value={form.username} onChange={sf('username')} placeholder="Username" required />
             </F>
             <F label="Password" required>
-              <Input type="password" value={form.password} onChange={sf('password')} placeholder="Quote password" required />
+              <Input type="password" value={form.password} onChange={sf('password')} placeholder="Password" required />
             </F>
             <F label="Account">
-              <Input value={form.account} onChange={sf('account')} placeholder="50071" />
+              <Input value={form.account} onChange={sf('account')} placeholder="Account number" />
             </F>
             <F label="Use SSL">
               <label className="flex items-center gap-2 h-[30px] cursor-pointer">
@@ -538,11 +968,11 @@ const ConnectModal = ({ onClose, onConnected }) => {
               <div className="grid grid-cols-2 gap-3">
                 <F label="Trade Sender CompID" required>
                   <Input value={form.trade_sender_comp_id} onChange={sf('trade_sender_comp_id')}
-                    placeholder="TIGER-50071-TRADE" required={showTrade} />
+                    placeholder="Trade SenderCompID" required={showTrade} />
                 </F>
                 <F label="Trade Username" required>
                   <Input value={form.trade_username} onChange={sf('trade_username')}
-                    placeholder="TIGER-50071-TRADE" required={showTrade} />
+                    placeholder="Trade username" required={showTrade} />
                 </F>
                 <div className="col-span-2">
                   <F label="Trade Password" required>
@@ -666,8 +1096,81 @@ const SessionBlock = ({ title, data, color, hideDetails }) => {
   );
 };
 
+// ─── Per-feed health (additive lp/status fields; hidden on older bridges) ──────
+const formatTickAge = (age) => {
+  if (typeof age !== 'number' || !Number.isFinite(age) || age < 0) return '—';
+  return age < 10 ? `${age.toFixed(1)}s` : `${Math.round(age)}s`;
+};
+
+const formatSymbolCount = (count) =>
+  (typeof count === 'number' && Number.isFinite(count)) ? String(count) : '—';
+
+const FeedProviderBadge = ({ provider }) => provider ? (
+  <span
+    className="inline-flex items-center h-5 px-2 rounded text-[10px] font-semibold uppercase tracking-wide"
+    style={{ background: 'rgba(96,165,250,0.12)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.25)' }}
+  >
+    {providerLabel(provider)}
+  </span>
+) : null;
+
+const FeedProviderRow = ({ provider }) => {
+  const connected = Boolean(provider?.connected);
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg px-3 py-2"
+      style={{ background: 'var(--surface-2)', border: '1px solid var(--border-3)' }}>
+      <span className="flex items-center gap-2 min-w-0">
+        <StatusDot on={connected} />
+        <span className="text-[11px] font-mono font-semibold uppercase truncate" style={{ color: 'var(--text)' }}>
+          {providerLabel(provider?.id)}
+        </span>
+        <span className="text-[10px]" style={{ color: connected ? '#4ade80' : 'var(--muted)' }}>
+          {connected ? 'Connected' : 'Disconnected'}
+        </span>
+      </span>
+      <span className="flex items-center gap-4 shrink-0 text-[11px] font-mono" style={{ color: 'var(--text-2)' }}>
+        <span title="Last tick age">tick {formatTickAge(provider?.last_tick_age_sec)}</span>
+        <span title="Symbols streaming">{formatSymbolCount(provider?.symbols_streaming)} symbols</span>
+      </span>
+    </div>
+  );
+};
+
+// Renders the additive per-feed health fields from GET …/gateway/lp/status.
+// Older bridges do not send these fields — in that case render nothing.
+const FeedHealthPanel = ({ status }) => {
+  const feedProvider = typeof status?.feed_provider === 'string' ? status.feed_provider : '';
+  const activeSource = typeof status?.feed_active_source === 'string' ? status.feed_active_source : '';
+  const providers = Array.isArray(status?.providers) ? status.providers : [];
+
+  if (!feedProvider && !activeSource && providers.length === 0) return null;
+
+  return (
+    <div className="flex flex-col rounded-lg overflow-hidden border mt-2" style={{ borderColor: 'var(--border)' }}>
+      <div className="px-3 py-2 text-[10px] uppercase tracking-widest font-bold flex items-center justify-between"
+        style={{ background: 'var(--surface-2)', color: 'var(--text-3)' }}>
+        <span className="flex items-center gap-1.5"><Activity size={11} /> Feed Health</span>
+        <FeedProviderBadge provider={feedProvider} />
+      </div>
+      <div className="px-3 py-2 flex flex-col gap-2" style={{ background: 'var(--surface)' }}>
+        <div className="flex flex-col">
+          {feedProvider && <KV label="Configured Provider" value={providerLabel(feedProvider)} mono />}
+          {activeSource && <KV label="Active Source" value={activeSource} mono />}
+        </div>
+        {providers.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            {providers.map((provider, index) => (
+              <FeedProviderRow key={provider?.id || index} provider={provider} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ─── LP Gateway Panel ──────────────────────────────────────────────────────────
-const LpGatewayPanel = ({ hideHostPortPassword }) => {
+const LpGatewayPanel = () => {
   const [status, setStatus]           = useState(null);
   const [loading, setLoading]         = useState(true);
   const [modal, setModal]             = useState(null); // 'connect' | 'disconnect'
@@ -691,7 +1194,14 @@ const LpGatewayPanel = ({ hideHostPortPassword }) => {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { fetchStatus(); }, [fetchStatus]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      await Promise.resolve();
+      if (!cancelled) fetchStatus();
+    })();
+    return () => { cancelled = true; };
+  }, [fetchStatus]);
 
   const isConnected = status?.quote?.connected || status?.trade?.connected;
 
@@ -749,6 +1259,9 @@ const LpGatewayPanel = ({ hideHostPortPassword }) => {
       {expanded && (
         <div className="px-4 pb-4 flex flex-col gap-3 border-t" style={{ borderColor: 'var(--border-3)' }}>
           <ErrBox msg={err} />
+
+          {/* Per-feed health (additive fields; hides itself on older bridges) */}
+          <FeedHealthPanel status={status} />
 
           {loading && !status && (
             <div className="flex items-center gap-2 py-6 text-sm justify-center" style={{ color: 'var(--muted)' }}>
@@ -820,12 +1333,13 @@ const GatewaysView = () => {
         <div>
           <h1 className="text-[17px] font-semibold text-white mb-1">Gateways</h1>
           <p className="text-[12px] text-[color:var(--text-muted)]">
-            Connect liquidity providers via the LP Gateway API, or choose from built-in exchange gateways below.
+            Configure RTX market-data FIX, Central LP order routing, and live LP Gateway sessions.
           </p>
         </div>
       </div>
 
       <div className="p-5 pb-12 flex flex-col gap-6">
+        <FeedProviderConfigPanel />
         <CentralLpConfigPanel />
         <LpGatewayPanel />
       </div>

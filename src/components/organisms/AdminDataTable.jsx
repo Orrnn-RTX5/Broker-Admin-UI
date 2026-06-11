@@ -30,6 +30,7 @@ import ServerStatusPanel from './ServerStatusPanel';
 import ServerPropertiesPopup from '../RIGHTCLICKJPOPUPS/ServerPropertiesPopup';
 import CreateGroupPopup from '../RIGHTCLICKJPOPUPS/CreateGroupPopup';
 
+import FeedTenantsView from './FeedTenantsView';
 import IntegrationsView from './IntegrationsView';
 import AntiDDoSView from './AntiDDoSView';
 import SupportCenterView from './SupportCenterView';
@@ -159,6 +160,7 @@ const IMPORTED_VIEW_TYPES = new Set([
   'Reconciliation',
   'Chargebacks',
   'Gateways',
+  'Feed Tenants',
 ]);
 
 const isDelegatedAdminView = (viewType) => (
@@ -673,6 +675,15 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     return (
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         <GatewaysView />
+      </div>
+    );
+  }
+
+  // --- FEED TENANTS INJECTION ---
+  if (viewType === 'Feed Tenants') {
+    return (
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <FeedTenantsView />
       </div>
     );
   }
