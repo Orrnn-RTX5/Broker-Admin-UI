@@ -1,8 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, CheckCircle2, Loader2, RefreshCw, Save, Zap } from 'lucide-react';
+import React, { useState } from 'react';
+import { AlertCircle, CheckCircle2, Loader2, Save, Zap } from 'lucide-react';
 import {
   gatewayApplyFeedConfig,
-  gatewayGetFeedConfig,
   gatewaySaveFeedConfig,
 } from '../../services/gateway.service';
 import { buildFeedConfigPayload, normalizeFeedProvider } from '../../lib/feedConfigPayload';
@@ -16,7 +15,7 @@ const PROVIDER_OPTIONS = [
 
 const DEFAULT_FORM = {
   feed_provider: 'rtxmd',
-  enabled: false,
+  enabled: true,
   host: '',
   port: '',
   sender_comp_id: '',
@@ -33,32 +32,6 @@ const providerLabel = (value) =>
   PROVIDER_OPTIONS.find((option) => option.value === normalizeFeedProvider(value))?.label ||
   normalizeFeedProvider(value) ||
   'RTX Market Data FIX';
-
-const symbolsToText = (symbols) => {
-  if (Array.isArray(symbols)) return symbols.join(', ');
-  if (typeof symbols === 'string') return symbols;
-  return '';
-};
-
-const normalizeForm = (data) => {
-  const cserver = data?.cserver || {};
-  const symbols = symbolsToText(cserver.symbols);
-
-  return {
-    feed_provider: normalizeFeedProvider(data?.feed_provider) || DEFAULT_FORM.feed_provider,
-    enabled: Boolean(data?.enabled),
-    host: cserver.host || '',
-    port: cserver.port ? String(cserver.port) : '',
-    sender_comp_id: cserver.sender_comp_id || '',
-    target_comp_id: cserver.target_comp_id || '',
-    username: cserver.username || '',
-    password: '',
-    use_ssl: cserver.use_ssl ?? true,
-    all_symbols: symbols.trim() === '',
-    symbols,
-    catalog_file: cserver.catalog_file || '',
-  };
-};
 
 const Field = ({ label, required, children }) => (
   <label className="flex flex-col gap-1.5">
@@ -103,14 +76,12 @@ const Notice = ({ tone = 'info', children }) => {
 const GatewaysView = () => {
   const { notify } = useToast();
   const [form, setForm] = useState(DEFAULT_FORM);
-  const [passwordSet, setPasswordSet] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  const disabled = loading || saving || applying;
+  const disabled = saving || applying;
 
   const setField = (key) => (event) => {
     const { checked, type, value } = event.target;
@@ -123,36 +94,7 @@ const GatewaysView = () => {
     setNotice('');
   };
 
-  const loadConfig = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    setNotice('');
-
-    try {
-      const data = await gatewayGetFeedConfig();
-      setForm(normalizeForm(data));
-      setPasswordSet(Boolean(data?.password_set));
-    } catch (err) {
-      setError(`Saved LP credentials could not be loaded: ${err.message || 'request failed'}. You can still enter credentials below.`);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      await Promise.resolve();
-      if (!cancelled) await loadConfig();
-    })();
-    return () => { cancelled = true; };
-  }, [loadConfig]);
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setError('');
-    setNotice('');
-
+  const validateForm = () => {
     if (form.enabled) {
       const missing = [
         ['Host', form.host],
@@ -160,27 +102,49 @@ const GatewaysView = () => {
         ['Sender CompID', form.sender_comp_id],
         ['Target CompID', form.target_comp_id],
         ['Username', form.username],
+        ['Password', form.password],
       ].filter(([, value]) => !String(value || '').trim());
 
       if (missing.length > 0) {
-        setError(`${missing.map(([label]) => label).join(', ')} required when LP credentials are enabled.`);
-        return;
+        return `${missing.map(([label]) => label).join(', ')} required when LP credentials are enabled.`;
       }
     }
 
     if (form.port && !Number.isInteger(Number(form.port))) {
-      setError('Port must be a whole number.');
-      return;
+      return 'Port must be a whole number.';
     }
 
-    setSaving(true);
-    try {
-      const payload = buildFeedConfigPayload(form);
-      await gatewaySaveFeedConfig(payload);
-      if (payload.password) setPasswordSet(true);
-      setForm((current) => ({ ...current, password: '' }));
+    if (form.port && Number(form.port) <= 0) {
+      return 'Port must be greater than zero.';
+    }
+
+    return '';
+  };
+
+  const saveCurrentCredentials = async ({ announce = true } = {}) => {
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return null;
+    }
+
+    const payload = buildFeedConfigPayload(form);
+    await gatewaySaveFeedConfig(payload);
+    setForm((current) => ({ ...current, password: '' }));
+    if (announce) {
       setNotice(`${providerLabel(payload.feed_provider)} LP credentials saved.`);
       notify({ title: 'LP credentials saved', tone: 'success' });
+    }
+    return payload;
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setError('');
+    setNotice('');
+    setSaving(true);
+    try {
+      await saveCurrentCredentials();
     } catch (err) {
       const message = err.message || 'Failed to save LP credentials.';
       setError(message);
@@ -196,9 +160,11 @@ const GatewaysView = () => {
     setApplying(true);
 
     try {
+      const payload = await saveCurrentCredentials({ announce: false });
+      if (!payload) return;
       const result = await gatewayApplyFeedConfig();
       const activeProvider = result?.feed_provider || result?.provider || form.feed_provider;
-      setNotice(`LP credentials applied: ${providerLabel(activeProvider)}.`);
+      setNotice(`${providerLabel(payload.feed_provider)} LP credentials saved and applied.`);
       notify({ title: 'LP credentials applied', description: providerLabel(activeProvider), tone: 'success' });
     } catch (err) {
       const message = err.message || 'Failed to apply LP credentials.';
@@ -211,20 +177,11 @@ const GatewaysView = () => {
 
   return (
     <div className="flex-1 min-h-0 bg-[color:var(--bg-app)] overflow-y-auto text-[color:var(--text-primary)]">
-      <div className="flex items-start justify-between border-b border-black/40 bg-[color:var(--bg-surface-1)] px-5 py-4">
+      <div className="border-b border-black/40 bg-[color:var(--bg-surface-1)] px-5 py-4">
         <div>
           <h1 className="mb-1 text-[17px] font-semibold text-white">Gateways</h1>
           <p className="text-[12px] text-[color:var(--text-muted)]">Enter your LP credentials.</p>
         </div>
-        <button
-          type="button"
-          onClick={loadConfig}
-          disabled={disabled}
-          className="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm"
-          title="Reload saved credentials"
-        >
-          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-        </button>
       </div>
 
       <div className="p-5 pb-12">
@@ -299,7 +256,7 @@ const GatewaysView = () => {
                 type="password"
                 value={form.password}
                 onChange={setField('password')}
-                placeholder={passwordSet ? 'Configured - enter replacement password' : 'Enter LP password'}
+                placeholder="Enter LP password"
                 disabled={disabled}
               />
             </Field>
@@ -327,7 +284,7 @@ const GatewaysView = () => {
 
           <div className="flex justify-end gap-2 border-t pt-3" style={{ borderColor: 'var(--border-3)' }}>
             <button type="button" onClick={handleApply} disabled={disabled} className="ui-btn ui-btn-secondary ui-btn-sm gap-1.5">
-              {applying ? <><Loader2 size={12} className="animate-spin" /> Applying</> : <><Zap size={12} /> Apply Now</>}
+              {applying ? <><Loader2 size={12} className="animate-spin" /> Applying</> : <><Zap size={12} /> Save & Apply</>}
             </button>
             <button type="submit" disabled={disabled} className="ui-btn ui-btn-primary ui-btn-sm gap-1.5">
               {saving ? <><Loader2 size={12} className="animate-spin" /> Saving</> : <><Save size={12} /> Save LP Credentials</>}
