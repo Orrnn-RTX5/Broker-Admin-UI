@@ -71,58 +71,69 @@ const brokerMatchesRuntime = (broker) => {
 };
 
 const getDefaultBroker = (list = []) =>
-  list.find(brokerMatchesRuntime) ||
+  getRuntimeLockedBroker(list) ||
   list[0];
+
+const hasRuntimeBrokerConstraint = () =>
+  Boolean(String(RUNTIME_BROKER_ID || '').trim() || comparableHost(RUNTIME_DEFAULT_MT5_SERVER));
+
+const isRuntimeLockedBroker = (broker) =>
+  Boolean(broker && hasRuntimeBrokerConstraint() && brokerMatchesRuntime(broker));
+
+const getRuntimeLockedBroker = (list = []) => {
+  if (!hasRuntimeBrokerConstraint()) return null;
+  return list.find(brokerMatchesRuntime) || null;
+};
+
+const RTX5_LOGO_SRC = `${import.meta.env.BASE_URL || './'}logo-full-light.avif`;
 
 // ---------------------------------------------------------------------------
 // Shell & shared UI primitives
 // ---------------------------------------------------------------------------
+const AuthLogo = () => (
+  <img
+    src={RTX5_LOGO_SRC}
+    alt="RTX5"
+    className="mx-auto h-auto w-[150px] sm:w-[158px]"
+    draggable="false"
+  />
+);
+
 const AuthShell = ({ children }) => (
-  <div className="fixed inset-0 z-[9999] grid min-h-screen bg-[#f4f7fb] font-sans lg:grid-cols-[60%_40%]">
-    <div className="relative hidden min-h-0 overflow-hidden bg-slate-950 lg:block">
+  <div className="fixed inset-0 z-[9999] grid min-h-screen bg-white font-sans text-[#111827] lg:grid-cols-[60%_40%]">
+    <div className="relative hidden min-h-0 overflow-hidden bg-[#060b18] lg:block">
       <img
         src={authTradingVisual}
         alt=""
         aria-hidden="true"
         className="absolute inset-0 h-full w-full object-cover"
       />
-      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,6,23,0.08),rgba(2,6,23,0.02)_48%,rgba(2,6,23,0.38))]" />
-      <div className="absolute inset-y-0 right-0 w-28 bg-[linear-gradient(90deg,rgba(2,6,23,0),rgba(15,23,42,0.42))]" />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,6,23,0.05),rgba(2,6,23,0.04)_58%,rgba(2,6,23,0.22))]" />
     </div>
 
-    <div className="relative flex min-h-screen min-w-0 items-center justify-center overflow-hidden bg-[#f7f9fc] px-4 py-8 sm:px-8">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(37,99,235,0.08),transparent_28%),linear-gradient(180deg,#ffffff_0%,#f6f8fb_100%)]" />
-      <div className="relative w-full max-w-[472px] rounded-[8px] border border-[#dfe5ee] bg-white px-8 py-9 shadow-[0_28px_80px_-46px_rgba(15,23,42,0.55)] sm:px-9 sm:py-10">
-        {children}
+    <div className="min-h-screen overflow-y-auto bg-white">
+      <div className="mx-auto flex min-h-screen w-full items-center justify-center px-6 py-8 sm:px-8">
+        <div className="w-full max-w-[420px]">
+          {children}
+        </div>
       </div>
     </div>
   </div>
 );
 
-const Header = ({ icon, title, subtitle, tone = 'manager', broker }) => {
-  const Icon = icon;
-  const isAdmin = tone === 'admin';
-
-  return (
-    <div className="pb-8">
-      <div className="flex items-center gap-4">
-        <div
-          className={
-            isAdmin
-              ? 'h-12 w-12 rounded-[8px] flex items-center justify-center bg-[#f7fbff] text-blue-700 border border-[#d8e2ef] shadow-[0_8px_18px_-14px_rgba(15,23,42,0.65)]'
-              : 'h-12 w-12 rounded-[8px] flex items-center justify-center bg-[color:var(--accent-50)] text-[color:var(--accent-500)] border border-[color:var(--accent-100)] shadow-[0_8px_18px_-14px_rgba(15,23,42,0.65)]'
-          }
-        >
-          {broker ? <BrokerLogo broker={broker} size={44} fallback={Icon} /> : <Icon size={26} aria-hidden="true" />}
-        </div>
-        <div className="min-w-0">
-          <h1 className="text-[20px] font-semibold leading-6 text-[color:var(--text-primary)] truncate">{title}</h1>
-          <p className="mt-0.5 text-[14px] leading-5 text-[color:var(--text-muted)]">{subtitle}</p>
-        </div>
-      </div>
+const Header = ({ title, subtitle }) => (
+  <div className="mb-8 text-center">
+    <AuthLogo />
+    <div className="mt-7">
+      <h1 className="text-[28px] font-bold leading-tight text-[#0f172a]">{title}</h1>
+      {subtitle && (
+        <p className="mt-2 text-[15px] font-medium leading-6 text-[#6b7280]">
+          {subtitle}
+        </p>
+      )}
     </div>
-  );
-};
+  </div>
+);
 
 const InlineError = ({ children }) => {
   if (!children) return null;
@@ -151,8 +162,8 @@ const BrokerLogo = ({ broker, size = 32, fallback = Building2 }) => {
   if (src && !failed) {
     return (
       <span
-        className="inline-flex shrink-0 items-center justify-center overflow-hidden bg-[color:var(--bg-app)] border border-[color:var(--border-default)]"
-        style={{ width: size, height: size, borderRadius: 4 }}
+        className="inline-flex shrink-0 items-center justify-center overflow-hidden border border-[#dcf7f0] bg-[#effdf9]"
+        style={{ width: size, height: size, borderRadius: 8 }}
       >
         <img
           src={src}
@@ -166,8 +177,8 @@ const BrokerLogo = ({ broker, size = 32, fallback = Building2 }) => {
 
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center bg-[color:var(--accent-50)] text-[color:var(--accent-500)] border border-[color:var(--accent-100)]"
-      style={{ width: size, height: size, borderRadius: 4 }}
+      className="inline-flex shrink-0 items-center justify-center border border-[#c9f2e8] bg-[#e9fbf7] text-[#21bfa4]"
+      style={{ width: size, height: size, borderRadius: 8 }}
     >
       {React.createElement(fallback, {
         size: Math.max(14, Math.round(size * 0.45)),
@@ -200,24 +211,24 @@ const BrokerDropdown = ({ brokers, selectedId, disabled, onChange }) => {
         type="button"
         disabled={disabled}
         onClick={() => setOpen((value) => !value)}
-        className="w-full min-h-11 min-w-0 bg-white border border-[#d5dbe5] text-[color:var(--text-primary)] px-3 pr-9 py-2 outline-none focus:border-[color:var(--accent-500)] focus:ring-2 focus:ring-blue-100 rounded-[6px] disabled:opacity-50 cursor-pointer flex items-center gap-3 text-left shadow-[0_1px_0_rgba(15,23,42,0.03)]"
+        className="relative flex min-h-[56px] w-full min-w-0 cursor-pointer items-center gap-3 rounded-[8px] border border-[#dce3ec] bg-white px-4 py-2.5 pr-11 text-left text-[#111827] outline-none transition-colors focus:border-[#2563eb] focus:ring-2 focus:ring-[#dbeafe] disabled:cursor-not-allowed disabled:opacity-60"
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <BrokerLogo broker={selectedBroker} size={30} />
+        <BrokerLogo broker={selectedBroker} size={34} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[14px] font-semibold leading-5">
+          <span className="block truncate text-[15px] font-semibold leading-5">
             {selectedBroker?.name || 'Select broker'}
           </span>
         </span>
-        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--text-muted)]" aria-hidden="true" />
+        <ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#6b7280]" aria-hidden="true" />
       </button>
 
       {open && (
         <div
           role="listbox"
           aria-labelledby="broker-select"
-          className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 max-h-64 overflow-y-auto rounded-[6px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] shadow-lg"
+          className="absolute left-0 right-0 top-[calc(100%+8px)] z-30 max-h-64 overflow-y-auto rounded-[8px] border border-[#e1e5ea] bg-white py-1 shadow-[0_18px_40px_-24px_rgba(15,23,42,0.7)]"
         >
           {brokers.map((broker) => {
             const selected = broker.broker_id === selectedId;
@@ -231,14 +242,14 @@ const BrokerDropdown = ({ brokers, selectedId, disabled, onChange }) => {
                   onChange(broker.broker_id);
                   setOpen(false);
                 }}
-                className="w-full flex items-center gap-2 px-2.5 py-2 text-left hover:bg-[color:var(--bg-surface-2)]"
-                style={{ background: selected ? 'var(--bg-surface-2)' : undefined }}
+                className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-[#f8fafc]"
+                style={{ background: selected ? '#f8fafc' : undefined }}
               >
-                <BrokerLogo broker={broker} size={30} />
+                <BrokerLogo broker={broker} size={34} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px] font-semibold text-[color:var(--text-primary)]">{broker.name}</span>
+                  <span className="block truncate text-[14px] font-semibold text-[#111827]">{broker.name}</span>
                 </span>
-                {selected && <Check size={13} className="text-[color:var(--accent-500)]" aria-hidden="true" />}
+                {selected && <Check size={15} className="text-[#2563eb]" aria-hidden="true" />}
               </button>
             );
           })}
@@ -251,6 +262,21 @@ const BrokerDropdown = ({ brokers, selectedId, disabled, onChange }) => {
 // ---------------------------------------------------------------------------
 // BrokerSelector — fetches broker list from API, shows dropdown
 // ---------------------------------------------------------------------------
+const LockedBrokerDisplay = ({ broker }) => (
+  <div
+    id="broker-select"
+    className="flex min-h-[56px] w-full min-w-0 items-center gap-3 rounded-[8px] border border-[#dce3ec] bg-[#f8fafc] px-4 py-2.5 text-left text-[#111827]"
+    aria-label={`Locked broker: ${broker?.name || 'Selected broker'}`}
+  >
+    <BrokerLogo broker={broker} size={34} />
+    <span className="min-w-0 flex-1">
+      <span className="block truncate text-[15px] font-semibold leading-5">
+        {broker?.name || 'Selected broker'}
+      </span>
+    </span>
+  </div>
+);
+
 export const BrokerSelector = ({ navigate }) => {
   const [brokerList, setBrokerList] = React.useState([]);
   const [selectedId, setSelectedId] = React.useState('');
@@ -259,6 +285,7 @@ export const BrokerSelector = ({ navigate }) => {
   const [error, setError] = React.useState('');
   const [loadingRole, setLoadingRole] = React.useState('');
   const [manualEntry, setManualEntry] = React.useState(false);
+  const runtimeLockedBroker = React.useMemo(() => getRuntimeLockedBroker(brokerList), [brokerList]);
 
   // Load broker list on mount
   React.useEffect(() => {
@@ -298,7 +325,7 @@ export const BrokerSelector = ({ navigate }) => {
   };
 
   const submit = async (role) => {
-    if (!selectedId) {
+    if (!runtimeLockedBroker && !selectedId) {
       setError('Please select a broker.');
       return;
     }
@@ -307,9 +334,9 @@ export const BrokerSelector = ({ navigate }) => {
     setError('');
 
     try {
-      const brokerInfo = discoverBrokerById(brokerList, selectedId);
+      const brokerInfo = runtimeLockedBroker || discoverBrokerById(brokerList, selectedId);
       setBrokerInfo(brokerInfo);
-      rememberBroker(selectedId);
+      rememberBroker(brokerInfo.broker_id);
       navigate(role === 'admin' ? '/admin-login' : '/manager-login');
     } catch (err) {
       setError(err.message || 'Connection failed');
@@ -395,12 +422,16 @@ export const BrokerSelector = ({ navigate }) => {
               <label htmlFor="broker-select" className="text-[11px] text-[color:var(--text-muted)]">
                 Broker
               </label>
-              <BrokerDropdown
-                brokers={brokerList}
-                selectedId={selectedId}
-                disabled={!!loadingRole}
-                onChange={(brokerId) => { setSelectedId(brokerId); setError(''); }}
-              />
+              {runtimeLockedBroker ? (
+                <LockedBrokerDisplay broker={runtimeLockedBroker} />
+              ) : (
+                <BrokerDropdown
+                  brokers={brokerList}
+                  selectedId={selectedId}
+                  disabled={!!loadingRole}
+                  onChange={(brokerId) => { setSelectedId(brokerId); setError(''); }}
+                />
+              )}
               <div className="hidden" aria-hidden="true">
                 <select
                   id="broker-select-native"
@@ -432,13 +463,15 @@ export const BrokerSelector = ({ navigate }) => {
             </div>
 
             <div className="pt-3 border-t border-[color:var(--border-subtle)]">
-              <button
-                type="button"
-                onClick={() => setManualEntry(true)}
-                className="text-[12px] text-[color:var(--accent-500)] hover:text-[color:var(--accent-700)]"
-              >
-                + Register new broker
-              </button>
+              {!runtimeLockedBroker && (
+                <button
+                  type="button"
+                  onClick={() => setManualEntry(true)}
+                  className="text-[12px] text-[color:var(--accent-500)] hover:text-[color:var(--accent-700)]"
+                >
+                  + Register new broker
+                </button>
+              )}
             </div>
           </form>
         )}
@@ -457,6 +490,7 @@ export const ManagerLogin = ({ navigate, onLoginSuccess }) => {
   const [server, setServer] = React.useState(() => getBrokerDisplayServer(getBrokerInfo() || {}));
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const brokerLocked = React.useMemo(() => isRuntimeLockedBroker(brokerInfo), [brokerInfo]);
 
   React.useEffect(() => {
     if (!brokerInfo) {
@@ -494,7 +528,12 @@ export const ManagerLogin = ({ navigate, onLoginSuccess }) => {
       error={error}
       loading={loading}
       onSubmit={handleSubmit}
-      onSwitchBroker={() => { clearBrokerInfo(); navigate('/', { replace: true }); }}
+      brokerLocked={brokerLocked}
+      onSwitchBroker={() => {
+        if (brokerLocked) return;
+        clearBrokerInfo();
+        navigate('/', { replace: true });
+      }}
       switchToLabel="Admin login"
       onSwitchRole={() => navigate('/admin-login')}
     >
@@ -510,16 +549,19 @@ export const ManagerLogin = ({ navigate, onLoginSuccess }) => {
 // ---------------------------------------------------------------------------
 export const AdminLogin = ({ navigate, onLoginSuccess }) => {
   const initialBrokerInfo = React.useMemo(() => getBrokerInfo(), []);
+  const runtimeBrokerConstrained = hasRuntimeBrokerConstraint();
+  const initialBrokerLocked = React.useMemo(() => isRuntimeLockedBroker(initialBrokerInfo), [initialBrokerInfo]);
   const [brokerList, setBrokerList] = React.useState(() => (initialBrokerInfo ? [initialBrokerInfo] : []));
   const [selectedId, setSelectedId] = React.useState(() => initialBrokerInfo?.broker_id || '');
   const [selectedBroker, setSelectedBroker] = React.useState(() => initialBrokerInfo);
   const [listError, setListError] = React.useState('');
-  const [listLoading, setListLoading] = React.useState(!initialBrokerInfo);
+  const [listLoading, setListLoading] = React.useState(!initialBrokerInfo || (runtimeBrokerConstrained && !initialBrokerLocked));
   const [user, setUser] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [server, setServer] = React.useState(() => getBrokerDisplayServer(initialBrokerInfo || {}));
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const runtimeLockedBroker = React.useMemo(() => getRuntimeLockedBroker(brokerList), [brokerList]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -533,7 +575,9 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
 
         setBrokerList(list);
 
+        const lockedBroker = getRuntimeLockedBroker(list);
         const preferredBroker =
+          lockedBroker ||
           (initialBrokerInfo?.broker_id && list.find((broker) => broker.broker_id === initialBrokerInfo.broker_id)) ||
           getDefaultBroker(list);
 
@@ -546,7 +590,7 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
       .catch((err) => {
         if (cancelled) return;
 
-        if (initialBrokerInfo) {
+        if (initialBrokerInfo && (!runtimeBrokerConstrained || initialBrokerLocked)) {
           setBrokerList([initialBrokerInfo]);
           setSelectedId(initialBrokerInfo.broker_id);
           setSelectedBroker(initialBrokerInfo);
@@ -561,7 +605,7 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
       });
 
     return () => { cancelled = true; };
-  }, [initialBrokerInfo]);
+  }, [initialBrokerInfo, initialBrokerLocked, runtimeBrokerConstrained]);
 
   const retryLoad = () => {
     setListLoading(true);
@@ -571,7 +615,7 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
       .then((list) => {
         setBrokerList(list);
 
-        const preferredBroker = getDefaultBroker(list);
+        const preferredBroker = getRuntimeLockedBroker(list) || getDefaultBroker(list);
         if (preferredBroker) {
           setSelectedId(preferredBroker.broker_id);
           setSelectedBroker(preferredBroker);
@@ -583,6 +627,16 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
   };
 
   const handleBrokerChange = (brokerId) => {
+    if (runtimeLockedBroker) {
+      setSelectedId(runtimeLockedBroker.broker_id);
+      setSelectedBroker(runtimeLockedBroker);
+      setServer(getBrokerDisplayServer(runtimeLockedBroker));
+      setBrokerInfo(runtimeLockedBroker);
+      rememberBroker(runtimeLockedBroker.broker_id);
+      setError('');
+      return;
+    }
+
     try {
       const nextBroker = discoverBrokerById(brokerList, brokerId);
       setSelectedId(nextBroker.broker_id);
@@ -597,6 +651,8 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
   };
 
   const handleSwitchBroker = () => {
+    if (runtimeLockedBroker) return;
+
     clearBrokerInfo();
     setSelectedId('');
     setSelectedBroker(null);
@@ -615,7 +671,7 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
 
     let brokerInfo;
     try {
-      brokerInfo = selectedBroker || discoverBrokerById(brokerList, selectedId);
+      brokerInfo = runtimeLockedBroker || selectedBroker || discoverBrokerById(brokerList, selectedId);
     } catch (err) {
       setError(err.message || 'Broker not found');
       return;
@@ -652,17 +708,18 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
       tone="admin"
       error={error}
       loading={loading}
-      submitDisabled={listLoading || !!listError || brokerList.length === 0 || !selectedId}
+      submitDisabled={listLoading || !!listError || brokerList.length === 0 || (!runtimeLockedBroker && !selectedId)}
       onSubmit={handleSubmit}
       onSwitchBroker={handleSwitchBroker}
-      onRegisterBroker={() => navigate('/broker-manual-entry')}
+      brokerLocked={!!runtimeLockedBroker}
+      onRegisterBroker={runtimeLockedBroker ? undefined : () => navigate('/broker-manual-entry')}
     >
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="broker-select" className="text-[13px] font-medium leading-5 text-[color:var(--text-muted)]">
+      <div className="flex flex-col gap-2">
+        <label htmlFor="broker-select" className="text-[13px] font-semibold leading-5 text-[#334155]">
           Broker
         </label>
         {listLoading && (
-          <div className="flex h-11 items-center gap-2 rounded-[6px] border border-[#d8dee8] bg-white px-3 text-[13px] text-[color:var(--text-muted)]">
+          <div className="flex h-[56px] items-center gap-2 rounded-[8px] border border-[#dce3ec] bg-white px-4 text-[14px] text-[#6b7280]">
             <Loader2 size={13} className="animate-spin" aria-hidden="true" />
             Loading brokers...
           </div>
@@ -680,12 +737,16 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
           </div>
         )}
         {!listLoading && !listError && (
-          <BrokerDropdown
-            brokers={brokerList}
-            selectedId={selectedId}
-            disabled={loading}
-            onChange={handleBrokerChange}
-          />
+          runtimeLockedBroker ? (
+            <LockedBrokerDisplay broker={runtimeLockedBroker} />
+          ) : (
+            <BrokerDropdown
+              brokers={brokerList}
+              selectedId={selectedId}
+              disabled={loading}
+              onChange={handleBrokerChange}
+            />
+          )
         )}
       </div>
       <Field id="admin-login" label="Login" type="number" icon={User} value={user} onChange={setUser} required />
@@ -698,8 +759,13 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
 // ---------------------------------------------------------------------------
 // Shared LoginScreen layout
 // ---------------------------------------------------------------------------
+const getLoginSubtitle = (tone, fallback) => {
+  if (tone === 'admin') return 'Sign in to access your admin dashboard';
+  if (tone === 'manager') return 'Sign in to access your manager dashboard';
+  return fallback;
+};
+
 const LoginScreen = ({
-  brokerInfo,
   subtitle,
   tone,
   error,
@@ -707,96 +773,118 @@ const LoginScreen = ({
   submitDisabled = false,
   onSubmit,
   onSwitchBroker,
+  brokerLocked = false,
   onRegisterBroker,
   switchToLabel,
   onSwitchRole,
   children,
-}) => (
-  <AuthShell>
-    <Header
-      icon={tone === 'admin' ? Building2 : Lock}
-      title={brokerInfo?.name || brokerInfo?.broker_id || 'Alpha FX Markets'}
-      subtitle={subtitle}
-      tone={tone}
-      broker={brokerInfo}
-    />
-    <div>
-      <InlineError>{error}</InlineError>
-      <form onSubmit={onSubmit} className="mt-1 flex flex-col gap-4">
-        {children}
-        <button
-          type="submit"
-          disabled={loading || submitDisabled}
-          className="mt-3 h-11 inline-flex items-center justify-center gap-2 bg-[color:var(--accent-500)] text-[color:var(--accent-contrast)] text-[14px] font-semibold rounded-[6px] shadow-[0_14px_28px_-18px_rgba(37,99,235,0.95)] transition-colors hover:bg-[color:var(--accent-600)] focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:opacity-50 disabled:hover:bg-[color:var(--accent-500)]"
-        >
-          {loading ? <SpinnerLabel>Signing in</SpinnerLabel> : 'Sign in'}
-        </button>
-      </form>
+}) => {
+  const supportSubtitle = getLoginSubtitle(tone, subtitle);
+  const showFooterActions =
+    (!brokerLocked && Boolean(onSwitchBroker || onRegisterBroker)) ||
+    Boolean(switchToLabel && onSwitchRole);
 
-      <div className="mt-7 border-t border-[color:var(--border-subtle)] pt-5 flex flex-wrap items-center justify-between gap-3">
-        <button type="button" onClick={onSwitchBroker} className="text-[13px] font-medium text-[color:var(--accent-500)] hover:text-[color:var(--accent-700)]">
-          &larr; Switch broker
-        </button>
-        {onRegisterBroker && (
+  return (
+    <AuthShell>
+      <Header title="Welcome Back!" subtitle={supportSubtitle} />
+      <div>
+        <InlineError>{error}</InlineError>
+        <form onSubmit={onSubmit} className="flex flex-col gap-[18px]">
+          {children}
+          <div className="flex items-center justify-between gap-4 pt-0.5">
+            <div className="flex items-center gap-2.5 text-[13px] font-semibold text-[#374151]">
+              <span className="inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[4px] bg-[#2563eb] text-white" aria-hidden="true">
+                <Check size={13} strokeWidth={3} />
+              </span>
+              <span>Remember me</span>
+            </div>
+            <span className="shrink-0 text-[13px] font-semibold text-[#2563eb]">
+              Forgot password?
+            </span>
+          </div>
           <button
-            type="button"
-            onClick={onRegisterBroker}
-            className="text-[13px] font-medium text-[color:var(--accent-500)] hover:text-[color:var(--accent-700)]"
+            type="submit"
+            disabled={loading || submitDisabled}
+            className="relative mt-1 inline-flex h-[56px] items-center justify-center rounded-[7px] bg-[#0b5cff] px-5 text-[16px] font-bold text-white transition-colors hover:bg-[#0050e6] focus:outline-none focus:ring-2 focus:ring-[#bfdbfe] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:bg-[#0b5cff]"
           >
-            + Register new broker
+            {loading ? <SpinnerLabel>Signing in</SpinnerLabel> : 'Sign in'}
+            {!loading && <ArrowRight size={23} className="absolute right-5 top-1/2 -translate-y-1/2" aria-hidden="true" />}
           </button>
-        )}
-        {switchToLabel && onSwitchRole && (
-          <button
-            type="button"
-            onClick={onSwitchRole}
-            className="inline-flex items-center gap-1 text-[12px] text-[color:var(--accent-500)] hover:text-[color:var(--accent-700)]"
-          >
-            {switchToLabel} <ArrowRight size={13} aria-hidden="true" />
-          </button>
+        </form>
+
+        {showFooterActions && (
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-[#edf0f4] pt-6">
+            {!brokerLocked && onSwitchBroker && (
+              <button type="button" onClick={onSwitchBroker} className="text-[13px] font-semibold text-[#2563eb] hover:text-[#1d4ed8]">
+                &larr; Switch broker
+              </button>
+            )}
+            {!brokerLocked && onRegisterBroker && (
+              <button
+                type="button"
+                onClick={onRegisterBroker}
+                className="text-[13px] font-semibold text-[#2563eb] hover:text-[#1d4ed8]"
+              >
+                + Register new broker
+              </button>
+            )}
+            {switchToLabel && onSwitchRole && (
+              <button
+                type="button"
+                onClick={onSwitchRole}
+                className="inline-flex items-center gap-1 text-[13px] font-semibold text-[#2563eb] hover:text-[#1d4ed8]"
+              >
+                {switchToLabel} <ArrowRight size={15} aria-hidden="true" />
+              </button>
+            )}
+          </div>
         )}
       </div>
-    </div>
-  </AuthShell>
-);
+    </AuthShell>
+  );
+};
 
 // ---------------------------------------------------------------------------
 // Shared form field components
 // ---------------------------------------------------------------------------
-const Field = ({ id, label, icon: Icon, value, onChange, type = 'text', readOnly = false, required = false, placeholder = '' }) => (
-  <div className="flex flex-col gap-1.5">
-    <label htmlFor={id} className="text-[13px] font-medium leading-5 text-[color:var(--text-muted)]">
-      {label}
-    </label>
-    <div className="relative">
-      <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[color:var(--text-muted)]">
-        {React.createElement(Icon, { size: 18, 'aria-hidden': 'true' })}
-      </span>
-      <input
-        id={id}
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        readOnly={readOnly}
-        required={required}
-        placeholder={placeholder}
-        className="w-full h-11 bg-white border border-[#d5dbe5] text-[color:var(--text-primary)] text-[14px] pl-11 pr-3 outline-none focus:border-[color:var(--accent-500)] focus:ring-2 focus:ring-blue-100 rounded-[6px] placeholder:text-[color:var(--text-muted)] read-only:bg-[#f8fafc] shadow-[0_1px_0_rgba(15,23,42,0.03)]"
-      />
+const Field = ({ id, label, icon: Icon, value, onChange, type = 'text', readOnly = false, required = false, placeholder = '' }) => {
+  const resolvedPlaceholder = placeholder || (label === 'Login' ? 'Enter your login' : '');
+
+  return (
+    <div className="flex flex-col gap-2">
+      <label htmlFor={id} className="text-[13px] font-semibold leading-5 text-[#334155]">
+        {label}
+      </label>
+      <div className="relative">
+        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-[#6b7280]">
+          {React.createElement(Icon, { size: 21, strokeWidth: 1.9, 'aria-hidden': 'true' })}
+        </span>
+        <input
+          id={id}
+          type={type}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          readOnly={readOnly}
+          required={required}
+          placeholder={resolvedPlaceholder}
+          className="h-[56px] w-full rounded-[8px] border border-[#dce3ec] bg-white pl-[54px] pr-4 text-[14px] font-medium text-[#111827] outline-none transition-colors placeholder:text-[#b8c0cc] focus:border-[#2563eb] focus:ring-2 focus:ring-[#dbeafe] read-only:bg-white"
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const PasswordField = ({ id, value, onChange }) => {
   const [showPassword, setShowPassword] = React.useState(false);
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-[13px] font-medium leading-5 text-[color:var(--text-muted)]">
+    <div className="flex flex-col gap-2">
+      <label htmlFor={id} className="text-[13px] font-semibold leading-5 text-[#334155]">
         Password
       </label>
       <div className="relative">
-        <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[color:var(--text-muted)]">
-          <Lock size={18} aria-hidden="true" />
+        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-[#6b7280]">
+          <Lock size={21} strokeWidth={1.9} aria-hidden="true" />
         </span>
         <input
           id={id}
@@ -804,16 +892,17 @@ const PasswordField = ({ id, value, onChange }) => {
           value={value}
           onChange={(event) => onChange(event.target.value)}
           required
-          className="w-full h-11 bg-white border border-[#d5dbe5] text-[color:var(--text-primary)] text-[14px] pl-11 pr-11 outline-none focus:border-[color:var(--accent-500)] focus:ring-2 focus:ring-blue-100 rounded-[6px] shadow-[0_1px_0_rgba(15,23,42,0.03)]"
+          placeholder="Enter your password"
+          className="h-[56px] w-full rounded-[8px] border border-[#dce3ec] bg-white pl-[54px] pr-[54px] text-[14px] font-medium text-[#111827] outline-none transition-colors placeholder:text-[#b8c0cc] focus:border-[#2563eb] focus:ring-2 focus:ring-[#dbeafe]"
         />
         <button
           type="button"
           onClick={() => setShowPassword((v) => !v)}
-          className="absolute inset-y-0 right-0 pr-3 flex items-center text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]"
+          className="absolute inset-y-0 right-0 flex items-center pr-4 text-[#6b7280] hover:text-[#111827]"
           tabIndex={-1}
           aria-label={showPassword ? 'Hide password' : 'Show password'}
         >
-          {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+          {showPassword ? <EyeOff size={20} strokeWidth={1.9} aria-hidden="true" /> : <Eye size={20} strokeWidth={1.9} aria-hidden="true" />}
         </button>
       </div>
     </div>
