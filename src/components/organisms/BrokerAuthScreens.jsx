@@ -100,7 +100,10 @@ const AuthLogo = () => (
 );
 
 const AuthShell = ({ children }) => (
-  <div className="fixed inset-0 z-[9999] grid min-h-screen bg-white font-sans text-[#111827] lg:grid-cols-[60%_40%]">
+  <div
+    className="fixed inset-0 z-[9999] grid min-h-screen bg-white font-sans text-[#111827] lg:grid-cols-[60%_40%]"
+    style={{ fontFamily: 'var(--font-auth)' }}
+  >
     <div className="relative hidden min-h-0 overflow-hidden bg-[#060b18] lg:block">
       <img
         src={authTradingVisual}

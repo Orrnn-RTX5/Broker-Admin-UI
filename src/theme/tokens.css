@@ -54,6 +54,7 @@
   --space-6: 24px;
   --space-8: 32px;
 
+  --font-auth: 'Manrope', 'Roboto', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-sans: 'Roboto', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'Roboto Mono', 'JetBrains Mono', ui-monospace, monospace;
 
