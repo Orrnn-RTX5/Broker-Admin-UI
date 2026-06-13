@@ -14,7 +14,8 @@ import {
   ShieldCheck,
   User,
 } from 'lucide-react';
-import authTradingVisual from '../../assets/auth-trading-visual.png';
+import authTradingVisualAvif from '../../assets/auth-trading-visual.avif';
+import authTradingVisualPng from '../../assets/auth-trading-visual.png';
 import {
   clearBrokerInfo,
   discoverBrokerById,
@@ -95,6 +96,8 @@ const AuthLogo = () => (
     src={RTX5_LOGO_SRC}
     alt="RTX5"
     className="mx-auto h-auto w-[150px] sm:w-[158px]"
+    decoding="async"
+    fetchPriority="high"
     draggable="false"
   />
 );
@@ -105,12 +108,17 @@ const AuthShell = ({ children }) => (
     style={{ fontFamily: 'var(--font-auth)' }}
   >
     <div className="relative hidden min-h-0 overflow-hidden bg-[#060b18] lg:block">
-      <img
-        src={authTradingVisual}
-        alt=""
-        aria-hidden="true"
-        className="absolute inset-0 h-full w-full object-cover"
-      />
+      <picture>
+        <source srcSet={authTradingVisualAvif} type="image/avif" />
+        <img
+          src={authTradingVisualPng}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover"
+          decoding="async"
+          fetchPriority="low"
+        />
+      </picture>
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,6,23,0.05),rgba(2,6,23,0.04)_58%,rgba(2,6,23,0.22))]" />
     </div>
 
