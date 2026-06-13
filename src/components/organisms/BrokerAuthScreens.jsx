@@ -101,7 +101,7 @@ const AuthLogo = () => (
 
 const AuthShell = ({ children }) => (
   <div
-    className="fixed inset-0 z-[9999] grid min-h-screen bg-white font-sans text-[#111827] lg:grid-cols-[60%_40%]"
+    className="fixed inset-0 z-[9999] grid h-[100dvh] min-h-0 overflow-hidden bg-white font-sans text-[#111827] lg:grid-cols-[60%_40%]"
     style={{ fontFamily: 'var(--font-auth)' }}
   >
     <div className="relative hidden min-h-0 overflow-hidden bg-[#060b18] lg:block">
@@ -114,8 +114,8 @@ const AuthShell = ({ children }) => (
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,6,23,0.05),rgba(2,6,23,0.04)_58%,rgba(2,6,23,0.22))]" />
     </div>
 
-    <div className="min-h-screen overflow-y-auto bg-white">
-      <div className="mx-auto flex min-h-screen w-full items-center justify-center px-6 py-8 sm:px-8">
+    <div className="h-full min-h-0 overflow-hidden bg-white">
+      <div className="mx-auto flex h-full min-h-0 w-full items-center justify-center px-6 py-6 sm:px-8 sm:py-8">
         <div className="w-full max-w-[420px]">
           {children}
         </div>
