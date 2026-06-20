@@ -32,6 +32,28 @@ const getCategory = (symbol) => {
   return CATEGORIES.OTHERS;
 };
 
+const buildFeedStatusUrl = () => {
+  const wsUrl = buildFeedWsUrl();
+  try {
+    const url = new URL(wsUrl, typeof window !== 'undefined' ? window.location.href : 'http://localhost');
+    url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:';
+    url.pathname = '/ws/feed/status';
+    url.hash = '';
+    return url.toString();
+  } catch {
+    return '';
+  }
+};
+
+const extractStatusSymbols = (payload = {}) => {
+  const source = Array.isArray(payload.available_symbols)
+    ? payload.available_symbols
+    : Array.isArray(payload.symbols)
+      ? payload.symbols
+      : [];
+  return new Set(source.map((symbol) => String(symbol || '').trim().toUpperCase()).filter(Boolean));
+};
+
 const useSymbolStore = create(
   persist(
     (set, get) => ({
@@ -93,6 +115,7 @@ const useSymbolStore = create(
             console.log('[SymbolStore] Connected to WebSocket');
             set({ isConnected: true });
             ws.send(JSON.stringify({ type: 'subscribe', symbols: ["*"] }));
+            get().syncAvailableSymbols();
           };
 
           ws.onmessage = (e) => {
@@ -133,6 +156,39 @@ const useSymbolStore = create(
         };
 
         connect();
+      },
+
+      syncAvailableSymbols: async () => {
+        let statusUrl;
+        try {
+          statusUrl = buildFeedStatusUrl();
+        } catch {
+          return;
+        }
+        if (!statusUrl) return;
+
+        try {
+          const res = await fetch(statusUrl, { credentials: 'include' });
+          if (!res.ok) return;
+          const payload = await res.json();
+          const allowed = extractStatusSymbols(payload);
+          if (allowed.size === 0) return;
+
+          set((state) => {
+            const nextSymbols = Object.entries(state.symbols || {}).reduce((acc, [key, entry]) => {
+              if (allowed.has(String(entry?.symbol || key).trim().toUpperCase())) acc[key] = entry;
+              return acc;
+            }, {});
+            return {
+              symbols: nextSymbols,
+              symbolMetadata: (state.symbolMetadata || []).filter((entry) => (
+                allowed.has(String(entry.symbol || '').trim().toUpperCase())
+              )),
+            };
+          });
+        } catch {
+          // Keep current cache if scoped status is temporarily unavailable.
+        }
       },
 
       disconnectWebSocket: () => {

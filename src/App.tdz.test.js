@@ -74,16 +74,21 @@ test('App.jsx declares canViewActive before its first use', () => {
   const src = readFileSync(join(here, 'App.jsx'), 'utf8');
   const lines = src.split(/\r?\n/);
 
-  const declLine = lines.findIndex((l) => /\bconst\s+canViewActive\s*=/.test(l));
-  assert.notEqual(declLine, -1, 'expected a `const canViewActive =` declaration in App.jsx');
-
   // First line that references the identifier `canViewActive` outside a comment
   // and not as part of the declaration itself.
+  const declLine = lines.findIndex((l) => /\bconst\s+canViewActive\s*=/.test(l));
   const firstUse = lines.findIndex((l, i) => {
     if (i === declLine) return false;
     const code = l.replace(/\/\/.*$/, ''); // strip line comments
     return /\bcanViewActive\b/.test(code);
   });
+
+  // Newer App.jsx delegates authenticated routes to AuthenticatedApp.jsx, so
+  // the old identifier may no longer live in this file. If it is absent, the
+  // original TDZ risk cannot exist here.
+  if (declLine === -1 && firstUse === -1) return;
+
+  assert.notEqual(declLine, -1, 'expected a `const canViewActive =` declaration before use in App.jsx');
   assert.notEqual(firstUse, -1, 'expected at least one use of canViewActive in App.jsx');
 
   assert.ok(

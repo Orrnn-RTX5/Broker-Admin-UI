@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AlertCircle, CheckCircle2, Loader2, Save, Zap } from 'lucide-react';
 import {
   gatewayApplyFeedConfig,
+  gatewayGetFeedConfig,
   gatewaySaveFeedConfig,
 } from '../../services/gateway.service';
 import { buildFeedConfigPayload, normalizeFeedProvider } from '../../lib/feedConfigPayload';
@@ -32,6 +33,27 @@ const providerLabel = (value) =>
   PROVIDER_OPTIONS.find((option) => option.value === normalizeFeedProvider(value))?.label ||
   normalizeFeedProvider(value) ||
   'RTX Market Data FIX';
+
+const formFromSavedConfig = (config) => {
+  const cserver = config?.cserver || {};
+  const symbols = String(cserver.symbols || '').trim();
+
+  return {
+    ...DEFAULT_FORM,
+    feed_provider: normalizeFeedProvider(config?.feed_provider) || DEFAULT_FORM.feed_provider,
+    enabled: typeof config?.enabled === 'boolean' ? config.enabled : DEFAULT_FORM.enabled,
+    host: String(cserver.host || ''),
+    port: cserver.port ? String(cserver.port) : '',
+    sender_comp_id: String(cserver.sender_comp_id || ''),
+    target_comp_id: String(cserver.target_comp_id || ''),
+    username: String(cserver.username || ''),
+    password: '',
+    use_ssl: typeof cserver.use_ssl === 'boolean' ? cserver.use_ssl : DEFAULT_FORM.use_ssl,
+    all_symbols: symbols === '',
+    symbols,
+    catalog_file: String(cserver.catalog_file || ''),
+  };
+};
 
 const Field = ({ label, required, children }) => (
   <label className="flex flex-col gap-1.5">
@@ -78,10 +100,33 @@ const GatewaysView = () => {
   const [form, setForm] = useState(DEFAULT_FORM);
   const [saving, setSaving] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [loadingConfig, setLoadingConfig] = useState(true);
+  const [passwordSet, setPasswordSet] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  const disabled = saving || applying;
+  const disabled = saving || applying || loadingConfig;
+
+  useEffect(() => {
+    let mounted = true;
+    setLoadingConfig(true);
+    gatewayGetFeedConfig()
+      .then((config) => {
+        if (!mounted) return;
+        setForm(formFromSavedConfig(config));
+        setPasswordSet(Boolean(config?.password_set));
+      })
+      .catch((err) => {
+        if (!mounted) return;
+        const message = err.message || 'Failed to load saved LP credentials.';
+        setError(message);
+      })
+      .finally(() => {
+        if (mounted) setLoadingConfig(false);
+      });
+
+    return () => { mounted = false; };
+  }, []);
 
   const setField = (key) => (event) => {
     const { checked, type, value } = event.target;
@@ -102,7 +147,7 @@ const GatewaysView = () => {
         ['Sender CompID', form.sender_comp_id],
         ['Target CompID', form.target_comp_id],
         ['Username', form.username],
-        ['Password', form.password],
+        ['Password', passwordSet || form.password],
       ].filter(([, value]) => !String(value || '').trim());
 
       if (missing.length > 0) {
@@ -131,6 +176,7 @@ const GatewaysView = () => {
     const payload = buildFeedConfigPayload(form);
     await gatewaySaveFeedConfig(payload);
     setForm((current) => ({ ...current, password: '' }));
+    setPasswordSet(Boolean(payload.password || passwordSet));
     if (announce) {
       setNotice(`${providerLabel(payload.feed_provider)} LP credentials saved.`);
       notify({ title: 'LP credentials saved', tone: 'success' });
@@ -256,7 +302,7 @@ const GatewaysView = () => {
                 type="password"
                 value={form.password}
                 onChange={setField('password')}
-                placeholder="Enter LP password"
+                placeholder={passwordSet ? 'Saved password set; leave blank to keep it' : 'Enter LP password'}
                 disabled={disabled}
               />
             </Field>
@@ -287,7 +333,7 @@ const GatewaysView = () => {
               {applying ? <><Loader2 size={12} className="animate-spin" /> Applying</> : <><Zap size={12} /> Save & Apply</>}
             </button>
             <button type="submit" disabled={disabled} className="ui-btn ui-btn-primary ui-btn-sm gap-1.5">
-              {saving ? <><Loader2 size={12} className="animate-spin" /> Saving</> : <><Save size={12} /> Save LP Credentials</>}
+              {saving || loadingConfig ? <><Loader2 size={12} className="animate-spin" /> {loadingConfig ? 'Loading' : 'Saving'}</> : <><Save size={12} /> Save LP Credentials</>}
             </button>
           </div>
         </form>

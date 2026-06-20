@@ -1,5 +1,40 @@
 import apiClient from './apiClient';
 
+const query = (params) => new URLSearchParams(
+  Object.entries(params).reduce((acc, [key, value]) => {
+    if (value !== undefined && value !== null) acc[key] = String(value);
+    return acc;
+  }, {})
+).toString();
+
+const LEGACY_SYMBOL_PARAM_ALIASES = {
+  contractSize: 'contract_size',
+  tickSize: 'tick_size',
+  tickValue: 'tick_value',
+  calcMode: 'calc_mode',
+  marginRate: 'margin_rate',
+  marginCurrency: 'margin_currency',
+  baseCurrency: 'base_currency',
+  profitCurrency: 'profit_currency',
+  tradeMode: 'trade_mode',
+  executionMode: 'execution_mode',
+  marginInitial: 'margin_initial',
+  marginMaintenance: 'margin_maintenance',
+  marginHedged: 'margin_hedged',
+  swapLong: 'swap_long',
+  swapShort: 'swap_short',
+  swapRollover3Days: 'swap_rollover_3days',
+  minVolume: 'min_volume',
+  maxVolume: 'max_volume',
+  volumeStep: 'volume_step',
+};
+
+const normalizeLegacySymbolParams = (params = {}) =>
+  Object.entries(params).reduce((acc, [key, value]) => {
+    acc[LEGACY_SYMBOL_PARAM_ALIASES[key] || key] = value;
+    return acc;
+  }, {});
+
 // ─── Online Users ──────────────────────────────────────────────────────────────
 export const getOnlineUsers = async () => {
   return apiClient.get('/OnlineUsers');
@@ -272,8 +307,8 @@ export const symbolList = async () => {
     return { ...s, ...meta };
   });
 };
-export const symbolAdd = (params) => apiClient.get(`/SymbolAdd?${new URLSearchParams(params).toString()}`);
-export const symbolUpdate = (params) => apiClient.get(`/SymbolUpdate?${new URLSearchParams(params).toString()}`);
+export const symbolAdd = (params) => apiClient.get(`/SymbolAdd?${query(normalizeLegacySymbolParams(params))}`);
+export const symbolUpdate = (params) => apiClient.get(`/SymbolUpdate?${query(normalizeLegacySymbolParams(params))}`);
 export const symbolEnable = (symbol) => apiClient.get(`/SymbolEnable?symbol=${encodeURIComponent(symbol)}`);
 export const symbolDisable = (symbol) => apiClient.get(`/SymbolDisable?symbol=${encodeURIComponent(symbol)}`);
 export const symbolClone = (body) => apiClient.post('/SymbolClone', body);
