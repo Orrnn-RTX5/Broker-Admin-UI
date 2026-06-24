@@ -18,7 +18,7 @@ const notifyBackendDisconnect = async (token) => {
 export const AuthService = {
   getMe: async () => {
     try {
-      const response = await api.get('/manager/api/v2/auth/me');
+      const response = await api.get('/manager/api/v2/auth/me', { _allowAuthFailure: true });
       const user = buildUserFromAuthPayload(response.data);
       useAuthStore.getState().setUser(user);
       return user;

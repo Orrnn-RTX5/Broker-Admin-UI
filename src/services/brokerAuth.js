@@ -3,6 +3,13 @@ import { getRuntimeValue } from '../config/runtimeConfig.js';
 import { isDesktopBackendTarget, resolveBrokerBackendUrl, resolveBrokerExtApiUrl } from '../config/backendTarget.js';
 import { redactForLog, redactUrlForLog } from '../lib/logRedaction.js';
 import { normalizeTokenExpiresAt } from '../store/authStore.js';
+import {
+  getAuthAccessToken,
+  getAuthExpiresAt,
+  getAuthExpiresIn,
+  getAuthPrimaryPayload,
+  getAuthRefreshToken,
+} from '../utils/authSession.js';
 
 const viteEnv = import.meta.env || {};
 const BROKER_INFO_KEY = 'broker_info';
@@ -209,7 +216,7 @@ const firstPresent = (...values) =>
 export const ADMIN_MISSING_AUTH_TOKEN_ERROR = 'Login failed: the broker did not return an access token.';
 
 export const hasUsableAuthSessionToken = (session = {}) =>
-  Boolean(firstPresent(session?.token, session?.access_token, session?.session_token));
+  Boolean(getAuthAccessToken(session));
 
 export const requireAdminAuthSessionToken = (session = {}) => {
   if (!hasUsableAuthSessionToken(session)) {
@@ -346,6 +353,17 @@ const getResponseMessage = (data) =>
   data?.detail ||
   data?.title ||
   '';
+
+const attachAuthHeaderToken = (data, response) => {
+  const authorization = response.headers?.get?.('authorization');
+  if (!authorization) return data || {};
+
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    return data.authorization ? data : { ...data, authorization };
+  }
+
+  return { value: data, authorization };
+};
 
 const extractBrokerRecords = (data) => {
   if (Array.isArray(data)) return data;
@@ -495,7 +513,7 @@ const postJson = async (url, body) => {
     status: response.status,
     data: redactForLog(data)
   });
-  return data || {};
+  return attachAuthHeaderToken(data, response);
 };
 
 export const loginManager = async (brokerInfo, { user, password, server }) => {
@@ -595,18 +613,22 @@ export const rememberBroker = (brokerId) => {
 };
 
 export const setAuthSession = (authData, brokerInfo) => {
-  const accessToken = authData?.token || authData?.access_token || authData?.session_token;
-  const refreshToken = authData?.refresh_token || accessToken;
+  const authPayload = getAuthPrimaryPayload(authData);
+  const accessToken = getAuthAccessToken(authData);
+  const refreshToken = getAuthRefreshToken(authData) || accessToken;
   const tokenExpiresAt = normalizeTokenExpiresAt(
-    authData?.expires_at || authData?.expiresAt || authData?.token_expires_at,
-    authData?.expires_in || authData?.expiresIn
+    getAuthExpiresAt(authData),
+    getAuthExpiresIn(authData)
   );
   const auth = {
     ...stripLicenseSecrets(authData || {}),
+    ...stripLicenseSecrets(authPayload),
     token: accessToken,
+    access_token: accessToken,
+    session_token: accessToken,
     refresh_token: refreshToken,
     tokenExpiresAt,
-    broker_id: authData?.broker_id || brokerInfo?.broker_id,
+    broker_id: authPayload?.broker_id || authData?.broker_id || brokerInfo?.broker_id,
   };
 
   sessionStorage.setItem(AUTH_KEY, JSON.stringify(auth));
@@ -616,6 +638,9 @@ export const setAuthSession = (authData, brokerInfo) => {
   if (tokenExpiresAt) {
     localStorage.setItem('tokenExpiresAt', String(tokenExpiresAt));
     localStorage.setItem('token_expires_at', String(tokenExpiresAt));
+  } else {
+    localStorage.removeItem('tokenExpiresAt');
+    localStorage.removeItem('token_expires_at');
   }
   if (auth.login) localStorage.setItem('brokerLogin', String(auth.login));
   if (auth.broker_id) localStorage.setItem('brokerId', auth.broker_id);

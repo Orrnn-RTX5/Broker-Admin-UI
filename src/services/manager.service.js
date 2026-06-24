@@ -305,9 +305,9 @@ export const ManagerService = {
     return res.data;
   },
 
-  getBrokerOrders: async (page = 1, limit = 50) => {
+  getBrokerOrders: async (limit = 100, offset = 0) => {
     const res = await api.get('/manager/BrokerOrders', {
-      params: { page, limit }
+      params: { limit, offset }
     });
     return res.data;
   },

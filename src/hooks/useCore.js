@@ -42,7 +42,7 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true) 
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, fetchFn, JSON.stringify(params), ...deps]);
+  }, [isAuthenticated, enabled, fetchFn, JSON.stringify(params), ...deps]);
 
   useEffect(() => {
     execute();

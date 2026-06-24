@@ -15,16 +15,28 @@ export const AUTH_STORAGE_KEYS = {
 };
 
 const AUTH_STORAGE_EVENT_KEYS = new Set(Object.values(AUTH_STORAGE_KEYS));
+const MIN_REASONABLE_EPOCH_SECONDS = 1_000_000_000;
+
+const normalizeExpiresIn = (expiresIn) => {
+  const seconds = Number(expiresIn);
+  return Number.isFinite(seconds) && seconds > 0 ? Date.now() + seconds * 1000 : null;
+};
 
 export const normalizeTokenExpiresAt = (expiresAt, expiresIn) => {
   if (expiresAt !== undefined && expiresAt !== null && expiresAt !== '') {
     if (typeof expiresAt === 'number' && Number.isFinite(expiresAt)) {
+      if (expiresAt > 0 && expiresAt < MIN_REASONABLE_EPOCH_SECONDS) {
+        return normalizeExpiresIn(expiresAt);
+      }
       return expiresAt < 100000000000 ? expiresAt * 1000 : expiresAt;
     }
 
     const raw = String(expiresAt).trim();
     if (/^\d+$/.test(raw)) {
       const numeric = Number(raw);
+      if (numeric > 0 && numeric < MIN_REASONABLE_EPOCH_SECONDS) {
+        return normalizeExpiresIn(numeric);
+      }
       return numeric < 100000000000 ? numeric * 1000 : numeric;
     }
 
@@ -33,8 +45,7 @@ export const normalizeTokenExpiresAt = (expiresAt, expiresIn) => {
   }
 
   if (expiresIn !== undefined && expiresIn !== null && expiresIn !== '') {
-    const seconds = Number(expiresIn);
-    return Number.isFinite(seconds) ? Date.now() + seconds * 1000 : null;
+    return normalizeExpiresIn(expiresIn);
   }
 
   return null;
@@ -76,6 +87,41 @@ const firstValue = (...values) =>
 const getTokenFromSessionAuth = (sessionAuth) =>
   firstValue(sessionAuth?.token, sessionAuth?.access_token, sessionAuth?.session_token);
 
+const getStoredAuthSession = () => {
+  if (typeof window === 'undefined') return null;
+
+  const sessionAuth = getSessionAuth();
+  const persistedState = getPersistedAuthState();
+  const accessToken = firstValue(
+    getTokenFromSessionAuth(sessionAuth),
+    localStorage.getItem(AUTH_STORAGE_KEYS.accessToken),
+    persistedState?.accessToken
+  );
+
+  if (!accessToken) return null;
+
+  return {
+    accessToken,
+    refreshToken: firstValue(
+      sessionAuth?.refresh_token,
+      sessionAuth?.refreshToken,
+      localStorage.getItem(AUTH_STORAGE_KEYS.refreshToken),
+      persistedState?.refreshToken,
+      accessToken
+    ),
+    tokenExpiresAt: firstValue(
+      sessionAuth?.tokenExpiresAt,
+      sessionAuth?.token_expires_at,
+      sessionAuth?.expires_at,
+      sessionAuth?.expiresAt,
+      localStorage.getItem(AUTH_STORAGE_KEYS.tokenExpiresAt),
+      localStorage.getItem(AUTH_STORAGE_KEYS.tokenExpiresAtSnake),
+      persistedState?.tokenExpiresAt
+    ),
+    user: persistedState?.user || null,
+  };
+};
+
 const getLoginPathForExpiredSession = (reason, user) => {
   if (reason === 'logout') return '/';
   return user?.is_admin || user?.role === 'admin' ? '/admin-login' : '/manager-login';
@@ -109,6 +155,24 @@ export const writeAuthSessionStorage = (accessToken, refreshToken, tokenExpiresA
   } catch {
     // Storage can be unavailable in constrained browser contexts.
   }
+};
+
+export const ensureAuthStateFromStorage = () => {
+  const state = useAuthStore.getState();
+  if (state.accessToken) return state;
+
+  const stored = getStoredAuthSession();
+  if (!stored?.accessToken || isTokenExpired(stored.tokenExpiresAt)) return state;
+
+  useAuthStore.setState({
+    accessToken: stored.accessToken,
+    refreshToken: stored.refreshToken || stored.accessToken,
+    tokenExpiresAt: normalizeTokenExpiresAt(stored.tokenExpiresAt),
+    user: state.user || stored.user,
+    isAuthenticated: true,
+  });
+  writeAuthSessionStorage(stored.accessToken, stored.refreshToken, stored.tokenExpiresAt);
+  return useAuthStore.getState();
 };
 
 export const clearAuthStorage = () => {
@@ -152,14 +216,34 @@ export const getAuthStorageStatus = (authState) => {
     { label: AUTH_STORAGE_KEYS.persisted, value: persistedState?.accessToken },
   ];
 
+  const presentTokens = tokens.filter((entry) => entry.value);
   const missing = tokens.filter((entry) => !entry.value).map((entry) => entry.label);
-  if (missing.length > 0) {
+  if (presentTokens.length === 0) {
     return { ok: false, reason: 'auth_storage_missing', missing };
   }
 
-  const mismatched = tokens.filter((entry) => entry.value !== accessToken).map((entry) => entry.label);
-  if (mismatched.length > 0) {
+  const mismatched = presentTokens
+    .filter((entry) => entry.value !== accessToken)
+    .map((entry) => entry.label);
+  const blockingMismatched = mismatched.filter((label) => label !== AUTH_STORAGE_KEYS.persisted);
+  if (blockingMismatched.length > 0) {
+    return { ok: false, reason: 'auth_storage_mismatch', mismatched: blockingMismatched };
+  }
+
+  const hasMatchingSessionSource = presentTokens.some((entry) => (
+    entry.value === accessToken &&
+    (entry.label === AUTH_STORAGE_KEYS.session || entry.label === AUTH_STORAGE_KEYS.accessToken)
+  ));
+  const hasMatchingPersistedSource = persistedState?.accessToken === accessToken;
+  if (!hasMatchingSessionSource && !hasMatchingPersistedSource) {
     return { ok: false, reason: 'auth_storage_mismatch', mismatched };
+  }
+
+  const missingRecoverableSessionSource = missing.some((label) => (
+    label === AUTH_STORAGE_KEYS.session || label === AUTH_STORAGE_KEYS.accessToken
+  ));
+  if (missingRecoverableSessionSource) {
+    writeAuthSessionStorage(accessToken, state.refreshToken, state.tokenExpiresAt);
   }
 
   const expiresAt = firstValue(
@@ -169,8 +253,7 @@ export const getAuthStorageStatus = (authState) => {
     sessionAuth?.expires_at,
     sessionAuth?.expiresAt,
     localStorage.getItem(AUTH_STORAGE_KEYS.tokenExpiresAt),
-    localStorage.getItem(AUTH_STORAGE_KEYS.tokenExpiresAtSnake),
-    persistedState?.tokenExpiresAt
+    localStorage.getItem(AUTH_STORAGE_KEYS.tokenExpiresAtSnake)
   );
 
   if (isTokenExpired(expiresAt)) {

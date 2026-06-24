@@ -39,3 +39,17 @@ test('resolveBrokerExtApiUrl prefers explicit ext fields and infers HTTP for bar
     'http://203.0.113.10:8091'
   );
 });
+
+test('resolveBrokerExtApiUrl uses discovered services domain as direct ext API origin', async () => {
+  installWindowConfig({ BACKEND_TARGET: 'web' });
+  const { resolveBrokerExtApiUrl } = await importFreshBackendTarget();
+
+  assert.equal(
+    resolveBrokerExtApiUrl({
+      broker_id: 'myprop-trade',
+      services_domain: 'services.myprop.trade',
+      server_url: 'https://services.myprop.trade',
+    }),
+    'https://services.myprop.trade'
+  );
+});

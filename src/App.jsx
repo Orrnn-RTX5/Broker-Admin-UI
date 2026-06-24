@@ -2,6 +2,7 @@ import React from 'react';
 import { AdminLogin, ManagerLogin, ManualBrokerEntry } from './components/organisms/BrokerAuthScreens';
 import { useAuthStore } from './store/authStore';
 import { buildUserFromAuthPayload } from './utils/sessionUser';
+import { getAuthAccessToken, getAuthExpiresAt, getAuthExpiresIn, getAuthRefreshToken } from './utils/authSession';
 
 const AuthenticatedApp = React.lazy(() => import('./AuthenticatedApp.jsx'));
 const AUTH_PATHS = new Set(['/', '/manager-login', '/admin-login', '/broker-manual-entry']);
@@ -35,17 +36,16 @@ const App = () => {
   const { pathname, navigate } = useBrowserPath();
 
   const handleAuthSuccess = React.useCallback((session, redirectPath) => {
-    const accessToken = session.token || session.session_token || session.access_token;
-    const refreshToken = session.refresh_token || accessToken;
-    const expiresAt = session.expires_at || session.expiresAt || session.token_expires_at || session.tokenExpiresAt;
-    const expiresIn = session.expires_in || session.expiresIn;
+    const accessToken = getAuthAccessToken(session);
+    const refreshToken = getAuthRefreshToken(session) || accessToken;
+    const expiresAt = getAuthExpiresAt(session);
+    const expiresIn = getAuthExpiresIn(session);
 
     if (accessToken) {
       setToken(accessToken, refreshToken, expiresAt, expiresIn);
       setUser(buildUserFromAuthPayload(session));
+      navigate(redirectPath, { replace: true });
     }
-
-    navigate(redirectPath, { replace: true });
   }, [navigate, setToken, setUser]);
 
   React.useEffect(() => {

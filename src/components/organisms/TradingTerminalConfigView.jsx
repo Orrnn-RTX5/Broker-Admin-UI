@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PlatformConfigService } from '../../services/platformConfig.service';
+import { getApiErrorMessage } from '../../utils/apiShapes';
 import { Search, Save } from 'lucide-react';
 
 const CHART_TYPES = ['candlestick', 'bar', 'line', 'area'];
@@ -11,6 +12,7 @@ const TradingTerminalConfigView = () => {
   const [searchGroup, setSearchGroup] = useState('');
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     default_chart: 'candlestick',
@@ -23,6 +25,7 @@ const TradingTerminalConfigView = () => {
     if (e) e.preventDefault();
     if (!searchGroup.trim()) return;
     setLoading(true);
+    setLoadError('');
     try {
       const res = await PlatformConfigService.getTradingTerminalConfig(searchGroup.trim());
       setConfig(res);
@@ -39,7 +42,9 @@ const TradingTerminalConfigView = () => {
         setForm({ default_chart: 'candlestick', default_timeframe: 'H1', theme: 'dark', config_json: '{}' });
         setGroup(searchGroup.trim());
       } else {
-        alert('Failed to load: ' + (err.response?.data?.error || err.message));
+        setConfig(null);
+        setGroup('');
+        setLoadError(getApiErrorMessage(err, 'Failed to load trading terminal config.'));
       }
     } finally {
       setLoading(false);
@@ -99,6 +104,11 @@ const TradingTerminalConfigView = () => {
       {/* Content */}
       {loading ? (
         <div className="flex items-center justify-center flex-1 text-[#888] text-[11px]">Loading…</div>
+      ) : loadError ? (
+        <div className="flex flex-col items-center justify-center flex-1 text-center px-6">
+          <div className="text-[12px] font-semibold text-[#f48771]">Failed to load trading terminal config</div>
+          <div className="mt-1 text-[11px] text-[#888] max-w-[520px]">{loadError}</div>
+        </div>
       ) : !group ? (
         <div className="flex items-center justify-center flex-1 text-[#555] text-[11px]">Enter a group name and click Load</div>
       ) : (

@@ -23,6 +23,7 @@ import { useLocalStorage } from './lib/useLocalStorage';
 import { useKbStatus } from './lib/useKbStatus';
 import { canAccessView, requiredPermissionForView } from './utils/permissions';
 import { AuthService } from './services/auth.service';
+import { getViewCapabilityToast, shouldBlockViewNavigation } from './config/viewCapabilities';
 import { Network, Globe, ShieldAlert } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { TooltipProvider } from './components/ui/Tooltip';
@@ -52,6 +53,13 @@ const AccessDeniedPanel = ({ viewName, permission }) => (
 );
 
 const SYMBOL_FEED_VIEWS = new Set(['Market Overview']);
+const getInitialServerTabForLabel = (label) => (
+  label === 'MainTrade Backup Server' ||
+  label === 'Local Main Status Server' ||
+  label === 'Local Main Backup Server'
+    ? 'Status'
+    : null
+);
 
 const AuthenticatedAppInner = ({ navigate }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -69,7 +77,6 @@ const AuthenticatedAppInner = ({ navigate }) => {
   const [serverPopupData, setServerPopupData] = React.useState(null);
   const [isCreatingGroup, setIsCreatingGroup] = React.useState(false);
   const [refreshKey, setRefreshKey] = React.useState(0);
-  const [serverTargetTab, setServerTargetTab] = React.useState(null);
   const [helpOpen, setHelpOpen] = React.useState(false);
   const [now, setNow] = React.useState(() => new Date());
   const [rowCount, setRowCount] = React.useState({ total: 0, filtered: 0 });
@@ -79,6 +86,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
   const [savedSearches, setSavedSearches] = useLocalStorage('rtx5.searches', {});
   const [openTabs, setOpenTabs] = useLocalStorage('rtx5.tabs', ['Groups']);
   const [activeTab, setActiveTab] = useLocalStorage('rtx5.activeTab', 'Groups');
+  const [serverTargetTab, setServerTargetTab] = React.useState(() => getInitialServerTabForLabel(activeTab));
 
   const [history, setHistory] = React.useState([activeTab || 'Groups']);
   const [currentIndex, setCurrentIndex] = React.useState(0);
@@ -239,14 +247,19 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
   const handleNodeSelect = (nodeOrLabel) => {
     let label = typeof nodeOrLabel === 'string' ? nodeOrLabel : nodeOrLabel.label;
-    if (label === 'Local Main Status Server' || label === 'Local Main Backup Server') {
-      label = 'Main Trade Server';
-      setServerTargetTab('Status');
-    } else {
-      setServerTargetTab(null);
-    }
+    const isLockedDropdownParent = typeof nodeOrLabel !== 'string' && nodeOrLabel.lockedDropdown;
+    const viewCapabilityToast = getViewCapabilityToast(label);
+    if (!isLockedDropdownParent && viewCapabilityToast) notify(viewCapabilityToast);
+    if (shouldBlockViewNavigation(label)) return;
+    setServerTargetTab(getInitialServerTabForLabel(label));
     if (label === activeNode) return;
     openTab(label);
+  };
+
+  const handleLockedDropdownClick = (nodeOrLabel) => {
+    const label = typeof nodeOrLabel === 'string' ? nodeOrLabel : nodeOrLabel.label;
+    const viewCapabilityToast = getViewCapabilityToast(label);
+    if (viewCapabilityToast) notify(viewCapabilityToast);
   };
 
   const handleNodeDoubleClick = (node) => {
@@ -442,6 +455,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
         <SidebarNavTree
           onNodeSelect={handleNodeSelect}
           onNodeDoubleClick={handleNodeDoubleClick}
+          onLockedDropdownClick={handleLockedDropdownClick}
           selectedNodeLabel={activeNode}
         />
 
@@ -450,7 +464,10 @@ const AuthenticatedAppInner = ({ navigate }) => {
             tabs={openTabs}
             activeTab={activeTab}
             onSelect={(t) => {
-              setActiveTab(t);
+              const viewCapabilityToast = getViewCapabilityToast(t);
+              if (viewCapabilityToast) notify(viewCapabilityToast);
+              if (shouldBlockViewNavigation(t)) return;
+              setServerTargetTab(getInitialServerTabForLabel(t));
               openTab(t);
             }}
             onClose={closeTab}

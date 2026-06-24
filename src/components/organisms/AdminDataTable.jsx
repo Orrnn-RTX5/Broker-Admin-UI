@@ -6,7 +6,7 @@ import {
   securityTableData
 } from '../../data/terminalData.jsx';
 import { useUsers, useGroups } from '../../hooks/useAdmin';
-import { usePositions, useDealsSummary } from '../../hooks/usePositions';
+import { usePositions, useOrders, useDealsSummary } from '../../hooks/usePositions';
 import { useInstruments } from '../../hooks/useInstruments';
 import { useAccounts } from '../../hooks/useAccounts';
 import { ManagerService } from '../../services/manager.service';
@@ -18,6 +18,7 @@ import {
   getCloseAllConfirmationPrompt,
   isCloseAllConfirmationAccepted,
 } from '../../utils/closeAllAction';
+import { canAccessView } from '../../utils/permissions';
 import { useToast } from '../ui/Toast';
 import { Clock, CornerUpRight, Server, Calendar, Search, ChevronDown, ShieldAlert } from 'lucide-react';
 
@@ -93,10 +94,19 @@ const OrangeSquareSIcon = (props) => (
 );
 
 const COMING_SOON_VIEWS = new Set([
-  'Orders', 'Ultency Matching Engine', 'Data Feeds', 'FCN', 'Routing',
-  'Funds & ETF', 'Plugins', 'Subscriptions', 'Charts & Ticks',
+  'Utency Matching Engine', 'Ultency Matching Engine', 'Data Feeds', 'FCN',
+  'Routing', 'Funds & ETF', 'Plugins', 'Reports', 'Subscriptions', 'Charts & Ticks',
   'Live Update', 'Mailbox',
 ]);
+
+const ORDER_RENDER_BATCH_SIZE = 100;
+const orderFilterSelectShellClassName = 'flex border border-[color:var(--border-strong)] bg-transparent h-[22px] items-center text-[color:var(--text-primary)] cursor-pointer hover:bg-white/10';
+const orderFilterSelectClassName = 'bg-[color:var(--bg-surface-1)] border-none outline-none w-full h-full text-[11px] px-1 appearance-none cursor-pointer text-[color:var(--text-primary)] [color-scheme:dark]';
+const orderFilterSelectOptionClassName = 'bg-[color:var(--bg-surface-2)] text-[color:var(--text-primary)]';
+const orderFilterSelectOptionStyle = {
+  backgroundColor: 'var(--bg-surface-2)',
+  color: 'var(--text-primary)',
+};
 
 const SUPPORT_CENTER_VIEWS = new Set([
   'Support Center', 'News', 'Articles', 'MetaQuotes Leads', 'Automation',
@@ -187,6 +197,247 @@ const getGroupRow = (group, idx) => ({
   iconType: 'group'
 });
 
+const padDatePart = (value) => String(value).padStart(2, '0');
+
+const formatOrderDateInput = (date) => (
+  `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}T${padDatePart(date.getHours())}:${padDatePart(date.getMinutes())}`
+);
+
+const getOrderDateRangeForPreset = (preset) => {
+  if (preset === 'all') {
+    return {
+      from: '',
+      to: '',
+    };
+  }
+
+  const now = new Date();
+  const start = new Date(now);
+  const end = new Date(now);
+
+  if (preset === 'last7') {
+    start.setDate(start.getDate() - 6);
+  } else if (preset === 'month') {
+    start.setDate(1);
+  }
+
+  start.setHours(0, 0, 0, 0);
+  end.setHours(23, 59, 59, 999);
+
+  return {
+    from: formatOrderDateInput(start),
+    to: formatOrderDateInput(end),
+  };
+};
+
+const createDefaultOrderFilters = () => ({
+  query: '',
+  symbol: '',
+  openOnly: false,
+  rangePreset: 'all',
+  ...getOrderDateRangeForPreset('all'),
+  database: 'current',
+});
+
+const parseOrderDateInput = (value) => {
+  const normalizedValue = String(value || '').trim().replace('T', ' ');
+  const match = normalizedValue.match(/^(\d{4})[.-](\d{2})[.-](\d{2})(?:\s+(\d{2}):(\d{2})(?::\d{2})?)?$/);
+  if (!match) return null;
+
+  const [, year, month, day, hour = '0', minute = '0'] = match;
+  const date = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), 0, 0);
+  return Number.isNaN(date.getTime()) ? null : date.getTime();
+};
+
+const getOrderTimestampMs = (order) => {
+  const candidates = [order.timeSetup, order.timeDone, order.time, order.openTime, order.closeTime];
+  for (const candidate of candidates) {
+    if (candidate == null || candidate === '') continue;
+    const numeric = Number(candidate);
+    if (Number.isFinite(numeric) && numeric > 0) {
+      return numeric > 1000000000000 ? numeric : numeric * 1000;
+    }
+
+    const parsed = Date.parse(candidate);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+};
+
+const pickDefined = (source, keys, fallback = '') => {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (value !== undefined && value !== null && value !== '') return value;
+  }
+  return fallback;
+};
+
+const formatTradeTimestamp = (value) => {
+  if (value === undefined || value === null || value === '') return '';
+
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 0) {
+    const timestampMs = numeric > 1000000000000 ? numeric : numeric * 1000;
+    const date = new Date(timestampMs);
+    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString();
+  }
+
+  const parsed = Date.parse(value);
+  if (Number.isFinite(parsed)) return new Date(parsed).toLocaleString();
+
+  return String(value);
+};
+
+const getTradeSideLabel = (value) => {
+  if (value === 0 || String(value).toLowerCase() === '0') return 'Buy';
+  if (value === 1 || String(value).toLowerCase() === '1') return 'Sell';
+
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return '';
+  if (normalized === 'buy') return 'Buy';
+  if (normalized === 'sell') return 'Sell';
+  return String(value);
+};
+
+const renderTableValue = (value) => (
+  value === undefined || value === null || value === '' ? '-' : value
+);
+
+const getOrderRow = (order, idx) => ({
+  id: order.ticket ?? order.order ?? order.orderTicket ?? idx,
+  ticket: order.ticket ?? order.order ?? order.orderTicket,
+  login: order.login,
+  time: order.timeSetupFormatted || order.timeDoneFormatted || order.timeSetup || order.timeDone || '',
+  timeMs: getOrderTimestampMs(order),
+  symbol: order.symbol,
+  side: order.side ?? order.action ?? order.type ?? '',
+  volume: order.volume,
+  open_price: order.priceOpen ?? order.price_open ?? order.price ?? '',
+  sl: order.priceSl ?? order.sl ?? '',
+  tp: order.priceTp ?? order.tp ?? '',
+  status: order.status ?? order.state ?? '',
+  comment: order.comment ?? '',
+});
+
+const getPositionRow = (position, idx) => {
+  const ticket = pickDefined(position, ['ticket', 'positionTicket', 'Position', 'position', 'id'], idx);
+  const rawTime = pickDefined(position, ['timeCreateFormatted', 'timeCreate', 'TimeCreate', 'time', 'Time', 'openTime', 'OpenTime']);
+
+  return {
+    id: ticket,
+    ticket,
+    login: pickDefined(position, ['login', 'Login', 'accountLogin', 'account_login']),
+    time: position.timeCreateFormatted || formatTradeTimestamp(rawTime),
+    symbol: pickDefined(position, ['symbol', 'Symbol']),
+    side: getTradeSideLabel(pickDefined(position, ['side', 'Side', 'action', 'Action', 'type', 'Type', 'cmd', 'Cmd'])),
+    volume: pickDefined(position, ['volume', 'Volume', 'lots', 'Lots', 'volumeExt', 'VolumeExt']),
+    open_price: pickDefined(position, ['priceOpen', 'PriceOpen', 'openPrice', 'OpenPrice', 'Price', 'price']),
+    current_price: pickDefined(position, ['priceCurrent', 'PriceCurrent', 'currentPrice', 'CurrentPrice']),
+    sl: pickDefined(position, ['priceSl', 'PriceSl', 'priceSL', 'PriceSL', 'sl', 'SL']),
+    tp: pickDefined(position, ['priceTp', 'PriceTp', 'priceTP', 'PriceTP', 'tp', 'TP']),
+    swap: pickDefined(position, ['swap', 'Swap', 'storage', 'Storage']),
+    profit: pickDefined(position, ['profit', 'Profit']),
+  };
+};
+
+const getDealRow = (deal, idx) => {
+  const ticket = pickDefined(deal, ['ticket', 'Ticket', 'deal', 'Deal', 'id'], idx);
+  const rawTime = pickDefined(deal, ['timeFormatted', 'time', 'Time', 'timeMsc', 'TimeMsc', 'time_msc', 'createdAt']);
+
+  return {
+    id: ticket,
+    ticket,
+    orderTicker: pickDefined(deal, ['orderTicket', 'OrderTicket', 'order', 'Order']),
+    time: deal.timeFormatted || formatTradeTimestamp(rawTime),
+    login: pickDefined(deal, ['login', 'Login', 'accountLogin', 'account_login']),
+    symbol: pickDefined(deal, ['symbol', 'Symbol']),
+    action: getTradeSideLabel(pickDefined(deal, ['action', 'Action', 'side', 'Side', 'type', 'Type'])),
+    entry: pickDefined(deal, ['entry', 'Entry']),
+    volume: pickDefined(deal, ['volume', 'Volume', 'lots', 'Lots', 'volumeExt', 'VolumeExt']),
+    price: pickDefined(deal, ['price', 'Price']),
+    commission: pickDefined(deal, ['commission', 'Commission']),
+    fee: pickDefined(deal, ['fee', 'Fee']),
+    profit: pickDefined(deal, ['profit', 'Profit']),
+  };
+};
+
+const CLOSED_ORDER_STATUSES = new Set([
+  'closed',
+  'done',
+  'cancelled',
+  'canceled',
+  'deleted',
+  'expired',
+  'rejected',
+]);
+
+const isOpenOrderRow = (row) => {
+  const status = String(row.status ?? '').trim().toLowerCase();
+  if (!status) return true;
+  return !CLOSED_ORDER_STATUSES.has(status);
+};
+
+const normalizeOrderSearchToken = (value) => (
+  String(value || '')
+    .trim()
+    .replace(/^#+/, '')
+    .replace(/^\[/, '')
+    .replace(/\]$/, '')
+    .toLowerCase()
+);
+
+const getOrderDisplayStatus = (row) => (
+  isOpenOrderRow(row) ? 'open' : row.status
+);
+
+const getOrderDisplayRow = (row) => ({
+  ...row,
+  status: getOrderDisplayStatus(row),
+});
+
+const orderMatchesQuery = (row, query) => {
+  const rawQuery = String(query || '').trim();
+  const tokens = rawQuery
+    .split(/[\s,]+/)
+    .map(normalizeOrderSearchToken)
+    .filter(Boolean);
+
+  if (!tokens.length) return true;
+
+  const searchableValues = [
+    row.ticket,
+    row.login,
+    row.symbol,
+    row.side,
+    row.status,
+    getOrderDisplayStatus(row),
+    row.comment,
+  ].map((value) => String(value ?? '').toLowerCase());
+
+  const matcher = (token) => searchableValues.some((value) => value.includes(token));
+  const isListSearch = rawQuery.includes(',') || rawQuery.includes('[') || rawQuery.includes(']') || rawQuery.includes('#');
+  return isListSearch ? tokens.some(matcher) : tokens.every(matcher);
+};
+
+const getOrderSymbolOptions = (rows) => (
+  Array.from(new Set(rows.map((row) => row.symbol).filter(Boolean))).sort()
+);
+
+const filterOrderRows = (rows, filters) => {
+  const fromMs = parseOrderDateInput(filters.from);
+  const toMs = parseOrderDateInput(filters.to);
+  const inclusiveToMs = toMs == null ? null : toMs + 59999;
+
+  return rows.filter((row) => {
+    if (filters.openOnly && !isOpenOrderRow(row)) return false;
+    if (filters.symbol && row.symbol !== filters.symbol) return false;
+    if (!orderMatchesQuery(row, filters.query)) return false;
+    if (fromMs != null && row.timeMs != null && row.timeMs < fromMs) return false;
+    if (inclusiveToMs != null && row.timeMs != null && row.timeMs > inclusiveToMs) return false;
+    return true;
+  });
+};
+
 const getRowsForCount = ({
   viewType,
   groupsList,
@@ -194,7 +445,9 @@ const getRowsForCount = ({
   accountsResponse,
   symbolsResponse,
   positionsResponse,
+  ordersResponse,
   dealsResponse,
+  orderFilters,
 }) => {
   if (isDelegatedAdminView(viewType)) {
     return [];
@@ -246,39 +499,16 @@ const getRowsForCount = ({
   }
 
   if (viewType === 'Positions') {
-    return normalizeArrayResponse(positionsResponse, ['data', 'positions', 'answer', 'items']).map((position, idx) => ({
-      id: position.ticket || idx,
-      ticket: position.ticket,
-      login: position.login,
-      time: position.timeCreateFormatted || '',
-      symbol: position.symbol,
-      side: position.side === 'buy' ? 'Buy' : 'Sell',
-      volume: position.volume,
-      open_price: position.priceOpen,
-      current_price: position.priceCurrent,
-      sl: position.priceSl,
-      tp: position.priceTp,
-      swap: position.swap,
-      profit: position.profit
-    }));
+    return normalizeArrayResponse(positionsResponse, ['data', 'positions', 'answer', 'items']).map(getPositionRow);
+  }
+
+  if (viewType === 'Orders') {
+    const rows = normalizeArrayResponse(ordersResponse, ['data', 'orders', 'answer', 'items']).map(getOrderRow);
+    return orderFilters ? filterOrderRows(rows, orderFilters) : rows;
   }
 
   if (viewType === 'Deals') {
-    return normalizeArrayResponse(dealsResponse, ['data', 'deals', 'answer', 'items']).map((deal, idx) => ({
-      id: deal.ticket || idx,
-      ticket: deal.ticket,
-      orderTicker: deal.orderTicket,
-      time: deal.timeFormatted || '',
-      login: deal.login,
-      symbol: deal.symbol,
-      action: deal.action,
-      entry: deal.entry,
-      volume: deal.volume,
-      price: deal.price,
-      commission: deal.commission,
-      fee: deal.fee,
-      profit: deal.profit
-    }));
+    return normalizeArrayResponse(dealsResponse, ['data', 'deals', 'answer', 'items']).map(getDealRow);
   }
 
   if (viewType === 'Payments') {
@@ -339,6 +569,9 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   const [closeAllSymbol, setCloseAllSymbol] = useState('');
   const [closeAllBusy, setCloseAllBusy] = useState(false);
   const [closeAllNotice, setCloseAllNotice] = useState(null);
+  const [ordersMode, setOrdersMode] = useState('all');
+  const [orderFilters, setOrderFilters] = useState(() => createDefaultOrderFilters());
+  const [orderRenderLimit, setOrderRenderLimit] = useState(ORDER_RENDER_BATCH_SIZE);
   const currentUser = useAuthStore((state) => state.user);
   const { notify } = useToast();
   const closeAllAction = getCloseAllActionState({
@@ -350,14 +583,18 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   // Row count reporting is committed after render so delegated views can clear
   // the breadcrumb counter without render-time ref writes.
   const lastSentRef = React.useRef({ total: -1, filtered: -1 });
+  const orderFromDateInputRef = React.useRef(null);
+  const orderToDateInputRef = React.useRef(null);
 
-  const { data: usersResponse, loading: usersLoading, error: usersError, mutate: refetchUsers } = useUsers(1, 100, '', '', viewType === 'Clients' || viewType === 'Managers');
+  const canLoadGroups = canAccessView(currentUser, 'Groups');
+  const { data: usersResponse, loading: usersLoading, error: usersError, mutate: refetchUsers } = useUsers(1, 100, '', '', viewType === 'Clients');
   const { data: accountsResponse, loading: accountsLoading, error: accountsError, mutate: refetchAccounts } = useAccounts(1, 100, '', '', '', viewType === 'Trading Accounts');
   const { data: symbolsResponse, loading: symbolsLoading, error: symbolsError, mutate: refetchSymbols } = useInstruments(1, 100, '', '', viewType === 'Symbols');
   const { data: positionsResponse, loading: positionsLoading, error: positionsError, mutate: refetchPositions } = usePositions({ page: 1, limit: 100 }, true, 2000, viewType === 'Positions');
+  const { data: ordersResponse, loading: ordersLoading, error: ordersError, mutate: refetchOrders } = useOrders({ limit: 100, offset: 0, allPages: ordersMode === 'all' }, viewType === 'Orders');
 
-  const { data: groupsResponse, loading: groupsLoading, error: groupsError, mutate: refetchGroups } = useGroups(true);
-  const groupsList = normalizeArrayResponse(groupsResponse, ['answer', 'groups', 'data', 'items']);
+  const { data: groupsResponse, loading: groupsLoading, error: groupsError, mutate: refetchGroups } = useGroups(canLoadGroups);
+  const groupsList = canLoadGroups ? normalizeArrayResponse(groupsResponse, ['answer', 'groups', 'data', 'items']) : [];
 
   React.useEffect(() => {
     if (!refreshTrigger) return;
@@ -368,6 +605,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
       'Trading Accounts': refetchAccounts,
       'Symbols': refetchSymbols,
       'Positions': refetchPositions,
+      'Orders': refetchOrders,
     };
     map[viewType]?.();
   }, [refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -385,6 +623,21 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     if (refreshTrigger && viewType === 'Deals') refetchDeals?.();
   }, [refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  React.useEffect(() => {
+    if (viewType !== 'Orders') return;
+    setOrderRenderLimit(ORDER_RENDER_BATCH_SIZE);
+  }, [
+    viewType,
+    ordersMode,
+    orderFilters.query,
+    orderFilters.symbol,
+    orderFilters.openOnly,
+    orderFilters.rangePreset,
+    orderFilters.from,
+    orderFilters.to,
+    orderFilters.database,
+  ]);
+
   const renderedCounts = getRenderedCounts({
     viewType,
     searchQuery,
@@ -393,7 +646,9 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     accountsResponse,
     symbolsResponse,
     positionsResponse,
+    ordersResponse,
     dealsResponse,
+    orderFilters,
   });
   const { total: renderedTotalCount, filtered: renderedFilteredCount } = renderedCounts;
 
@@ -498,6 +753,64 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
       notify({ tone: 'danger', title: 'Close all failed', description: message });
     } finally {
       setCloseAllBusy(false);
+    }
+  };
+
+  const handleOrderModeChange = (mode) => {
+    setOrdersMode(mode);
+    setOrderFilters((current) => ({
+      ...current,
+      openOnly: mode !== 'all',
+    }));
+  };
+
+  const handleOrderOpenOnlyChange = (event) => {
+    const openOnly = event.target.checked;
+    setOrdersMode(openOnly ? 'open' : 'all');
+    setOrderFilters((current) => ({
+      ...current,
+      openOnly,
+    }));
+  };
+
+  const handleOrderRangePresetChange = (event) => {
+    const rangePreset = event.target.value;
+    setOrderFilters((current) => ({
+      ...current,
+      rangePreset,
+      ...(rangePreset === 'custom' ? {} : getOrderDateRangeForPreset(rangePreset)),
+    }));
+  };
+
+  const handleOrderRequest = () => {
+    refetchOrders?.();
+  };
+
+  const handleLoadMoreOrders = () => {
+    setOrderRenderLimit((current) => current + ORDER_RENDER_BATCH_SIZE);
+  };
+
+  const openOrderDatePicker = (inputRef) => {
+    const input = inputRef.current;
+    if (!input) return;
+    if (typeof input.showPicker === 'function') {
+      input.showPicker();
+      return;
+    }
+    input.focus();
+  };
+
+  const handleOrderFilterSelectMouseDown = (event) => {
+    if (event.target?.tagName === 'SELECT') return;
+
+    const select = event.currentTarget.querySelector('select');
+    if (!select || select.disabled) return;
+
+    event.preventDefault();
+    select.focus();
+
+    if (typeof select.showPicker === 'function') {
+      select.showPicker();
     }
   };
 
@@ -690,7 +1003,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
 
   // --- SERVER STATUS INJECTION ---
   if (SERVER_STATUS_VIEWS.has(viewType)) {
-    return <ServerStatusPanel serverName={viewType} initialTab={initialServerTab} onDoubleClick={() => setServerPopupData({ isOpen: true, target: viewType, id: 'SRV-001' })} />;
+    return <ServerStatusPanel key={viewType} serverName={viewType} initialTab={initialServerTab} onDoubleClick={() => setServerPopupData({ isOpen: true, target: viewType, id: 'SRV-001' })} />;
   }
 
   const groupColumns = [
@@ -728,6 +1041,9 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   let isAccountsViewTemp = false;
   let isGroupLookupViewTemp = false;
   let isLoading = false;
+  let orderSymbolOptions = [];
+  let orderTotalFilteredCount = 0;
+  let orderVisibleCount = 0;
 
   if (viewType === 'Groups') {
     isGroupLookupViewTemp = true;
@@ -817,23 +1133,34 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     
     const dataList = normalizeArrayResponse(positionsResponse, ['data', 'positions', 'answer', 'items']);
     
-    data = dataList.map((p, idx) => ({
-      id: p.ticket || idx,
-      ticket: p.ticket,
-      login: p.login,
-      time: p.timeCreateFormatted || '',
-      symbol: p.symbol,
-      side: p.side === 'buy' ? 'Buy' : 'Sell',
-      volume: p.volume,
-      open_price: p.priceOpen,
-      current_price: p.priceCurrent,
-      sl: p.priceSl,
-      tp: p.priceTp,
-      swap: p.swap,
-      profit: p.profit
-    }));
+    data = dataList.map(getPositionRow);
     isPositionsViewTemp = true;
     isLoading = positionsLoading;
+  } else if (viewType === 'Orders') {
+    columns = [
+      { label: 'Ticket', width: 'w-24' },
+      { label: 'Login', width: 'w-24' },
+      { label: 'Time', width: 'w-40' },
+      { label: 'Symbol', width: 'w-32' },
+      { label: 'Side', width: 'w-20' },
+      { label: 'Volume', width: 'w-24' },
+      { label: 'Price Open', width: 'w-32' },
+      { label: 'S/L', width: 'w-32' },
+      { label: 'T/P', width: 'w-32' },
+      { label: 'Status', width: 'w-32' },
+      { label: 'Comment', width: 'flex-1' },
+    ];
+
+    const dataList = normalizeArrayResponse(ordersResponse, ['data', 'orders', 'answer', 'items']);
+
+    data = dataList.map(getOrderRow);
+    orderSymbolOptions = getOrderSymbolOptions(data);
+    const filteredOrders = filterOrderRows(data, orderFilters).map(getOrderDisplayRow);
+    orderTotalFilteredCount = filteredOrders.length;
+    data = filteredOrders.slice(0, orderRenderLimit);
+    orderVisibleCount = data.length;
+    isPositionsViewTemp = true;
+    isLoading = ordersLoading;
   } else if (viewType === 'Deals') {
     columns = [
       { label: 'Ticket', width: 'w-24' },
@@ -852,21 +1179,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     
     const dataList = normalizeArrayResponse(dealsResponse, ['data', 'deals', 'answer', 'items']);
     
-    data = dataList.map((d, idx) => ({
-      id: d.ticket || idx,
-      ticket: d.ticket,
-      orderTicker: d.orderTicket,
-      time: d.timeFormatted || '',
-      login: d.login,
-      symbol: d.symbol,
-      action: d.action,
-      entry: d.entry,
-      volume: d.volume,
-      price: d.price,
-      commission: d.commission,
-      fee: d.fee,
-      profit: d.profit
-    }));
+    data = dataList.map(getDealRow);
     
     isPositionsViewTemp = true; // Use the same custom row renderer for Deals as Positions
     isLoading = dealsLoading;
@@ -922,6 +1235,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     'Trading Accounts': accountsError,
     'Symbols': symbolsError,
     'Positions': positionsError,
+    'Orders': ordersError,
     'Deals': dealsError,
   }[viewType] || (isGroupLookupView && groupsError && !groupsLoading ? groupsError : null);
   const activeErrorMessage = activeError
@@ -931,6 +1245,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   // Client-side filter: matches the search query against any string/number field
   // on each row. Empty query → no filtering.
   const totalCount = Array.isArray(data) ? data.length : 0;
+  const hasMoreOrderRows = viewType === 'Orders' && orderVisibleCount < orderTotalFilteredCount;
   if (searchQuery && Array.isArray(data) && data.length) {
     const q = searchQuery.toLowerCase();
     data = data.filter((row) =>
@@ -1000,6 +1315,17 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
             <div className="px-1.5"><Search size={10} /></div>
             <input
               type="text"
+              value={viewType === 'Orders' ? orderFilters.query : ''}
+              onChange={(event) => {
+                if (viewType !== 'Orders') return;
+                setOrderFilters((current) => ({
+                  ...current,
+                  query: event.target.value,
+                }));
+              }}
+              onKeyDown={(event) => {
+                if (viewType === 'Orders' && event.key === 'Enter') handleOrderRequest();
+              }}
               placeholder="Group or Accounts [1,2,..,1000] or Orders (#1,#2,..#1000)"
               className="bg-transparent border-none outline-none w-[280px] text-[11px] text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)]"
             />
@@ -1008,49 +1334,130 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
             </div>
           </div>
 
-          <div className="flex border border-[color:var(--border-strong)] bg-transparent h-[22px] items-center text-[color:var(--text-primary)] w-[100px] mr-2">
-            <select className="bg-transparent border-none outline-none w-full text-[11px] px-1 appearance-none cursor-pointer">
-              <option>All Symbols</option>
+          <div
+            className={`${orderFilterSelectShellClassName} w-[100px] mr-2`}
+            onMouseDown={handleOrderFilterSelectMouseDown}
+          >
+            <select
+              value={viewType === 'Orders' ? orderFilters.symbol : ''}
+              onChange={(event) => {
+                if (viewType !== 'Orders') return;
+                setOrderFilters((current) => ({
+                  ...current,
+                  symbol: event.target.value,
+                }));
+              }}
+              className={orderFilterSelectClassName}
+            >
+              <option value="" className={orderFilterSelectOptionClassName} style={orderFilterSelectOptionStyle}>All Symbols</option>
+              {viewType === 'Orders' && orderSymbolOptions.map((symbol) => (
+                <option key={symbol} value={symbol} className={orderFilterSelectOptionClassName} style={orderFilterSelectOptionStyle}>{symbol}</option>
+              ))}
             </select>
             <div className="px-1 pointer-events-none text-[color:var(--text-muted)]"><ChevronDown size={12} /></div>
           </div>
 
           <label className="flex items-center gap-1.5 text-[color:var(--text-primary)] cursor-pointer mr-2 border border-transparent hover:border-[color:var(--border-strong)] px-1 h-[22px] rounded-sm">
-            <input type="checkbox" className="w-[11px] h-[11px] accent-[#3B82F6]" />
+            <input
+              type="checkbox"
+              checked={viewType === 'Orders' ? orderFilters.openOnly : false}
+              onChange={viewType === 'Orders' ? handleOrderOpenOnlyChange : undefined}
+              className="w-[11px] h-[11px] accent-[#3B82F6]"
+            />
             Open only
           </label>
 
-          <div className="flex border border-[color:var(--border-strong)] bg-transparent h-[22px] items-center text-[color:var(--text-primary)] w-[70px] mr-1">
-            <select className="bg-transparent border-none outline-none w-full text-[11px] px-1 appearance-none cursor-pointer">
-              <option>Today</option>
+          <div
+            className={`${orderFilterSelectShellClassName} w-[70px] mr-1`}
+            onMouseDown={handleOrderFilterSelectMouseDown}
+          >
+            <select
+              value={viewType === 'Orders' ? orderFilters.rangePreset : 'all'}
+              onChange={viewType === 'Orders' ? handleOrderRangePresetChange : undefined}
+              className={orderFilterSelectClassName}
+            >
+              <option value="all" className={orderFilterSelectOptionClassName} style={orderFilterSelectOptionStyle}>All</option>
+              <option value="today" className={orderFilterSelectOptionClassName} style={orderFilterSelectOptionStyle}>Today</option>
+              <option value="last7" className={orderFilterSelectOptionClassName} style={orderFilterSelectOptionStyle}>Last 7</option>
+              <option value="month" className={orderFilterSelectOptionClassName} style={orderFilterSelectOptionStyle}>Month</option>
+              <option value="custom" className={orderFilterSelectOptionClassName} style={orderFilterSelectOptionStyle}>Custom</option>
             </select>
             <div className="px-1 pointer-events-none text-[color:var(--text-muted)]"><ChevronDown size={12} /></div>
           </div>
 
           <div className="flex border border-[color:var(--border-strong)] bg-transparent h-[22px] items-center text-[color:var(--text-primary)] mr-1">
-            <input type="text" defaultValue="2026.04.03 00:00" className="bg-transparent border-none outline-none w-[90px] text-[11px] pl-2" />
-            <div className="border-l border-[color:var(--border-strong)] px-1.5 text-blue-400 hover:bg-white/10 cursor-pointer h-full flex items-center">
+            <input
+              ref={orderFromDateInputRef}
+              type="datetime-local"
+              step="60"
+              aria-label="Orders from date"
+              value={viewType === 'Orders' ? orderFilters.from : ''}
+              onChange={(event) => {
+                if (viewType !== 'Orders') return;
+                setOrderFilters((current) => ({
+                  ...current,
+                  from: event.target.value,
+                  rangePreset: 'custom',
+                }));
+              }}
+              className="order-date-input bg-transparent border-none outline-none w-[140px] text-[11px] pl-2"
+            />
+            <button
+              type="button"
+              onClick={() => openOrderDatePicker(orderFromDateInputRef)}
+              className="border-l border-[color:var(--border-strong)] px-1.5 text-blue-400 hover:bg-white/10 cursor-pointer h-full flex items-center"
+              aria-label="Select orders from date"
+            >
               <Calendar size={12} />
-            </div>
+            </button>
           </div>
 
           <div className="flex border border-[color:var(--border-strong)] bg-transparent h-[22px] items-center text-[color:var(--text-primary)] mr-2">
-            <input type="text" defaultValue="2026.04.03 23:59" className="bg-transparent border-none outline-none w-[90px] text-[11px] pl-2" />
-            <div className="border-l border-[color:var(--border-strong)] px-1.5 text-blue-400 hover:bg-white/10 cursor-pointer h-full flex items-center">
+            <input
+              ref={orderToDateInputRef}
+              type="datetime-local"
+              step="60"
+              aria-label="Orders to date"
+              value={viewType === 'Orders' ? orderFilters.to : ''}
+              onChange={(event) => {
+                if (viewType !== 'Orders') return;
+                setOrderFilters((current) => ({
+                  ...current,
+                  to: event.target.value,
+                  rangePreset: 'custom',
+                }));
+              }}
+              className="order-date-input bg-transparent border-none outline-none w-[140px] text-[11px] pl-2"
+            />
+            <button
+              type="button"
+              onClick={() => openOrderDatePicker(orderToDateInputRef)}
+              className="border-l border-[color:var(--border-strong)] px-1.5 text-blue-400 hover:bg-white/10 cursor-pointer h-full flex items-center"
+              aria-label="Select orders to date"
+            >
               <Calendar size={12} />
-            </div>
+            </button>
           </div>
 
-          <div className="flex border border-[color:var(--border-strong)] bg-transparent h-[22px] items-center text-[color:var(--text-primary)] w-[120px] mr-1">
-            <select className="bg-transparent border-none outline-none w-full text-[11px] px-1 appearance-none cursor-pointer">
-              <option>Current database</option>
+          <div
+            className={`${orderFilterSelectShellClassName} w-[120px] mr-1`}
+            onMouseDown={handleOrderFilterSelectMouseDown}
+          >
+            <select
+              value={viewType === 'Orders' ? orderFilters.database : 'current'}
+              onChange={(event) => {
+                if (viewType !== 'Orders') return;
+                setOrderFilters((current) => ({
+                  ...current,
+                  database: event.target.value,
+                }));
+              }}
+              className={orderFilterSelectClassName}
+            >
+              <option value="current" className={orderFilterSelectOptionClassName} style={orderFilterSelectOptionStyle}>Current database</option>
             </select>
             <div className="px-1 pointer-events-none text-[color:var(--text-muted)]"><ChevronDown size={12} /></div>
           </div>
-
-          <button className="h-[22px] px-4 bg-transparent border border-[color:var(--border-strong)] rounded-[2px] text-[color:var(--text-primary)] hover:bg-white/10 hover:border-[#777777] transition-all">
-            Request
-          </button>
 
           {viewType === 'Positions' && (
             <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-[color:var(--border-strong)]">
@@ -1168,10 +1575,12 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
                   if (col.label === 'Commission') val = row.commission;
                   if (col.label === 'Fee') val = row.fee;
                   if (col.label === 'Profit') val = row.profit;
+                  if (col.label === 'Status') val = row.status;
+                  if (col.label === 'Comment') val = row.comment;
 
                   return (
                     <div key={cIdx} className={`${col.width} px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 ${col.label === 'Profit' && row.profit > 0 ? 'text-green-400' : ''} ${col.label === 'Profit' && row.profit < 0 ? 'text-red-400' : ''} truncate`}>
-                       {val !== undefined ? val : '-'}
+                       {renderTableValue(val)}
                     </div>
                   );
                 })}
@@ -1209,6 +1618,22 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
             )}
           </div>
         ))}
+        {viewType === 'Orders' && orderTotalFilteredCount > 0 && (
+          <div className="flex items-center gap-2 px-3 py-2 text-[11px] text-[color:var(--text-muted)] border-b border-black/10 bg-[color:var(--bg-surface-1)]">
+            <span>
+              Showing {orderVisibleCount} of {orderTotalFilteredCount} orders
+            </span>
+            {hasMoreOrderRows && (
+              <button
+                type="button"
+                onClick={handleLoadMoreOrders}
+                className="h-[22px] px-3 border border-[color:var(--border-strong)] rounded-[2px] text-[color:var(--text-primary)] hover:bg-white/10 hover:border-[#777777] transition-colors"
+              >
+                Load next {Math.min(ORDER_RENDER_BATCH_SIZE, orderTotalFilteredCount - orderVisibleCount)}
+              </button>
+            )}
+          </div>
+        )}
         {isLoading && data.length === 0 && (
           <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">Loading data...</div>
         )}
@@ -1230,12 +1655,33 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
 
       {/* Bottom Tab Bar (MT5 Style) */}
       <div className="h-7 bg-[color:var(--bg-surface-1)] border-t border-black/40 flex items-center px-1 gap-1">
-        <div className="h-[22px] px-3 bg-[#3e3e3e] text-white text-[11px] flex items-center border border-black/40 rounded-sm shadow-sm cursor-default">
-          {viewType === 'Clients & Accounts' ? 'Clients & Accounts' : (viewType === 'Groups' && totalCount > 0 ? `Groups (${totalCount})` : viewType)}
-        </div>
-        <div className="h-[22px] px-3 text-[#999999] hover:text-[color:var(--text-secondary)] text-[11px] flex items-center cursor-default transition-colors">
-          All {viewType}
-        </div>
+        {viewType === 'Orders' ? (
+          <>
+            <button
+              type="button"
+              onClick={() => handleOrderModeChange('open')}
+              className={`h-[22px] px-3 text-[11px] flex items-center border border-black/40 rounded-sm transition-colors ${ordersMode !== 'all' ? 'bg-[#3e3e3e] text-white shadow-sm' : 'text-[#999999] hover:text-[color:var(--text-secondary)] hover:bg-white/5'}`}
+            >
+              Orders
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOrderModeChange('all')}
+              className={`h-[22px] px-3 text-[11px] flex items-center border border-black/40 rounded-sm transition-colors ${ordersMode === 'all' ? 'bg-[#3e3e3e] text-white shadow-sm' : 'text-[#999999] hover:text-[color:var(--text-secondary)] hover:bg-white/5'}`}
+            >
+              All Orders
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="h-[22px] px-3 bg-[#3e3e3e] text-white text-[11px] flex items-center border border-black/40 rounded-sm shadow-sm cursor-default">
+              {viewType === 'Clients & Accounts' ? 'Clients & Accounts' : (viewType === 'Groups' && totalCount > 0 ? `Groups (${totalCount})` : viewType)}
+            </div>
+            <div className="h-[22px] px-3 text-[#999999] hover:text-[color:var(--text-secondary)] text-[11px] flex items-center cursor-default transition-colors">
+              All {viewType}
+            </div>
+          </>
+        )}
       </div>
       {/* Context Menu Overlay */}
       {contextMenu.visible && viewType === 'Groups' && (

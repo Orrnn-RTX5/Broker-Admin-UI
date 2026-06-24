@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { PlatformConfigService } from '../../services/platformConfig.service';
+import { getApiErrorMessage, normalizeArrayResponse } from '../../utils/apiShapes';
 import { Plus, Save, Trash2 } from 'lucide-react';
 
 const SymbolVisibilityView = () => {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [selected, setSelected] = useState(null); // { group, symbols }
   const [editSymbols, setEditSymbols] = useState('');
   const [saving, setSaving] = useState(false);
@@ -14,11 +16,13 @@ const SymbolVisibilityView = () => {
 
   const fetchList = async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const res = await PlatformConfigService.listSymbolVisibility();
-      setList(Array.isArray(res) ? res : []);
-    } catch {
+      setList(normalizeArrayResponse(res, ['visibility', 'symbol_visibility', 'data', 'answer', 'items', 'rows']));
+    } catch (err) {
       setList([]);
+      setLoadError(getApiErrorMessage(err, 'Failed to load symbol visibility.'));
     } finally {
       setLoading(false);
     }
@@ -79,6 +83,11 @@ const SymbolVisibilityView = () => {
         <div className="flex-1 overflow-auto">
           {loading ? (
             <div className="text-[#888] text-[11px] p-3">Loading…</div>
+          ) : loadError ? (
+            <div className="p-3 text-[11px]">
+              <div className="font-semibold text-[#f48771]">Failed to load symbol visibility</div>
+              <div className="mt-1 text-[#888]">{loadError}</div>
+            </div>
           ) : list.length === 0 ? (
             <div className="text-[#555] text-[11px] p-3">No entries</div>
           ) : (

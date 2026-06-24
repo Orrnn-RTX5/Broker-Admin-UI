@@ -1,12 +1,40 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useDataFetch } from './useCore';
 import { ManagerService } from '../services/manager.service';
+import { normalizeArrayResponse } from '../utils/apiShapes';
 
 // Basic timestamp converter that safely parses a Unix stamp to a localized string or returns a fallback
 const formatUnix = (timestamp) => {
   if (!timestamp || timestamp === 0) return '-';
   const dateObj = new Date(timestamp * 1000);
   return Number.isNaN(dateObj.getTime()) ? '-' : dateObj.toLocaleString();
+};
+
+const formatOrderTimestamps = (order) => ({
+  ...order,
+  timeSetupFormatted: formatUnix(order.timeSetup),
+  timeDoneFormatted: formatUnix(order.timeDone),
+  timeExpiryFormatted: formatUnix(order.timeExpiry)
+});
+
+const ORDER_RESPONSE_KEYS = ['data', 'orders', 'answer', 'items'];
+const ORDER_MAX_PAGES = 50;
+
+const formatOrdersPayload = (rawData) => {
+  if (Array.isArray(rawData)) {
+    return rawData.map(formatOrderTimestamps);
+  }
+
+  for (const key of ORDER_RESPONSE_KEYS) {
+    if (rawData?.[key] && Array.isArray(rawData[key])) {
+      return {
+        ...rawData,
+        [key]: rawData[key].map(formatOrderTimestamps)
+      };
+    }
+  }
+
+  return rawData;
 };
 
 export function usePositions(params = { page: 1, limit: 100, logins: [] }, autoRefresh = true, refreshInterval = 2000, enabled = true) {
@@ -74,22 +102,55 @@ export function useDealsSummary(from, to, login, symbol, enabled = true) {
   return useDataFetch(fetcher, { from, to, login, symbol }, [from, to, login, symbol], enabled);
 }
 
-export function useOrders(params = { page: 1, limit: 100, logins: [] }, enabled = true) {
-  const fetcher = async () => {
-    const rawData = params.logins && params.logins.length > 0 
-      ? await ManagerService.getOrders(params.logins)
-      : await ManagerService.getBrokerOrders(params.page, params.limit);
-      
-    if (Array.isArray(rawData)) {
-      return rawData.map(order => ({
-        ...order,
-        timeSetupFormatted: formatUnix(order.timeSetup),
-        timeDoneFormatted: formatUnix(order.timeDone),
-        timeExpiryFormatted: formatUnix(order.timeExpiry)
-      }));
+const getOrderPageKey = (order, index) => (
+  order.ticket ?? order.order ?? order.orderTicket ?? `${order.login ?? ''}:${order.symbol ?? ''}:${order.timeSetup ?? ''}:${order.timeDone ?? ''}:${index}`
+);
+
+export function useOrders(params = { limit: 100, offset: 0, logins: [], allPages: false }, enabled = true) {
+  const limitParam = params.limit ?? 100;
+  const offsetParam = params.offset ?? 0;
+  const allPages = Boolean(params.allPages);
+  const loginsKey = JSON.stringify(params.logins ?? []);
+
+  const fetcher = useCallback(async () => {
+    const logins = JSON.parse(loginsKey);
+    if (logins.length > 0) {
+      return formatOrdersPayload(await ManagerService.getOrders(logins));
     }
-    return rawData;
-  };
-  return useDataFetch(fetcher, null, [JSON.stringify(params)], enabled);
+
+    const limit = Number(limitParam);
+    const startOffset = Number(offsetParam);
+
+    if (allPages) {
+      const allRows = [];
+      const seenOrderKeys = new Set();
+      const seenPageSignatures = new Set();
+      let offset = startOffset;
+
+      for (let page = 0; page < ORDER_MAX_PAGES; page += 1) {
+        const rawPage = await ManagerService.getBrokerOrders(limit, offset);
+        const pageRows = normalizeArrayResponse(rawPage, ORDER_RESPONSE_KEYS);
+        const pageSignature = pageRows.map(getOrderPageKey).join('|');
+
+        if (seenPageSignatures.has(pageSignature)) break;
+        seenPageSignatures.add(pageSignature);
+
+        pageRows.forEach((order, index) => {
+          const orderKey = getOrderPageKey(order, index);
+          if (seenOrderKeys.has(orderKey)) return;
+          seenOrderKeys.add(orderKey);
+          allRows.push(order);
+        });
+
+        if (pageRows.length < limit) break;
+        offset += limit;
+      }
+
+      return allRows.map(formatOrderTimestamps);
+    }
+
+    return formatOrdersPayload(await ManagerService.getBrokerOrders(limit, startOffset));
+  }, [allPages, limitParam, loginsKey, offsetParam]);
+  return useDataFetch(fetcher, null, [allPages, limitParam, loginsKey, offsetParam], enabled);
 }
 

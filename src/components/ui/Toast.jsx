@@ -17,7 +17,7 @@ const ToastCtx = React.createContext(null);
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = React.useState([]);
   const notify = React.useCallback((t) => {
-    setToasts((prev) => [...prev, { id: crypto.randomUUID?.() ?? Date.now(), ...t }]);
+    setToasts([{ id: crypto.randomUUID?.() ?? Date.now(), ...t }]);
   }, []);
   const dismiss = (id) => setToasts((prev) => prev.filter((t) => t.id !== id));
 

@@ -236,6 +236,35 @@ test('loginAdmin omits server when the caller does not explicitly supply one', a
   assert.equal(response.token, 'admin-token');
 });
 
+test('loginAdmin preserves authorization header tokens when the body has no token', async () => {
+  installBrowserGlobals();
+  globalThis.fetch = async () => ({
+    ok: true,
+    status: 200,
+    headers: {
+      get: (name) => (String(name).toLowerCase() === 'authorization' ? 'Bearer header-admin-token' : null),
+    },
+    text: async () => JSON.stringify({ broker_id: 'gta_broker' }),
+  });
+
+  const brokerAuth = await importFreshBrokerAuth();
+  const response = await brokerAuth.loginAdmin(
+    {
+      broker_id: 'gta_broker',
+      name: 'Grow Trading Academy',
+      server: 'broker-server-42',
+      backend_url: 'https://services.growtradingacademy.com',
+    },
+    { user: '1000', password: 'secret' }
+  );
+
+  const session = brokerAuth.setAuthSession(response, { broker_id: 'gta_broker' });
+
+  assert.equal(response.authorization, 'Bearer header-admin-token');
+  assert.equal(session.token, 'header-admin-token');
+  assert.equal(localStorage.getItem('authToken'), 'header-admin-token');
+});
+
 test('loginAdmin maps GTA stale public server values to the accepted broker server handle', async () => {
   installBrowserGlobals();
   let postedBody = null;
@@ -390,6 +419,50 @@ test('setAuthSession strips license secrets before writing auth session storage'
   assert.equal(stored.nested.licenceSecret, undefined);
 });
 
+test('setAuthSession clears stale expiry keys when login response has no expiry', async () => {
+  installBrowserGlobals();
+  localStorage.setItem('tokenExpiresAt', '1');
+  localStorage.setItem('token_expires_at', '1');
+  const brokerAuth = await importFreshBrokerAuth();
+
+  brokerAuth.setAuthSession(
+    {
+      token: 'session-token',
+      refresh_token: 'refresh-token',
+    },
+    { broker_id: 'demo' }
+  );
+
+  assert.equal(localStorage.getItem('tokenExpiresAt'), null);
+  assert.equal(localStorage.getItem('token_expires_at'), null);
+});
+
+test('setAuthSession unwraps common token response shapes before storage', async () => {
+  installBrowserGlobals();
+  const brokerAuth = await importFreshBrokerAuth();
+
+  const auth = brokerAuth.setAuthSession(
+    {
+      data: {
+        accessToken: 'wrapped-access-token',
+        refreshToken: 'wrapped-refresh-token',
+        expiresIn: 3600,
+        broker_id: 'myprop-trade',
+      },
+    },
+    { broker_id: 'fallback-broker' }
+  );
+  const stored = JSON.parse(sessionStorage.getItem('auth'));
+
+  assert.equal(auth.token, 'wrapped-access-token');
+  assert.equal(auth.access_token, 'wrapped-access-token');
+  assert.equal(auth.session_token, 'wrapped-access-token');
+  assert.equal(auth.refresh_token, 'wrapped-refresh-token');
+  assert.equal(auth.broker_id, 'myprop-trade');
+  assert.equal(stored.token, 'wrapped-access-token');
+  assert.equal(localStorage.getItem('authToken'), 'wrapped-access-token');
+});
+
 test('requireAdminAuthSessionToken accepts recognized admin token fields', async () => {
   installBrowserGlobals();
   const brokerAuth = await importFreshBrokerAuth();
@@ -400,8 +473,16 @@ test('requireAdminAuthSessionToken accepts recognized admin token fields', async
     'access-token-value'
   );
   assert.equal(
+    brokerAuth.requireAdminAuthSessionToken({ accessToken: 'access-token-camel' }).accessToken,
+    'access-token-camel'
+  );
+  assert.equal(
     brokerAuth.requireAdminAuthSessionToken({ session_token: 'session-token-value' }).session_token,
     'session-token-value'
+  );
+  assert.deepEqual(
+    brokerAuth.requireAdminAuthSessionToken({ value: { token: 'wrapped-token' } }),
+    { value: { token: 'wrapped-token' } }
   );
 });
 

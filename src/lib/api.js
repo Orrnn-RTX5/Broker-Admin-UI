@@ -1,5 +1,11 @@
 import axios from 'axios';
-import { expireAuthSession, isTokenExpired, useAuthStore, validateAuthSession } from '../store/authStore.js';
+import {
+  ensureAuthStateFromStorage,
+  expireAuthSession,
+  isTokenExpired,
+  useAuthStore,
+  validateAuthSession,
+} from '../store/authStore.js';
 import { useConnectionStore } from '../store/connectionStore.js';
 import { redactForLog, redactUrlForLog } from './logRedaction.js';
 
@@ -8,6 +14,10 @@ import { API_HOST, buildExtApiUrl, buildManagerApiUrl } from '../config/endpoint
 
 const AUTH_REJECTION_RE = /\b(not authenticated|unauthenticated|unauthorized|missing authorization|missing bearer|invalid token|token expired|expired token|invalid session|session expired|invalid jwt|jwt expired)\b/i;
 const AUTH_QUERY_PARAM_RE = /^(token|access_token|refresh_token|session|session_token|auth|authorization|jwt)$/i;
+const MANAGER_API_PATH_RE = /^\/manager(?:\/|\?|$)|^\/api\/v\d+\/(?:admin|manager|accounts?)(?:\/|\?|$)/i;
+const PROTECTED_API_PATH_RE = /(?:^|\/)(?:manager)(?:\/|$)|\/api\/v\d+\/(?:admin|manager|accounts?)(?:\/|$)/i;
+const PUBLIC_AUTH_PATH_RE = /\/api\/v\d+\/(?:admin\/login|auth\/login|auth\/refresh|broker\/servers)(?:\/|\?|$)/i;
+const AUTH_TOKEN_MISSING_MESSAGE = 'Missing auth token. Please log in again.';
 
 const isCurrentTokenValue = (value, token) =>
   !!token && String(value || '') === String(token);
@@ -71,6 +81,23 @@ const responseDataText = (data) => {
   }
 };
 
+const getUrlPath = (url = '') => {
+  try {
+    const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
+    return new URL(String(url || ''), base).pathname;
+  } catch {
+    return String(url || '').split('?')[0];
+  }
+};
+
+export const isProtectedApiRequest = (url = '') => {
+  const path = getUrlPath(url);
+  return PROTECTED_API_PATH_RE.test(path) && !PUBLIC_AUTH_PATH_RE.test(path);
+};
+
+export const shouldRouteThroughManagerApi = (url = '') =>
+  MANAGER_API_PATH_RE.test(getUrlPath(url));
+
 export const isAuthRejectionError = (error) => {
   const status = error.response?.status;
   if (status === 401 || status === 419) return true;
@@ -88,7 +115,7 @@ api.interceptors.request.use((config) => {
   if (config.url && !config.url.startsWith('http')) {
     if (config.url.startsWith('/ext-api')) {
       config.url = buildExtApiUrl(config.url);
-    } else if (config.url.startsWith('/manager')) {
+    } else if (shouldRouteThroughManagerApi(config.url)) {
       config.url = buildManagerApiUrl(config.url);
     } else if (config.url.startsWith('/')) {
       if (API_HOST) {
@@ -97,15 +124,26 @@ api.interceptors.request.use((config) => {
     }
   }
 
+  const recoveredAuthState = ensureAuthStateFromStorage();
+
   if (validateAuthSession('auth_storage_invalid')) {
     return Promise.reject(new Error('Session expired. Please log in again.'));
   }
 
-  const authState = useAuthStore.getState();
+  const authState = useAuthStore.getState().accessToken
+    ? useAuthStore.getState()
+    : recoveredAuthState;
   const token = authState.accessToken;
   if (token && isTokenExpired(authState.tokenExpiresAt)) {
     expireAuthSession('token_expired');
     return Promise.reject(new Error('Session expired. Please log in again.'));
+  }
+
+  if (!token && isProtectedApiRequest(config.url)) {
+    if (authState.isAuthenticated && !config._allowAuthFailure) {
+      expireAuthSession('auth_storage_missing');
+    }
+    return Promise.reject(new Error(AUTH_TOKEN_MISSING_MESSAGE));
   }
 
   if (token) {
@@ -149,6 +187,10 @@ api.interceptors.response.use((response) => {
     useConnectionStore.getState().markError(
       error.response?.statusText || error.message || 'Network error'
     );
+  }
+
+  if (originalRequest?._allowAuthFailure && isAuthRejectionError(error)) {
+    return Promise.reject(error);
   }
 
   if (isAuthRejectionError(error) && error.response?.status !== 401) {

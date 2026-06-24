@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PlatformConfigService } from '../../services/platformConfig.service';
+import { getApiErrorMessage, normalizeArrayResponse } from '../../utils/apiShapes';
 import { Plus, Trash2 } from 'lucide-react';
 
 const ENTITY_TYPES = ['account', 'client', 'order'];
@@ -9,6 +10,7 @@ const CustomFieldsView = () => {
   const [entityType, setEntityType] = useState('account');
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ entity_type: 'account', field_name: '', field_type: 'text', required: false, options: '' });
   const [saving, setSaving] = useState(false);
@@ -16,11 +18,13 @@ const CustomFieldsView = () => {
 
   const fetchFields = async (et) => {
     setLoading(true);
+    setLoadError('');
     try {
       const res = await PlatformConfigService.listCustomFields(et);
-      setData(Array.isArray(res) ? res : []);
-    } catch {
+      setData(normalizeArrayResponse(res, ['fields', 'custom_fields', 'data', 'answer', 'items', 'rows']));
+    } catch (err) {
       setData([]);
+      setLoadError(getApiErrorMessage(err, 'Failed to load custom fields.'));
     } finally {
       setLoading(false);
     }
@@ -100,6 +104,11 @@ const CustomFieldsView = () => {
       <div className="flex-1 overflow-auto">
         {loading ? (
           <div className="flex items-center justify-center h-24 text-[#888] text-[11px]">Loading…</div>
+        ) : loadError ? (
+          <div className="flex flex-col items-center justify-center h-24 text-center px-4">
+            <div className="text-[12px] font-semibold text-[#f48771]">Failed to load custom fields</div>
+            <div className="mt-1 text-[11px] text-[#888] max-w-[520px]">{loadError}</div>
+          </div>
         ) : data.length === 0 ? (
           <div className="flex items-center justify-center h-24 text-[#555] text-[11px]">No custom fields defined</div>
         ) : (

@@ -313,7 +313,7 @@ export const resolveBrokerExtApiUrl = (brokerInfo = {}, backendUrl = '') => {
   const domainProxy = getFirstValue(brokerInfo, WEB_DOMAIN_FIELDS);
   if (domainProxy) {
     const webBackendUrl = buildWebBackendUrl(brokerInfo);
-    if (webBackendUrl) return `${trimTrailingSlash(webBackendUrl)}/ext-api`;
+    if (webBackendUrl) return trimTrailingSlash(webBackendUrl);
   }
 
   return '';

@@ -58,6 +58,26 @@ test('dynamic endpoints use explicit broker ext API fields when supplied', async
   );
 });
 
+test('dynamic endpoints call discovered service-domain ext endpoints without ext-api prefix', async () => {
+  installWindow({ BACKEND_TARGET: 'web' });
+  installStorage({
+    broker_info: JSON.stringify({
+      broker_id: 'myprop-trade',
+      server_url: 'https://services.myprop.trade',
+      services_domain: 'services.myprop.trade',
+      server_ip: '185.204.168.202',
+    }),
+  });
+
+  const endpoints = await importFreshEndpoints();
+
+  assert.equal(endpoints.API_HOST_EXT, 'https://services.myprop.trade');
+  assert.equal(
+    endpoints.buildExtApiUrl('/ext-api/ServerStatus'),
+    'https://services.myprop.trade/ServerStatus'
+  );
+});
+
 test('GTA web services host keeps manager API calls on the manager proxy namespace', async () => {
   installWindow({
     BACKEND_TARGET: 'web',

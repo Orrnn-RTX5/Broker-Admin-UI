@@ -2,14 +2,20 @@ import React, { useState } from 'react';
 import { ChevronRight, Folder, File } from 'lucide-react';
 import { cn } from '../../lib/cn';
 
-const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, selectedLabel }) => {
+const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, onLockedDropdownClick, selectedLabel }) => {
   const [isOpen, setIsOpen] = useState(item.initiallyExpanded);
   const hasChildren = item.children && item.children.length > 0;
+  const showArrow = hasChildren || item.lockedDropdown;
+  const isBlockedNavigation = Boolean(item.blockedNavigation);
   const isActive = selectedLabel === item.label;
   const Icon = item.icon || (hasChildren ? Folder : File);
 
   const handleArrowClick = (e) => {
     e.stopPropagation();
+    if (item.lockedDropdown) {
+      onLockedDropdownClick && onLockedDropdownClick(item);
+      return;
+    }
     if (hasChildren) setIsOpen(!isOpen);
   };
 
@@ -19,7 +25,8 @@ const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, selectedLabel }) =
         onClick={() => onSelect && onSelect(item)}
         onDoubleClick={() => onDoubleClick && onDoubleClick(item)}
         className={cn(
-          'flex items-center h-7 pr-2 cursor-default select-none text-[12px]',
+          'flex items-center h-7 pr-2 select-none text-[12px]',
+          isBlockedNavigation ? 'cursor-not-allowed' : 'cursor-default',
           'transition-colors duration-100',
           isActive
             ? 'bg-[color:var(--bg-surface-3)] text-[color:var(--text-primary)] font-medium'
@@ -30,15 +37,18 @@ const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, selectedLabel }) =
         <button
           type="button"
           onClick={handleArrowClick}
-          className="w-4 h-4 flex items-center justify-center shrink-0 rounded-sm hover:bg-[color:var(--bg-surface-3)] focus:outline-none"
+          className={cn(
+            'w-4 h-4 flex items-center justify-center shrink-0 rounded-sm hover:bg-[color:var(--bg-surface-3)] focus:outline-none',
+            item.lockedDropdown ? 'cursor-not-allowed' : 'cursor-default'
+          )}
           tabIndex={-1}
         >
-          {hasChildren && (
+          {showArrow && (
             <ChevronRight
               size={11}
               className={cn(
                 'text-[color:var(--text-muted)] transition-transform duration-150',
-                isOpen && 'rotate-90'
+                !item.lockedDropdown && isOpen && 'rotate-90'
               )}
             />
           )}
@@ -58,7 +68,7 @@ const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, selectedLabel }) =
         </span>
       </div>
 
-      {hasChildren && isOpen && (
+      {hasChildren && !item.lockedDropdown && isOpen && (
         <div>
           {item.children.map((child, index) => (
             <TreeItem
@@ -67,6 +77,7 @@ const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, selectedLabel }) =
               level={level + 1}
               onSelect={onSelect}
               onDoubleClick={onDoubleClick}
+              onLockedDropdownClick={onLockedDropdownClick}
               selectedLabel={selectedLabel}
             />
           ))}

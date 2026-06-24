@@ -14,8 +14,7 @@ import {
   ShieldCheck,
   User,
 } from 'lucide-react';
-import authTradingVisualAvif from '../../assets/auth-trading-visual.avif';
-import authTradingVisualPng from '../../assets/auth-trading-visual.png';
+import authTradingVisualWebp from '../../assets/auth-trading-visual.webp';
 import {
   clearBrokerInfo,
   discoverBrokerById,
@@ -86,7 +85,7 @@ const getRuntimeLockedBroker = (list = []) => {
   return list.find(brokerMatchesRuntime) || null;
 };
 
-const RTX5_LOGO_SRC = `${import.meta.env.BASE_URL || './'}logo-full-light.avif`;
+const RTX5_LOGO_SRC = `${import.meta.env.BASE_URL || './'}logo-full-light.webp`;
 
 // ---------------------------------------------------------------------------
 // Shell & shared UI primitives
@@ -109,9 +108,9 @@ const AuthShell = ({ children }) => (
   >
     <div className="relative hidden min-h-0 overflow-hidden bg-[#060b18] lg:block">
       <picture>
-        <source srcSet={authTradingVisualAvif} type="image/avif" />
+        <source srcSet={authTradingVisualWebp} type="image/webp" />
         <img
-          src={authTradingVisualPng}
+          src={authTradingVisualWebp}
           alt=""
           aria-hidden="true"
           className="absolute inset-0 h-full w-full object-cover"

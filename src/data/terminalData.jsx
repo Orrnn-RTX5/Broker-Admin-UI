@@ -163,41 +163,6 @@ export const sidebarData = [
     initiallyExpanded: true,
     children: [
       {
-        label: "RTX5 Server",
-        icon: Cpu,
-        initiallyExpanded: true,
-        active: true,
-        children: [
-          {
-            label: "Network Cluster",
-            icon: GreenHexagonIcon,
-            initiallyExpanded: true,
-            children: [
-               {
-                 label: "Main Trade Server",
-                 icon: GreenServerIcon,
-                 initiallyExpanded: true,
-                 children: [
-                   { label: "MainTrade Backup Server", icon: GreenDatabaseIcon },
-                   { label: "Local Main Status Server", icon: GreenDatabaseIcon },
-                   { label: "TradeProcessor SQL_E", icon: RedDatabaseIcon },
-                 ]
-               },
-               {
-                 label: "History Server",
-                 icon: GreenCandlesIcon,
-                 initiallyExpanded: true,
-                 children: [
-                   { label: "History Backup Server", icon: GreenDatabaseIcon }
-                 ]
-               },
-               { label: "Access Server", icon: GreenShieldIcon },
-               { label: "Access Server", icon: GreenShieldIcon }
-            ]
-          }
-        ]
-      },
-      {
         label: "Server Configuration",
         icon: Settings,
         initiallyExpanded: false,
@@ -241,8 +206,7 @@ export const sidebarData = [
                        { label: "History Backup Server", icon: GreenDatabaseIcon }
                      ]
                    },
-                   { label: "Access Server", icon: GreenShieldIcon },
-                   { label: "Access Server", icon: GreenShieldIcon }
+                    { label: "Access Server", icon: GreenShieldIcon }
                 ]
               },
               { label: "Integrations", icon: Network },
