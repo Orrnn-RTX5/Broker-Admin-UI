@@ -1,10 +1,147 @@
 import { api } from '../lib/api';
 import { buildInstrumentToggleRequest } from '../utils/serviceContracts';
+import { normalizeArrayResponse } from '../utils/apiShapes';
+
+const cleanParams = (params = {}) => Object.fromEntries(
+  Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
+);
+
+const isNotFoundError = (error) => (
+  error?.response?.status === 404 ||
+  /\b404\b|not found/i.test(String(error?.response?.data || error?.message || ''))
+);
+
+const pickSymbolName = (symbol) => {
+  if (typeof symbol === 'string') return symbol;
+  return symbol?.symbol || symbol?.Symbol || symbol?.name || symbol?.Name || symbol?.symbol_name || symbol?.SymbolName || '';
+};
+
+const toNumber = (value, fallback = '') => {
+  if (value === undefined || value === null || value === '') return fallback;
+  const next = Number(value);
+  return Number.isFinite(next) ? next : value;
+};
+
+const normalizeEnabled = (value) => {
+  if (value === undefined || value === null || value === '') return value;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+
+  const normalized = String(value).trim().toLowerCase();
+  if (['false', '0', 'disabled', 'disable', 'off'].includes(normalized)) return false;
+  if (['true', '1', 'enabled', 'enable', 'on'].includes(normalized)) return true;
+  return value;
+};
+
+const normalizeSymbolRow = (symbol, fallbackName = '') => {
+  const name = pickSymbolName(symbol) || fallbackName;
+  const source = typeof symbol === 'object' && symbol !== null ? symbol : {};
+
+  return {
+    ...source,
+    id: source.id || source.ID || name,
+    symbol: name,
+    name,
+    description: source.description || source.Description || source.path || source.Path || source.category || source.Category || '',
+    digits: toNumber(source.digits ?? source.Digits ?? source.digits_currency ?? source.DigitsCurrency),
+    type: source.trade_mode || source.TradeMode || source.type || source.Type || source.mode || source.Mode || '',
+    execution: source.execution || source.Execution || source.execution_mode || source.ExecutionMode || '',
+    expiration: source.expiration || source.Expiration || source.expiration_mode || source.ExpirationMode || '',
+    background: source.background || source.Background || '',
+    enabled: normalizeEnabled(source.enabled ?? source.Enabled ?? source.enable ?? source.Enable),
+  };
+};
+
+const getRows = (response) => normalizeArrayResponse(response, [
+  'instruments',
+  'symbols',
+  'data',
+  'answer',
+  'items',
+  'rows',
+  'value',
+]);
+
+const fetchManagerSymbolNames = async () => {
+  try {
+    const res = await api.get('/manager/SymbolsList');
+    return res.data;
+  } catch (error) {
+    if (!isNotFoundError(error)) throw error;
+    const res = await api.get('/manager/SymbolList');
+    return res.data;
+  }
+};
+
+const fetchManagerSymbolParams = async (symbols) => {
+  if (!symbols.length) return [];
+
+  try {
+    const res = await api.get('/manager/SymbolsParams', {
+      params: { symbols },
+    });
+    return getRows(res.data);
+  } catch {
+    return [];
+  }
+};
+
+const getManagerInstruments = async (params = {}) => {
+  const safePage = Math.max(1, Number(params.page) || 1);
+  const safeLimit = Math.max(1, Number(params.limit) || 100);
+  const search = String(params.search || '').trim().toLowerCase();
+  const enabledFilter = params.enabled;
+  const listResponse = await fetchManagerSymbolNames();
+  const listRows = getRows(listResponse);
+  const symbolMap = new Map();
+
+  for (const row of listRows) {
+    const name = pickSymbolName(row);
+    if (name && !symbolMap.has(name)) symbolMap.set(name, row);
+  }
+
+  const searchedNames = Array.from(symbolMap.keys()).filter((name) => {
+    if (!search) return true;
+    const row = symbolMap.get(name);
+    return (
+      name.toLowerCase().includes(search) ||
+      Object.values(row || {}).some((value) => String(value ?? '').toLowerCase().includes(search))
+    );
+  });
+  const startIndex = (safePage - 1) * safeLimit;
+  const pageNames = searchedNames.slice(startIndex, startIndex + safeLimit);
+  const paramRows = await fetchManagerSymbolParams(pageNames);
+  const paramMap = new Map();
+
+  for (const row of paramRows) {
+    const name = pickSymbolName(row);
+    if (name) paramMap.set(name, row);
+  }
+
+  const rows = pageNames
+    .map((name) => normalizeSymbolRow({ ...(symbolMap.get(name) || {}), ...(paramMap.get(name) || {}) }, name))
+    .filter((row) => {
+      if (enabledFilter === '' || enabledFilter === undefined || enabledFilter === null) return true;
+      return String(Boolean(row.enabled)) === String(enabledFilter);
+    });
+
+  return {
+    data: rows,
+    total: searchedNames.length,
+    page: safePage,
+    limit: safeLimit,
+  };
+};
 
 export const InstrumentsService = {
-  getInstruments: async (params) => {
-    const res = await api.get('/api/v2/admin/instruments', { params });
-    return res.data;
+  getInstruments: async (params = {}) => {
+    try {
+      const res = await api.get('/api/v2/admin/instruments', { params: cleanParams(params) });
+      return res.data;
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error;
+      return getManagerInstruments(params);
+    }
   },
 
   createInstrument: async (data) => {

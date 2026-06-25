@@ -1,18 +1,17 @@
 import React, { useState } from 'react';
 import {
   clientsAccountsTableData,
-  paymentsTableData,
   automationsTableData,
   securityTableData
 } from '../../data/terminalData.jsx';
-import { useUsers, useGroups } from '../../hooks/useAdmin';
+import { useGroups } from '../../hooks/useAdmin';
 import { usePositions, useOrders, useDealsSummary } from '../../hooks/usePositions';
 import { useInstruments } from '../../hooks/useInstruments';
 import { useAccounts } from '../../hooks/useAccounts';
 import { ManagerService } from '../../services/manager.service';
 import { PositionsService } from '../../services/positions.service';
 import { useAuthStore } from '../../store/authStore';
-import { normalizeArrayResponse, getApiErrorMessage } from '../../utils/apiShapes';
+import { normalizePagedResponse, getApiErrorMessage } from '../../utils/apiShapes';
 import {
   getCloseAllActionState,
   getCloseAllConfirmationPrompt,
@@ -25,7 +24,6 @@ import { Clock, CornerUpRight, Server, Calendar, Search, ChevronDown, ShieldAler
 import AdminContextMenu from './AdminContextMenu';
 import NetworkCluster from './NetworkCluster';
 import AllocationsView from './AllocationsView';
-import PaymentsView from './PaymentsView';
 import GatewaysView from './GatewaysView';
 import ServerStatusPanel from './ServerStatusPanel';
 import ServerPropertiesPopup from '../RIGHTCLICKJPOPUPS/ServerPropertiesPopup';
@@ -95,11 +93,31 @@ const OrangeSquareSIcon = (props) => (
 
 const COMING_SOON_VIEWS = new Set([
   'Utency Matching Engine', 'Ultency Matching Engine', 'Data Feeds', 'FCN',
-  'Routing', 'Funds & ETF', 'Plugins', 'Reports', 'Subscriptions', 'Charts & Ticks',
+  'Routing', 'Funds & ETF', 'Plugins', 'Reports', 'Providers', 'Subscriptions', 'Charts & Ticks',
   'Live Update', 'Mailbox',
 ]);
 
-const ORDER_RENDER_BATCH_SIZE = 100;
+const FOLDER_ONLY_VIEWS = new Set([
+  'Risk Management',
+  'Communications',
+]);
+
+const DEFAULT_PAGE_SIZE = 100;
+const PAGE_SIZE_OPTIONS = [50, 100, 250];
+const PAGED_VIEW_TYPES = new Set(['Groups', 'Clients', 'Trading Accounts', 'Symbols', 'Orders', 'Positions', 'Deals']);
+const NON_GROUP_LOOKUP_VIEWS = new Set([
+  'Clients & Accounts',
+  'Clients',
+  'Trading Accounts',
+  'Symbols',
+  'Positions',
+  'Orders',
+  'Orders & Deals',
+  'Deals',
+  'Automations',
+  'Security',
+  'Time',
+]);
 const orderFilterSelectShellClassName = 'flex border border-[color:var(--border-strong)] bg-transparent h-[22px] items-center text-[color:var(--text-primary)] cursor-pointer hover:bg-white/10';
 const orderFilterSelectClassName = 'bg-[color:var(--bg-surface-1)] border-none outline-none w-full h-full text-[11px] px-1 appearance-none cursor-pointer text-[color:var(--text-primary)] [color-scheme:dark]';
 const orderFilterSelectOptionClassName = 'bg-[color:var(--bg-surface-2)] text-[color:var(--text-primary)]';
@@ -109,7 +127,7 @@ const orderFilterSelectOptionStyle = {
 };
 
 const SUPPORT_CENTER_VIEWS = new Set([
-  'Support Center', 'News', 'Articles', 'MetaQuotes Leads', 'Automation',
+  'Support Center', 'News', 'Articles', 'Orrnn Leads', 'Automation',
   'Sponsored VPS', 'Platform Documentation', 'API Documentation', 'Workshops',
   'Certification', 'Service Desk', 'Online Assistant', 'Search',
 ]);
@@ -161,7 +179,7 @@ const IMPORTED_VIEW_TYPES = new Set([
   'Allocations',
   'Integrations',
   'Anti DDoS Protection',
-  'Providers',
+  'Payments',
   'Payment Methods',
   'Deposits',
   'Withdrawals',
@@ -174,6 +192,7 @@ const IMPORTED_VIEW_TYPES = new Set([
 ]);
 
 const isDelegatedAdminView = (viewType) => (
+  FOLDER_ONLY_VIEWS.has(viewType) ||
   COMING_SOON_VIEWS.has(viewType) ||
   IMPORTED_VIEW_TYPES.has(viewType) ||
   SUPPORT_CENTER_VIEWS.has(viewType) ||
@@ -250,7 +269,18 @@ const parseOrderDateInput = (value) => {
 };
 
 const getOrderTimestampMs = (order) => {
-  const candidates = [order.timeSetup, order.timeDone, order.time, order.openTime, order.closeTime];
+  const candidates = [
+    order.timeSetup,
+    order.TimeSetup,
+    order.timeDone,
+    order.TimeDone,
+    order.time,
+    order.Time,
+    order.openTime,
+    order.OpenTime,
+    order.closeTime,
+    order.CloseTime,
+  ];
   for (const candidate of candidates) {
     if (candidate == null || candidate === '') continue;
     const numeric = Number(candidate);
@@ -304,19 +334,19 @@ const renderTableValue = (value) => (
 );
 
 const getOrderRow = (order, idx) => ({
-  id: order.ticket ?? order.order ?? order.orderTicket ?? idx,
-  ticket: order.ticket ?? order.order ?? order.orderTicket,
-  login: order.login,
-  time: order.timeSetupFormatted || order.timeDoneFormatted || order.timeSetup || order.timeDone || '',
+  id: pickDefined(order, ['ticket', 'Ticket', 'order', 'Order', 'orderTicket', 'OrderTicket'], idx),
+  ticket: pickDefined(order, ['ticket', 'Ticket', 'order', 'Order', 'orderTicket', 'OrderTicket']),
+  login: pickDefined(order, ['login', 'Login', 'accountLogin', 'account_login']),
+  time: formatTradeTimestamp(pickDefined(order, ['timeSetupFormatted', 'timeDoneFormatted', 'timeSetup', 'TimeSetup', 'timeDone', 'TimeDone', 'time', 'Time', 'openTime', 'OpenTime', 'closeTime', 'CloseTime'])),
   timeMs: getOrderTimestampMs(order),
-  symbol: order.symbol,
-  side: order.side ?? order.action ?? order.type ?? '',
-  volume: order.volume,
-  open_price: order.priceOpen ?? order.price_open ?? order.price ?? '',
-  sl: order.priceSl ?? order.sl ?? '',
-  tp: order.priceTp ?? order.tp ?? '',
-  status: order.status ?? order.state ?? '',
-  comment: order.comment ?? '',
+  symbol: pickDefined(order, ['symbol', 'Symbol']),
+  side: pickDefined(order, ['side', 'Side', 'action', 'Action', 'type', 'Type', 'cmd', 'Cmd']),
+  volume: pickDefined(order, ['volume', 'Volume', 'lots', 'Lots', 'volumeExt', 'VolumeExt']),
+  open_price: pickDefined(order, ['priceOpen', 'PriceOpen', 'price_open', 'openPrice', 'OpenPrice', 'price', 'Price']),
+  sl: pickDefined(order, ['priceSl', 'PriceSl', 'priceSL', 'PriceSL', 'sl', 'SL']),
+  tp: pickDefined(order, ['priceTp', 'PriceTp', 'priceTP', 'PriceTP', 'tp', 'TP']),
+  status: pickDefined(order, ['status', 'Status', 'state', 'State']),
+  comment: pickDefined(order, ['comment', 'Comment']),
 });
 
 const getPositionRow = (position, idx) => {
@@ -438,109 +468,196 @@ const filterOrderRows = (rows, filters) => {
   });
 };
 
-const getRowsForCount = ({
-  viewType,
-  groupsList,
-  usersResponse,
-  accountsResponse,
-  symbolsResponse,
-  positionsResponse,
-  ordersResponse,
-  dealsResponse,
-  orderFilters,
-}) => {
-  if (isDelegatedAdminView(viewType)) {
-    return [];
-  }
+const hasActiveOrderFilter = (filters) => Boolean(
+  String(filters.query || '').trim() ||
+  filters.symbol ||
+  filters.openOnly ||
+  filters.from ||
+  filters.to
+);
 
-  if (viewType === 'Groups') {
-    return groupsList.map(getGroupRow);
-  }
+const matchesRecordSearch = (record, query) => {
+  const normalizedQuery = String(query || '').trim().toLowerCase();
+  if (!normalizedQuery) return true;
 
-  if (viewType === 'Clients & Accounts') {
-    return clientsAccountsTableData;
-  }
-
-  if (viewType === 'Clients') {
-    return normalizeArrayResponse(usersResponse, ['users', 'data', 'answer', 'items'])
-      .filter((user) => !user.is_admin && user.role !== 'manager')
-      .map((user, idx) => ({
-        id: user.id || user.login || user.email || idx,
-        iconType: 'user',
-        name: user.name || user.full_name || user.username || user.login || user.email || '-',
-        description: user.email || user.phone || user.group || '',
-      }));
-  }
-
-  if (viewType === 'Trading Accounts') {
-    return normalizeArrayResponse(accountsResponse, ['accounts', 'data', 'answer', 'items']).map((account, idx) => ({
-      id: account.login || account.account_login || idx,
-      login: account.login || account.account_login,
-      name: account.name || account.client_name || account.full_name || account.user_name || '',
-      group: account.group || account.group_name || account.account_group || '',
-      balance: account.balance,
-      equity: account.equity,
-      currency: account.currency,
-      status: account.status || (account.enabled === false ? 'disabled' : 'active'),
-    }));
-  }
-
-  if (viewType === 'Symbols') {
-    return normalizeArrayResponse(symbolsResponse, ['instruments', 'symbols', 'data', 'answer', 'items']).map((symbol, idx) => ({
-      id: symbol.id || symbol.symbol || idx,
-      symbol: symbol.symbol || symbol.name || '',
-      description: symbol.description || symbol.path || symbol.category || '',
-      digits: symbol.digits ?? symbol.digits_currency ?? '',
-      type: symbol.trade_mode || symbol.type || symbol.mode || '',
-      execution: symbol.enabled === false ? 'Disabled' : (symbol.execution || 'Enabled'),
-      expiration: symbol.expiration || 'GTC',
-      background: symbol.background || '',
-    }));
-  }
-
-  if (viewType === 'Positions') {
-    return normalizeArrayResponse(positionsResponse, ['data', 'positions', 'answer', 'items']).map(getPositionRow);
-  }
-
-  if (viewType === 'Orders') {
-    const rows = normalizeArrayResponse(ordersResponse, ['data', 'orders', 'answer', 'items']).map(getOrderRow);
-    return orderFilters ? filterOrderRows(rows, orderFilters) : rows;
-  }
-
-  if (viewType === 'Deals') {
-    return normalizeArrayResponse(dealsResponse, ['data', 'deals', 'answer', 'items']).map(getDealRow);
-  }
-
-  if (viewType === 'Payments') {
-    return paymentsTableData;
-  }
-
-  if (viewType === 'Automations') {
-    return automationsTableData;
-  }
-
-  if (viewType === 'Security') {
-    return securityTableData;
-  }
-
-  const backendGroup = groupsList.find((group) => group.name === viewType);
-  return backendGroup ? [getGroupRow(backendGroup, 0)] : [];
+  return Object.values(record || {}).some((value) => (
+    value !== undefined &&
+    value !== null &&
+    String(value).toLowerCase().includes(normalizedQuery)
+  ));
 };
 
-const getRenderedCounts = (args) => {
-  const rows = getRowsForCount(args);
-  const total = Array.isArray(rows) ? rows.length : 0;
-  if (!args.searchQuery || !total) {
-    return { total, filtered: total };
-  }
+const getBrokerClientRow = (account, idx) => {
+  const id = pickDefined(account, ['id', 'ID', 'login', 'Login', 'account_login', 'accountLogin', 'email', 'Email', 'phone', 'Phone'], idx);
+  const login = pickDefined(account, ['login', 'Login', 'account_login', 'accountLogin']);
+  const name = pickDefined(account, ['name', 'Name', 'client_name', 'clientName', 'full_name', 'fullName', 'user_name', 'userName'], login || '-');
+  const email = pickDefined(account, ['email', 'Email']);
+  const phone = pickDefined(account, ['phone', 'Phone']);
+  const group = pickDefined(account, ['group', 'Group', 'group_name', 'groupName', 'account_group', 'accountGroup', 'accountGroupName']);
+  const status = pickDefined(account, ['status', 'Status'], account.enabled === false || account.Enabled === false ? 'disabled' : 'active');
 
-  const query = args.searchQuery.toLowerCase();
-  const filtered = rows.filter((row) =>
-    Object.values(row).some((value) => value != null && String(value).toLowerCase().includes(query))
-  ).length;
-
-  return { total, filtered };
+  return {
+    id,
+    iconType: 'user',
+    name,
+    description: [
+      email,
+      phone,
+      group ? `Group: ${group}` : '',
+      status ? `Status: ${status}` : '',
+    ].filter(Boolean).join(' | '),
+  };
 };
+
+const getAccountRow = (account, idx) => ({
+  id: pickDefined(account, ['login', 'Login', 'account_login', 'accountLogin'], idx),
+  login: pickDefined(account, ['login', 'Login', 'account_login', 'accountLogin']),
+  name: pickDefined(account, ['name', 'Name', 'client_name', 'clientName', 'full_name', 'fullName', 'user_name', 'userName']),
+  group: pickDefined(account, ['group', 'Group', 'group_name', 'groupName', 'account_group', 'accountGroup', 'accountGroupName']),
+  balance: pickDefined(account, ['balance', 'Balance'], 0),
+  equity: pickDefined(account, ['equity', 'Equity'], 0),
+  currency: pickDefined(account, ['currency', 'Currency']),
+  status: pickDefined(account, ['status', 'Status'], account.enabled === false || account.Enabled === false ? 'disabled' : 'active'),
+});
+
+const getSymbolRow = (symbol, idx) => ({
+  id: symbol.id || symbol.symbol || idx,
+  symbol: symbol.symbol || symbol.name || '',
+  description: symbol.description || symbol.path || symbol.category || '',
+  digits: symbol.digits ?? symbol.digits_currency ?? '',
+  type: symbol.trade_mode || symbol.type || symbol.mode || '',
+  execution: symbol.enabled === false ? 'Disabled' : (symbol.execution || 'Enabled'),
+  expiration: symbol.expiration || 'GTC',
+  background: symbol.background || '',
+});
+
+const getPagedMappedRows = ({ response, keys, page, pageSize, search, filterFn, mapFn }) => {
+  const normalizedSearch = String(search || '').trim();
+  const combinedFilter = (record, index) => (
+    (!filterFn || filterFn(record, index)) &&
+    matchesRecordSearch(record, normalizedSearch)
+  );
+  const paged = normalizePagedResponse(response, {
+    arrayKeys: keys,
+    page,
+    limit: pageSize,
+    filterFn: filterFn || normalizedSearch ? combinedFilter : undefined,
+  });
+
+  return {
+    ...paged,
+    rows: paged.rows.map(mapFn),
+  };
+};
+
+const getOrderRecordFilter = (filters) => (order, index) => {
+  const row = getOrderRow(order, index);
+  return filterOrderRows([row], filters).length > 0;
+};
+
+const clampPage = (page, totalPages) => {
+  const nextPage = Number(page);
+  if (!Number.isFinite(nextPage) || nextPage < 1) return 1;
+  if (Number.isFinite(totalPages)) return Math.min(Math.floor(nextPage), totalPages);
+  return Math.floor(nextPage);
+};
+
+const formatCount = (value) => (
+  Number.isFinite(value) ? new Intl.NumberFormat().format(value) : ''
+);
+
+const estimateJsonBytes = (value) => {
+  try {
+    const json = JSON.stringify(value ?? []);
+    if (typeof TextEncoder !== 'undefined') {
+      return new TextEncoder().encode(json).length;
+    }
+    return json.length;
+  } catch {
+    return 0;
+  }
+};
+
+const GROUP_COLUMNS = [
+  { label: 'Group', key: 'group', width: 'w-64' },
+  { label: 'Server', key: 'server', width: 'w-48' },
+  { label: 'Company', key: 'company', width: 'w-64' },
+  { label: 'Type', key: 'type', width: 'w-32' },
+  { label: 'Authentication', key: 'auth', width: 'w-40' },
+  { label: 'Risk Management', key: 'risk', width: 'w-48' },
+  { label: 'Margin', key: 'margin', width: 'w-32' },
+  { label: 'Floating Leverage Profile', key: 'leverage', width: 'w-56' },
+  { label: 'Currency', key: 'currency', width: 'w-24' },
+];
+
+const CLIENTS_COLUMNS = [
+  { label: 'Name', key: 'name', width: 'w-64' },
+  { label: 'Description', key: 'description', width: 'flex-1' },
+];
+
+const ACCOUNT_COLUMNS = [
+  { label: 'Login', key: 'login', width: 'w-32' },
+  { label: 'Name', key: 'name', width: 'w-48' },
+  { label: 'Group', key: 'group', width: 'w-48' },
+  { label: 'Balance', key: 'balance', width: 'w-32' },
+  { label: 'Equity', key: 'equity', width: 'w-32' },
+  { label: 'Currency', key: 'currency', width: 'w-24' },
+  { label: 'Status', key: 'status', width: 'w-32' },
+];
+
+const SYMBOL_COLUMNS = [
+  { label: 'Symbol', key: 'symbol', width: 'w-48' },
+  { label: 'Description', key: 'description', width: 'w-72' },
+  { label: 'Digits', key: 'digits', width: 'w-24' },
+  { label: 'Type', key: 'type', width: 'w-32' },
+  { label: 'Execution', key: 'execution', width: 'w-48' },
+  { label: 'Expiration', key: 'expiration', width: 'w-32' },
+  { label: 'Background', key: 'background', width: 'flex-1' },
+];
+
+const POSITION_COLUMNS = [
+  { label: 'Ticket', width: 'w-24' },
+  { label: 'Login', width: 'w-24' },
+  { label: 'Time', width: 'w-40' },
+  { label: 'Symbol', width: 'w-32' },
+  { label: 'Side', width: 'w-20' },
+  { label: 'Volume', width: 'w-24' },
+  { label: 'Price Open', width: 'w-32' },
+  { label: 'Price Current', width: 'w-32' },
+  { label: 'S/L', width: 'w-32' },
+  { label: 'T/P', width: 'w-32' },
+  { label: 'Swap', width: 'w-24' },
+  { label: 'Profit', width: 'flex-1' },
+];
+
+const ORDER_COLUMNS = [
+  { label: 'Ticket', width: 'w-24' },
+  { label: 'Login', width: 'w-24' },
+  { label: 'Time', width: 'w-40' },
+  { label: 'Symbol', width: 'w-32' },
+  { label: 'Side', width: 'w-20' },
+  { label: 'Volume', width: 'w-24' },
+  { label: 'Price Open', width: 'w-32' },
+  { label: 'S/L', width: 'w-32' },
+  { label: 'T/P', width: 'w-32' },
+  { label: 'Status', width: 'w-32' },
+  { label: 'Comment', width: 'flex-1' },
+];
+
+const DEAL_COLUMNS = [
+  { label: 'Ticket', width: 'w-24' },
+  { label: 'Order Ticket', width: 'w-24' },
+  { label: 'Time', width: 'w-40' },
+  { label: 'Login', width: 'w-24' },
+  { label: 'Symbol', width: 'w-32' },
+  { label: 'Action', width: 'w-24' },
+  { label: 'Entry', width: 'w-24' },
+  { label: 'Volume', width: 'w-24' },
+  { label: 'Price', width: 'w-32' },
+  { label: 'Commission', width: 'w-24' },
+  { label: 'Fee', width: 'w-24' },
+  { label: 'Profit', width: 'flex-1' },
+];
 
 const TimePropertyRow = ({ idx, icon, label, value }) => (
   <div className={`flex items-center text-[12px] border-b border-black/20 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-blue-600/20 cursor-default`}>
@@ -571,7 +688,10 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   const [closeAllNotice, setCloseAllNotice] = useState(null);
   const [ordersMode, setOrdersMode] = useState('all');
   const [orderFilters, setOrderFilters] = useState(() => createDefaultOrderFilters());
-  const [orderRenderLimit, setOrderRenderLimit] = useState(ORDER_RENDER_BATCH_SIZE);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
+  const [debouncedOrderQuery, setDebouncedOrderQuery] = useState(orderFilters.query);
   const currentUser = useAuthStore((state) => state.user);
   const { notify } = useToast();
   const closeAllAction = getCloseAllActionState({
@@ -586,22 +706,99 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   const orderFromDateInputRef = React.useRef(null);
   const orderToDateInputRef = React.useRef(null);
 
-  const canLoadGroups = canAccessView(currentUser, 'Groups');
-  const { data: usersResponse, loading: usersLoading, error: usersError, mutate: refetchUsers } = useUsers(1, 100, '', '', viewType === 'Clients');
-  const { data: accountsResponse, loading: accountsLoading, error: accountsError, mutate: refetchAccounts } = useAccounts(1, 100, '', '', '', viewType === 'Trading Accounts');
-  const { data: symbolsResponse, loading: symbolsLoading, error: symbolsError, mutate: refetchSymbols } = useInstruments(1, 100, '', '', viewType === 'Symbols');
-  const { data: positionsResponse, loading: positionsLoading, error: positionsError, mutate: refetchPositions } = usePositions({ page: 1, limit: 100 }, true, 2000, viewType === 'Positions');
-  const { data: ordersResponse, loading: ordersLoading, error: ordersError, mutate: refetchOrders } = useOrders({ limit: 100, offset: 0, allPages: ordersMode === 'all' }, viewType === 'Orders');
+  React.useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
 
-  const { data: groupsResponse, loading: groupsLoading, error: groupsError, mutate: refetchGroups } = useGroups(canLoadGroups);
-  const groupsList = canLoadGroups ? normalizeArrayResponse(groupsResponse, ['answer', 'groups', 'data', 'items']) : [];
+    return () => window.clearTimeout(timerId);
+  }, [searchQuery]);
+
+  React.useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      setDebouncedOrderQuery(orderFilters.query);
+    }, 300);
+
+    return () => window.clearTimeout(timerId);
+  }, [orderFilters.query]);
+
+  const canLoadGroups = canAccessView(currentUser, 'Groups');
+  const isPotentialGroupLookup = !isDelegatedAdminView(viewType) && !NON_GROUP_LOOKUP_VIEWS.has(viewType);
+  const shouldLoadGroups = canLoadGroups && (viewType === 'Groups' || isPotentialGroupLookup);
+  const groupSearch = viewType === 'Groups' ? debouncedSearchQuery : (isPotentialGroupLookup ? viewType : '');
+  const orderSearch = debouncedOrderQuery || debouncedSearchQuery;
+  const effectiveOrderFilters = React.useMemo(() => ({
+    query: orderSearch,
+    symbol: orderFilters.symbol,
+    openOnly: orderFilters.openOnly,
+    rangePreset: orderFilters.rangePreset,
+    from: orderFilters.from,
+    to: orderFilters.to,
+    database: orderFilters.database,
+  }), [
+    orderFilters.database,
+    orderFilters.from,
+    orderFilters.openOnly,
+    orderFilters.rangePreset,
+    orderFilters.symbol,
+    orderFilters.to,
+    orderSearch,
+  ]);
+  const pagingScopeKey = React.useMemo(() => JSON.stringify([
+    viewType,
+    pageSize,
+    debouncedSearchQuery,
+    debouncedOrderQuery,
+    ordersMode,
+    orderFilters.symbol,
+    orderFilters.openOnly,
+    orderFilters.rangePreset,
+    orderFilters.from,
+    orderFilters.to,
+    orderFilters.database,
+  ]), [
+    viewType,
+    pageSize,
+    debouncedSearchQuery,
+    debouncedOrderQuery,
+    ordersMode,
+    orderFilters.symbol,
+    orderFilters.openOnly,
+    orderFilters.rangePreset,
+    orderFilters.from,
+    orderFilters.to,
+    orderFilters.database,
+  ]);
+  const pagingScopeRef = React.useRef(pagingScopeKey);
+  const activePage = pagingScopeRef.current === pagingScopeKey ? page : 1;
+
+  React.useEffect(() => {
+    if (pagingScopeRef.current === pagingScopeKey) return;
+    pagingScopeRef.current = pagingScopeKey;
+    setPage(1);
+  }, [pagingScopeKey]);
+
+  const usesAccountDetailsMany = viewType === 'Clients' || viewType === 'Trading Accounts';
+  const { data: accountsResponse, loading: accountsLoading, error: accountsError, mutate: refetchAccounts } = useAccounts(activePage, pageSize, debouncedSearchQuery, '', '', usesAccountDetailsMany);
+  const { data: symbolsResponse, loading: symbolsLoading, error: symbolsError, mutate: refetchSymbols } = useInstruments(activePage, pageSize, debouncedSearchQuery, '', viewType === 'Symbols');
+  const { data: positionsResponse, loading: positionsLoading, error: positionsError, mutate: refetchPositions } = usePositions({ page: activePage, limit: pageSize }, true, 2000, viewType === 'Positions');
+  const { data: ordersResponse, loading: ordersLoading, error: ordersError, mutate: refetchOrders } = useOrders({
+    limit: pageSize,
+    offset: (activePage - 1) * pageSize,
+    search: orderSearch,
+    symbol: orderFilters.symbol,
+    from: orderFilters.from,
+    to: orderFilters.to,
+    openOnly: orderFilters.openOnly,
+  }, viewType === 'Orders');
+
+  const { data: groupsResponse, loading: groupsLoading, error: groupsError, mutate: refetchGroups } = useGroups(activePage, pageSize, groupSearch, shouldLoadGroups);
 
   React.useEffect(() => {
     if (!refreshTrigger) return;
     const map = {
       'Groups': refetchGroups,
-      'Clients': refetchUsers,
-      'Managers': refetchUsers,
+      'Clients': refetchAccounts,
       'Trading Accounts': refetchAccounts,
       'Symbols': refetchSymbols,
       'Positions': refetchPositions,
@@ -617,49 +814,18 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
       to: new Date(now).toISOString()
     };
   });
-  const { data: dealsResponse, loading: dealsLoading, error: dealsError, mutate: refetchDeals } = useDealsSummary(dealDateRange.from, dealDateRange.to, '', '', viewType === 'Deals');
+  const { data: dealsResponse, loading: dealsLoading, error: dealsError, mutate: refetchDeals } = useDealsSummary(
+    dealDateRange.from,
+    dealDateRange.to,
+    '',
+    '',
+    viewType === 'Deals',
+    { page: activePage, limit: pageSize, search: debouncedSearchQuery }
+  );
 
   React.useEffect(() => {
     if (refreshTrigger && viewType === 'Deals') refetchDeals?.();
   }, [refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  React.useEffect(() => {
-    if (viewType !== 'Orders') return;
-    setOrderRenderLimit(ORDER_RENDER_BATCH_SIZE);
-  }, [
-    viewType,
-    ordersMode,
-    orderFilters.query,
-    orderFilters.symbol,
-    orderFilters.openOnly,
-    orderFilters.rangePreset,
-    orderFilters.from,
-    orderFilters.to,
-    orderFilters.database,
-  ]);
-
-  const renderedCounts = getRenderedCounts({
-    viewType,
-    searchQuery,
-    groupsList,
-    usersResponse,
-    accountsResponse,
-    symbolsResponse,
-    positionsResponse,
-    ordersResponse,
-    dealsResponse,
-    orderFilters,
-  });
-  const { total: renderedTotalCount, filtered: renderedFilteredCount } = renderedCounts;
-
-  React.useEffect(() => {
-    if (renderedTotalCount !== lastSentRef.current.total || renderedFilteredCount !== lastSentRef.current.filtered) {
-      const nextCounts = { total: renderedTotalCount, filtered: renderedFilteredCount };
-      lastSentRef.current = nextCounts;
-      onCountChange?.(nextCounts);
-    }
-  }, [renderedTotalCount, renderedFilteredCount, onCountChange]);
-
 
   const [editingGroup, setEditingGroup] = useState(null);
 
@@ -786,10 +952,6 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     refetchOrders?.();
   };
 
-  const handleLoadMoreOrders = () => {
-    setOrderRenderLimit((current) => current + ORDER_RENDER_BATCH_SIZE);
-  };
-
   const openOrderDatePicker = (inputRef) => {
     const input = inputRef.current;
     if (!input) return;
@@ -814,6 +976,243 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     }
   };
 
+  const tableState = React.useMemo(() => {
+    let columns = [];
+    let data = [];
+    let isClientsViewTemp = false;
+    let isSymbolsViewTemp = false;
+    let isPositionsViewTemp = false;
+    let isAccountsViewTemp = false;
+    let isGroupLookupViewTemp = false;
+    let isLoading = false;
+    let orderSymbolOptions = [];
+    let pagination = null;
+
+    if (viewType === 'Groups') {
+      const pageData = getPagedMappedRows({
+        response: groupsResponse,
+        keys: ['answer', 'groups', 'data', 'items', 'rows'],
+        page: activePage,
+        pageSize,
+        search: debouncedSearchQuery,
+        mapFn: getGroupRow,
+      });
+
+      columns = GROUP_COLUMNS;
+      data = pageData.rows;
+      pagination = pageData;
+      isGroupLookupViewTemp = true;
+      isLoading = groupsLoading;
+    } else if (viewType === 'Clients & Accounts') {
+      columns = CLIENTS_COLUMNS;
+      data = debouncedSearchQuery
+        ? clientsAccountsTableData.filter((row) => matchesRecordSearch(row, debouncedSearchQuery))
+        : clientsAccountsTableData;
+      isClientsViewTemp = true;
+    } else if (viewType === 'Clients') {
+      const pageData = getPagedMappedRows({
+        response: accountsResponse,
+        keys: ['accounts', 'data', 'answer', 'items', 'rows'],
+        page: activePage,
+        pageSize,
+        search: debouncedSearchQuery,
+        mapFn: getBrokerClientRow,
+      });
+
+      columns = CLIENTS_COLUMNS;
+      data = pageData.rows;
+      pagination = pageData;
+      isClientsViewTemp = true;
+      isLoading = accountsLoading;
+    } else if (viewType === 'Trading Accounts') {
+      const pageData = getPagedMappedRows({
+        response: accountsResponse,
+        keys: ['accounts', 'data', 'answer', 'items', 'rows'],
+        page: activePage,
+        pageSize,
+        search: debouncedSearchQuery,
+        mapFn: getAccountRow,
+      });
+
+      columns = ACCOUNT_COLUMNS;
+      data = pageData.rows;
+      pagination = pageData;
+      isAccountsViewTemp = true;
+      isLoading = accountsLoading;
+    } else if (viewType === 'Symbols') {
+      const pageData = getPagedMappedRows({
+        response: symbolsResponse,
+        keys: ['instruments', 'symbols', 'data', 'answer', 'items', 'rows', 'value'],
+        page: activePage,
+        pageSize,
+        search: debouncedSearchQuery,
+        mapFn: getSymbolRow,
+      });
+
+      columns = SYMBOL_COLUMNS;
+      data = pageData.rows;
+      pagination = pageData;
+      isSymbolsViewTemp = true;
+      isLoading = symbolsLoading;
+    } else if (viewType === 'Positions') {
+      const pageData = getPagedMappedRows({
+        response: positionsResponse,
+        keys: ['data', 'positions', 'answer', 'items', 'rows'],
+        page: activePage,
+        pageSize,
+        search: debouncedSearchQuery,
+        mapFn: getPositionRow,
+      });
+
+      columns = POSITION_COLUMNS;
+      data = pageData.rows;
+      pagination = pageData;
+      isPositionsViewTemp = true;
+      isLoading = positionsLoading;
+    } else if (viewType === 'Orders') {
+      const applyLocalOrderFilter = hasActiveOrderFilter(effectiveOrderFilters);
+      const pageData = getPagedMappedRows({
+        response: ordersResponse,
+        keys: ['data', 'orders', 'answer', 'items', 'rows'],
+        page: activePage,
+        pageSize,
+        filterFn: applyLocalOrderFilter ? getOrderRecordFilter(effectiveOrderFilters) : undefined,
+        mapFn: (order, idx) => getOrderDisplayRow(getOrderRow(order, idx)),
+      });
+
+      columns = ORDER_COLUMNS;
+      data = pageData.rows;
+      pagination = pageData;
+      orderSymbolOptions = getOrderSymbolOptions(data);
+      isPositionsViewTemp = true;
+      isLoading = ordersLoading;
+    } else if (viewType === 'Deals') {
+      const pageData = getPagedMappedRows({
+        response: dealsResponse,
+        keys: ['data', 'deals', 'answer', 'items', 'rows'],
+        page: activePage,
+        pageSize,
+        search: debouncedSearchQuery,
+        mapFn: getDealRow,
+      });
+
+      columns = DEAL_COLUMNS;
+      data = pageData.rows;
+      pagination = pageData;
+      isPositionsViewTemp = true;
+      isLoading = dealsLoading;
+    } else if (viewType === 'Automations' || viewType === 'Security') {
+      columns = CLIENTS_COLUMNS;
+      if (viewType === 'Automations') data = automationsTableData;
+      else data = securityTableData;
+      if (debouncedSearchQuery) {
+        data = data.filter((row) => matchesRecordSearch(row, debouncedSearchQuery));
+      }
+      isClientsViewTemp = true;
+    } else {
+      const pageData = getPagedMappedRows({
+        response: groupsResponse,
+        keys: ['answer', 'groups', 'data', 'items', 'rows'],
+        page: activePage,
+        pageSize,
+        search: viewType,
+        mapFn: getGroupRow,
+      });
+      const matchingGroup = pageData.rows.find((row) => row.group === viewType);
+
+      isGroupLookupViewTemp = true;
+      if (!groupsResponse && groupsLoading) {
+        isLoading = true;
+      }
+
+      if (matchingGroup) {
+        columns = GROUP_COLUMNS;
+        data = [matchingGroup];
+      } else {
+        columns = [
+          { label: 'Item Name', width: 'w-64' },
+          { label: 'Status', width: 'w-32' },
+          { label: 'Description', width: 'flex-1' },
+        ];
+        data = [];
+      }
+    }
+
+    return {
+      columns,
+      data,
+      isClientsView: isClientsViewTemp,
+      isSymbolsView: isSymbolsViewTemp,
+      isPositionsView: isPositionsViewTemp,
+      isAccountsView: isAccountsViewTemp,
+      isGroupLookupView: isGroupLookupViewTemp,
+      isLoading,
+      orderSymbolOptions,
+      pagination,
+    };
+  }, [
+    accountsLoading,
+    accountsResponse,
+    debouncedSearchQuery,
+    dealsLoading,
+    dealsResponse,
+    effectiveOrderFilters,
+    groupsLoading,
+    groupsResponse,
+    ordersLoading,
+    ordersResponse,
+    activePage,
+    pageSize,
+    positionsLoading,
+    positionsResponse,
+    symbolsLoading,
+    symbolsResponse,
+    viewType,
+  ]);
+
+  const {
+    columns,
+    data,
+    isClientsView,
+    isSymbolsView,
+    isPositionsView,
+    isAccountsView,
+    isGroupLookupView,
+    isLoading,
+    orderSymbolOptions,
+    pagination,
+  } = tableState;
+
+  const knownTotalCount = pagination?.hasKnownTotal ? pagination.total : undefined;
+  const renderedTotalCount = Number.isFinite(knownTotalCount) ? knownTotalCount : data.length;
+  const renderedFilteredCount = renderedTotalCount;
+  const mountedRowBytes = React.useMemo(() => estimateJsonBytes(data), [data]);
+  const totalPages = pagination?.hasKnownTotal ? pagination.totalPages : undefined;
+
+  React.useEffect(() => {
+    if (Number.isFinite(totalPages) && activePage > totalPages) {
+      setPage(totalPages);
+    }
+  }, [activePage, totalPages]);
+
+  React.useEffect(() => {
+    if (
+      renderedTotalCount !== lastSentRef.current.total ||
+      renderedFilteredCount !== lastSentRef.current.filtered ||
+      data.length !== lastSentRef.current.visible ||
+      mountedRowBytes !== lastSentRef.current.bytes
+    ) {
+      const nextCounts = {
+        total: renderedTotalCount,
+        filtered: renderedFilteredCount,
+        visible: data.length,
+        bytes: mountedRowBytes,
+      };
+      lastSentRef.current = nextCounts;
+      onCountChange?.(nextCounts);
+    }
+  }, [data.length, mountedRowBytes, renderedTotalCount, renderedFilteredCount, onCountChange]);
+
   // --- COMING SOON: sidebar views that have no backend yet ---
   // Renders a lightweight empty state so clicking these items doesn't show
   // a blank table. Remove an entry once that view gets wired to an API.
@@ -833,6 +1232,27 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
           </div>
           <span className="mt-2 inline-flex items-center h-5 px-2 rounded-[var(--radius-sm)] border border-[color:var(--border-default)] text-[10px] font-mono uppercase tracking-wider text-[color:var(--text-muted)]">
             No backend
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (FOLDER_ONLY_VIEWS.has(viewType)) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-[color:var(--bg-app)] select-none">
+        <div className="flex flex-col items-center gap-3 max-w-md text-center px-6">
+          <div className="w-12 h-12 rounded-full bg-[color:var(--bg-surface-2)] border border-[color:var(--border-default)] flex items-center justify-center">
+            <ShieldAlert size={20} className="text-[color:var(--text-muted)]" />
+          </div>
+          <div className="text-[14px] font-semibold text-[color:var(--text-primary)]">
+            {viewType}
+          </div>
+          <div className="text-[12px] text-[color:var(--text-secondary)] leading-relaxed">
+            This is a folder. Open one of the connected child pages from the sidebar.
+          </div>
+          <span className="mt-2 inline-flex items-center h-5 px-2 rounded-[var(--radius-sm)] border border-[color:var(--border-default)] text-[10px] font-mono uppercase tracking-wider text-[color:var(--text-muted)]">
+            Folder only
           </span>
         </div>
       </div>
@@ -894,7 +1314,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   if (viewType === 'Risk Reports') {
     return <RiskReportsView />;
   }
-  if (viewType === 'Client Analytics') {
+  if (viewType === 'Analytics' || viewType === 'Client Analytics') {
     return <AnalyticsClientView />;
   }
   if (viewType === 'Trading Analytics') {
@@ -948,10 +1368,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   }
 
   // --- PAYMENTS INJECTION ---
-  if (viewType === 'Providers') {
-    return <PaymentsView />;
-  }
-  if (viewType === 'Payment Methods') {
+  if (viewType === 'Payments' || viewType === 'Payment Methods') {
     return <PaymentMethodsView />;
   }
   if (viewType === 'Deposits') {
@@ -975,7 +1392,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
 
   // --- COMMUNICATIONS INJECTION ---
   if (COMMUNICATIONS_VIEWS.has(viewType)) {
-    return <CommunicationsView />;
+    return <CommunicationsView initialTab={viewType} />;
   }
 
   // --- SECURITY & ACCESS INJECTION ---
@@ -1006,232 +1423,9 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     return <ServerStatusPanel key={viewType} serverName={viewType} initialTab={initialServerTab} onDoubleClick={() => setServerPopupData({ isOpen: true, target: viewType, id: 'SRV-001' })} />;
   }
 
-  const groupColumns = [
-    { label: 'Group', key: 'group', width: 'w-64' },
-    { label: 'Server', key: 'server', width: 'w-48' },
-    { label: 'Company', key: 'company', width: 'w-64' },
-    { label: 'Type', key: 'type', width: 'w-32' },
-    { label: 'Authentication', key: 'auth', width: 'w-40' },
-    { label: 'Risk Management', key: 'risk', width: 'w-48' },
-    { label: 'Margin', key: 'margin', width: 'w-32' },
-    { label: 'Floating Leverage Profile', key: 'leverage', width: 'w-56' },
-    { label: 'Currency', key: 'currency', width: 'w-24' },
-  ];
- 
-  const clientsColumns = [
-    { label: 'Name', key: 'name', width: 'w-64' },
-    { label: 'Description', key: 'description', width: 'flex-1' },
-  ];
-
-  const symbolsColumns = [
-    { label: 'Symbol', key: 'symbol', width: 'w-48' },
-    { label: 'Description', key: 'description', width: 'w-72' },
-    { label: 'Digits', key: 'digits', width: 'w-24' },
-    { label: 'Type', key: 'type', width: 'w-32' },
-    { label: 'Execution', key: 'execution', width: 'w-48' },
-    { label: 'Expiration', key: 'expiration', width: 'w-32' },
-    { label: 'Background', key: 'background', width: 'flex-1' },
-  ];
-
-  let columns = [];
-  let data = [];
-  let isClientsViewTemp = false;
-  let isSymbolsViewTemp = false;
-  let isPositionsViewTemp = false;
-  let isAccountsViewTemp = false;
-  let isGroupLookupViewTemp = false;
-  let isLoading = false;
-  let orderSymbolOptions = [];
-  let orderTotalFilteredCount = 0;
-  let orderVisibleCount = 0;
-
-  if (viewType === 'Groups') {
-    isGroupLookupViewTemp = true;
-    columns = groupColumns;
-    data = groupsList.map((g, idx) => ({
-      ...g,
-      id: g.name || idx,
-      group: g.name,
-      server: 'Main Trade Server',
-      company: g.description,
-      type: g.accountType,
-      auth: 'Normal',
-      risk: g.executionMode,
-      margin: `${g.marginCallLevel}% / ${g.stopOutLevel}%`,
-      leverage: `1 : ${g.leverage}`,
-      currency: g.currency,
-      iconType: 'group'
-    }));
-    isLoading = groupsLoading;
-  } else if (viewType === 'Clients & Accounts') {
-    columns = clientsColumns;
-    data = clientsAccountsTableData;
-    isClientsViewTemp = true;
-  } else if (viewType === 'Clients') {
-    columns = clientsColumns;
-    data = normalizeArrayResponse(usersResponse, ['users', 'data', 'answer', 'items'])
-      .filter((u) => !u.is_admin && u.role !== 'manager')
-      .map((u, idx) => ({
-        id: u.id || u.login || u.email || idx,
-        iconType: 'user',
-        name: u.name || u.full_name || u.username || u.login || u.email || '-',
-        description: u.email || u.phone || u.group || '',
-      }));
-    isClientsViewTemp = true;
-    isLoading = usersLoading;
-  } else if (viewType === 'Trading Accounts') {
-    columns = [
-      { label: 'Login', key: 'login', width: 'w-32' },
-      { label: 'Name', key: 'name', width: 'w-48' },
-      { label: 'Group', key: 'group', width: 'w-48' },
-      { label: 'Balance', key: 'balance', width: 'w-32' },
-      { label: 'Equity', key: 'equity', width: 'w-32' },
-      { label: 'Currency', key: 'currency', width: 'w-24' },
-      { label: 'Status', key: 'status', width: 'w-32' },
-    ];
-    data = normalizeArrayResponse(accountsResponse, ['accounts', 'data', 'answer', 'items']).map((a, idx) => ({
-      id: a.login || a.account_login || idx,
-      login: a.login || a.account_login,
-      name: a.name || a.client_name || a.full_name || a.user_name || '',
-      group: a.group || a.group_name || a.account_group || '',
-      balance: a.balance,
-      equity: a.equity,
-      currency: a.currency,
-      status: a.status || (a.enabled === false ? 'disabled' : 'active'),
-    }));
-    isAccountsViewTemp = true;
-    isLoading = accountsLoading;
-  } else if (viewType === 'Symbols') {
-    columns = symbolsColumns;
-    data = normalizeArrayResponse(symbolsResponse, ['instruments', 'symbols', 'data', 'answer', 'items']).map((s, i) => ({
-      id: s.id || s.symbol || i,
-      symbol: s.symbol || s.name || '',
-      description: s.description || s.path || s.category || '',
-      digits: s.digits ?? s.digits_currency ?? '',
-      type: s.trade_mode || s.type || s.mode || '',
-      execution: s.enabled === false ? 'Disabled' : (s.execution || 'Enabled'),
-      expiration: s.expiration || 'GTC',
-      background: s.background || '',
-    }));
-    isSymbolsViewTemp = true;
-    isLoading = symbolsLoading;
-  } else if (viewType === 'Positions') {
-    columns = [
-      { label: 'Ticket', width: 'w-24' },
-      { label: 'Login', width: 'w-24' },
-      { label: 'Time', width: 'w-40' },
-      { label: 'Symbol', width: 'w-32' },
-      { label: 'Side', width: 'w-20' },
-      { label: 'Volume', width: 'w-24' },
-      { label: 'Price Open', width: 'w-32' },
-      { label: 'Price Current', width: 'w-32' },
-      { label: 'S/L', width: 'w-32' },
-      { label: 'T/P', width: 'w-32' },
-      { label: 'Swap', width: 'w-24' },
-      { label: 'Profit', width: 'flex-1' }
-    ];
-    
-    const dataList = normalizeArrayResponse(positionsResponse, ['data', 'positions', 'answer', 'items']);
-    
-    data = dataList.map(getPositionRow);
-    isPositionsViewTemp = true;
-    isLoading = positionsLoading;
-  } else if (viewType === 'Orders') {
-    columns = [
-      { label: 'Ticket', width: 'w-24' },
-      { label: 'Login', width: 'w-24' },
-      { label: 'Time', width: 'w-40' },
-      { label: 'Symbol', width: 'w-32' },
-      { label: 'Side', width: 'w-20' },
-      { label: 'Volume', width: 'w-24' },
-      { label: 'Price Open', width: 'w-32' },
-      { label: 'S/L', width: 'w-32' },
-      { label: 'T/P', width: 'w-32' },
-      { label: 'Status', width: 'w-32' },
-      { label: 'Comment', width: 'flex-1' },
-    ];
-
-    const dataList = normalizeArrayResponse(ordersResponse, ['data', 'orders', 'answer', 'items']);
-
-    data = dataList.map(getOrderRow);
-    orderSymbolOptions = getOrderSymbolOptions(data);
-    const filteredOrders = filterOrderRows(data, orderFilters).map(getOrderDisplayRow);
-    orderTotalFilteredCount = filteredOrders.length;
-    data = filteredOrders.slice(0, orderRenderLimit);
-    orderVisibleCount = data.length;
-    isPositionsViewTemp = true;
-    isLoading = ordersLoading;
-  } else if (viewType === 'Deals') {
-    columns = [
-      { label: 'Ticket', width: 'w-24' },
-      { label: 'Order Ticket', width: 'w-24' },
-      { label: 'Time', width: 'w-40' },
-      { label: 'Login', width: 'w-24' },
-      { label: 'Symbol', width: 'w-32' },
-      { label: 'Action', width: 'w-24' },
-      { label: 'Entry', width: 'w-24' },
-      { label: 'Volume', width: 'w-24' },
-      { label: 'Price', width: 'w-32' },
-      { label: 'Commission', width: 'w-24' },
-      { label: 'Fee', width: 'w-24' },
-      { label: 'Profit', width: 'flex-1' }
-    ];
-    
-    const dataList = normalizeArrayResponse(dealsResponse, ['data', 'deals', 'answer', 'items']);
-    
-    data = dataList.map(getDealRow);
-    
-    isPositionsViewTemp = true; // Use the same custom row renderer for Deals as Positions
-    isLoading = dealsLoading;
-  } else if (viewType === 'Payments' || viewType === 'Automations' || viewType === 'Security') {
-    columns = clientsColumns; // Use generic Name/Description list UI
-    if (viewType === 'Payments') data = paymentsTableData;
-    else if (viewType === 'Automations') data = automationsTableData;
-    else data = securityTableData;
-    isClientsViewTemp = true;
-  } else {
-    isGroupLookupViewTemp = true;
-    const backendGroup = groupsList.find(g => g.name === viewType);
-    const matchingSubGroupData = backendGroup ? [{
-      id: backendGroup.name,
-      group: backendGroup.name,
-      server: 'Main Trade Server',
-      company: backendGroup.description,
-      type: backendGroup.accountType,
-      auth: 'Normal',
-      risk: backendGroup.executionMode,
-      margin: `${backendGroup.marginCallLevel}% / ${backendGroup.stopOutLevel}%`,
-      leverage: `1 : ${backendGroup.leverage}`,
-      currency: backendGroup.currency,
-      iconType: 'group'
-    }] : [];
-
-    if (!groupsResponse && groupsLoading) {
-      isLoading = true;
-    }
-
-    if (matchingSubGroupData.length > 0) {
-      columns = groupColumns;
-      data = matchingSubGroupData;
-    } else {
-      // Empty state for all other strictly empty specific pages (Orders, Deals, Network Cluster, etc.)
-      columns = [
-        { label: 'Item Name', width: 'w-64' },
-        { label: 'Status', width: 'w-32' },
-        { label: 'Description', width: 'flex-1' },
-      ];
-      data = [];
-    }
-  }
-
-  const isClientsView = isClientsViewTemp;
-  const isSymbolsView = isSymbolsViewTemp;
-  const isPositionsView = isPositionsViewTemp;
-  const isAccountsView = isAccountsViewTemp;
-  const isGroupLookupView = isGroupLookupViewTemp;
   const activeError = {
     'Groups': groupsError,
-    'Clients': usersError,
+    'Clients': accountsError,
     'Trading Accounts': accountsError,
     'Symbols': symbolsError,
     'Positions': positionsError,
@@ -1242,16 +1436,29 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     ? getApiErrorMessage(activeError, `Failed to load ${viewType}.`)
     : '';
 
-  // Client-side filter: matches the search query against any string/number field
-  // on each row. Empty query → no filtering.
-  const totalCount = Array.isArray(data) ? data.length : 0;
-  const hasMoreOrderRows = viewType === 'Orders' && orderVisibleCount < orderTotalFilteredCount;
-  if (searchQuery && Array.isArray(data) && data.length) {
-    const q = searchQuery.toLowerCase();
-    data = data.filter((row) =>
-      Object.values(row).some((v) => v != null && String(v).toLowerCase().includes(q))
-    );
-  }
+  const isPagedView = PAGED_VIEW_TYPES.has(viewType);
+  const totalCount = renderedTotalCount;
+  const pageStart = pagination?.pageStart ?? (data.length ? 1 : 0);
+  const pageEnd = pagination?.pageEnd ?? data.length;
+  const hasKnownPaginationTotal = Boolean(pagination?.hasKnownTotal);
+  const canGoPreviousPage = isPagedView && !isLoading && activePage > 1;
+  const canGoNextPage = isPagedView && !isLoading && Boolean(pagination?.hasNextPage);
+  const canGoLastPage = isPagedView && !isLoading && hasKnownPaginationTotal && activePage < totalPages;
+  const paginationRangeLabel = data.length
+    ? `Showing ${formatCount(pageStart)}-${formatCount(pageEnd)}${hasKnownPaginationTotal ? ` of ${formatCount(pagination.total)}` : ''}`
+    : (isLoading ? 'Loading...' : 'No rows');
+
+  const goToPage = (nextPage) => {
+    setPage((currentPage) => {
+      const resolvedPage = typeof nextPage === 'function' ? nextPage(currentPage) : nextPage;
+      return clampPage(resolvedPage, totalPages);
+    });
+  };
+
+  const handlePageSizeChange = (event) => {
+    const nextPageSize = Number(event.target.value);
+    setPageSize(PAGE_SIZE_OPTIONS.includes(nextPageSize) ? nextPageSize : DEFAULT_PAGE_SIZE);
+  };
 
   const closeAllSymbolOptions = isPositionsView
     ? Array.from(new Set(data.map((row) => row.symbol).filter(Boolean))).sort()
@@ -1618,22 +1825,6 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
             )}
           </div>
         ))}
-        {viewType === 'Orders' && orderTotalFilteredCount > 0 && (
-          <div className="flex items-center gap-2 px-3 py-2 text-[11px] text-[color:var(--text-muted)] border-b border-black/10 bg-[color:var(--bg-surface-1)]">
-            <span>
-              Showing {orderVisibleCount} of {orderTotalFilteredCount} orders
-            </span>
-            {hasMoreOrderRows && (
-              <button
-                type="button"
-                onClick={handleLoadMoreOrders}
-                className="h-[22px] px-3 border border-[color:var(--border-strong)] rounded-[2px] text-[color:var(--text-primary)] hover:bg-white/10 hover:border-[#777777] transition-colors"
-              >
-                Load next {Math.min(ORDER_RENDER_BATCH_SIZE, orderTotalFilteredCount - orderVisibleCount)}
-              </button>
-            )}
-          </div>
-        )}
         {isLoading && data.length === 0 && (
           <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">Loading data...</div>
         )}
@@ -1654,7 +1845,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
       </div>
 
       {/* Bottom Tab Bar (MT5 Style) */}
-      <div className="h-7 bg-[color:var(--bg-surface-1)] border-t border-black/40 flex items-center px-1 gap-1">
+      <div className="h-8 bg-[color:var(--bg-surface-1)] border-t border-black/40 flex items-center px-1 gap-1">
         {viewType === 'Orders' ? (
           <>
             <button
@@ -1681,6 +1872,73 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
               All {viewType}
             </div>
           </>
+        )}
+        {isPagedView && (
+          <div className="ml-auto flex items-center gap-1 text-[11px] text-[color:var(--text-muted)]">
+            <span className="px-2 font-mono tracking-tight">{paginationRangeLabel}</span>
+            <button
+              type="button"
+              aria-label="First page"
+              onClick={() => goToPage(1)}
+              disabled={!canGoPreviousPage}
+              className="h-[22px] px-2 border border-black/40 rounded-sm text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              First
+            </button>
+            <button
+              type="button"
+              aria-label="Previous page"
+              onClick={() => goToPage((current) => current - 1)}
+              disabled={!canGoPreviousPage}
+              className="h-[22px] px-2 border border-black/40 rounded-sm text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Prev
+            </button>
+            <label className="flex items-center gap-1">
+              <span>Page</span>
+              <input
+                aria-label="Page number"
+                type="number"
+                min="1"
+                max={hasKnownPaginationTotal ? totalPages : undefined}
+                value={activePage}
+                onChange={(event) => goToPage(event.target.value)}
+                className="h-[22px] w-14 bg-[color:var(--bg-app)] border border-black/40 rounded-sm px-1 text-[11px] text-[color:var(--text-primary)] outline-none"
+              />
+              {hasKnownPaginationTotal && (
+                <span className="font-mono">/ {formatCount(totalPages)}</span>
+              )}
+            </label>
+            <button
+              type="button"
+              aria-label="Next page"
+              onClick={() => goToPage((current) => current + 1)}
+              disabled={!canGoNextPage}
+              className="h-[22px] px-2 border border-black/40 rounded-sm text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+            <button
+              type="button"
+              aria-label="Last page"
+              onClick={() => goToPage(totalPages)}
+              disabled={!canGoLastPage}
+              className="h-[22px] px-2 border border-black/40 rounded-sm text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Last
+            </button>
+            <select
+              aria-label="Rows per page"
+              value={pageSize}
+              onChange={handlePageSizeChange}
+              disabled={isLoading}
+              className="h-[22px] bg-[color:var(--bg-app)] border border-black/40 rounded-sm px-1 text-[11px] text-[color:var(--text-primary)] outline-none disabled:opacity-50"
+            >
+              {PAGE_SIZE_OPTIONS.map((option) => (
+                <option key={option} value={option}>{option} rows</option>
+              ))}
+            </select>
+          </div>
         )}
       </div>
       {/* Context Menu Overlay */}

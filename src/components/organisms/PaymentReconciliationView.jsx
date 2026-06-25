@@ -1,6 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { PaymentService } from '../../services/payment.service';
+import { normalizeArrayResponse, getApiErrorMessage } from '../../utils/apiShapes';
 import { RefreshCw, Play, Link } from 'lucide-react';
+
+const pickDefined = (source, keys, fallback) => {
+  for (const key of keys) {
+    if (source?.[key] !== undefined && source?.[key] !== null) return source[key];
+  }
+  return fallback;
+};
+
+const toBoolean = (value) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') return ['true', '1', 'yes', 'matched'].includes(value.toLowerCase());
+  return Boolean(value);
+};
+
+const normalizeReconciliationRow = (row, idx) => ({
+  ...row,
+  id: pickDefined(row, ['id', 'reconciliation_id', 'reconciliationId', 'record_id'], idx),
+  deposit_id: pickDefined(row, ['deposit_id', 'depositId', 'deposit'], undefined),
+  gateway_ref: pickDefined(row, ['gateway_ref', 'gatewayRef', 'gateway_reference', 'reference'], ''),
+  gateway_amount: pickDefined(row, ['gateway_amount', 'gatewayAmount', 'external_amount'], undefined),
+  internal_amount: pickDefined(row, ['internal_amount', 'internalAmount', 'amount'], undefined),
+  matched: toBoolean(pickDefined(row, ['matched', 'is_matched', 'isMatched'], false)),
+  reconciled_at: pickDefined(row, ['reconciled_at', 'reconciledAt', 'created_at', 'updated_at'], undefined),
+});
 
 const fmt = (v) => (v == null ? '—' : v);
 const fmtTs = (v) => { if (!v) return '—'; try { return new Date(v * 1000).toLocaleString(); } catch { return v; } };
@@ -21,7 +47,7 @@ const RunTab = () => {
     try {
       const res = await PaymentService.runReconciliation(parseInt(form.gateway_id), form.date);
       setResult(res);
-    } catch (err) { setError(err.response?.data?.message || err.message); }
+    } catch (err) { setError(getApiErrorMessage(err, 'Failed to run reconciliation.')); }
     finally { setLoading(false); }
   };
 
@@ -66,13 +92,19 @@ const ListTab = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
   const [matchPopup, setMatchPopup] = useState(null);
+  const [error, setError] = useState('');
 
   const fetchData = async (matched) => {
     setLoading(true);
+    setError('');
     try {
       const res = await PaymentService.getReconciliationList(matched !== '' ? matched === 'true' : undefined);
-      setData(Array.isArray(res) ? res : res?.data ?? []);
-    } catch (err) { console.error(err); setData([]); }
+      setData(normalizeArrayResponse(res, ['reconciliations', 'records', 'data', 'answer', 'items', 'rows']).map(normalizeReconciliationRow));
+    } catch (err) {
+      console.error(err);
+      setError(getApiErrorMessage(err, 'Failed to load reconciliation records.'));
+      setData([]);
+    }
     finally { setLoading(false); }
   };
 
@@ -89,7 +121,7 @@ const ListTab = () => {
       if (!depositId) { setError('Deposit ID is required.'); return; }
       setLoading(true);
       try { await PaymentService.matchReconciliation(row.id, parseInt(depositId)); onSaved(); onClose(); }
-      catch (err) { setError(err.response?.data?.message || err.message); }
+      catch (err) { setError(getApiErrorMessage(err, 'Failed to match reconciliation record.')); }
       finally { setLoading(false); }
     };
     return (
@@ -157,7 +189,8 @@ const ListTab = () => {
           </div>
         ))}
         {loading && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">Loading…</div>}
-        {!loading && data.length === 0 && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">No reconciliation records.</div>}
+        {!loading && error && <div className="p-4 text-[#f48771] text-[12px] bg-[#f48771]/10 border-b border-[#f48771]/20">{error}</div>}
+        {!loading && !error && data.length === 0 && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">No reconciliation records.</div>}
       </div>
       {matchPopup && <MatchPopup row={matchPopup} onClose={() => setMatchPopup(null)} onSaved={() => fetchData(filter)} />}
     </div>

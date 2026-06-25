@@ -257,9 +257,8 @@ export const sidebarData = [
               { label: "Swap-Free Configs", icon: Settings },
               { 
                 label: "Groups", 
-                count: 127, 
                 icon: YellowFolderIcon,
-                initiallyExpanded: true,
+                initiallyExpanded: false,
                 active: true,
                 children: [
                    { label: "ACH", count: 2, icon: BlueUserIcon },
@@ -272,7 +271,6 @@ export const sidebarData = [
               },
               { 
                 label: "Clients & Accounts", 
-                count: 812, 
                 icon: UserCheck,
                 initiallyExpanded: true,
                 children: [
@@ -361,7 +359,7 @@ export const sidebarData = [
                 children: [
                   { label: "News", icon: OrangeNewsIcon },
                   { label: "Articles", icon: BlueArticlesIcon },
-                  { label: "MetaQuotes Leads", icon: BlueUsersIcon },
+                  { label: "Orrnn Leads", icon: BlueUsersIcon },
                   { label: "Automation", icon: GreenGearPlayIcon },
                   { label: "Sponsored VPS", icon: BlueCloudIcon },
                   { label: "Platform Documentation", icon: BlueBookRedBookmarkIcon },
@@ -374,12 +372,12 @@ export const sidebarData = [
                 ]
               },
               { label: "Market Overview", icon: TrendingUp },
-              { label: "Symbols", count: 696, icon: Hash },
+              { label: "Symbols", icon: Hash },
               { label: "Market Depth", icon: Database },
               { label: "Spreads", icon: Activity },
               { label: "Charts & Ticks", icon: LineChart },
               { label: "Subscriptions", icon: Bell },
-              { label: "Mailbox", count: 1, icon: Mailbox },
+              { label: "Mailbox", icon: Mailbox },
               { label: "Live Update", icon: RotateCcw },
             ]
           }

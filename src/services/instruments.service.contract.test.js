@@ -10,3 +10,15 @@ test('InstrumentsService.toggleInstrument requires and sends desired enabled sta
   assert.match(source, /buildInstrumentToggleRequest\(symbol,\s*enabled\)/);
   assert.match(source, /api\.patch\(request\.url,\s*request\.data\)/);
 });
+
+test('InstrumentsService falls back to manager symbol APIs when admin instruments route is missing', () => {
+  assert.match(source, /api\.get\('\/api\/v2\/admin\/instruments',\s*\{ params: cleanParams\(params\) \}\)/);
+  assert.match(source, /if \(!isNotFoundError\(error\)\) throw error;/);
+  assert.match(source, /return getManagerInstruments\(params\);/);
+  assert.match(source, /api\.get\('\/manager\/SymbolsList'\)/);
+  assert.match(source, /api\.get\('\/manager\/SymbolList'\)/);
+  assert.match(source, /api\.get\('\/manager\/SymbolsParams',\s*\{\s*params:\s*\{ symbols \},\s*\}\)/);
+  assert.match(source, /total:\s*searchedNames\.length/);
+  assert.match(source, /page:\s*safePage/);
+  assert.match(source, /limit:\s*safeLimit/);
+});

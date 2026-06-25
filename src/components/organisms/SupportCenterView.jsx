@@ -7,9 +7,9 @@ const SupportCenterView = () => {
       <div className="max-w-[1300px] flex flex-col h-full mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-[22px] font-normal text-white mb-0.5 tracking-tight">MetaQuotes Support Center</h1>
+          <h1 className="text-[22px] font-normal text-white mb-0.5 tracking-tight">Orrnn Support Center</h1>
           <div className="text-[12.5px] font-sans">
-            <a href="#" className="text-[#3b82f6] hover:underline">https://support.metaquotes.net</a>
+            <a href="mailto:support@orrnn.com" className="text-[#3b82f6] hover:underline">support@orrnn.com</a>
             <span className="text-[#888] ml-1">— Authorization</span>
           </div>
         </div>
@@ -19,7 +19,7 @@ const SupportCenterView = () => {
         {/* Login Area */}
         <div className="flex flex-col items-center justify-center max-w-[500px] mx-auto w-full mb-[70px]">
           <p className="text-[13px] text-[color:var(--text-primary)] text-center mb-4 leading-relaxed font-sans">
-            MetaQuotes Technical Support Center features unique information<br/>
+            Orrnn Technical Support Center features unique information<br/>
             and provides direct access to assistance from our support team
           </p>
           
@@ -50,7 +50,7 @@ const SupportCenterView = () => {
           </div>
 
           <button className="w-full bg-[#00E676] hover:bg-[#00c853] text-[#000] py-2 rounded-[2px] text-[13px] font-medium transition-colors mb-5 h-[34px] flex items-center justify-center">
-            Enter MetaQuotes Support Center
+            Enter Orrnn Support Center
           </button>
 
           <div className="text-[12px] text-[color:var(--text-muted)] mb-3 font-sans">
@@ -58,7 +58,7 @@ const SupportCenterView = () => {
           </div>
 
           <a href="#" className="flex items-center text-[12px] text-[#3b82f6] hover:underline gap-1.5 font-sans">
-            <Send size={13} className="fill-[#3b82f6] text-white" /> Official Support Channel
+            <Send size={13} className="fill-[#3b82f6] text-white" /> Official Orrnn Support Channel
           </a>
         </div>
 

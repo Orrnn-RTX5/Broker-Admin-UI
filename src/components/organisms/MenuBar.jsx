@@ -3,7 +3,7 @@ import {
   Files, Loader, Activity, Percent, Users, Puzzle, Mail, BookOpen,
   ArrowLeft, ArrowRight, RefreshCcw,
   Upload, Download, Printer, LogOut, Undo2, Redo2, Palette, Power,
-  Rows3, FileSpreadsheet, HelpCircle, Keyboard, Clock,
+  Rows3, FileSpreadsheet, Info, Keyboard, Clock,
 } from 'lucide-react';
 import { AuthService } from '../../services/auth.service';
 import {
@@ -47,7 +47,7 @@ const SubTrigger = ({ icon: Icon, label }) => (
 const MenuBar = ({
   onMenuSelect, activeNode, onThemeSelect, currentTheme,
   density, onDensityToggle,
-  onUndo, onRedo, onRefresh, onExport, onExportCsv, onImport, onHelp,
+  onUndo, onRedo, onRefresh, onExport, onExportCsv, onImport, onHelp, onAbout,
   canUndo, canRedo,
 }) => {
   const handleLogout = () => AuthService.logout();
@@ -141,7 +141,7 @@ const MenuBar = ({
         <MenuTrigger label="Help" />
         <DropdownMenuContent align="start">
           <Item icon={Keyboard}   label="Keyboard shortcuts" shortcut="?" onClick={onHelp} />
-          <Item icon={HelpCircle} label="About RTX 5" onClick={() => alert('RTX 5 Admin\nBuild: dev\nElectron + React + Vite')} />
+          <Item icon={Info} label="About RTX 5" onClick={onAbout} />
         </DropdownMenuContent>
       </DropdownMenu>
 

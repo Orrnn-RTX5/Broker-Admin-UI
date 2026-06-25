@@ -1,6 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { PaymentService } from '../../services/payment.service';
+import { normalizeArrayResponse, getApiErrorMessage } from '../../utils/apiShapes';
 import { RefreshCw, ToggleLeft, ToggleRight, Zap, RotateCcw } from 'lucide-react';
+
+const pickDefined = (source, keys, fallback) => {
+  for (const key of keys) {
+    if (source?.[key] !== undefined && source?.[key] !== null) return source[key];
+  }
+  return fallback;
+};
+
+const toBoolean = (value) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') return ['true', '1', 'yes', 'active', 'enabled'].includes(value.toLowerCase());
+  return Boolean(value);
+};
+
+const normalizeGatewayRow = (row, idx) => ({
+  ...row,
+  id: pickDefined(row, ['id', 'gateway_id', 'gatewayId'], idx),
+  gateway_name: pickDefined(row, ['gateway_name', 'gatewayName', 'gateway', 'name'], ''),
+  provider: pickDefined(row, ['provider', 'provider_name', 'providerName'], ''),
+  status: pickDefined(row, ['status', 'health_status', 'healthStatus'], ''),
+  success_rate: pickDefined(row, ['success_rate', 'successRate'], undefined),
+  avg_response_ms: pickDefined(row, ['avg_response_ms', 'avgResponseMs', 'average_response_ms'], undefined),
+  last_health_check: pickDefined(row, ['last_health_check', 'lastHealthCheck', 'checked_at', 'updated_at'], undefined),
+  enabled: toBoolean(pickDefined(row, ['enabled', 'is_enabled', 'active'], false)),
+});
 
 const fmt = (v) => (v == null ? '—' : v);
 const fmtTs = (v) => { if (!v) return '—'; try { return new Date(v * 1000).toLocaleString(); } catch { return v; } };
@@ -10,13 +37,19 @@ const GatewayStatusTab = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(null);
+  const [error, setError] = useState('');
 
   const fetchData = async () => {
     setLoading(true);
+    setError('');
     try {
       const res = await PaymentService.getGatewayStatusList();
-      setData(Array.isArray(res) ? res : res?.data ?? []);
-    } catch (err) { console.error(err); setData([]); }
+      setData(normalizeArrayResponse(res, ['gateways', 'gateway_status', 'statuses', 'data', 'answer', 'items', 'rows']).map(normalizeGatewayRow));
+    } catch (err) {
+      console.error(err);
+      setError(getApiErrorMessage(err, 'Failed to load payment gateways.'));
+      setData([]);
+    }
     finally { setLoading(false); }
   };
 
@@ -27,7 +60,7 @@ const GatewayStatusTab = () => {
     if (!window.confirm(`${newEnabled ? 'Enable' : 'Disable'} gateway "${row.gateway_name}"?`)) return;
     setToggling(row.id);
     try { await PaymentService.toggleGateway(row.id, newEnabled); fetchData(); }
-    catch (err) { alert(err.response?.data?.message || err.message); }
+    catch (err) { alert(getApiErrorMessage(err, 'Failed to update payment gateway.')); }
     finally { setToggling(null); }
   };
 
@@ -75,7 +108,8 @@ const GatewayStatusTab = () => {
           </div>
         ))}
         {loading && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">Loading…</div>}
-        {!loading && data.length === 0 && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">No gateways found.</div>}
+        {!loading && error && <div className="p-4 text-[#f48771] text-[12px] bg-[#f48771]/10 border-b border-[#f48771]/20">{error}</div>}
+        {!loading && !error && data.length === 0 && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">No gateways found.</div>}
       </div>
     </div>
   );
@@ -99,7 +133,7 @@ const CallbackTab = () => {
       if (form.gateway_ref) params.gateway_ref = form.gateway_ref;
       const res = await PaymentService.processCallback(params);
       setResult(res);
-    } catch (err) { setError(err.response?.data?.message || err.message); }
+    } catch (err) { setError(getApiErrorMessage(err, 'Failed to process payment callback.')); }
     finally { setLoading(false); }
   };
 
@@ -155,7 +189,7 @@ const RefundTab = () => {
     try {
       const res = await PaymentService.processRefund(parseInt(form.transaction_id), form.reason || undefined);
       setResult(res);
-    } catch (err) { setError(err.response?.data?.message || err.message); }
+    } catch (err) { setError(getApiErrorMessage(err, 'Failed to process refund.')); }
     finally { setLoading(false); }
   };
 

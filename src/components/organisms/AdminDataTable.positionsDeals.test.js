@@ -12,7 +12,9 @@ test('Positions table maps live manager field variants into visible cells', () =
   assert.match(src, /getTradeSideLabel\(pickDefined\(position, \['side', 'Side', 'action', 'Action', 'type', 'Type', 'cmd', 'Cmd'\]\)\)/);
   assert.match(src, /pickDefined\(position, \['priceOpen', 'PriceOpen', 'openPrice', 'OpenPrice', 'Price', 'price'\]\)/);
   assert.match(src, /pickDefined\(position, \['priceCurrent', 'PriceCurrent', 'currentPrice', 'CurrentPrice'\]\)/);
-  assert.match(src, /normalizeArrayResponse\(positionsResponse, \['data', 'positions', 'answer', 'items'\]\)\.map\(getPositionRow\)/);
+  assert.match(src, /getPagedMappedRows\(\{\s*response:\s*positionsResponse,/);
+  assert.match(src, /keys:\s*\['data', 'positions', 'answer', 'items', 'rows'\]/);
+  assert.match(src, /mapFn:\s*getPositionRow/);
 });
 
 test('Deals table maps live manager field variants into visible cells', () => {
@@ -23,7 +25,9 @@ test('Deals table maps live manager field variants into visible cells', () => {
   assert.match(src, /pickDefined\(deal, \['symbol', 'Symbol'\]\)/);
   assert.match(src, /getTradeSideLabel\(pickDefined\(deal, \['action', 'Action', 'side', 'Side', 'type', 'Type'\]\)\)/);
   assert.match(src, /pickDefined\(deal, \['commission', 'Commission'\]\)/);
-  assert.match(src, /normalizeArrayResponse\(dealsResponse, \['data', 'deals', 'answer', 'items'\]\)\.map\(getDealRow\)/);
+  assert.match(src, /getPagedMappedRows\(\{\s*response:\s*dealsResponse,/);
+  assert.match(src, /keys:\s*\['data', 'deals', 'answer', 'items', 'rows'\]/);
+  assert.match(src, /mapFn:\s*getDealRow/);
 });
 
 test('Positions and Deals renderer shows a dash for missing cells instead of blank rows', () => {

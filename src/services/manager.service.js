@@ -1,7 +1,14 @@
 import { api } from '../lib/api';
+
+const cleanParams = (params = {}) => Object.fromEntries(
+  Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
+);
+
 export const ManagerService = {
-  getGroupList: async () => {
-    const res = await api.get('/manager/GroupList');
+  getGroupList: async (params = {}) => {
+    const res = await api.get('/manager/GroupList', {
+      params: cleanParams(params),
+    });
     return res.data;
   },
 
@@ -305,9 +312,12 @@ export const ManagerService = {
     return res.data;
   },
 
-  getBrokerOrders: async (limit = 100, offset = 0) => {
+  getBrokerOrders: async (limitOrParams = 100, offset = 0) => {
+    const params = typeof limitOrParams === 'object' && limitOrParams !== null
+      ? cleanParams(limitOrParams)
+      : { limit: limitOrParams, offset };
     const res = await api.get('/manager/BrokerOrders', {
-      params: { limit, offset }
+      params
     });
     return res.data;
   },
@@ -338,9 +348,12 @@ export const ManagerService = {
     return res.data;
   },
 
-  getBrokerDeals: async (page = 1, limit = 50) => {
+  getBrokerDeals: async (pageOrParams = 1, limit = 50) => {
+    const params = typeof pageOrParams === 'object' && pageOrParams !== null
+      ? cleanParams(pageOrParams)
+      : { page: pageOrParams, limit };
     const res = await api.get('/manager/BrokerDeals', {
-      params: { page, limit }
+      params
     });
     return res.data;
   },

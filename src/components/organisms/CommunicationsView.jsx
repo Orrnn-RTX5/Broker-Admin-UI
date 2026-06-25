@@ -317,7 +317,20 @@ const MessageCenterTab = () => {
       setData(Array.isArray(r) ? r : r?.data ?? []);
     } catch { setData([]); } finally { setLoading(false); }
   };
-  useEffect(() => { fetch(); }, []);
+  useEffect(() => {
+    const loadInitialMessages = async () => {
+      setLoading(true);
+      try {
+        const r = await CommunicationsService.listMessages({});
+        setData(Array.isArray(r) ? r : r?.data ?? []);
+      } catch {
+        setData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadInitialMessages();
+  }, []);
 
   const handleMarkRead = async (row) => {
     setActionLoading(row.id);
@@ -669,8 +682,23 @@ const TABS = [
   { id: 'sms', label: 'SMS', icon: Smartphone },
 ];
 
-const CommunicationsView = () => {
-  const [tab, setTab] = useState('rules');
+const TAB_BY_VIEW = {
+  Communications: 'rules',
+  'Auto Notification Rules': 'rules',
+  'Email Campaigns': 'email',
+  'Message Center': 'msgctr',
+  'Push Notifications': 'push',
+  SMS: 'sms',
+};
+
+const getInitialCommunicationsTab = (viewName) => TAB_BY_VIEW[viewName] || 'rules';
+
+const CommunicationsView = ({ initialTab }) => {
+  const [tab, setTab] = useState(() => getInitialCommunicationsTab(initialTab));
+
+  useEffect(() => {
+    setTab(getInitialCommunicationsTab(initialTab));
+  }, [initialTab]);
 
   return (
     <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden">
@@ -682,13 +710,13 @@ const CommunicationsView = () => {
       </div>
       {/* Tab Bar */}
       <div className="flex bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0 select-none">
-        {TABS.map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => setTab(id)}
-            className={`flex items-center gap-1.5 px-4 h-[30px] text-[11px] border-r border-black/30 transition-colors ${tab === id
+        {TABS.map((item) => (
+          <button key={item.id} onClick={() => setTab(item.id)}
+            className={`flex items-center gap-1.5 px-4 h-[30px] text-[11px] border-r border-black/30 transition-colors ${tab === item.id
               ? 'bg-[color:var(--bg-app)] text-white border-t-2 border-t-[color:var(--accent-500)]'
               : 'text-[#888] hover:text-[#ccc] hover:bg-[color:var(--bg-surface-1)]'}`}>
-            <Icon size={11} />
-            {label}
+            {React.createElement(item.icon, { size: 11 })}
+            {item.label}
           </button>
         ))}
       </div>

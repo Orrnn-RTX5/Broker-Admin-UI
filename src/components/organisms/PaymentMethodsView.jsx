@@ -122,12 +122,13 @@ const PaymentMethodsView = () => {
 
   const cols = [
     { label: 'ID', w: 'w-[60px]' }, { label: 'Name', w: 'w-[160px]' },
-    { label: 'Type', w: 'w-[90px]' }, { label: 'Currency', w: 'w-[90px]' },
+    { label: 'Type', w: 'w-[120px]' }, { label: 'Currency', w: 'w-[90px]' },
     { label: 'Min', w: 'w-[90px]' }, { label: 'Max', w: 'w-[90px]' },
     { label: 'Fee Fixed', w: 'w-[90px]' }, { label: 'Fee %', w: 'w-[80px]' },
     { label: 'Processing', w: 'w-[120px]' }, { label: 'Enabled', w: 'w-[80px]' },
     { label: 'Created', w: 'flex-1' },
   ];
+  const clippedTextClassName = 'block min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap';
 
   return (
     <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative"
@@ -157,17 +158,25 @@ const PaymentMethodsView = () => {
       </div>
       {/* Header */}
       <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 sticky top-0 z-10 select-none shrink-0">
-        {cols.map(c => <div key={c.label} className={`${c.w} px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0`}>{c.label}</div>)}
+        {cols.map(c => (
+          <div
+            key={c.label}
+            className={`${c.w} px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0 min-w-0 overflow-hidden`}
+            title={c.label}
+          >
+            <span className={clippedTextClassName}>{c.label}</span>
+          </div>
+        ))}
       </div>
       {/* Body */}
       <div className="flex-1 overflow-auto no-scrollbar">
         {data.map((row, idx) => (
           <div key={row.id || idx} onContextMenu={e => { e.preventDefault(); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, row }); }}
-            className={`flex border-b border-black/10 hover:bg-blue-600/20 transition-colors cursor-default ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
+            className={`group flex border-b border-black/10 hover:bg-blue-600/20 transition-colors cursor-default ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
             <div className="w-[60px] px-3 py-1 text-[12px] text-[#9cdcfe] font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.id)}</div>
             <div className="w-[160px] px-3 py-1 text-[12px] text-[color:var(--text-primary)] border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.name)}</div>
-            <div className="w-[90px] px-3 py-1 text-[12px] border-r border-black/10 shrink-0 flex items-center">
-              <span className="font-mono text-[11px] px-1.5 py-0.5 rounded-[2px] bg-black/30" style={{ color: TYPE_COLORS[row.method_type] || '#ccc' }}>{fmt(row.method_type)}</span>
+            <div className="w-[120px] px-3 py-1 text-[12px] border-r border-black/10 shrink-0 flex items-center min-w-0 overflow-hidden" title={fmt(row.method_type)}>
+              <span className={`${clippedTextClassName} font-mono text-[11px] px-1.5 py-0.5 rounded-[2px] bg-black/30`} style={{ color: TYPE_COLORS[row.method_type] || '#ccc' }}>{fmt(row.method_type)}</span>
             </div>
             <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.currency)}</div>
             <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.min_amount)}</div>

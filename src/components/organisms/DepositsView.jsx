@@ -200,7 +200,7 @@ const DepositsView = () => {
       {/* Header */}
       <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 sticky top-0 z-10 select-none shrink-0">
         {cols.map(c => <div key={c.label} className={`${c.w} px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0`}>{c.label}</div>)}
-        <div className="w-[130px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] shrink-0">Actions</div>
+        <div className="w-[190px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] shrink-0">Actions</div>
       </div>
       {/* Body */}
       <div className="flex-1 overflow-auto no-scrollbar">
@@ -217,14 +217,14 @@ const DepositsView = () => {
             <div className="w-[140px] px-3 py-1 text-[11px] text-[#888] font-mono border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.reference)}</div>
             <div className="w-[150px] px-3 py-1 text-[11px] text-[#888] font-mono border-r border-black/10 shrink-0 flex items-center">{fmtTs(row.created_at)}</div>
             <div className="flex-1 px-3 py-1 text-[11px] text-[#888] font-mono border-r border-black/10 flex items-center">{fmtTs(row.processed_at)}</div>
-            <div className="w-[130px] px-2 py-1 flex items-center gap-1 shrink-0">
+            <div className="w-[190px] px-2 py-1 flex items-center gap-1.5 shrink-0 overflow-visible">
               {row.status === 'pending' && <>
                 <button onClick={() => handleApprove(row)} disabled={actionLoading === row.id} title="Approve"
-                  className="flex items-center gap-1 h-[20px] px-2 bg-[#4ec9b0]/20 hover:bg-[#4ec9b0]/40 text-[#4ec9b0] text-[10px] rounded-[2px] disabled:opacity-50 transition-colors">
+                  className="flex items-center gap-1 h-[20px] px-2 bg-[#4ec9b0]/20 hover:bg-[#4ec9b0]/40 text-[#4ec9b0] text-[10px] rounded-[2px] disabled:opacity-50 transition-colors whitespace-nowrap shrink-0">
                   <CheckCircle size={10} /> Approve
                 </button>
                 <button onClick={() => setRejectRow(row)} title="Reject"
-                  className="flex items-center gap-1 h-[20px] px-2 bg-[#f48771]/20 hover:bg-[#f48771]/40 text-[#f48771] text-[10px] rounded-[2px] transition-colors">
+                  className="flex items-center gap-1 h-[20px] px-2 bg-[#f48771]/20 hover:bg-[#f48771]/40 text-[#f48771] text-[10px] rounded-[2px] transition-colors whitespace-nowrap shrink-0">
                   <XCircle size={10} /> Reject
                 </button>
               </>}

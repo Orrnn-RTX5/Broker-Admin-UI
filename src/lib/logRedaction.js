@@ -2,6 +2,8 @@ const SECRET_KEY_RE = /(authorization|password|token|secret|api[_-]?key|session|
 const URL_SECRET_PARAM_RE = /^(id|token|access_token|refresh_token|session|session_token|auth|authorization|jwt|licen[cs]e[_-]?(key|secret))$/i;
 const BEARER_VALUE_RE = /\bBearer\s+[-._~+/=A-Za-z0-9]+/gi;
 const SECRET_QUERY_RE = /([?&](?:id|token|access_token|refresh_token|session|session_token|auth|authorization|jwt|licen[cs]e[_-]?(?:key|secret))=)[^&#\s]+/gi;
+const MAX_LOG_ARRAY_ITEMS = 20;
+const MAX_LOG_DEPTH = 6;
 
 const redactStringForLog = (value = '') =>
   String(value)
@@ -31,7 +33,7 @@ export const redactUrlForLog = (value = '') => {
   }
 };
 
-export const redactForLog = (value, seen = new WeakSet()) => {
+export const redactForLog = (value, seen = new WeakSet(), depth = 0) => {
   if (typeof value === 'string') return redactStringForLog(value);
   if (!value || typeof value !== 'object') return value;
   if (seen.has(value)) return '[Circular]';
@@ -44,16 +46,26 @@ export const redactForLog = (value, seen = new WeakSet()) => {
     };
   }
 
+  if (depth >= MAX_LOG_DEPTH) return Array.isArray(value) ? '[Array]' : '[Object]';
+
   seen.add(value);
 
   if (Array.isArray(value)) {
-    return value.map((item) => redactForLog(item, seen));
+    const preview = value
+      .slice(0, MAX_LOG_ARRAY_ITEMS)
+      .map((item) => redactForLog(item, seen, depth + 1));
+
+    if (value.length > MAX_LOG_ARRAY_ITEMS) {
+      preview.push(`[${value.length - MAX_LOG_ARRAY_ITEMS} more items]`);
+    }
+
+    return preview;
   }
 
   return Object.fromEntries(
     Object.entries(value).map(([key, entry]) => [
       key,
-      SECRET_KEY_RE.test(key) ? '[REDACTED]' : redactForLog(entry, seen),
+      SECRET_KEY_RE.test(key) ? '[REDACTED]' : redactForLog(entry, seen, depth + 1),
     ])
   );
 };

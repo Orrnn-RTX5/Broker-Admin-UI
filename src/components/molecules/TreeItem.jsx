@@ -16,13 +16,26 @@ const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, onLockedDropdownCl
       onLockedDropdownClick && onLockedDropdownClick(item);
       return;
     }
-    if (hasChildren) setIsOpen(!isOpen);
+    if (hasChildren) setIsOpen((current) => !current);
+  };
+
+  const handleRowClick = () => {
+    if (hasChildren && !item.lockedDropdown) {
+      setIsOpen((current) => !current);
+    }
+
+    if (item.lockedDropdown && isBlockedNavigation) {
+      onLockedDropdownClick && onLockedDropdownClick(item);
+      return;
+    }
+
+    onSelect && onSelect(item);
   };
 
   return (
     <div>
       <div
-        onClick={() => onSelect && onSelect(item)}
+        onClick={handleRowClick}
         onDoubleClick={() => onDoubleClick && onDoubleClick(item)}
         className={cn(
           'flex items-center h-7 pr-2 select-none text-[12px]',

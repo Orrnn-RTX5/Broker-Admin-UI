@@ -1,6 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { PaymentService } from '../../services/payment.service';
+import { normalizeArrayResponse, getApiErrorMessage } from '../../utils/apiShapes';
 import { Plus, RefreshCw, X, CheckCircle, XCircle } from 'lucide-react';
+
+const pickDefined = (source, keys, fallback) => {
+  for (const key of keys) {
+    if (source?.[key] !== undefined && source?.[key] !== null) return source[key];
+  }
+  return fallback;
+};
+
+const normalizeChargebackRow = (row, idx) => ({
+  ...row,
+  id: pickDefined(row, ['id', 'chargeback_id', 'chargebackId'], idx),
+  deposit_id: pickDefined(row, ['deposit_id', 'depositId', 'deposit'], undefined),
+  account_login: pickDefined(row, ['account_login', 'accountLogin', 'login'], undefined),
+  amount: pickDefined(row, ['amount', 'chargeback_amount', 'chargebackAmount'], undefined),
+  status: pickDefined(row, ['status', 'state'], ''),
+  reason: pickDefined(row, ['reason', 'description'], ''),
+  resolution: pickDefined(row, ['resolution', 'resolution_note', 'resolutionNote'], ''),
+  created_at: pickDefined(row, ['created_at', 'createdAt', 'time_created'], undefined),
+  resolved_at: pickDefined(row, ['resolved_at', 'resolvedAt', 'time_resolved', 'updated_at'], undefined),
+});
 
 const fmt = (v) => (v == null ? '—' : v);
 const fmtTs = (v) => { if (!v) return '—'; try { return new Date(v * 1000).toLocaleString(); } catch { return v; } };
@@ -33,7 +54,7 @@ const CreatePopup = ({ onClose, onSaved }) => {
       if (form.reason) payload.reason = form.reason;
       await PaymentService.createChargeback(payload);
       onSaved(); onClose();
-    } catch (err) { setError(err.response?.data?.message || err.message); }
+    } catch (err) { setError(getApiErrorMessage(err, 'Failed to create chargeback.')); }
     finally { setLoading(false); }
   };
 
@@ -85,7 +106,7 @@ const ResolvePopup = ({ row, onClose, onSaved }) => {
     try {
       await PaymentService.resolveChargeback(row.id, form.status, form.resolution || undefined);
       onSaved(); onClose();
-    } catch (err) { setError(err.response?.data?.message || err.message); }
+    } catch (err) { setError(getApiErrorMessage(err, 'Failed to resolve chargeback.')); }
     finally { setLoading(false); }
   };
 
@@ -135,13 +156,19 @@ const ChargebacksView = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [resolveRow, setResolveRow] = useState(null);
   const [contextMenu, setContextMenu] = useState({ visible: false });
+  const [error, setError] = useState('');
 
   const fetchData = async () => {
     setLoading(true);
+    setError('');
     try {
       const res = await PaymentService.getChargebackList(filterStatus || undefined);
-      setData(Array.isArray(res) ? res : res?.data ?? []);
-    } catch (err) { console.error(err); setData([]); }
+      setData(normalizeArrayResponse(res, ['chargebacks', 'disputes', 'data', 'answer', 'items', 'rows']).map(normalizeChargebackRow));
+    } catch (err) {
+      console.error(err);
+      setError(getApiErrorMessage(err, 'Failed to load chargebacks.'));
+      setData([]);
+    }
     finally { setLoading(false); }
   };
 
@@ -204,7 +231,8 @@ const ChargebacksView = () => {
           </div>
         ))}
         {loading && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">Loading…</div>}
-        {!loading && data.length === 0 && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">No chargebacks found.</div>}
+        {!loading && error && <div className="p-4 text-[#f48771] text-[12px] bg-[#f48771]/10 border-b border-[#f48771]/20">{error}</div>}
+        {!loading && !error && data.length === 0 && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">No chargebacks found.</div>}
         {[...Array(12)].map((_, i) => <div key={i} className={`flex border-b border-black/5 opacity-30 h-6 ${i%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}></div>)}
       </div>
 

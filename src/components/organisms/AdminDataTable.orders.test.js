@@ -10,17 +10,18 @@ test('Orders view is wired to backend data instead of the coming-soon placeholde
 
   assert.doesNotMatch(comingSoonBlock, /'Orders'/);
   assert.match(src, /import\s+\{\s*usePositions,\s*useOrders,\s*useDealsSummary\s*\}/);
-  assert.match(src, /useOrders\(\{\s*limit:\s*100,\s*offset:\s*0,\s*allPages:\s*ordersMode === 'all'\s*\},\s*viewType === 'Orders'\)/);
+  assert.match(src, /useOrders\(\{\s*limit:\s*pageSize,\s*offset:\s*\(activePage - 1\) \* pageSize,/);
+  assert.doesNotMatch(src, /allPages:\s*ordersMode === 'all'/);
   assert.match(src, /viewType === 'Orders'/);
   assert.match(src, /'Orders':\s*ordersError/);
 });
 
 test('Orders rows are rendered with order-specific fields', () => {
   assert.match(src, /const getOrderRow = \(order, idx\) => \(\{/);
-  assert.match(src, /ticket:\s*order\.ticket \?\? order\.order \?\? order\.orderTicket/);
-  assert.match(src, /side:\s*order\.side \?\? order\.action \?\? order\.type/);
-  assert.match(src, /status:\s*order\.status \?\? order\.state/);
-  assert.match(src, /comment:\s*order\.comment/);
+  assert.match(src, /ticket:\s*pickDefined\(order, \['ticket', 'Ticket', 'order', 'Order', 'orderTicket', 'OrderTicket'\]\)/);
+  assert.match(src, /side:\s*pickDefined\(order, \['side', 'Side', 'action', 'Action', 'type', 'Type', 'cmd', 'Cmd'\]\)/);
+  assert.match(src, /status:\s*pickDefined\(order, \['status', 'Status', 'state', 'State'\]\)/);
+  assert.match(src, /comment:\s*pickDefined\(order, \['comment', 'Comment'\]\)/);
   assert.match(src, /if \(col\.label === 'Status'\) val = row\.status/);
   assert.match(src, /if \(col\.label === 'Comment'\) val = row\.comment/);
 });
@@ -28,10 +29,14 @@ test('Orders rows are rendered with order-specific fields', () => {
 test('Orders filter bar is controlled by Orders state', () => {
   assert.match(src, /const \[ordersMode,\s*setOrdersMode\] = useState\('all'\)/);
   assert.match(src, /const \[orderFilters,\s*setOrderFilters\] = useState\(\(\) => createDefaultOrderFilters\(\)\)/);
-  assert.match(src, /const \[orderRenderLimit,\s*setOrderRenderLimit\] = useState\(ORDER_RENDER_BATCH_SIZE\)/);
+  assert.match(src, /const \[page,\s*setPage\] = useState\(1\)/);
+  assert.match(src, /const \[pageSize,\s*setPageSize\] = useState\(DEFAULT_PAGE_SIZE\)/);
+  assert.match(src, /const \[debouncedOrderQuery,\s*setDebouncedOrderQuery\] = useState\(orderFilters\.query\)/);
   assert.match(src, /const filterOrderRows = \(rows, filters\) => \{/);
   assert.match(src, /orderSymbolOptions = getOrderSymbolOptions\(data\)/);
-  assert.match(src, /const filteredOrders = filterOrderRows\(data, orderFilters\)\.map\(getOrderDisplayRow\)/);
+  assert.match(src, /const applyLocalOrderFilter = hasActiveOrderFilter\(effectiveOrderFilters\)/);
+  assert.match(src, /filterFn:\s*applyLocalOrderFilter \? getOrderRecordFilter\(effectiveOrderFilters\) : undefined/);
+  assert.match(src, /mapFn:\s*\(order, idx\) => getOrderDisplayRow\(getOrderRow\(order, idx\)\)/);
   assert.match(src, /checked=\{viewType === 'Orders' \? orderFilters\.openOnly : false\}/);
   assert.match(src, /value=\{viewType === 'Orders' \? orderFilters\.symbol : ''\}/);
 });
@@ -92,18 +97,20 @@ test('Orders display active rows as open instead of backend filled status in eve
   assert.match(src, /const getOrderDisplayStatus = \(row\) => \(/);
   assert.match(src, /isOpenOrderRow\(row\) \? 'open' : row\.status/);
   assert.match(src, /getOrderDisplayStatus\(row\)/);
-  assert.match(src, /filterOrderRows\(data, orderFilters\)\.map\(getOrderDisplayRow\)/);
+  assert.match(src, /getOrderDisplayRow\(getOrderRow\(order, idx\)\)/);
 });
 
-test('Orders table renders data in batches instead of all rows at once', () => {
-  assert.match(src, /const ORDER_RENDER_BATCH_SIZE = 100/);
-  assert.match(src, /setOrderRenderLimit\(ORDER_RENDER_BATCH_SIZE\)/);
-  assert.match(src, /const handleLoadMoreOrders = \(\) => \{/);
-  assert.match(src, /setOrderRenderLimit\(\(current\) => current \+ ORDER_RENDER_BATCH_SIZE\)/);
-  assert.match(src, /data = filteredOrders\.slice\(0, orderRenderLimit\)/);
-  assert.match(src, /const hasMoreOrderRows = viewType === 'Orders' && orderVisibleCount < orderTotalFilteredCount/);
-  assert.match(src, /Showing \{orderVisibleCount\} of \{orderTotalFilteredCount\} orders/);
-  assert.match(src, /Load next \{Math\.min\(ORDER_RENDER_BATCH_SIZE, orderTotalFilteredCount - orderVisibleCount\)\}/);
+test('Orders table uses shared paging instead of all-row render batches', () => {
+  assert.match(src, /const DEFAULT_PAGE_SIZE = 100/);
+  assert.match(src, /const PAGE_SIZE_OPTIONS = \[50, 100, 250\]/);
+  assert.doesNotMatch(src, /ORDER_RENDER_BATCH_SIZE/);
+  assert.doesNotMatch(src, /handleLoadMoreOrders/);
+  assert.match(src, /const tableState = React\.useMemo\(\(\) => \{/);
+  assert.match(src, /getPagedMappedRows\(\{\s*response:\s*ordersResponse,/);
+  assert.match(src, /aria-label="Page number"/);
+  assert.match(src, /aria-label="Rows per page"/);
+  assert.match(src, /aria-label="Next page"/);
+  assert.match(src, /paginationRangeLabel/);
 });
 
 test('Orders bottom tabs switch between open and all orders', () => {

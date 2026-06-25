@@ -36,3 +36,19 @@ test('redactUrlForLog redacts license query parameters', () => {
     '/validate?licenseSecret=[REDACTED]&broker_id=demo'
   );
 });
+
+test('redactForLog caps large arrays before they reach the browser console', () => {
+  const redacted = redactForLog({
+    answer: Array.from({ length: 25 }, (_, index) => ({
+      Login: index + 1,
+      token: `secret-${index}`,
+    })),
+  });
+
+  assert.equal(redacted.answer.length, 21);
+  assert.deepEqual(redacted.answer[0], {
+    Login: 1,
+    token: '[REDACTED]',
+  });
+  assert.equal(redacted.answer[20], '[5 more items]');
+});

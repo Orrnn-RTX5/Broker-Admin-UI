@@ -94,15 +94,15 @@ test('tab selection also warns and blocks locked non-working views', () => {
   );
 });
 
-test('Automations and Security sidebar dropdowns stay locked to parent pages only', () => {
+test('configured sidebar dropdowns stay locked to parent pages only', () => {
   const appSource = readSource('AuthenticatedApp.jsx');
   const sidebarSource = readSource('components/organisms/SidebarNavTree.jsx');
   const treeItemSource = readSource('components/molecules/TreeItem.jsx');
 
   assert.match(
     sidebarSource,
-    /LOCKED_DROPDOWN_LABELS\s*=\s*new Set\(\['Automations', 'Security'\]\)/,
-    'Automations and Security should be the only sidebar dropdowns locked by this rule'
+    /LOCKED_DROPDOWN_LABELS\s*=\s*new Set\(\['Automations', 'Security', 'Platform Config', 'Risk Management', 'Communications', 'Support Center'\]\)/,
+    'Automations, Security, Platform Config, Risk Management, Communications, and Support Center should be locked to parent selection only'
   );
   assert.match(
     sidebarSource,
@@ -165,4 +165,38 @@ test('locked sidebar options show a blocked cursor', () => {
     /item\.lockedDropdown \? 'cursor-not-allowed' : 'cursor-default'/,
     'locked dropdown arrows should use the blocked cursor'
   );
+});
+
+test('sidebar parent row clicks toggle normal dropdowns but not locked dropdowns', () => {
+  const treeItemSource = readSource('components/molecules/TreeItem.jsx');
+
+  assert.match(
+    treeItemSource,
+    /const handleRowClick = \(\) => \{[\s\S]*?if \(hasChildren && !item\.lockedDropdown\) \{[\s\S]*?setIsOpen\(\(current\) => !current\);[\s\S]*?\}/,
+    'clicking a normal parent row should toggle its dropdown'
+  );
+  assert.match(
+    treeItemSource,
+    /if \(item\.lockedDropdown && isBlockedNavigation\) \{[\s\S]*?onLockedDropdownClick && onLockedDropdownClick\(item\);[\s\S]*?return;/,
+    'clicking a locked blocked parent row should show the lock handler instead of opening children'
+  );
+  assert.match(
+    treeItemSource,
+    /onClick=\{handleRowClick\}/,
+    'the full sidebar row should use the shared row click handler'
+  );
+});
+
+test('header data metric is derived from active table rows, not hardcoded', () => {
+  const appSource = readSource('AuthenticatedApp.jsx');
+  const tableSource = readSource('components/organisms/AdminDataTable.jsx');
+
+  assert.doesNotMatch(appSource, /4482\s*\/\s*8 KB/);
+  assert.match(appSource, /const formatBytes = \(value\) => \{/);
+  assert.match(appSource, /const activeViewMetricLabel = React\.useMemo\(\(\) => \{/);
+  assert.match(appSource, /title="Mounted rows \/ estimated row payload"/);
+  assert.match(appSource, /\{activeViewMetricLabel\}/);
+  assert.match(tableSource, /const mountedRowBytes = React\.useMemo\(\(\) => estimateJsonBytes\(data\), \[data\]\);/);
+  assert.match(tableSource, /visible:\s*data\.length/);
+  assert.match(tableSource, /bytes:\s*mountedRowBytes/);
 });

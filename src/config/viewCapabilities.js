@@ -36,20 +36,10 @@ export const VIEW_CAPABILITIES = Object.freeze({
     'Deals partially connected',
     'This view uses an undocumented endpoint, so data can be unavailable until the backend contract is confirmed.'
   ),
-  'Trading Accounts': capability(
-    PARTIAL,
-    'Trading Accounts partially connected',
-    'The status APIs exist, but the account list endpoint used by this view is not in the current Swagger contract.'
-  ),
   Gateways: capability(
     PARTIAL,
     'Gateways partially connected',
     'Gateway LP APIs exist, but this screen still calls undocumented manager feed endpoints.'
-  ),
-  'Feed Tenants': capability(
-    PARTIAL,
-    'Feed Tenants partially connected',
-    'This screen depends on manager feed endpoints that are not present in the current Swagger contract.'
   ),
   Integrations: capability(
     STATIC_ONLY,
@@ -106,6 +96,12 @@ export const VIEW_CAPABILITIES = Object.freeze({
     'Anti DDoS Protection is static',
     'This page is informational and is not connected to backend APIs yet.'
   ),
+  'Platform Config': capability(
+    LOCKED_NO_API,
+    'Platform Config is locked',
+    'This Platform Config section is not enabled yet.',
+    'info'
+  ),
   Holidays: capability(
     LOCKED_NO_API,
     'Holidays is locked',
@@ -136,15 +132,47 @@ export const VIEW_CAPABILITIES = Object.freeze({
     'This Platform Config option is not enabled yet.',
     'info'
   ),
-  Payments: capability(
+  'Risk Management': capability(
     CONTAINER_ONLY,
-    'Payments has connected child pages',
-    'Open a child page like Payment Methods, Deposits, Withdrawals, Payment Gateways, or Reconciliation.'
+    'Risk Management is a folder',
+    'Open Exposure, Risk Events, Risk Limits, Suspicious Activity, or Risk Reports.',
+    'info'
+  ),
+  Communications: capability(
+    CONTAINER_ONLY,
+    'Communications is a folder',
+    'Open Auto Notification Rules, Email Campaigns, Message Center, Push Notifications, or SMS.',
+    'info'
   ),
   Providers: capability(
-    STATIC_ONLY,
-    'Providers is static',
-    'This page is informational and is not connected to provider APIs yet.'
+    LOCKED_NO_API,
+    'Providers is locked',
+    'No payment-provider management API is wired for this screen yet.',
+    'info'
+  ),
+  Withdrawals: capability(
+    LOCKED_NO_API,
+    'Withdrawals is locked',
+    'Withdrawal request APIs are not available in the current backend contract.',
+    'info'
+  ),
+  'Payment Gateways': capability(
+    LOCKED_NO_API,
+    'Payment Gateways is locked',
+    'Gateway payment management APIs are not available in the current backend contract.',
+    'info'
+  ),
+  Reconciliation: capability(
+    LOCKED_NO_API,
+    'Reconciliation is locked',
+    'Payment reconciliation APIs are not available in the current backend contract.',
+    'info'
+  ),
+  Chargebacks: capability(
+    LOCKED_NO_API,
+    'Chargebacks is locked',
+    'Chargeback management APIs are not available in the current backend contract.',
+    'info'
   ),
   Allocations: capability(
     STATIC_ONLY,
@@ -205,6 +233,30 @@ export const VIEW_CAPABILITIES = Object.freeze({
     'Plugin APIs are connected under Plugin Management; this top-level page is not integrated yet.',
     'info'
   ),
+  'Charts & Ticks': capability(
+    LOCKED_NO_API,
+    'Charts & Ticks is locked',
+    'No chart or tick-stream backend API is wired for this screen yet.',
+    'info'
+  ),
+  Subscriptions: capability(
+    LOCKED_NO_API,
+    'Subscriptions is locked',
+    'No market-data subscription management API is wired for this screen yet.',
+    'info'
+  ),
+  Mailbox: capability(
+    LOCKED_NO_API,
+    'Mailbox is locked',
+    'No mailbox API is wired for this screen yet.',
+    'info'
+  ),
+  'Live Update': capability(
+    LOCKED_NO_API,
+    'Live Update is locked',
+    'No live-update management API is wired for this screen yet.',
+    'info'
+  ),
   'Support Center': capability(
     STATIC_ONLY,
     'Support Center is static',
@@ -230,5 +282,5 @@ export const getViewCapabilityToast = (viewName) => {
 
 export const shouldBlockViewNavigation = (viewName) => {
   const { status } = getViewCapability(viewName);
-  return status === LOCKED_NO_API || status === API_AVAILABLE_NOT_INTEGRATED;
+  return status === LOCKED_NO_API || status === API_AVAILABLE_NOT_INTEGRATED || status === CONTAINER_ONLY;
 };

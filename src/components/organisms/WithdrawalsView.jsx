@@ -52,7 +52,7 @@ const AddWithdrawalPopup = ({ onClose, onSaved }) => {
       if (form.bank_details) payload.bank_details = form.bank_details;
       await PaymentService.createWithdrawal(payload);
       onSaved(); onClose();
-    } catch (err) { setError(err.response?.data?.message || err.message); }
+    } catch (err) { setError(getApiErrorMessage(err, 'Failed to create withdrawal request.')); }
     finally { setLoading(false); }
   };
 
@@ -92,7 +92,7 @@ const RejectPopup = ({ row, onClose, onSaved }) => {
     e.preventDefault();
     setLoading(true);
     try { await PaymentService.rejectWithdrawal(row.id, reason); onSaved(); onClose(); }
-    catch (err) { alert(err.response?.data?.message || err.message); }
+    catch (err) { alert(getApiErrorMessage(err, 'Failed to reject withdrawal request.')); }
     finally { setLoading(false); }
   };
   return (
@@ -167,7 +167,7 @@ const WithdrawalsView = () => {
       if (action === 'approve') { await PaymentService.approveWithdrawal(row.id); }
       else if (action === 'hold') { await PaymentService.holdWithdrawal(row.id); }
       fetchData();
-    } catch (err) { alert(err.response?.data?.message || err.message); }
+    } catch (err) { alert(getApiErrorMessage(err, `Failed to ${action} withdrawal request.`)); }
     finally { setActionLoading(null); }
   };
 

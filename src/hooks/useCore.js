@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuthStore } from '../store/authStore';
 
 export function useAuth() {
@@ -23,26 +23,44 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true) 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const requestIdRef = useRef(0);
+  const fetchFnRef = useRef(fetchFn);
   
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
+  useEffect(() => {
+    fetchFnRef.current = fetchFn;
+  }, [fetchFn]);
+
   const execute = useCallback(async () => {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+
     if (!isAuthenticated || !enabled) {
-      setLoading(false);
-      return;
+      if (requestIdRef.current === requestId) setLoading(false);
+      return null;
     }
+
     try {
       setLoading(true);
       setError(null);
-      const result = await fetchFn(params);
-      setData(result);
+      const result = await fetchFnRef.current(params);
+      if (requestIdRef.current === requestId) {
+        setData(result);
+      }
+      return result;
     } catch (err) {
-      setError(err);
-      console.error('Fetch error:', err);
+      if (requestIdRef.current === requestId) {
+        setError(err);
+        console.error('Fetch error:', err);
+      }
+      return null;
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) {
+        setLoading(false);
+      }
     }
-  }, [isAuthenticated, enabled, fetchFn, JSON.stringify(params), ...deps]);
+  }, [isAuthenticated, enabled, JSON.stringify(params), ...deps]);
 
   useEffect(() => {
     execute();

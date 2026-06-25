@@ -9,6 +9,7 @@ import ServerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ServerProperti
 import CreateGroupPopup from './components/RIGHTCLICKJPOPUPS/CreateGroupPopup';
 import { TabBar } from './components/organisms/TabBar';
 import { HelpModal } from './components/organisms/HelpModal';
+import { AboutModal } from './components/organisms/AboutModal';
 import {
   expireAuthSession,
   isAuthStorageEvent,
@@ -32,6 +33,27 @@ import { StatusDot } from './components/ui/Badge';
 
 const formatTime = (d) =>
   `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+
+const formatCount = (value) => (
+  Number.isFinite(value) ? new Intl.NumberFormat().format(value) : '0'
+);
+
+const formatBytes = (value) => {
+  const bytes = Number(value);
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let size = bytes;
+  let unitIndex = 0;
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+
+  if (unitIndex === 0) return `${Math.round(size)} ${units[unitIndex]}`;
+  const formatted = size >= 10 ? size.toFixed(0) : size.toFixed(1);
+  return `${formatted} ${units[unitIndex]}`;
+};
 
 const AccessDeniedPanel = ({ viewName, permission }) => (
   <div className="flex-1 flex items-center justify-center bg-[color:var(--bg-app)] select-none">
@@ -78,8 +100,9 @@ const AuthenticatedAppInner = ({ navigate }) => {
   const [isCreatingGroup, setIsCreatingGroup] = React.useState(false);
   const [refreshKey, setRefreshKey] = React.useState(0);
   const [helpOpen, setHelpOpen] = React.useState(false);
+  const [aboutOpen, setAboutOpen] = React.useState(false);
   const [now, setNow] = React.useState(() => new Date());
-  const [rowCount, setRowCount] = React.useState({ total: 0, filtered: 0 });
+  const [rowCount, setRowCount] = React.useState({ total: 0, filtered: 0, visible: 0, bytes: 0 });
 
   const [globalTheme, setGlobalTheme] = useLocalStorage('rtx5.theme', 'light');
   const [density, setDensity] = useLocalStorage('rtx5.density', 'compact');
@@ -97,6 +120,10 @@ const AuthenticatedAppInner = ({ navigate }) => {
     setSavedSearches((prev) => ({ ...prev, [activeNode]: q }));
 
   const searchInputRef = React.useRef(null);
+  const activeViewMetricLabel = React.useMemo(() => {
+    const visibleRows = Number(rowCount.visible) || 0;
+    return `${formatCount(visibleRows)} / ${formatBytes(rowCount.bytes)}`;
+  }, [rowCount.bytes, rowCount.visible]);
 
   React.useEffect(() => {
     if (!isAuthenticated || !accessToken) return undefined;
@@ -405,12 +432,13 @@ const AuthenticatedAppInner = ({ navigate }) => {
         else if (isCreatingGroup) setIsCreatingGroup(false);
         else if (serverPopupData) setServerPopupData(null);
         else if (helpOpen) setHelpOpen(false);
+        else if (aboutOpen) setAboutOpen(false);
         else if (searchQuery) setSearchQuery('');
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [handleRefresh, activeTab, openTabs, isPopupOpen, isCreatingGroup, serverPopupData, helpOpen, searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [handleRefresh, activeTab, openTabs, isPopupOpen, isCreatingGroup, serverPopupData, helpOpen, aboutOpen, searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const connTone = connStatus === 'error' ? 'danger' : 'success';
   const connText = connStatus === 'error' ? `Connection issue: ${connError}` : 'Connected to RTX5-PROD-01';
@@ -433,6 +461,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
         onExportCsv={handleExportCsv}
         onImport={handleImport}
         onHelp={() => setHelpOpen(true)}
+        onAbout={() => setAboutOpen(true)}
         canUndo={currentIndex > 0}
         canRedo={currentIndex < history.length - 1}
       />
@@ -487,7 +516,13 @@ const AuthenticatedAppInner = ({ navigate }) => {
             )}
             <div className="flex items-center gap-1.5 ml-auto text-[color:var(--text-secondary)]">
               <Globe size={12} />
-              <span className="font-mono tracking-tight">4482 / 8 KB</span>
+              <span
+                className="font-mono tracking-tight"
+                title="Mounted rows / estimated row payload"
+                aria-label={`Mounted rows and estimated row payload: ${activeViewMetricLabel}`}
+              >
+                {activeViewMetricLabel}
+              </span>
             </div>
           </div>
 
@@ -535,6 +570,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
       </AnimatePresence>
 
       <HelpModal open={helpOpen} onOpenChange={setHelpOpen} />
+      <AboutModal open={aboutOpen} onOpenChange={setAboutOpen} />
 
       <footer className="h-7 bg-[color:var(--bg-surface-2)] border-t border-[color:var(--border-subtle)] flex items-center px-3 justify-between select-none text-[11px] text-[color:var(--text-secondary)]">
         <div className="flex items-center gap-2" title={connText}>

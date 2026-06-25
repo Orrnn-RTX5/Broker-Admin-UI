@@ -21,3 +21,12 @@ test('MenuBar Exit invokes logout cleanup before window close or reload', () => 
     'Exit must clear local auth/session state before reloading fallback'
   );
 });
+
+test('MenuBar About opens the in-app About dialog instead of a browser alert', () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const src = readFileSync(join(here, 'MenuBar.jsx'), 'utf8');
+
+  assert.match(src, /onHelp,\s*onAbout/);
+  assert.match(src, /label="About RTX 5"\s+onClick=\{onAbout\}/);
+  assert.doesNotMatch(src, /About RTX 5[\s\S]{0,120}alert\(/);
+});

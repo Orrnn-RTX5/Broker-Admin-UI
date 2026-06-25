@@ -34,6 +34,11 @@ const SandboxInner = () => {
     ['MGR-004', 'Viewer',        'neutral', 'Offline', '—',            '—'],
   ];
 
+  const rowsPayloadBytes = JSON.stringify(rows).length;
+  const rowsPayloadLabel = rowsPayloadBytes >= 1024
+    ? `${(rowsPayloadBytes / 1024).toFixed(1)} KB`
+    : `${rowsPayloadBytes} B`;
+
   return (
     <div className="min-h-screen w-full bg-[color:var(--bg-app)] text-[color:var(--text-primary)] overflow-auto">
       {/* Top chrome */}
@@ -304,7 +309,7 @@ const SandboxInner = () => {
             <StatusDot tone="success" />
             -RTX-5
           </span>
-          <span>4482 / 8 KB</span>
+          <span>{rows.length} / {rowsPayloadLabel}</span>
           <span className="ml-auto tabular-nums">18:42:05</span>
         </div>
       </div>
