@@ -18,8 +18,20 @@ import {
   isCloseAllConfirmationAccepted,
 } from '../../utils/closeAllAction';
 import { canAccessView } from '../../utils/permissions';
-import { useToast } from '../ui/Toast';
-import { Clock, CornerUpRight, Server, Calendar, Search, ChevronDown, ShieldAlert } from 'lucide-react';
+import { useToast } from '../ui/useToast';
+import {
+  Clock,
+  CornerUpRight,
+  Server,
+  Calendar,
+  Search,
+  ChevronDown,
+  ShieldAlert,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from 'lucide-react';
 
 import AdminContextMenu from './AdminContextMenu';
 import NetworkCluster from './NetworkCluster';
@@ -125,6 +137,8 @@ const orderFilterSelectOptionStyle = {
   backgroundColor: 'var(--bg-surface-2)',
   color: 'var(--text-primary)',
 };
+const paginationButtonClassName = 'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[3px] border border-[color:var(--border-strong)] bg-[color:var(--bg-app)] text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--bg-surface-3)] hover:text-[color:var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent-500)] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-[color:var(--bg-app)]';
+const paginationFieldClassName = 'h-7 rounded-[3px] border border-[color:var(--border-strong)] bg-[color:var(--bg-app)] text-[11px] text-[color:var(--text-primary)] outline-none focus-visible:border-[color:var(--accent-500)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 
 const SUPPORT_CENTER_VIEWS = new Set([
   'Support Center', 'News', 'Articles', 'Orrnn Leads', 'Automation',
@@ -680,6 +694,19 @@ const TimeGroupHeader = ({ title }) => (
   </div>
 );
 
+const PaginationIconButton = ({ 'aria-label': ariaLabel, onClick, disabled, children }) => (
+  <button
+    type="button"
+    aria-label={ariaLabel}
+    title={ariaLabel}
+    onClick={onClick}
+    disabled={disabled}
+    className={paginationButtonClassName}
+  >
+    {children}
+  </button>
+);
+
 const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerTab, refreshTrigger, searchQuery = '', onCountChange }) => {
   const [contextMenu, setContextMenu] = useState({ x: 0, y: 0, visible: false });
   const [serverPopupData, setServerPopupData] = useState(null);
@@ -689,6 +716,7 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   const [ordersMode, setOrdersMode] = useState('all');
   const [orderFilters, setOrderFilters] = useState(() => createDefaultOrderFilters());
   const [page, setPage] = useState(1);
+  const [pageInputValue, setPageInputValue] = useState('1');
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
   const [debouncedOrderQuery, setDebouncedOrderQuery] = useState(orderFilters.query);
@@ -777,6 +805,10 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     pagingScopeRef.current = pagingScopeKey;
     setPage(1);
   }, [pagingScopeKey]);
+
+  React.useEffect(() => {
+    setPageInputValue(String(activePage));
+  }, [activePage]);
 
   const usesAccountDetailsMany = viewType === 'Clients' || viewType === 'Trading Accounts';
   const { data: accountsResponse, loading: accountsLoading, error: accountsError, mutate: refetchAccounts } = useAccounts(activePage, pageSize, debouncedSearchQuery, '', '', usesAccountDetailsMany);
@@ -1438,6 +1470,9 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
 
   const isPagedView = PAGED_VIEW_TYPES.has(viewType);
   const totalCount = renderedTotalCount;
+  const activeFooterTabLabel = viewType === 'Clients & Accounts'
+    ? 'Clients & Accounts'
+    : (viewType === 'Groups' && totalCount > 0 ? `Groups (${totalCount})` : viewType);
   const pageStart = pagination?.pageStart ?? (data.length ? 1 : 0);
   const pageEnd = pagination?.pageEnd ?? data.length;
   const hasKnownPaginationTotal = Boolean(pagination?.hasKnownTotal);
@@ -1445,8 +1480,9 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   const canGoNextPage = isPagedView && !isLoading && Boolean(pagination?.hasNextPage);
   const canGoLastPage = isPagedView && !isLoading && hasKnownPaginationTotal && activePage < totalPages;
   const paginationRangeLabel = data.length
-    ? `Showing ${formatCount(pageStart)}-${formatCount(pageEnd)}${hasKnownPaginationTotal ? ` of ${formatCount(pagination.total)}` : ''}`
+    ? `${formatCount(pageStart)}-${formatCount(pageEnd)}${hasKnownPaginationTotal ? ` of ${formatCount(pagination.total)}` : ''}`
     : (isLoading ? 'Loading...' : 'No rows');
+  const paginationRangeAriaLabel = data.length ? `Rows ${paginationRangeLabel}` : paginationRangeLabel;
 
   const goToPage = (nextPage) => {
     setPage((currentPage) => {
@@ -1455,9 +1491,35 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     });
   };
 
+  const commitPageInput = () => {
+    if (pageInputValue.trim() === '') {
+      setPageInputValue(String(activePage));
+      return;
+    }
+    goToPage(pageInputValue);
+  };
+
+  const handlePageInputChange = (event) => {
+    const nextValue = event.target.value;
+    if (/^\d*$/.test(nextValue)) {
+      setPageInputValue(nextValue);
+    }
+  };
+
+  const handlePageInputKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      commitPageInput();
+    } else if (event.key === 'Escape') {
+      setPageInputValue(String(activePage));
+      event.currentTarget.blur();
+    }
+  };
+
   const handlePageSizeChange = (event) => {
     const nextPageSize = Number(event.target.value);
     setPageSize(PAGE_SIZE_OPTIONS.includes(nextPageSize) ? nextPageSize : DEFAULT_PAGE_SIZE);
+    setPage(1);
   };
 
   const closeAllSymbolOptions = isPositionsView
@@ -1845,94 +1907,101 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
       </div>
 
       {/* Bottom Tab Bar (MT5 Style) */}
-      <div className="h-8 bg-[color:var(--bg-surface-1)] border-t border-black/40 flex items-center px-1 gap-1">
-        {viewType === 'Orders' ? (
-          <>
-            <button
-              type="button"
-              onClick={() => handleOrderModeChange('open')}
-              className={`h-[22px] px-3 text-[11px] flex items-center border border-black/40 rounded-sm transition-colors ${ordersMode !== 'all' ? 'bg-[#3e3e3e] text-white shadow-sm' : 'text-[#999999] hover:text-[color:var(--text-secondary)] hover:bg-white/5'}`}
-            >
-              Orders
-            </button>
-            <button
-              type="button"
-              onClick={() => handleOrderModeChange('all')}
-              className={`h-[22px] px-3 text-[11px] flex items-center border border-black/40 rounded-sm transition-colors ${ordersMode === 'all' ? 'bg-[#3e3e3e] text-white shadow-sm' : 'text-[#999999] hover:text-[color:var(--text-secondary)] hover:bg-white/5'}`}
-            >
-              All Orders
-            </button>
-          </>
-        ) : (
-          <>
-            <div className="h-[22px] px-3 bg-[#3e3e3e] text-white text-[11px] flex items-center border border-black/40 rounded-sm shadow-sm cursor-default">
-              {viewType === 'Clients & Accounts' ? 'Clients & Accounts' : (viewType === 'Groups' && totalCount > 0 ? `Groups (${totalCount})` : viewType)}
-            </div>
-            <div className="h-[22px] px-3 text-[#999999] hover:text-[color:var(--text-secondary)] text-[11px] flex items-center cursor-default transition-colors">
-              All {viewType}
-            </div>
-          </>
-        )}
+      <div className="min-h-9 bg-[color:var(--bg-surface-1)] border-t border-black/40 flex flex-wrap items-center gap-1.5 px-1.5 py-1">
+        <div className="flex min-w-0 shrink-0 items-center gap-1 overflow-hidden">
+          {viewType === 'Orders' ? (
+            <>
+              <button
+                type="button"
+                onClick={() => handleOrderModeChange('open')}
+                className={`h-7 shrink-0 px-3 text-[11px] flex items-center border border-black/40 rounded-[3px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent-500)] ${ordersMode !== 'all' ? 'bg-[#3e3e3e] text-white shadow-sm' : 'text-[#999999] hover:text-[color:var(--text-secondary)] hover:bg-white/5'}`}
+              >
+                Orders
+              </button>
+              <button
+                type="button"
+                onClick={() => handleOrderModeChange('all')}
+                className={`h-7 shrink-0 px-3 text-[11px] flex items-center border border-black/40 rounded-[3px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent-500)] ${ordersMode === 'all' ? 'bg-[#3e3e3e] text-white shadow-sm' : 'text-[#999999] hover:text-[color:var(--text-secondary)] hover:bg-white/5'}`}
+              >
+                All Orders
+              </button>
+            </>
+          ) : (
+            <>
+              <div
+                className="h-7 max-w-[220px] truncate px-3 bg-[#3e3e3e] text-white text-[11px] flex items-center border border-black/40 rounded-[3px] shadow-sm cursor-default"
+                title={activeFooterTabLabel}
+              >
+                <span className="truncate">{activeFooterTabLabel}</span>
+              </div>
+              <div className="hidden h-7 max-w-[160px] truncate px-2 text-[#999999] hover:text-[color:var(--text-secondary)] text-[11px] sm:flex items-center cursor-default transition-colors">
+                All {viewType}
+              </div>
+            </>
+          )}
+        </div>
         {isPagedView && (
-          <div className="ml-auto flex items-center gap-1 text-[11px] text-[color:var(--text-muted)]">
-            <span className="px-2 font-mono tracking-tight">{paginationRangeLabel}</span>
-            <button
-              type="button"
+          <div className="ml-auto flex min-w-0 max-w-full items-center justify-end gap-1.5 overflow-x-auto no-scrollbar whitespace-nowrap text-[11px] text-[color:var(--text-muted)]">
+            <div
+              className="flex h-7 min-w-[132px] shrink-0 items-center gap-1.5 rounded-[3px] border border-[color:var(--border-subtle)] bg-[color:var(--bg-app)] px-2"
+              aria-live="polite"
+              aria-label={paginationRangeAriaLabel}
+            >
+              <span className="text-[9px] font-semibold uppercase text-[color:var(--text-muted)]">{data.length ? 'Rows' : 'Status'}</span>
+              <span className="font-mono tabular-nums tracking-tight text-[color:var(--text-secondary)]">{paginationRangeLabel}</span>
+            </div>
+            <PaginationIconButton
               aria-label="First page"
               onClick={() => goToPage(1)}
               disabled={!canGoPreviousPage}
-              className="h-[22px] px-2 border border-black/40 rounded-sm text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              First
-            </button>
-            <button
-              type="button"
+              <ChevronsLeft size={14} strokeWidth={1.8} aria-hidden="true" />
+            </PaginationIconButton>
+            <PaginationIconButton
               aria-label="Previous page"
               onClick={() => goToPage((current) => current - 1)}
               disabled={!canGoPreviousPage}
-              className="h-[22px] px-2 border border-black/40 rounded-sm text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Prev
-            </button>
-            <label className="flex items-center gap-1">
-              <span>Page</span>
+              <ChevronLeft size={14} strokeWidth={1.8} aria-hidden="true" />
+            </PaginationIconButton>
+            <label className="flex h-7 shrink-0 items-center gap-1.5 rounded-[3px] border border-[color:var(--border-subtle)] bg-[color:var(--bg-app)] px-1.5 text-[color:var(--text-muted)]">
+              <span className="text-[10px]">Page</span>
               <input
                 aria-label="Page number"
-                type="number"
-                min="1"
-                max={hasKnownPaginationTotal ? totalPages : undefined}
-                value={activePage}
-                onChange={(event) => goToPage(event.target.value)}
-                className="h-[22px] w-14 bg-[color:var(--bg-app)] border border-black/40 rounded-sm px-1 text-[11px] text-[color:var(--text-primary)] outline-none"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={pageInputValue}
+                onChange={handlePageInputChange}
+                onBlur={commitPageInput}
+                onKeyDown={handlePageInputKeyDown}
+                disabled={isLoading}
+                className={`${paginationFieldClassName} w-14 px-1 text-center font-mono tabular-nums`}
               />
               {hasKnownPaginationTotal && (
-                <span className="font-mono">/ {formatCount(totalPages)}</span>
+                <span className="font-mono tabular-nums text-[color:var(--text-muted)]">/ {formatCount(totalPages)}</span>
               )}
             </label>
-            <button
-              type="button"
+            <PaginationIconButton
               aria-label="Next page"
               onClick={() => goToPage((current) => current + 1)}
               disabled={!canGoNextPage}
-              className="h-[22px] px-2 border border-black/40 rounded-sm text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Next
-            </button>
-            <button
-              type="button"
+              <ChevronRight size={14} strokeWidth={1.8} aria-hidden="true" />
+            </PaginationIconButton>
+            <PaginationIconButton
               aria-label="Last page"
               onClick={() => goToPage(totalPages)}
               disabled={!canGoLastPage}
-              className="h-[22px] px-2 border border-black/40 rounded-sm text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Last
-            </button>
+              <ChevronsRight size={14} strokeWidth={1.8} aria-hidden="true" />
+            </PaginationIconButton>
             <select
               aria-label="Rows per page"
               value={pageSize}
               onChange={handlePageSizeChange}
               disabled={isLoading}
-              className="h-[22px] bg-[color:var(--bg-app)] border border-black/40 rounded-sm px-1 text-[11px] text-[color:var(--text-primary)] outline-none disabled:opacity-50"
+              className={`${paginationFieldClassName} shrink-0 px-2 font-mono tabular-nums`}
             >
               {PAGE_SIZE_OPTIONS.map((option) => (
                 <option key={option} value={option}>{option} rows</option>

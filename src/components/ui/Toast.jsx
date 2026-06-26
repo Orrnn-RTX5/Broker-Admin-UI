@@ -2,6 +2,7 @@ import React from 'react';
 import * as RToast from '@radix-ui/react-toast';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/cn';
+import { ToastCtx } from './useToast';
 
 /**
  * Lightweight toast. Usage:
@@ -11,8 +12,6 @@ import { cn } from '../../lib/cn';
  *   </ToastProvider>
  * Trigger with useToast(): const { notify } = useToast(); notify({ title, tone })
  */
-
-const ToastCtx = React.createContext(null);
 
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = React.useState([]);
@@ -77,9 +76,3 @@ export const ToastProvider = ({ children }) => {
 export const ToastViewport = () => (
   <RToast.Viewport className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 outline-none" />
 );
-
-export const useToast = () => {
-  const ctx = React.useContext(ToastCtx);
-  if (!ctx) throw new Error('useToast must be used inside <ToastProvider>');
-  return ctx;
-};

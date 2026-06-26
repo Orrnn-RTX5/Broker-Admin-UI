@@ -11,10 +11,10 @@ const downloadBlob = (blob, filename) => {
   URL.revokeObjectURL(url);
 };
 
-const ExportCard = ({ icon: Icon, title, description, color, onExport, loading }) => (
+const ExportCard = ({ icon, title, description, color, onExport, loading }) => (
   <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--bg-surface-2)] rounded-[3px] p-5 flex flex-col gap-3 w-[280px]">
     <div className="flex items-center gap-2">
-      <Icon size={16} className={color} />
+      {React.createElement(icon, { size: 16, className: color })}
       <span className="text-[12px] font-semibold text-[color:var(--text-primary)]">{title}</span>
     </div>
     <p className="text-[11px] text-[#888] leading-relaxed">{description}</p>

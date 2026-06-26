@@ -2,7 +2,7 @@ import React from 'react';
 import * as RTabs from '@radix-ui/react-tabs';
 import { cn } from '../../lib/cn';
 
-export const Tabs = RTabs.Root;
+export const Tabs = (props) => <RTabs.Root {...props} />;
 
 export const TabsList = React.forwardRef(function TabsList({ className, ...rest }, ref) {
   return (
@@ -35,4 +35,6 @@ export const TabsTrigger = React.forwardRef(function TabsTrigger({ className, ..
   );
 });
 
-export const TabsContent = RTabs.Content;
+export const TabsContent = React.forwardRef(function TabsContent(props, ref) {
+  return <RTabs.Content ref={ref} {...props} />;
+});

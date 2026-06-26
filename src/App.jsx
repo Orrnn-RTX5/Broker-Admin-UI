@@ -3,23 +3,30 @@ import { AdminLogin, ManagerLogin, ManualBrokerEntry } from './components/organi
 import { useAuthStore } from './store/authStore';
 import { buildUserFromAuthPayload } from './utils/sessionUser';
 import { getAuthAccessToken, getAuthExpiresAt, getAuthExpiresIn, getAuthRefreshToken } from './utils/authSession';
+import { buildNavigationTarget, readAppPath } from './lib/routerPath';
 
 const AuthenticatedApp = React.lazy(() => import('./AuthenticatedApp.jsx'));
 const AUTH_PATHS = new Set(['/', '/manager-login', '/admin-login', '/broker-manual-entry']);
 
 const useBrowserPath = () => {
-  const [pathname, setPathname] = React.useState(() => window.location.pathname || '/');
+  const [pathname, setPathname] = React.useState(() => readAppPath());
 
   const navigate = React.useCallback((to, options = {}) => {
     const method = options.replace ? 'replaceState' : 'pushState';
-    window.history[method](null, '', to);
-    setPathname(to);
+    window.history[method](null, '', buildNavigationTarget(to));
+    setPathname(readAppPath());
   }, []);
 
   React.useEffect(() => {
-    const handlePopState = () => setPathname(window.location.pathname || '/');
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    const handleLocationChange = () => setPathname(readAppPath());
+
+    window.addEventListener('hashchange', handleLocationChange);
+    window.addEventListener('popstate', handleLocationChange);
+
+    return () => {
+      window.removeEventListener('hashchange', handleLocationChange);
+      window.removeEventListener('popstate', handleLocationChange);
+    };
   }, []);
 
   return { pathname, navigate };

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Save, Loader2, X } from 'lucide-react';
 import {
-  symbolsList, symbolSessionGet, symbolSessionSet,
+  symbolSessionGet, symbolSessionSet,
   sessionOverrideList, sessionOverrideSet, sessionOverrideDelete,
 } from '../../../services/api';
 
@@ -140,7 +140,9 @@ const SessionsTab = () => {
           const msg = JSON.parse(messages[i]);
           if (msg.symbol) symbolSet.add(msg.symbol);
         }
-      } catch (err) {}
+      } catch {
+        // Ignore malformed feed messages.
+      }
     };
 
     const timer = setTimeout(() => {

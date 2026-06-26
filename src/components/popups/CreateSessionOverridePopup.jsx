@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { X, Clock, AlertCircle } from 'lucide-react';
 import { ManagerService } from '../../services/manager.service';
 
+const MotionDiv = motion.div;
+
 const DAY_OPTIONS = [
   { value: 0, label: 'Sunday' },
   { value: 1, label: 'Monday' },
@@ -67,7 +69,7 @@ const CreateSessionOverridePopup = ({ symbol, group, existingOverrides = [], onC
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4">
-      <motion.div
+      <MotionDiv
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
@@ -139,7 +141,7 @@ const CreateSessionOverridePopup = ({ symbol, group, existingOverrides = [], onC
             </button>
           </div>
         </form>
-      </motion.div>
+      </MotionDiv>
     </div>
   );
 };

@@ -49,7 +49,7 @@ const LeveragesView = () => {
     try {
       const res = await ManagerService.getLeverageScheduleList(id);
       setSchedule(Array.isArray(res) ? res : res?.schedules ?? []);
-    } catch (err) {
+    } catch {
       setSchedule([]);
     } finally {
       setScheduleLoading(false);

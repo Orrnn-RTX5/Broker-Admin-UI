@@ -10,6 +10,7 @@ export const AUTH_STORAGE_KEYS = {
   refreshToken: 'refreshToken',
   brokerLogin: 'brokerLogin',
   brokerId: 'brokerId',
+  brokerInfo: 'broker_info',
   tokenExpiresAt: 'tokenExpiresAt',
   tokenExpiresAtSnake: 'token_expires_at',
 };
@@ -185,6 +186,8 @@ export const clearAuthStorage = () => {
     localStorage.removeItem(AUTH_STORAGE_KEYS.refreshToken);
     localStorage.removeItem(AUTH_STORAGE_KEYS.brokerLogin);
     localStorage.removeItem(AUTH_STORAGE_KEYS.brokerId);
+    localStorage.removeItem(AUTH_STORAGE_KEYS.brokerInfo);
+    sessionStorage.removeItem(AUTH_STORAGE_KEYS.brokerInfo);
     localStorage.removeItem(AUTH_STORAGE_KEYS.tokenExpiresAt);
     localStorage.removeItem(AUTH_STORAGE_KEYS.tokenExpiresAtSnake);
   } catch {

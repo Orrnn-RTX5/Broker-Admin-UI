@@ -10,7 +10,14 @@ const SHOW_SANDBOX = false;
 
 // Surface unhandled JS errors in production so the EXE never goes blank.
 window.addEventListener('error', (e) => console.error('[window.error]', e.error || e.message));
-window.addEventListener('unhandledrejection', (e) => console.error('[unhandledrejection]', e.reason));
+window.addEventListener('unhandledrejection', (e) => {
+  if (e.reason?.__rtx5SuppressLog) {
+    e.preventDefault();
+    return;
+  }
+
+  console.error('[unhandledrejection]', e.reason);
+});
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

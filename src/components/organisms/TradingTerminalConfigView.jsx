@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { PlatformConfigService } from '../../services/platformConfig.service';
 import { getApiErrorMessage } from '../../utils/apiShapes';
 import { Search, Save } from 'lucide-react';

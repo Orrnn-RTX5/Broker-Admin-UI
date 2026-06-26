@@ -49,13 +49,29 @@ test('setBrokerInfo strips raw license secrets and registers selected broker ori
   });
 
   const stored = JSON.parse(sessionStorage.getItem('broker_info'));
+  const persisted = JSON.parse(localStorage.getItem('broker_info'));
 
   assert.equal(stored.license_key, undefined);
   assert.equal(stored.nested.license_secret, undefined);
+  assert.deepEqual(persisted, stored);
   assert.deepEqual(new Set(registeredOrigins), new Set([
     'https://broker.example.com',
     'http://broker.example.com:8091',
   ]));
+});
+
+test('getBrokerInfo recovers selected broker from local storage after desktop restart', async () => {
+  installBrowserGlobals();
+  localStorage.setItem('broker_info', JSON.stringify({
+    broker_id: 'myprop',
+    backend_url: 'https://services.myprop.trade',
+  }));
+
+  const brokerAuth = await importFreshBrokerAuth();
+  const brokerInfo = brokerAuth.getBrokerInfo();
+
+  assert.equal(brokerInfo.broker_id, 'myprop');
+  assert.equal(brokerInfo.backend_url, 'https://services.myprop.trade');
 });
 
 test('fetchBrokerList uses v2 discovery and keeps sanitized broker server handles', async () => {
@@ -295,6 +311,35 @@ test('loginAdmin maps GTA stale public server values to the accepted broker serv
     password: 'secret',
     server: 'broker-server-2',
   });
+});
+
+test('desktop loginAdmin uses public service URL instead of raw IP when both are discovered', async () => {
+  installBrowserGlobals({ BACKEND_TARGET: 'desktop' });
+  let postedUrl = '';
+  globalThis.fetch = async (url) => {
+    postedUrl = url;
+
+    return {
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ token: 'admin-token', broker_id: 'myprop' }),
+    };
+  };
+
+  const brokerAuth = await importFreshBrokerAuth();
+  await brokerAuth.loginAdmin(
+    {
+      broker_id: 'myprop',
+      name: 'MyProp',
+      server_url: 'https://services.myprop.trade',
+      services_domain: 'services.myprop.trade',
+      server_ip: '185.204.168.202',
+      server_port: 443,
+    },
+    { user: '10017', password: 'secret' }
+  );
+
+  assert.equal(postedUrl, 'https://services.myprop.trade/manager/api/v2/admin/login');
 });
 
 test('loginManager sends the opaque server handle when discovery does not expose server_ip', async () => {

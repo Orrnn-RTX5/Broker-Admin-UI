@@ -24,11 +24,16 @@ import { useLocalStorage } from './lib/useLocalStorage';
 import { useKbStatus } from './lib/useKbStatus';
 import { canAccessView, requiredPermissionForView } from './utils/permissions';
 import { AuthService } from './services/auth.service';
+import {
+  DESKTOP_RELEASES_PAGE_URL,
+  getLatestDesktopInstaller,
+} from './config/desktopRelease';
 import { getViewCapabilityToast, shouldBlockViewNavigation } from './config/viewCapabilities';
-import { Network, Globe, ShieldAlert } from 'lucide-react';
+import { Download, Network, Globe, RefreshCcw, ShieldAlert } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { TooltipProvider } from './components/ui/Tooltip';
-import { ToastProvider, ToastViewport, useToast } from './components/ui/Toast';
+import { ToastProvider, ToastViewport } from './components/ui/Toast';
+import { useToast } from './components/ui/useToast';
 import { StatusDot } from './components/ui/Badge';
 
 const formatTime = (d) =>
@@ -103,6 +108,11 @@ const AuthenticatedAppInner = ({ navigate }) => {
   const [aboutOpen, setAboutOpen] = React.useState(false);
   const [now, setNow] = React.useState(() => new Date());
   const [rowCount, setRowCount] = React.useState({ total: 0, filtered: 0, visible: 0, bytes: 0 });
+  const [desktopReleaseState, setDesktopReleaseState] = React.useState({
+    status: 'idle',
+    installer: null,
+    error: null,
+  });
 
   const [globalTheme, setGlobalTheme] = useLocalStorage('rtx5.theme', 'light');
   const [density, setDensity] = useLocalStorage('rtx5.density', 'compact');
@@ -114,6 +124,10 @@ const AuthenticatedAppInner = ({ navigate }) => {
   const [history, setHistory] = React.useState([activeTab || 'Groups']);
   const [currentIndex, setCurrentIndex] = React.useState(0);
   const activeNode = activeTab || history[currentIndex];
+  const canCheckForUpdates =
+    typeof window !== 'undefined' &&
+    typeof window.rtx5Electron?.checkForUpdates === 'function';
+  const canDownloadDesktopApp = !canCheckForUpdates;
 
   const searchQuery = savedSearches[activeNode] || '';
   const setSearchQuery = (q) =>
@@ -238,6 +252,48 @@ const AuthenticatedAppInner = ({ navigate }) => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  React.useEffect(() => {
+    if (!canDownloadDesktopApp) return undefined;
+
+    let cancelled = false;
+    const loadLatestDesktopRelease = () => {
+      setDesktopReleaseState((current) => ({
+        ...current,
+        status: current.installer ? 'ready' : 'loading',
+        error: null,
+      }));
+
+      getLatestDesktopInstaller()
+        .then((installer) => {
+          if (!cancelled) {
+            setDesktopReleaseState({ status: 'ready', installer, error: null });
+          }
+        })
+        .catch((error) => {
+          if (!cancelled) {
+            setDesktopReleaseState((current) => ({
+              status: current.installer ? 'ready' : 'error',
+              installer: current.installer,
+              error,
+            }));
+          }
+        });
+    };
+
+    loadLatestDesktopRelease();
+    const intervalId = window.setInterval(loadLatestDesktopRelease, 10 * 60 * 1000);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') loadLatestDesktopRelease();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [canDownloadDesktopApp]);
 
   const canViewActive = canAccessView(currentUser, activeNode);
   const activeViewPermission = requiredPermissionForView(activeNode);
@@ -367,6 +423,52 @@ const AuthenticatedAppInner = ({ navigate }) => {
     };
     input.click();
   };
+
+  const handleCheckForUpdates = React.useCallback(() => {
+    const checkForUpdates = window.rtx5Electron?.checkForUpdates;
+    if (typeof checkForUpdates !== 'function') return;
+
+    checkForUpdates().catch((error) => {
+      notify({
+        title: 'Update check failed',
+        description: error?.message || 'Unable to start the desktop update check.',
+        tone: 'danger',
+      });
+    });
+  }, [notify]);
+
+  const desktopInstaller = desktopReleaseState.installer;
+  const desktopDownloadHref = desktopInstaller?.downloadUrl || DESKTOP_RELEASES_PAGE_URL;
+  const desktopDownloadLabel = desktopReleaseState.status === 'loading'
+    ? 'Finding app'
+    : 'Download app';
+
+  const handleDesktopDownloadClick = React.useCallback((event) => {
+    if (desktopReleaseState.status === 'loading' && !desktopInstaller) {
+      event.preventDefault();
+      notify({
+        title: 'Preparing desktop download',
+        description: 'Checking the latest release asset.',
+        tone: 'info',
+      });
+      return;
+    }
+
+    if (!desktopInstaller) {
+      notify({
+        title: 'Opening release downloads',
+        description: 'Could not resolve the installer automatically.',
+        tone: 'warning',
+      });
+      return;
+    }
+
+    notify({
+      title: 'Downloading desktop app',
+      description: `RTX5 Broker Admin v${desktopInstaller.version}`,
+      tone: 'success',
+    });
+  }, [desktopInstaller, desktopReleaseState.status, notify]);
 
   React.useEffect(() => {
     const onKey = (e) => {
@@ -572,12 +674,44 @@ const AuthenticatedAppInner = ({ navigate }) => {
       <HelpModal open={helpOpen} onOpenChange={setHelpOpen} />
       <AboutModal open={aboutOpen} onOpenChange={setAboutOpen} />
 
-      <footer className="h-7 bg-[color:var(--bg-surface-2)] border-t border-[color:var(--border-subtle)] flex items-center px-3 justify-between select-none text-[11px] text-[color:var(--text-secondary)]">
-        <div className="flex items-center gap-2" title={connText}>
+      <footer className="h-7 bg-[color:var(--bg-surface-2)] border-t border-[color:var(--border-subtle)] flex items-center gap-2 px-3 justify-between select-none text-[11px] text-[color:var(--text-secondary)]">
+        <div className="flex min-w-0 items-center gap-2" title={connText}>
           <StatusDot tone={connTone} />
-          <span className="font-medium">{connText}</span>
+          <span className="truncate font-medium">{connText}</span>
         </div>
-        <div className="flex items-center gap-4 text-[color:var(--text-muted)] font-mono tracking-tight">
+        <div className="flex shrink-0 items-center gap-3 text-[color:var(--text-muted)] font-mono tracking-tight">
+          {canDownloadDesktopApp && (
+            <a
+              href={desktopDownloadHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              download={desktopInstaller?.fileName || undefined}
+              onClick={handleDesktopDownloadClick}
+              className="h-5 inline-flex items-center gap-1.5 rounded-[2px] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-1)] px-2 font-sans text-[11px] font-medium text-[color:var(--text-secondary)] hover:border-[color:var(--accent-500)] hover:text-[color:var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--accent-500)]"
+              title={desktopInstaller ? `Download RTX5 Broker Admin v${desktopInstaller.version}` : 'Open latest desktop app download'}
+              aria-label={desktopInstaller ? `Download desktop app version ${desktopInstaller.version}` : 'Download desktop app'}
+            >
+              <Download size={12} aria-hidden="true" />
+              <span>{desktopDownloadLabel}</span>
+              {desktopInstaller?.version && (
+                <span className="hidden text-[10px] text-[color:var(--text-muted)] md:inline">
+                  v{desktopInstaller.version}
+                </span>
+              )}
+            </a>
+          )}
+          {canCheckForUpdates && (
+            <button
+              type="button"
+              onClick={handleCheckForUpdates}
+              className="h-5 inline-flex items-center gap-1.5 rounded-[2px] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-1)] px-2 font-sans text-[11px] font-medium text-[color:var(--text-secondary)] hover:border-[color:var(--accent-500)] hover:text-[color:var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--accent-500)]"
+              title="Check for desktop app updates"
+              aria-label="Check for desktop app updates"
+            >
+              <RefreshCcw size={12} aria-hidden="true" />
+              <span>Check updates</span>
+            </button>
+          )}
           <span className={kb.caps ? 'text-[color:var(--text-primary)]' : ''}>CAP</span>
           <span className={kb.num ? 'text-[color:var(--text-primary)]' : ''}>NUM</span>
           <span className={kb.scroll ? 'text-[color:var(--text-primary)]' : ''}>SCRL</span>

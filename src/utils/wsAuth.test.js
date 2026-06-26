@@ -46,6 +46,21 @@ test('readWsAuthContext prefers broker scoped token and broker id', () => {
   });
 });
 
+test('readWsAuthContext recovers broker info from local storage', () => {
+  installStorage('sessionStorage', {
+    auth: JSON.stringify({ access_token: 'session-token' }),
+  });
+  installStorage('localStorage', {
+    broker_info: JSON.stringify({ broker_id: 'myprop', feed_token: 'feed-token' }),
+    authToken: 'local-token',
+  });
+
+  assert.deepEqual(readWsAuthContext(), {
+    token: 'feed-token',
+    brokerId: 'myprop',
+  });
+});
+
 test('redactUrlForLog redacts WebSocket token and id query parameters', () => {
   assert.equal(
     redactUrlForLog('wss://broker.example/ws/feed?token=secret&broker_id=gta_broker'),

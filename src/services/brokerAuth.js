@@ -27,13 +27,19 @@ const GTA_LOGIN_SERVER_MARKERS = [
 ];
 
 export const RUNTIME_API_HOST =
-  (getRuntimeValue('API_HOST', 'VITE_API_HOST') ||
+  (getRuntimeValue('API_HOST', 'VITE_API_HOST', 'API_URL', 'VITE_API_URL') ||
   viteEnv.VITE_API_HOST ||
+  viteEnv.VITE_API_URL ||
+  viteEnv.API_HOST ||
+  viteEnv.API_URL ||
   '').replace(/\/+$/, '');
 
 export const RUNTIME_API_HOST_EXT =
-  (getRuntimeValue('API_HOST_EXT', 'VITE_API_HOST_EXT') ||
+  (getRuntimeValue('API_HOST_EXT', 'VITE_API_HOST_EXT', 'API_EXT_URL', 'VITE_API_EXT_URL') ||
   viteEnv.VITE_API_HOST_EXT ||
+  viteEnv.VITE_API_EXT_URL ||
+  viteEnv.API_HOST_EXT ||
+  viteEnv.API_EXT_URL ||
   '').replace(/\/+$/, '');
 
 const comparableOrigin = (value = '') => {
@@ -574,23 +580,32 @@ const mapAdminLoginError = (message = '') => {
 };
 
 export const getBrokerInfo = () => {
-  try {
-    const raw = sessionStorage.getItem(BROKER_INFO_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+  const readStorage = (storage) => {
+    if (!storage?.getItem) return null;
+
+    try {
+      const raw = storage.getItem(BROKER_INFO_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  return readStorage(sessionStorage) || readStorage(localStorage);
 };
 
 export const setBrokerInfo = (brokerInfo) => {
   const normalized = normalizeBrokerInfo(brokerInfo);
-  sessionStorage.setItem(BROKER_INFO_KEY, JSON.stringify(normalized));
+  const serialized = JSON.stringify(normalized);
+  sessionStorage.setItem(BROKER_INFO_KEY, serialized);
+  localStorage.setItem(BROKER_INFO_KEY, serialized);
   registerElectronBrokerOrigins(normalized);
   updateDynamicEndpoints();
 };
 
 export const clearBrokerInfo = () => {
   sessionStorage.removeItem(BROKER_INFO_KEY);
+  localStorage.removeItem(BROKER_INFO_KEY);
   clearElectronBrokerOrigins();
   updateDynamicEndpoints();
 };

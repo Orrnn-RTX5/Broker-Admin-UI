@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { RiskManagementService } from '../../services/riskManagement.service';
 import { RefreshCw, CheckCheck, Check } from 'lucide-react';
 
@@ -16,19 +16,28 @@ const RiskEventsView = () => {
   const [showAckModal, setShowAckModal] = useState(null); // event object
   const [comment, setComment] = useState('');
 
-  const fetchEvents = async () => {
+  const loadEvents = useCallback(async ({ severityFilter, acknowledgedFilter }) => {
     setLoading(true);
     try {
       const params = {};
-      if (severity) params.severity = severity;
-      if (acknowledged !== '') params.acknowledged = acknowledged;
+      if (severityFilter) params.severity = severityFilter;
+      if (acknowledgedFilter !== '') params.acknowledged = acknowledgedFilter;
       const res = await RiskManagementService.listRiskEvents(params);
       setData(Array.isArray(res) ? res : []);
     } catch { setData([]); }
     finally { setLoading(false); }
-  };
+  }, []);
 
-  useEffect(() => { fetchEvents(); }, []);
+  const fetchEvents = useCallback(() => {
+    return loadEvents({ severityFilter: severity, acknowledgedFilter: acknowledged });
+  }, [acknowledged, loadEvents, severity]);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      loadEvents({ severityFilter: '', acknowledgedFilter: 'false' });
+    }, 0);
+    return () => window.clearTimeout(timerId);
+  }, [loadEvents]);
 
   const handleAck = async () => {
     if (!showAckModal) return;

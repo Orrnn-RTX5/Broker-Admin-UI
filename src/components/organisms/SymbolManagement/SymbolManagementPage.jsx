@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Settings2, List, FolderTree, ArrowLeftRight, Clock, DollarSign, Layers } from 'lucide-react';
 import SymbolsTab from './SymbolsTab';
 import CategoriesTab from './CategoriesTab';
@@ -35,7 +35,7 @@ const SymbolManagementPage = () => {
 
       {/* Tab bar */}
       <div className="flex items-center gap-1 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
-        {TABS.map(({ id, label, icon: Icon }) => (
+        {TABS.map(({ id, label, icon }) => (
           <button
             key={id}
             onClick={() => setActiveTab(id)}
@@ -46,7 +46,7 @@ const SymbolManagementPage = () => {
               background: 'transparent',
             }}
           >
-            <Icon size={13} />
+            {React.createElement(icon, { size: 13 })}
             {label}
           </button>
         ))}

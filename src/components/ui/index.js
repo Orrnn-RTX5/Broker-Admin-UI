@@ -19,4 +19,5 @@ export {
 } from './Menu';
 export { Table, THead, TR, TH, TD } from './Table';
 export { TreeNode } from './TreeNode';
-export { ToastProvider, ToastViewport, useToast } from './Toast';
+export { ToastProvider, ToastViewport } from './Toast';
+export { useToast } from './useToast';

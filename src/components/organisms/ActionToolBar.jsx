@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   XOctagon, RefreshCcw, RotateCw, ArrowLeft, ArrowRight,
   ExternalLink, Download, Check, Plus, Pencil, Trash2,
@@ -11,10 +12,10 @@ const Divider = () => (
   <div className="w-px h-5 bg-[color:var(--border-subtle)] mx-1" />
 );
 
-const Tool = ({ icon: Icon, label, onClick, disabled }) => (
+const Tool = ({ icon, label, onClick, disabled }) => (
   <Tooltip content={disabled ? `${label} (not available)` : label || ''}>
     <IconButton aria-label={label || 'action'} onClick={onClick} disabled={disabled}>
-      <Icon size={14} />
+      {React.createElement(icon, { size: 14 })}
     </IconButton>
   </Tooltip>
 );

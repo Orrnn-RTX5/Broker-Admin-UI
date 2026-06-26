@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Save, Loader2, Plus, Trash2, X } from 'lucide-react';
 import {
   marketDepthConfigGet, marketDepthConfigSet,
@@ -158,12 +158,15 @@ const VisibilitySection = ({ allSymbols, loadingSymbols }) => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true);
     symbolVisibilityList().then(d => setRules(Array.isArray(d) ? d : [])).catch(() => {}).finally(() => setLoading(false));
-  };
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const timerId = window.setTimeout(load, 0);
+    return () => window.clearTimeout(timerId);
+  }, [load]);
 
   return (
     <div className="ui-card p-4 flex flex-col gap-3">
@@ -221,7 +224,6 @@ const AdvancedTab = () => {
   const [loadingSymbols, setLoadingSymbols] = useState(true);
 
   useEffect(() => {
-    setLoadingSymbols(true);
     const ws = new WebSocket(buildFeedWsUrl());
     const symbolSet = new Set();
     
@@ -234,7 +236,9 @@ const AdvancedTab = () => {
           const msg = JSON.parse(messages[i]);
           if (msg.symbol) symbolSet.add(msg.symbol);
         }
-      } catch (err) {}
+      } catch {
+        // Ignore malformed feed messages.
+      }
     };
 
     const timer = setTimeout(() => {

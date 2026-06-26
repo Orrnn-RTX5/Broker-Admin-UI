@@ -1,6 +1,21 @@
 import { api } from '../lib/api';
 import { buildInstrumentToggleRequest } from '../utils/serviceContracts';
 import { normalizeArrayResponse } from '../utils/apiShapes';
+import { getRuntimeValue } from '../config/runtimeConfig';
+
+const viteEnv = import.meta.env || {};
+
+const getInstrumentsListMode = () =>
+  String(
+    getRuntimeValue('INSTRUMENTS_LIST_MODE', 'VITE_INSTRUMENTS_LIST_MODE') ||
+      viteEnv.VITE_INSTRUMENTS_LIST_MODE ||
+      'manager'
+  )
+    .trim()
+    .toLowerCase();
+
+const shouldUseAdminInstrumentsList = () =>
+  ['admin', 'admin-api', 'api-v2'].includes(getInstrumentsListMode());
 
 const cleanParams = (params = {}) => Object.fromEntries(
   Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
@@ -135,8 +150,13 @@ const getManagerInstruments = async (params = {}) => {
 
 export const InstrumentsService = {
   getInstruments: async (params = {}) => {
+    if (!shouldUseAdminInstrumentsList()) return getManagerInstruments(params);
+
     try {
-      const res = await api.get('/api/v2/admin/instruments', { params: cleanParams(params) });
+      const res = await api.get('/api/v2/admin/instruments', {
+        params: cleanParams(params),
+        _expectedStatuses: [404],
+      });
       return res.data;
     } catch (error) {
       if (!isNotFoundError(error)) throw error;

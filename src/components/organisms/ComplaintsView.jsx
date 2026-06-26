@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { ReportsService } from '../../services/reports.service';
 import { RefreshCw, Plus, CheckCircle, Pencil } from 'lucide-react';
 
@@ -39,19 +39,28 @@ const ComplaintsView = () => {
   const [resolution, setResolution] = useState('');
   const [resolving, setResolving] = useState(false);
 
-  const fetchList = async () => {
+  const loadComplaints = useCallback(async ({ status, login }) => {
     setLoading(true);
     try {
       const params = {};
-      if (statusFilter) params.status = statusFilter;
-      if (loginFilter) params.login = parseInt(loginFilter);
+      if (status) params.status = status;
+      if (login) params.login = parseInt(login);
       const res = await ReportsService.listComplaints(params);
       setData(Array.isArray(res) ? res : []);
     } catch { setData([]); }
     finally { setLoading(false); }
-  };
+  }, []);
 
-  useEffect(() => { fetchList(); }, []);
+  const fetchList = useCallback(() => {
+    return loadComplaints({ status: statusFilter, login: loginFilter });
+  }, [loadComplaints, statusFilter, loginFilter]);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      loadComplaints({ status: '', login: '' });
+    }, 0);
+    return () => window.clearTimeout(timerId);
+  }, [loadComplaints]);
 
   const handleCreate = async (e) => {
     e.preventDefault();

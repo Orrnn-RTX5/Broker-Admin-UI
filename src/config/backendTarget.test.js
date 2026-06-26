@@ -53,3 +53,52 @@ test('resolveBrokerExtApiUrl uses discovered services domain as direct ext API o
     'https://services.myprop.trade'
   );
 });
+
+test('desktop backend uses discovered services domain before raw IP fallback', async () => {
+  installWindowConfig({ BACKEND_TARGET: 'desktop' });
+  const { resolveBrokerBackendUrl } = await importFreshBackendTarget();
+
+  assert.equal(
+    resolveBrokerBackendUrl({
+      broker_id: 'myprop',
+      services_domain: 'services.myprop.trade',
+      server_url: 'https://services.myprop.trade',
+      server_ip: '185.204.168.202',
+      server_port: 443,
+    }),
+    'https://services.myprop.trade'
+  );
+});
+
+test('desktop backend keeps service URL when stale normalized backend_url contains raw IP', async () => {
+  installWindowConfig({ BACKEND_TARGET: 'desktop' });
+  const { resolveBrokerBackendUrl } = await importFreshBackendTarget();
+
+  assert.equal(
+    resolveBrokerBackendUrl({
+      broker_id: 'myprop',
+      server_url: 'https://services.myprop.trade',
+      backend_url: 'https://185.204.168.202',
+      server_ip: '185.204.168.202',
+      server_port: 443,
+    }),
+    'https://services.myprop.trade'
+  );
+});
+
+test('runtime VITE_API_URL alias can identify the current web deployment', async () => {
+  installWindowConfig({
+    BACKEND_TARGET: 'web',
+    BROKER_ID: 'myprop',
+    VITE_API_URL: 'https://services.myprop.trade',
+  });
+  const { resolveBrokerBackendUrl } = await importFreshBackendTarget();
+
+  assert.equal(
+    resolveBrokerBackendUrl({
+      broker_id: 'myprop',
+      server_url: 'https://stale.example.com',
+    }),
+    'https://services.myprop.trade'
+  );
+});

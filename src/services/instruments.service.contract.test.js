@@ -11,8 +11,15 @@ test('InstrumentsService.toggleInstrument requires and sends desired enabled sta
   assert.match(source, /api\.patch\(request\.url,\s*request\.data\)/);
 });
 
-test('InstrumentsService falls back to manager symbol APIs when admin instruments route is missing', () => {
-  assert.match(source, /api\.get\('\/api\/v2\/admin\/instruments',\s*\{ params: cleanParams\(params\) \}\)/);
+test('InstrumentsService uses manager symbols by default and keeps admin instruments opt-in', () => {
+  assert.match(source, /VITE_INSTRUMENTS_LIST_MODE/);
+  assert.match(source, /'manager'/);
+  assert.match(source, /const shouldUseAdminInstrumentsList = \(\) =>/);
+  assert.match(source, /if \(!shouldUseAdminInstrumentsList\(\)\) return getManagerInstruments\(params\);/);
+  assert.match(
+    source,
+    /api\.get\('\/api\/v2\/admin\/instruments',\s*\{\s*params: cleanParams\(params\),\s*_expectedStatuses: \[404\],\s*\}\)/
+  );
   assert.match(source, /if \(!isNotFoundError\(error\)\) throw error;/);
   assert.match(source, /return getManagerInstruments\(params\);/);
   assert.match(source, /api\.get\('\/manager\/SymbolsList'\)/);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { PlatformConfigService } from '../../services/platformConfig.service';
 import { getApiErrorMessage, normalizeArrayResponse } from '../../utils/apiShapes';
 import { Plus, ToggleLeft, ToggleRight } from 'lucide-react';
@@ -13,7 +13,7 @@ const FeatureFlagsView = () => {
   const [saving, setSaving] = useState(false);
   const [toggling, setToggling] = useState(null);
 
-  const fetchFlags = async (group) => {
+  const loadFlags = useCallback(async (group) => {
     setLoading(true);
     setLoadError('');
     try {
@@ -25,9 +25,16 @@ const FeatureFlagsView = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { fetchFlags(groupFilter); }, []);
+  const fetchFlags = useCallback((group = groupFilter) => {
+    return loadFlags(group);
+  }, [groupFilter, loadFlags]);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => loadFlags(''), 0);
+    return () => window.clearTimeout(timerId);
+  }, [loadFlags]);
 
   const handleToggle = async (flag) => {
     setToggling(flag.feature_name);

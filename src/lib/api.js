@@ -18,6 +18,28 @@ const MANAGER_API_PATH_RE = /^\/manager(?:\/|\?|$)|^\/api\/v\d+\/(?:admin|manage
 const PROTECTED_API_PATH_RE = /(?:^|\/)(?:manager)(?:\/|$)|\/api\/v\d+\/(?:admin|manager|accounts?)(?:\/|$)/i;
 const PUBLIC_AUTH_PATH_RE = /\/api\/v\d+\/(?:admin\/login|auth\/login|auth\/refresh|broker\/servers)(?:\/|\?|$)/i;
 const AUTH_TOKEN_MISSING_MESSAGE = 'Missing auth token. Please log in again.';
+const DESKTOP_BACKEND_MISSING_MESSAGE = 'Broker backend URL is not configured. Sign out and select the broker again.';
+const SILENT_ERROR_FLAG = '__rtx5SuppressLog';
+const isAbsoluteHttpUrl = (value = '') => /^https?:\/\//i.test(String(value || ''));
+const isElectronDesktop = () =>
+  typeof window !== 'undefined' &&
+  typeof window.rtx5Electron === 'object' &&
+  window.rtx5Electron !== null;
+let brokerBackendMissingSessionExpired = false;
+
+export const shouldSuppressApiErrorLog = (error) => Boolean(error?.[SILENT_ERROR_FLAG]);
+
+const createSilentError = (message, flags = {}) => {
+  const error = new Error(message);
+  error[SILENT_ERROR_FLAG] = true;
+  return Object.assign(error, flags);
+};
+
+const expireMissingBrokerBackendSession = () => {
+  if (brokerBackendMissingSessionExpired) return;
+  brokerBackendMissingSessionExpired = true;
+  expireAuthSession('broker_backend_missing');
+};
 
 const isCurrentTokenValue = (value, token) =>
   !!token && String(value || '') === String(token);
@@ -98,6 +120,16 @@ export const isProtectedApiRequest = (url = '') => {
 export const shouldRouteThroughManagerApi = (url = '') =>
   MANAGER_API_PATH_RE.test(getUrlPath(url));
 
+const shouldSuppressResponseErrorLog = (error, config, status) => {
+  if (shouldSuppressApiErrorLog(error)) return true;
+
+  const expectedStatuses = Array.isArray(config?._expectedStatuses)
+    ? config._expectedStatuses.map(Number)
+    : [];
+
+  return expectedStatuses.includes(Number(status));
+};
+
 export const isAuthRejectionError = (error) => {
   const status = error.response?.status;
   if (status === 401 || status === 419) return true;
@@ -116,7 +148,14 @@ api.interceptors.request.use((config) => {
     if (config.url.startsWith('/ext-api')) {
       config.url = buildExtApiUrl(config.url);
     } else if (shouldRouteThroughManagerApi(config.url)) {
-      config.url = buildManagerApiUrl(config.url);
+      const resolvedUrl = buildManagerApiUrl(config.url);
+      if (isElectronDesktop() && !isAbsoluteHttpUrl(resolvedUrl)) {
+        expireMissingBrokerBackendSession();
+        return Promise.reject(createSilentError(DESKTOP_BACKEND_MISSING_MESSAGE, {
+          brokerBackendMissing: true,
+        }));
+      }
+      config.url = resolvedUrl;
     } else if (config.url.startsWith('/')) {
       if (API_HOST) {
         config.url = `${API_HOST}${config.url}`;
@@ -176,14 +215,16 @@ api.interceptors.response.use((response) => {
 }, async (error) => {
   const originalRequest = error.config;
 
-  console.error(`%c[API Response Error] ${originalRequest?.method?.toUpperCase()} ${redactUrlForLog(originalRequest?.url)}`, 'color: #f44336; font-weight: bold;', {
-    status: error.response?.status,
-    statusText: error.response?.statusText,
-    data: redactForLog(error.response?.data),
-    message: redactForLog(error.message)
-  });
+  if (!shouldSuppressResponseErrorLog(error, originalRequest, error.response?.status)) {
+    console.error(`%c[API Response Error] ${originalRequest?.method?.toUpperCase()} ${redactUrlForLog(originalRequest?.url)}`, 'color: #f44336; font-weight: bold;', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: redactForLog(error.response?.data),
+      message: redactForLog(error.message)
+    });
+  }
 
-  if (!error.response || error.response.status >= 500) {
+  if (!shouldSuppressApiErrorLog(error) && (!error.response || error.response.status >= 500)) {
     useConnectionStore.getState().markError(
       error.response?.statusText || error.message || 'Network error'
     );

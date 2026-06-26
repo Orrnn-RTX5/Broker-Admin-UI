@@ -22,8 +22,10 @@ const labelCls = 'px-2 py-1 text-[10px] uppercase tracking-wider text-[color:var
 const shortcutCls = 'ml-auto pl-3 text-[11px] font-mono text-[color:var(--text-muted)]';
 
 /* Dropdown (click-triggered) */
-export const DropdownMenu = RDropdown.Root;
-export const DropdownMenuTrigger = RDropdown.Trigger;
+export const DropdownMenu = (props) => <RDropdown.Root {...props} />;
+export const DropdownMenuTrigger = React.forwardRef(function DropdownMenuTrigger(props, ref) {
+  return <RDropdown.Trigger ref={ref} {...props} />;
+});
 export const DropdownMenuContent = ({ className, sideOffset = 4, ...rest }) => (
   <RDropdown.Portal>
     <RDropdown.Content sideOffset={sideOffset} className={cn(contentCls, className)} {...rest} />
@@ -41,7 +43,7 @@ export const DropdownMenuLabel = ({ className, ...rest }) => (
 export const DropdownMenuSeparator = ({ className, ...rest }) => (
   <RDropdown.Separator className={cn(separatorCls, className)} {...rest} />
 );
-export const DropdownMenuSub = RDropdown.Sub;
+export const DropdownMenuSub = (props) => <RDropdown.Sub {...props} />;
 export const DropdownMenuSubTrigger = ({ className, children, ...rest }) => (
   <RDropdown.SubTrigger className={cn(itemCls, className)} {...rest}>
     {children}
@@ -64,8 +66,10 @@ export const DropdownMenuCheckboxItem = ({ className, shortcut, children, ...res
 );
 
 /* Context menu (right-click) */
-export const ContextMenu = RContext.Root;
-export const ContextMenuTrigger = RContext.Trigger;
+export const ContextMenu = (props) => <RContext.Root {...props} />;
+export const ContextMenuTrigger = React.forwardRef(function ContextMenuTrigger(props, ref) {
+  return <RContext.Trigger ref={ref} {...props} />;
+});
 export const ContextMenuContent = ({ className, ...rest }) => (
   <RContext.Portal>
     <RContext.Content className={cn(contentCls, className)} {...rest} />
@@ -83,7 +87,7 @@ export const ContextMenuLabel = ({ className, ...rest }) => (
 export const ContextMenuSeparator = ({ className, ...rest }) => (
   <RContext.Separator className={cn(separatorCls, className)} {...rest} />
 );
-export const ContextMenuSub = RContext.Sub;
+export const ContextMenuSub = (props) => <RContext.Sub {...props} />;
 export const ContextMenuSubTrigger = ({ className, children, ...rest }) => (
   <RContext.SubTrigger className={cn(itemCls, className)} {...rest}>
     {children}

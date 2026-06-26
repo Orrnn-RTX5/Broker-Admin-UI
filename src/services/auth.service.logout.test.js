@@ -21,6 +21,7 @@ const installBrowserGlobals = () => {
   const local = createStorage({
     authToken: 'session-token',
     refreshToken: 'refresh-token',
+    broker_info: JSON.stringify({ broker_id: 'demo', backend_url: 'https://broker.example.com' }),
     brokerLogin: '1001',
     brokerId: 'demo',
     tokenExpiresAt: String(Date.now() + 60_000),
@@ -73,6 +74,7 @@ test('logout clears local auth and broker state before slow Disconnect resolves'
   assert.equal(disconnectStarted, true);
   assert.equal(sessionStorage.getItem('auth'), null);
   assert.equal(sessionStorage.getItem('broker_info'), null);
+  assert.equal(localStorage.getItem('broker_info'), null);
   assert.equal(localStorage.getItem('authToken'), null);
   assert.equal(localStorage.getItem('refreshToken'), null);
   assert.equal(useAuthStore.getState().isAuthenticated, false);

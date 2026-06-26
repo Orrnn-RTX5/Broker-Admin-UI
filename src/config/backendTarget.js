@@ -11,6 +11,8 @@ const WEB_BACKEND_FIELDS = [
   'public_api_url',
   'env.API_HOST',
   'env.VITE_API_HOST',
+  'env.API_URL',
+  'env.VITE_API_URL',
   'backend_url',
   'api_url',
   'server_url',
@@ -50,6 +52,8 @@ const WEB_EXT_FIELDS = [
   'ext_api_url',
   'env.API_HOST_EXT',
   'env.VITE_API_HOST_EXT',
+  'env.API_EXT_URL',
+  'env.VITE_API_EXT_URL',
 ];
 
 const DESKTOP_EXT_FIELDS = [
@@ -102,10 +106,24 @@ const getRuntimeDefaultServer = () =>
   ).trim();
 
 const getRuntimeApiHost = () =>
-  trimTrailingSlash(getRuntimeValue('API_HOST', 'VITE_API_HOST') || viteEnv.VITE_API_HOST || '');
+  trimTrailingSlash(
+    getRuntimeValue('API_HOST', 'VITE_API_HOST', 'API_URL', 'VITE_API_URL') ||
+      viteEnv.VITE_API_HOST ||
+      viteEnv.VITE_API_URL ||
+      viteEnv.API_HOST ||
+      viteEnv.API_URL ||
+      ''
+  );
 
 const getRuntimeApiHostExt = () =>
-  trimTrailingSlash(getRuntimeValue('API_HOST_EXT', 'VITE_API_HOST_EXT') || viteEnv.VITE_API_HOST_EXT || '');
+  trimTrailingSlash(
+    getRuntimeValue('API_HOST_EXT', 'VITE_API_HOST_EXT', 'API_EXT_URL', 'VITE_API_EXT_URL') ||
+      viteEnv.VITE_API_HOST_EXT ||
+      viteEnv.VITE_API_EXT_URL ||
+      viteEnv.API_HOST_EXT ||
+      viteEnv.API_EXT_URL ||
+      ''
+  );
 
 const getRuntimeWsHost = () =>
   trimTrailingSlash(getRuntimeValue('WS_HOST', 'VITE_WS_HOST') || viteEnv.VITE_WS_HOST || '');
@@ -257,9 +275,33 @@ const buildWebBackendUrl = (brokerInfo = {}) => {
   return '';
 };
 
+const buildDesktopPublicBackendUrl = (brokerInfo = {}) => {
+  const domain = getFirstValue(brokerInfo, WEB_DOMAIN_FIELDS);
+  if (domain) return ensureUrl(domain, brokerInfo.https === false ? 'http' : 'https');
+
+  const explicitUrl = getFirstValue(brokerInfo, [
+    'web_backend_url',
+    'web_api_url',
+    'public_backend_url',
+    'public_api_url',
+    'env.API_HOST',
+    'env.VITE_API_HOST',
+    'env.API_URL',
+    'env.VITE_API_URL',
+    'server_url',
+    'backend_url',
+    'api_url',
+  ]);
+
+  return explicitUrl ? ensureUrl(explicitUrl, brokerInfo.https === false ? 'http' : 'https') : '';
+};
+
 const buildDesktopBackendUrl = (brokerInfo = {}) => {
   const explicitUrl = getFirstValue(brokerInfo, DESKTOP_BACKEND_FIELDS);
   if (explicitUrl) return ensureUrl(explicitUrl, 'http');
+
+  const publicUrl = buildDesktopPublicBackendUrl(brokerInfo);
+  if (publicUrl) return publicUrl;
 
   const host = getFirstValue(brokerInfo, DESKTOP_HOST_FIELDS);
   if (!host) return '';

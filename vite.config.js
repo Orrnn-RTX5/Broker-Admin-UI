@@ -5,8 +5,8 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const apiHost    = env.VITE_API_HOST    || 'https://backend.orrnn.com'
-  const apiHostExt = env.VITE_API_HOST_EXT || 'http://backend.orrnn.com:8091'
+  const apiHost    = env.VITE_API_HOST || env.VITE_API_URL || env.API_HOST || env.API_URL || 'https://backend.orrnn.com'
+  const apiHostExt = env.VITE_API_HOST_EXT || env.VITE_API_EXT_URL || env.API_HOST_EXT || env.API_EXT_URL || 'http://backend.orrnn.com:8091'
 
   return {
     plugins: [

@@ -6,7 +6,7 @@ import {
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { Table, THead, TR, TH, TD } from '../ui/Table';
-import { useToast } from '../ui/Toast';
+import { useToast } from '../ui/useToast';
 import {
   feedTenantsList,
   feedTenantCreate,

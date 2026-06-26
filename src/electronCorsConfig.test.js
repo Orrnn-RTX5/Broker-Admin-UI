@@ -12,12 +12,16 @@ test('Electron CORS origins include packaged Vite env and explicit broker origin
   const origins = collectBrokerOrigins({
     VITE_API_HOST: 'https://broker.example.com/',
     VITE_API_HOST_EXT: 'broker.example.com:8091',
+    VITE_API_URL: 'https://alias-broker.example.com/',
+    VITE_API_EXT_URL: 'alias-broker.example.com:8091',
     RTX5_BROKER_ORIGINS: 'https://selected.example.com, http://selected.example.com:8091',
   });
 
   assert.deepEqual(new Set(origins), new Set([
     'https://broker.example.com',
     'https://broker.example.com:8091',
+    'https://alias-broker.example.com',
+    'https://alias-broker.example.com:8091',
     'https://selected.example.com',
     'http://selected.example.com:8091',
   ]));

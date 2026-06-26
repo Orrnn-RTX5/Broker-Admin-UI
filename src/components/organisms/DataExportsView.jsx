@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { ReportsService } from '../../services/reports.service';
 import { Download, RefreshCw, Search } from 'lucide-react';
 
@@ -165,7 +165,7 @@ const KYCReportTab = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await ReportsService.getKYCReport(verified);
@@ -173,9 +173,12 @@ const KYCReportTab = () => {
     } catch (err) {
       alert('Failed: ' + (err.response?.data?.message || err.message));
     } finally { setLoading(false); }
-  };
+  }, [verified]);
 
-  useEffect(() => { load(); }, [verified]);
+  useEffect(() => {
+    const timerId = window.setTimeout(load, 0);
+    return () => window.clearTimeout(timerId);
+  }, [load]);
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">

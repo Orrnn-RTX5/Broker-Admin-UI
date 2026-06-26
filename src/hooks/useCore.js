@@ -1,15 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuthStore } from '../store/authStore';
 
+const shouldSuppressFetchErrorLog = (error) => Boolean(error?.__rtx5SuppressLog);
+
 export function useAuth() {
   const { user, isAuthenticated, logout } = useAuthStore();
-  const [isInitializing, setIsInitializing] = useState(true);
-
-  useEffect(() => {
-    // If we have an access token and user is null, we might need to fetch the user if not handled
-    // The store automatically hydrates from localStorage.
-    setIsInitializing(false);
-  }, []);
+  const isInitializing = false;
 
   return {
     user,
@@ -25,12 +21,19 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true) 
   const [error, setError] = useState(null);
   const requestIdRef = useRef(0);
   const fetchFnRef = useRef(fetchFn);
+  const paramsRef = useRef(params);
+  const paramsKey = JSON.stringify(params);
+  const depsKey = JSON.stringify(deps);
   
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   useEffect(() => {
     fetchFnRef.current = fetchFn;
   }, [fetchFn]);
+
+  useEffect(() => {
+    paramsRef.current = params;
+  }, [paramsKey, params]);
 
   const execute = useCallback(async () => {
     const requestId = requestIdRef.current + 1;
@@ -44,7 +47,7 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true) 
     try {
       setLoading(true);
       setError(null);
-      const result = await fetchFnRef.current(params);
+      const result = await fetchFnRef.current(paramsRef.current);
       if (requestIdRef.current === requestId) {
         setData(result);
       }
@@ -52,7 +55,9 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true) 
     } catch (err) {
       if (requestIdRef.current === requestId) {
         setError(err);
-        console.error('Fetch error:', err);
+        if (!shouldSuppressFetchErrorLog(err)) {
+          console.error('Fetch error:', err);
+        }
       }
       return null;
     } finally {
@@ -60,11 +65,11 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true) 
         setLoading(false);
       }
     }
-  }, [isAuthenticated, enabled, JSON.stringify(params), ...deps]);
+  }, [isAuthenticated, enabled]);
 
   useEffect(() => {
     execute();
-  }, [execute]);
+  }, [execute, paramsKey, depsKey]);
 
   return { data, loading, error, mutate: execute };
 }

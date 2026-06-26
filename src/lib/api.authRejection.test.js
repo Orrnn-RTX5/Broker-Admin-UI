@@ -1,7 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { isAuthRejectionError, isProtectedApiRequest, shouldRouteThroughManagerApi } from './api.js';
+import {
+  isAuthRejectionError,
+  isProtectedApiRequest,
+  shouldRouteThroughManagerApi,
+  shouldSuppressApiErrorLog,
+} from './api.js';
 
 const errorWith = (status, data) => ({ response: { status, data } });
 const apiSource = readFileSync(new URL('./api.js', import.meta.url), 'utf8');
@@ -44,6 +49,26 @@ test('optional auth hydration requests do not expire the global session', () => 
     apiSource,
     /return Promise\.reject\(error\);[\s\S]*?if \(isAuthRejectionError\(error\) && error\.response\?\.status !== 401\)/
   );
+});
+
+test('expected response statuses can skip noisy console error logging', () => {
+  assert.match(apiSource, /const shouldSuppressResponseErrorLog = \(error, config, status\) => \{/);
+  assert.match(apiSource, /config\?\._expectedStatuses/);
+  assert.match(apiSource, /if \(!shouldSuppressResponseErrorLog\(error, originalRequest, error\.response\?\.status\)\) \{/);
+});
+
+test('desktop manager requests do not fall through to relative proxy URLs', () => {
+  assert.match(apiSource, /DESKTOP_BACKEND_MISSING_MESSAGE/);
+  assert.match(apiSource, /const isElectronDesktop = \(\) =>/);
+  assert.match(apiSource, /expireMissingBrokerBackendSession\(\);/);
+  assert.match(apiSource, /expireAuthSession\('broker_backend_missing'\)/);
+  assert.match(apiSource, /createSilentError\(DESKTOP_BACKEND_MISSING_MESSAGE/);
+  assert.match(apiSource, /isElectronDesktop\(\) && !isAbsoluteHttpUrl\(resolvedUrl\)/);
+});
+
+test('silent API errors opt out of repeated console logging', () => {
+  assert.equal(shouldSuppressApiErrorLog({ __rtx5SuppressLog: true }), true);
+  assert.equal(shouldSuppressApiErrorLog(new Error('normal')), false);
 });
 
 test('protected broker API requests require a client auth token', () => {

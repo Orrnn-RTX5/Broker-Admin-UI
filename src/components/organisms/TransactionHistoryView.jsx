@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { PaymentService } from '../../services/payment.service';
 import { RefreshCw, Settings } from 'lucide-react';
 
@@ -14,19 +14,28 @@ const TransactionHistoryView = () => {
   const [filterType, setFilterType] = useState('');
   const [filterLimit, setFilterLimit] = useState('200');
 
-  const fetchData = async () => {
+  const loadTransactions = useCallback(async ({ login, type, limit }) => {
     setLoading(true);
     try {
-      const params = { limit: parseInt(filterLimit) || 200 };
-      if (filterLogin) params.login = parseInt(filterLogin);
-      if (filterType) params.type = filterType;
+      const params = { limit: parseInt(limit) || 200 };
+      if (login) params.login = parseInt(login);
+      if (type) params.type = type;
       const res = await PaymentService.getTransactionHistory(params);
       setData(Array.isArray(res) ? res : res?.data ?? []);
     } catch (err) { console.error(err); setData([]); }
     finally { setLoading(false); }
-  };
+  }, []);
 
-  useEffect(() => { fetchData(); }, []);
+  const fetchData = useCallback(() => {
+    return loadTransactions({ login: filterLogin, type: filterType, limit: filterLimit });
+  }, [filterLimit, filterLogin, filterType, loadTransactions]);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      loadTransactions({ login: '', type: '', limit: '200' });
+    }, 0);
+    return () => window.clearTimeout(timerId);
+  }, [loadTransactions]);
 
   const cols = [
     { label: 'ID', w: 'w-[70px]' }, { label: 'Login', w: 'w-[90px]' },

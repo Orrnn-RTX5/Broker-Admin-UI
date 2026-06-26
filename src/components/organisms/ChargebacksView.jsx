@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { PaymentService } from '../../services/payment.service';
 import { normalizeArrayResponse, getApiErrorMessage } from '../../utils/apiShapes';
 import { Plus, RefreshCw, X, CheckCircle, XCircle } from 'lucide-react';
@@ -158,11 +158,11 @@ const ChargebacksView = () => {
   const [contextMenu, setContextMenu] = useState({ visible: false });
   const [error, setError] = useState('');
 
-  const fetchData = async () => {
+  const loadChargebacks = useCallback(async (status) => {
     setLoading(true);
     setError('');
     try {
-      const res = await PaymentService.getChargebackList(filterStatus || undefined);
+      const res = await PaymentService.getChargebackList(status || undefined);
       setData(normalizeArrayResponse(res, ['chargebacks', 'disputes', 'data', 'answer', 'items', 'rows']).map(normalizeChargebackRow));
     } catch (err) {
       console.error(err);
@@ -170,9 +170,16 @@ const ChargebacksView = () => {
       setData([]);
     }
     finally { setLoading(false); }
-  };
+  }, []);
 
-  useEffect(() => { fetchData(); }, []);
+  const fetchData = useCallback(() => {
+    loadChargebacks(filterStatus);
+  }, [filterStatus, loadChargebacks]);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => loadChargebacks(''), 0);
+    return () => window.clearTimeout(timerId);
+  }, [loadChargebacks]);
 
   const cols = [
     { label: 'ID', w: 'w-[60px]' }, { label: 'Deposit ID', w: 'w-[90px]' },

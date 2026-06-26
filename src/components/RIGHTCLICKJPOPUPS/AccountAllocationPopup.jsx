@@ -2,51 +2,53 @@ import React from 'react';
 import { motion, useDragControls } from 'framer-motion';
 import { X, HelpCircle, Users } from 'lucide-react';
 
+const MotionDiv = motion.div;
+
+const Label = ({ children, width = "w-24" }) => (
+  <label className={`text-[12px] text-[color:var(--text-primary)] ${width} text-right shrink-0 select-none pb-0.5`}>{children}</label>
+);
+
+const InputField = ({ label, value, width = "w-full", labelWidth }) => (
+  <div className="flex items-center gap-2 mb-2">
+    <Label width={labelWidth}>{label}</Label>
+    <input
+      type="text"
+      defaultValue={value}
+      className={`${width} bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-2 py-0.5 text-[12px] text-[color:var(--text-primary)] focus:border-blue-500/50 focus:outline-none`}
+    />
+  </div>
+);
+
+const SelectField = ({ label, options, defaultValue, width = "w-full", labelWidth }) => (
+  <div className="flex items-center gap-2 mb-2">
+    <Label width={labelWidth}>{label}</Label>
+    <select
+      defaultValue={defaultValue}
+      className={`${width} bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-1.5 py-0.5 text-[12px] text-[color:var(--text-primary)] focus:border-blue-500/50 focus:outline-none appearance-none cursor-pointer`}
+      style={{ backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23808080\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.5rem center', backgroundSize: '0.75rem' }}
+    >
+      {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+    </select>
+  </div>
+);
+
+const CheckboxField = ({ label, defaultValue, ml = "ml-26" }) => (
+  <div className={`flex items-start gap-2 mb-3 mt-1 ${ml}`}>
+    <input
+      type="checkbox"
+      defaultChecked={defaultValue}
+      className="mt-0.5 w-[13px] h-[13px] accent-blue-500 rounded-sm border-[color:var(--border-default)] opacity-60"
+    />
+    <label className="text-[11px] text-[color:var(--text-muted)] leading-tight select-none cursor-default">{label}</label>
+  </div>
+);
+
 const AccountAllocationPopup = ({ group, onClose }) => {
   const dragControls = useDragControls();
 
-  const Label = ({ children, width = "w-24" }) => (
-    <label className={`text-[12px] text-[color:var(--text-primary)] ${width} text-right shrink-0 select-none pb-0.5`}>{children}</label>
-  );
-
-  const InputField = ({ label, value, width = "w-full", labelWidth }) => (
-    <div className="flex items-center gap-2 mb-2">
-      <Label width={labelWidth}>{label}</Label>
-      <input 
-        type="text" 
-        defaultValue={value}
-        className={`${width} bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-2 py-0.5 text-[12px] text-[color:var(--text-primary)] focus:border-blue-500/50 focus:outline-none`}
-      />
-    </div>
-  );
-
-  const SelectField = ({ label, options, defaultValue, width = "w-full", labelWidth }) => (
-    <div className="flex items-center gap-2 mb-2">
-      <Label width={labelWidth}>{label}</Label>
-      <select 
-        defaultValue={defaultValue}
-        className={`${width} bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-1.5 py-0.5 text-[12px] text-[color:var(--text-primary)] focus:border-blue-500/50 focus:outline-none appearance-none cursor-pointer`}
-        style={{ backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23808080\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.5rem center', backgroundSize: '0.75rem' }}
-      >
-        {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-      </select>
-    </div>
-  );
-
-  const CheckboxField = ({ label, defaultValue, ml = "ml-26" }) => (
-    <div className={`flex items-start gap-2 mb-3 mt-1 ${ml}`}>
-      <input 
-        type="checkbox" 
-        defaultChecked={defaultValue}
-        className="mt-0.5 w-[13px] h-[13px] accent-blue-500 rounded-sm border-[color:var(--border-default)] opacity-60" 
-      />
-      <label className="text-[11px] text-[color:var(--text-muted)] leading-tight select-none cursor-default">{label}</label>
-    </div>
-  );
-
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 backdrop-blur-[1px]">
-      <motion.div 
+      <MotionDiv
         drag
         dragControls={dragControls}
         dragListener={false}
@@ -144,7 +146,7 @@ const AccountAllocationPopup = ({ group, onClose }) => {
            <button onClick={onClose} className="px-8 py-1 bg-transparent hover:bg-white/5 text-[12px] text-[color:var(--text-primary)] border border-[color:var(--text-muted)] rounded shadow-sm transition-colors">Cancel</button>
         </div>
 
-      </motion.div>
+      </MotionDiv>
     </div>
   );
 };

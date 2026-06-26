@@ -1,19 +1,50 @@
-# React + Vite
+# RTX5 Broker Admin
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+RTX5 Broker Admin is the existing Vite React admin UI used for broker operations. The same source builds both the hosted web app and the Windows desktop app.
 
-Currently, two official plugins are available:
+## Web Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm ci
+npm run dev
+npm run build
+```
 
-## React Compiler
+## Windows Desktop App
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Run the Electron desktop app locally:
 
-## Expanding the ESLint configuration
+```bash
+npm ci
+npm run desktop:dev
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Build the Windows x64 NSIS installer locally:
+
+```bash
+npm run desktop:build
+```
+
+Desktop builds use `vite build --mode electron` and package the existing `dist` output with Electron. The desktop app is unsigned for v1, so Windows SmartScreen may warn until code signing is added.
+
+Desktop updates are manual. Publishing a GitHub release does not make running apps check or install automatically; users start the update flow from **Help > Check for Updates...**.
+
+## Desktop Releases
+
+Create and push a version tag from the source repo:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+GitHub Actions runs `.github/workflows/admin-desktop-release.yml` on tags matching `v*`. The workflow installs with `npm ci`, runs tests, lint, web build, and then publishes the Windows installer with `electron-builder`.
+
+Release assets are uploaded to:
+
+https://github.com/rtx5-orrnn/rtx5-broker-admin-releases/releases
+
+The workflow uses only the repository secret `RTX5_BROKER_ADMIN_RELEASES` as `GH_TOKEN` for cross-repo publishing. Do not commit GitHub tokens to source, `.env`, README, package scripts, or workflow logs.
 
 ## Broker Discovery Login Flow
 
@@ -29,7 +60,7 @@ VITE_DISCOVERY_BASE_URL=https://superbackend.orrnn.com
 VITE_USE_MOCK_DISCOVERY=true
 ```
 
-Use `VITE_BACKEND_TARGET=web` for the hosted web app so each selected broker uses its broker-list backend/API URL. Use `VITE_BACKEND_TARGET=desktop` for the desktop/electron app so each selected broker uses its broker-list server IP and broker port.
+Use `VITE_BACKEND_TARGET=web` for the hosted web app so each selected broker uses its broker-list backend/API URL. Use `VITE_BACKEND_TARGET=desktop` for the desktop/electron app so explicit desktop/local backend fields win first, public service URLs are preferred when present, and raw `server_ip` plus `server_port` is only the fallback.
 
 Broker discovery entries should include a web URL field such as `backend_url`, `api_url`, `web_backend_url`, or `backend_domain`, plus a desktop field such as `server_ip`/`host` and `server_port`. Optional fields like `web_ext_api_url`, `desktop_backend_url`, and `ws_url` override the derived URLs when needed. A deployment `domain` is treated as the admin UI host, not the backend API URL. Use `nginx.listen_host` only on dedicated listen addresses; leave it empty on shared-IP broker servers.
 

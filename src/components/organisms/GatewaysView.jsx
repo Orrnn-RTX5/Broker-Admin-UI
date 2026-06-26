@@ -6,7 +6,7 @@ import {
   gatewaySaveFeedConfig,
 } from '../../services/gateway.service';
 import { buildFeedConfigPayload, normalizeFeedProvider } from '../../lib/feedConfigPayload';
-import { useToast } from '../ui/Toast';
+import { useToast } from '../ui/useToast';
 
 const PROVIDER_OPTIONS = [
   { value: 'rtxmd', label: 'RTX Market Data FIX' },

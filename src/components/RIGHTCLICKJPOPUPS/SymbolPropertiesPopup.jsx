@@ -1,7 +1,69 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
-import { X, HelpCircle, DollarSign, FileText } from 'lucide-react';
+import { X, DollarSign } from 'lucide-react';
 import { ManagerService } from '../../services/manager.service';
+
+const MotionDiv = motion.div;
+
+const Label = ({ children, width = "w-32" }) => (
+  <label className={`text-[11px] text-[color:var(--text-primary)] ${width} text-right shrink-0 select-none`}>{children}:</label>
+);
+
+const InputField = ({ label, value, type = "text", width = "w-full", labelWidth }) => (
+  <div className="flex items-center gap-2 mb-2">
+    <Label width={labelWidth}>{label}</Label>
+    <input
+      type={type}
+      defaultValue={value}
+      className={`${width} bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-2 py-0.5 text-[11px] text-[color:var(--text-primary)] focus:border-blue-500/50 focus:outline-none`}
+    />
+  </div>
+);
+
+const SelectField = ({ label, options, defaultValue, width = "w-full", labelWidth, disabled = false }) => (
+  <div className="flex items-center gap-2 mb-2">
+    <Label width={labelWidth}>{label}</Label>
+    <select
+      defaultValue={defaultValue}
+      disabled={disabled}
+      className={`${width} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-1 py-0.5 text-[11px] text-[color:var(--text-primary)] focus:border-blue-500/50 focus:outline-none appearance-none`}
+      style={{ backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23808080\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.5rem center', backgroundSize: '0.75rem' }}
+    >
+      {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+    </select>
+  </div>
+);
+
+const CheckboxField = ({ label, checked = false, ml = "ml-36", disabled = false, onChange }) => (
+  <div className={`flex items-start gap-2 mb-1.5 ${ml} ${disabled ? 'opacity-40' : ''}`}>
+    <input type="checkbox" defaultChecked={checked} onChange={onChange} disabled={disabled} className="mt-0.5 w-3.5 h-3.5 accent-blue-500 rounded-sm border-[color:var(--border-default)]" />
+    <label className="text-[11px] text-[color:var(--text-primary)] leading-tight select-none">{label}</label>
+  </div>
+);
+
+const BlueDocIcon = () => (
+  <div className="w-3.5 h-3.5 bg-blue-500/20 border border-blue-500/50 rounded-sm flex items-center justify-center">
+    <div className="w-1.5 h-0.5 bg-blue-400 mb-0.5"></div>
+    <div className="w-1.5 h-0.5 bg-blue-400"></div>
+  </div>
+);
+
+const RedDocIcon = () => (
+  <div className="w-3.5 h-3.5 bg-red-500/20 border border-red-500/50 rounded-sm flex items-center justify-center">
+    <div className="w-1.5 h-0.5 bg-red-400 mb-0.5"></div>
+    <div className="w-1.5 h-0.5 bg-red-400"></div>
+  </div>
+);
+
+const TableHeader = ({ title }) => (
+  <div className="px-3 py-1.5 border-r border-[color:var(--border-default)] text-center last:border-r-0">{title}</div>
+);
+
+const TableCell = ({ children, isFirst = false }) => (
+  <div className={`px-3 py-1 border-r border-black/10 last:border-r-0 ${isFirst ? 'flex items-center gap-1.5 font-medium' : 'text-center'}`}>
+    {children}
+  </div>
+);
 
 const SymbolPropertiesPopup = ({ symbol, groupName, onClose }) => {
   const [activeTab, setActiveTab] = useState('Common');
@@ -17,73 +79,12 @@ const SymbolPropertiesPopup = ({ symbol, groupName, onClose }) => {
         }
       }).catch(err => console.error(err));
     }
-  }, [groupName, symbol?.symbol]);
+  }, [groupName, symbol]);
   const dragControls = useDragControls();
 
   const tabs = [
     'Common', 'Trade', 'Execution', 'Margin', 'Margin Rates', 'Swaps'
   ];
-
-  // --- Helper Components ---
-  const Label = ({ children, width = "w-32" }) => (
-    <label className={`text-[11px] text-[color:var(--text-primary)] ${width} text-right shrink-0 select-none`}>{children}:</label>
-  );
-
-  const InputField = ({ label, value, type = "text", width = "w-full", labelWidth }) => (
-    <div className="flex items-center gap-2 mb-2">
-      <Label width={labelWidth}>{label}</Label>
-      <input 
-        type={type} 
-        defaultValue={value}
-        className={`${width} bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-2 py-0.5 text-[11px] text-[color:var(--text-primary)] focus:border-blue-500/50 focus:outline-none`}
-      />
-    </div>
-  );
-
-  const SelectField = ({ label, options, defaultValue, width = "w-full", labelWidth, disabled = false }) => (
-    <div className="flex items-center gap-2 mb-2">
-      <Label width={labelWidth}>{label}</Label>
-      <select 
-        defaultValue={defaultValue}
-        disabled={disabled}
-        className={`${width} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-1 py-0.5 text-[11px] text-[color:var(--text-primary)] focus:border-blue-500/50 focus:outline-none appearance-none`}
-        style={{ backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23808080\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.5rem center', backgroundSize: '0.75rem' }}
-      >
-        {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-      </select>
-    </div>
-  );
-
-  const CheckboxField = ({ label, checked = false, ml = "ml-36", disabled = false, onChange }) => (
-    <div className={`flex items-start gap-2 mb-1.5 ${ml} ${disabled ? 'opacity-40' : ''}`}>
-      <input type="checkbox" defaultChecked={checked} onChange={onChange} disabled={disabled} className="mt-0.5 w-3.5 h-3.5 accent-blue-500 rounded-sm border-[color:var(--border-default)]" />
-      <label className="text-[11px] text-[color:var(--text-primary)] leading-tight select-none">{label}</label>
-    </div>
-  );
-
-  const BlueDocIcon = () => (
-    <div className="w-3.5 h-3.5 bg-blue-500/20 border border-blue-500/50 rounded-sm flex items-center justify-center">
-       <div className="w-1.5 h-0.5 bg-blue-400 mb-0.5"></div>
-       <div className="w-1.5 h-0.5 bg-blue-400"></div>
-    </div>
-  );
-
-  const RedDocIcon = () => (
-    <div className="w-3.5 h-3.5 bg-red-500/20 border border-red-500/50 rounded-sm flex items-center justify-center">
-       <div className="w-1.5 h-0.5 bg-red-400 mb-0.5"></div>
-       <div className="w-1.5 h-0.5 bg-red-400"></div>
-    </div>
-  );
-
-  const TableHeader = ({ title }) => (
-    <div className="px-3 py-1.5 border-r border-[color:var(--border-default)] text-center last:border-r-0">{title}</div>
-  );
-
-  const TableCell = ({ children, isFirst = false }) => (
-    <div className={`px-3 py-1 border-r border-black/10 last:border-r-0 ${isFirst ? 'flex items-center gap-1.5 font-medium' : 'text-center'}`}>
-      {children}
-    </div>
-  );
 
   const handleToggleEnable = async (e) => {
     const isChecked = e.target.checked;
@@ -104,7 +105,7 @@ const SymbolPropertiesPopup = ({ symbol, groupName, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-[1px]">
-      <motion.div 
+      <MotionDiv
         drag
         dragControls={dragControls}
         dragListener={false}
@@ -161,7 +162,7 @@ const SymbolPropertiesPopup = ({ symbol, groupName, onClose }) => {
           </div>
 
           <AnimatePresence mode='wait'>
-            <motion.div key={activeTab} initial={{ opacity: 0, x: 5 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.15 }}>
+            <MotionDiv key={activeTab} initial={{ opacity: 0, x: 5 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.15 }}>
               
               {/* --- MARGIN TAB --- */}
               {activeTab === 'Margin' && (
@@ -416,7 +417,7 @@ const SymbolPropertiesPopup = ({ symbol, groupName, onClose }) => {
                   </div>
                 </div>
               )}
-            </motion.div>
+            </MotionDiv>
           </AnimatePresence>
         </div>
 
@@ -426,7 +427,7 @@ const SymbolPropertiesPopup = ({ symbol, groupName, onClose }) => {
            <button onClick={onClose} className="w-24 py-1.5 bg-[#404040] hover:bg-[color:var(--border-strong)] text-[12px] text-white border border-black/60 rounded-sm shadow-md transition-shadow active:shadow-none hover:border-black/80">Cancel</button>
            <button className="w-24 py-1.5 bg-[#404040] hover:bg-[color:var(--border-strong)] text-[12px] text-white border border-black/60 rounded-sm shadow-md transition-shadow active:shadow-none hover:border-black/80 ml-6">Help</button>
         </div>
-      </motion.div>
+      </MotionDiv>
     </div>
   );
 };

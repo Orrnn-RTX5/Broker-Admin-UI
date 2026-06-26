@@ -57,7 +57,10 @@ const findField = (source, fields) => {
 };
 
 export const readWsAuthContext = () => {
-  const brokerInfo = safeJson(readStorageValue('sessionStorage', 'broker_info')) || {};
+  const brokerInfo =
+    safeJson(readStorageValue('sessionStorage', 'broker_info')) ||
+    safeJson(readStorageValue('localStorage', 'broker_info')) ||
+    {};
   const authInfo = safeJson(readStorageValue('sessionStorage', 'auth')) || {};
 
   const token = firstValue(

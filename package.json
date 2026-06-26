@@ -10,26 +10,29 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "electron:dev": "concurrently \"vite --mode electron\" \"wait-on http://localhost:5173 && electron .\"",
-    "dist": "vite build --mode electron && electron-builder --win --x64",
-    "dist:publish": "vite build --mode electron && electron-builder --win --x64 --publish always"
+    "desktop:dev": "concurrently \"vite --mode electron\" \"wait-on http://localhost:5173 && node scripts/electron-dev.js\"",
+    "desktop:build": "vite build --mode electron && electron-builder --win --x64",
+    "dist": "npm run desktop:build",
+    "release": "vite build --mode electron && electron-builder --win --x64 --publish always",
+    "electron:dev": "npm run desktop:dev",
+    "dist:publish": "npm run release"
   },
   "build": {
-    "appId": "com.rtx5.admin",
-    "productName": "RTX5 Admin",
+    "appId": "com.rtx5.broker.admin",
+    "productName": "RTX5 Broker Admin",
     "directories": {
       "output": "release"
     },
     "files": [
       "dist/**/*",
-      "electron/main.js",
-      "electron/preload.cjs"
+      "electron/**/*",
+      "package.json"
     ],
     "publish": [
       {
         "provider": "github",
         "owner": "rtx5-orrnn",
-        "repo": "rtx5-broker-admin-ui"
+        "repo": "rtx5-broker-admin-releases"
       }
     ],
     "win": {
@@ -50,8 +53,8 @@
       "allowToChangeInstallationDirectory": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "RTX5 Admin",
-      "artifactName": "RTX5-Admin-Setup-${version}.exe"
+      "shortcutName": "RTX5 Broker Admin",
+      "artifactName": "RTX5-Broker-Admin-${version}-Setup.${ext}"
     }
   },
   "dependencies": {

@@ -86,7 +86,7 @@ const CategoryFormModal = ({ category: existing, allCategories, onClose, onSucce
 };
 
 // ─── Tree Node ─────────────────────────────────────────────────────────────────
-const CategoryTreeNode = ({ cat, allCategories, depth = 0, onEdit, onDelete }) => {
+const CategoryTreeNode = ({ cat, allCategories, depth = 0, onEdit, onDelete, deletingName }) => {
   const [expanded, setExpanded] = useState(depth === 0);
   const [symbols, setSymbols] = useState(null);
   const [loadingSymbols, setLoadingSymbols] = useState(false);
@@ -101,7 +101,7 @@ const CategoryTreeNode = ({ cat, allCategories, depth = 0, onEdit, onDelete }) =
         const { symbolsByCategory } = await import('../../../services/api');
         const data = await symbolsByCategory(cat.name);
         setSymbols(Array.isArray(data) ? data : []);
-      } catch (e) {
+      } catch {
         setSymbols([]);
       } finally {
         setLoadingSymbols(false);
@@ -120,7 +120,7 @@ const CategoryTreeNode = ({ cat, allCategories, depth = 0, onEdit, onDelete }) =
       >
         <div
           className="w-4 h-4 flex items-center justify-center shrink-0"
-          style={{ color: 'var(--muted)', visibility: (children.length > 0 || true) ? 'visible' : 'hidden' }}
+          style={{ color: 'var(--muted)', visibility: 'visible' }}
         >
           {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         </div>
@@ -135,11 +135,27 @@ const CategoryTreeNode = ({ cat, allCategories, depth = 0, onEdit, onDelete }) =
         </span>
         <div className="opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity" onClick={e => e.stopPropagation()}>
           <button onClick={() => onEdit(cat)} className="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" title="Edit"><Edit2 size={12} /></button>
-          <button onClick={() => onDelete(cat)} className="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" style={{ color: 'var(--danger)' }} title="Delete"><Trash2 size={12} /></button>
+          <button
+            onClick={() => onDelete(cat)}
+            disabled={deletingName === cat.name}
+            className="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm disabled:opacity-50"
+            style={{ color: 'var(--danger)' }}
+            title="Delete"
+          >
+            <Trash2 size={12} />
+          </button>
         </div>
       </div>
       {expanded && children.map(child => (
-        <CategoryTreeNode key={child.id || child.name} cat={child} allCategories={allCategories} depth={depth + 1} onEdit={onEdit} onDelete={onDelete} />
+        <CategoryTreeNode
+          key={child.id || child.name}
+          cat={child}
+          allCategories={allCategories}
+          depth={depth + 1}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          deletingName={deletingName}
+        />
       ))}
       {expanded && loadingSymbols && (
         <div className="py-1 px-2 text-xs flex items-center gap-2" style={{ paddingLeft: 8 + (depth + 1) * 20, color: 'var(--muted)' }}>
@@ -181,7 +197,7 @@ const CategoriesTab = () => {
     try {
       const data = await symbolCategoryList();
       setCategories(Array.isArray(data) ? data : []);
-    } catch (e) {
+    } catch {
       setCategories([]);
     } finally {
       setLoading(false);
@@ -231,6 +247,7 @@ const CategoriesTab = () => {
               allCategories={categories}
               onEdit={c => { setEditTarget(c); setModal('edit'); }}
               onDelete={handleDelete}
+              deletingName={deleting}
             />
           ))
         )}

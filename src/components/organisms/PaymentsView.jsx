@@ -124,7 +124,7 @@ const PaymentsView = () => {
 
       {/* List Area */}
       <div className="flex-1 overflow-y-auto no-scrollbar pb-10">
-        {providers.map((provider, idx) => (
+        {providers.map((provider) => (
           <div key={provider.id} className="flex px-6 py-6 border-b border-black/40 hover:bg-white/5 transition-colors relative group">
             
             {/* Action Button - Top Right */}

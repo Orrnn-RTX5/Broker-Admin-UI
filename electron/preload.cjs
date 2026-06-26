@@ -7,4 +7,7 @@ contextBridge.exposeInMainWorld('rtx5Electron', {
   clearBrokerOrigins() {
     ipcRenderer.send('rtx5:clear-broker-origins');
   },
+  checkForUpdates() {
+    return ipcRenderer.invoke('rtx5:check-for-updates');
+  },
 });

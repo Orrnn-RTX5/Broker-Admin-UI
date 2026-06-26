@@ -13,9 +13,23 @@ const viteEnv = import.meta.env || {};
 const trimTrailingSlash = (value = '') => String(value || '').replace(/\/+$/, '');
 
 const DEFAULTS = {
-  API_HOST: trimTrailingSlash(getRuntimeValue('API_HOST', 'VITE_API_HOST') || viteEnv.VITE_API_HOST || ''),
+  API_HOST: trimTrailingSlash(
+    getRuntimeValue('API_HOST', 'VITE_API_HOST', 'API_URL', 'VITE_API_URL') ||
+      viteEnv.VITE_API_HOST ||
+      viteEnv.VITE_API_URL ||
+      viteEnv.API_HOST ||
+      viteEnv.API_URL ||
+      ''
+  ),
   WS_HOST: trimTrailingSlash(getRuntimeValue('WS_HOST', 'VITE_WS_HOST') || viteEnv.VITE_WS_HOST || ''),
-  API_HOST_EXT: trimTrailingSlash(getRuntimeValue('API_HOST_EXT', 'VITE_API_HOST_EXT') || viteEnv.VITE_API_HOST_EXT || ''),
+  API_HOST_EXT: trimTrailingSlash(
+    getRuntimeValue('API_HOST_EXT', 'VITE_API_HOST_EXT', 'API_EXT_URL', 'VITE_API_EXT_URL') ||
+      viteEnv.VITE_API_HOST_EXT ||
+      viteEnv.VITE_API_EXT_URL ||
+      viteEnv.API_HOST_EXT ||
+      viteEnv.API_EXT_URL ||
+      ''
+  ),
   DEFAULT_MT5_SERVER: getRuntimeValue('DEFAULT_MT5_SERVER', 'VITE_DEFAULT_MT5_SERVER') || viteEnv.VITE_DEFAULT_MT5_SERVER || '',
 };
 
@@ -25,16 +39,29 @@ export let API_HOST_EXT = DEFAULTS.API_HOST_EXT;
 export let DEFAULT_MT5_SERVER = DEFAULTS.DEFAULT_MT5_SERVER;
 
 const readBrokerInfo = () => {
-  if (typeof sessionStorage === 'undefined') return null;
+  const readStorage = (storage) => {
+    if (!storage?.getItem) return null;
 
-  const raw = sessionStorage.getItem('broker_info');
-  if (!raw) return null;
+    const raw = storage.getItem('broker_info');
+    if (!raw) return null;
 
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  };
+
+  if (typeof sessionStorage !== 'undefined') {
+    const sessionBroker = readStorage(sessionStorage);
+    if (sessionBroker) return sessionBroker;
   }
+
+  if (typeof localStorage !== 'undefined') {
+    return readStorage(localStorage);
+  }
+
+  return null;
 };
 
 // ---------------------------------------------------------------------------

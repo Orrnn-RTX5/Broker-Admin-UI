@@ -66,7 +66,10 @@ const LpRoutingOptionsPanel = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { fetchOptions(); }, [fetchOptions]);
+  useEffect(() => {
+    const timerId = window.setTimeout(fetchOptions, 0);
+    return () => window.clearTimeout(timerId);
+  }, [fetchOptions]);
 
   const toggleExpand = () => setExpanded(e => !e);
 
@@ -161,10 +164,13 @@ const GroupDashboardPanel = ({ groupName, onClose }) => {
   const [err, setErr] = useState('');
 
   useEffect(() => {
-    setLoading(true);
-    setErr('');
-    ManagerService.getGroupRoutingOverviewList()
-      .then(res => {
+    let cancelled = false;
+    const timerId = window.setTimeout(() => {
+      setLoading(true);
+      setErr('');
+      ManagerService.getGroupRoutingOverviewList()
+        .then(res => {
+          if (cancelled) return;
         const list = Array.isArray(res) ? res : [];
         const groupData = list.find(g => g.group_name === groupName);
         if (groupData) {
@@ -174,9 +180,18 @@ const GroupDashboardPanel = ({ groupName, onClose }) => {
         }
       })
       .catch(e => {
+        if (cancelled) return;
         setErr(e.message || 'Failed to fetch routing overview');
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timerId);
+    };
   }, [groupName]);
 
   return (

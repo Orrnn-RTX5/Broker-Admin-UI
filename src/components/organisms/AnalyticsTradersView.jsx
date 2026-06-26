@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { AnalyticsService } from '../../services/analytics.service';
 import { RefreshCw } from 'lucide-react';
 
@@ -41,7 +41,7 @@ const AnalyticsTradersView = () => {
   const [results, setResults] = useState({});
   const [loading, setLoading] = useState(false);
 
-  const load = async (key) => {
+  const load = useCallback(async (key) => {
     if (results[key]) return;
     setLoading(true);
     try {
@@ -52,13 +52,13 @@ const AnalyticsTradersView = () => {
     } catch (err) {
       alert('Failed: ' + (err.response?.data?.message || err.message));
     } finally { setLoading(false); }
-  };
+  }, [results]);
 
   const refresh = () => {
     setResults(r => { const copy = { ...r }; delete copy[tab]; return copy; });
   };
 
-  useEffect(() => { load(tab); }, [tab]);
+  useEffect(() => { load(tab); }, [load, tab]);
 
   return (
     <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden">

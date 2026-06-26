@@ -791,14 +791,15 @@ const TAB_MAP = {
 const TABS = Object.values(TAB_MAP);
 
 const SecurityAccessView = ({ initialTab }) => {
-  const startTab = (initialTab && TAB_MAP[initialTab]?.id) || 'ip';
-  const [tab, setTab] = useState(startTab);
+  const requestedTab = (initialTab && TAB_MAP[initialTab]?.id) || 'ip';
+  const [tab, setTab] = useState(requestedTab);
 
   useEffect(() => {
-    if (initialTab && TAB_MAP[initialTab]) {
-      setTab(TAB_MAP[initialTab].id);
-    }
-  }, [initialTab]);
+    if (tab === requestedTab) return undefined;
+
+    const timerId = window.setTimeout(() => setTab(requestedTab), 0);
+    return () => window.clearTimeout(timerId);
+  }, [requestedTab, tab]);
 
   return (
     <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden">
@@ -807,13 +808,13 @@ const SecurityAccessView = ({ initialTab }) => {
         <span className="text-[11px] text-[#888]">Security &amp; Access — IP restrictions, throttle rules, log level, backup schedules, and plugin management. Requires <span className="text-[#9cdcfe]">server_admin</span> permission.</span>
       </div>
       <div className="flex bg-[color:var(--bg-surface-1)] border-b border-black/40">
-        {TABS.map(({ id, label, icon: Icon }) => (
+        {TABS.map(({ id, label, icon }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
             className={`flex items-center gap-1.5 px-4 h-[30px] text-[11px] border-b-2 transition-colors ${tab === id ? 'border-[color:var(--accent-500)] text-[color:var(--text-primary)] bg-[color:var(--bg-app)]' : 'border-transparent text-[#888] hover:text-[#ccc] hover:bg-[color:var(--bg-surface-1)]'}`}
           >
-            <Icon size={11} />
+            {React.createElement(icon, { size: 11 })}
             {label}
           </button>
         ))}

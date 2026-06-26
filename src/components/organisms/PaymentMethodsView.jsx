@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { PaymentService } from '../../services/payment.service';
 import { Plus, RefreshCw, X, Settings, Edit2, Check } from 'lucide-react';
 
@@ -98,19 +98,28 @@ const PaymentMethodsView = () => {
   const [popup, setPopup] = useState(null); // null | 'add' | row (edit)
   const [contextMenu, setContextMenu] = useState({ visible: false });
 
-  const fetchData = async () => {
+  const loadMethods = useCallback(async ({ enabled, currency }) => {
     setLoading(true);
     try {
       const params = {};
-      if (filterEnabled !== '') params.enabled = filterEnabled === 'true';
-      if (filterCurrency) params.currency = filterCurrency;
+      if (enabled !== '') params.enabled = enabled === 'true';
+      if (currency) params.currency = currency;
       const res = await PaymentService.getMethodList(params);
       setData(Array.isArray(res) ? res : res?.data ?? []);
     } catch (err) { console.error(err); setData([]); }
     finally { setLoading(false); }
-  };
+  }, []);
 
-  useEffect(() => { fetchData(); }, []);
+  const fetchData = useCallback(() => {
+    return loadMethods({ enabled: filterEnabled, currency: filterCurrency });
+  }, [filterCurrency, filterEnabled, loadMethods]);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      loadMethods({ enabled: '', currency: '' });
+    }, 0);
+    return () => window.clearTimeout(timerId);
+  }, [loadMethods]);
 
   const handleDelete = async () => {
     const row = contextMenu.row;

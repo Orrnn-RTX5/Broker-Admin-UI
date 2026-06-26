@@ -104,3 +104,41 @@ test('GTA web services host keeps manager API calls on the manager proxy namespa
     'https://services.growtradingacademy.com/manager/api/v2/admin/login'
   );
 });
+
+test('runtime VITE_API_URL alias provides default manager API host', async () => {
+  installWindow({
+    BACKEND_TARGET: 'desktop',
+    VITE_API_URL: 'https://services.myprop.trade',
+    VITE_API_EXT_URL: 'https://services.myprop.trade',
+  });
+  installStorage({});
+
+  const endpoints = await importFreshEndpoints();
+
+  assert.equal(endpoints.API_HOST, 'https://services.myprop.trade');
+  assert.equal(
+    endpoints.buildManagerApiUrl('/manager/GroupList'),
+    'https://services.myprop.trade/manager/GroupList'
+  );
+});
+
+test('dynamic endpoints recover broker info from local storage after desktop restart', async () => {
+  installWindow({ BACKEND_TARGET: 'desktop' });
+  installStorage({});
+  globalThis.localStorage = {
+    getItem: (key) => key === 'broker_info'
+      ? JSON.stringify({
+          broker_id: 'myprop',
+          backend_url: 'https://services.myprop.trade',
+        })
+      : null,
+  };
+
+  const endpoints = await importFreshEndpoints();
+
+  assert.equal(endpoints.API_HOST, 'https://services.myprop.trade');
+  assert.equal(
+    endpoints.buildManagerApiUrl('/manager/GroupList'),
+    'https://services.myprop.trade/manager/GroupList'
+  );
+});

@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Check } from 'lucide-react';
 import { ManagerService } from '../../services/manager.service';
 import { useRoles } from '../../hooks/useManager';
+
+const MotionDiv = motion.div;
 
 const BlueUserLargeIcon = () => (
   <svg width="48" height="48" viewBox="0 0 24 24" fill="#1D4ED8" stroke="#1E3A8A" strokeWidth="1">
@@ -31,16 +33,10 @@ const CheckboxIcon = ({ checked, indeterminate, isRedCross }) => {
 
 const ManagerPropertiesPopup = ({ manager, onClose }) => {
   const [activeTab, setActiveTab] = useState('Common');
-  const [roleId, setRoleId] = useState('');
+  const [roleId, setRoleId] = useState(() => manager?.role_id || '');
   
   const { data: rolesResponse } = useRoles();
   const roles = rolesResponse?.roles || [];
-
-  useEffect(() => {
-    if (manager?.role_id) {
-      setRoleId(manager.role_id);
-    }
-  }, [manager]);
 
   const handleSave = async () => {
     try {
@@ -309,7 +305,7 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <motion.div 
+      <MotionDiv
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
@@ -383,7 +379,7 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
           </button>
         </div>
 
-      </motion.div>
+      </MotionDiv>
     </div>
   );
 };

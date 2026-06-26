@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, X, Monitor } from 'lucide-react';
 
 const ServerIcon = () => (
@@ -279,7 +279,7 @@ const ServerPropertiesPopup = ({ isOpen, onClose, serverName = "MainTrade Backup
 
               {/* Sub Navigation Tabs */}
               <div className="flex items-center px-1 pt-[1px] bg-[color:var(--bg-app)] shrink-0 pointer-events-auto">
-                  {tabs.map((t, idx) => (
+                  {tabs.map((t) => (
                       <div key={t} 
                            onClick={() => setActiveTab(t)}
                            className={`text-[11.5px] px-2.5 pb-[5px] pt-1.5 cursor-pointer relative ${activeTab === t ? 'text-white' : 'text-[color:var(--text-primary)] hover:text-[#00a2e8]'}`}>

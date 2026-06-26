@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Server, Zap, Cpu, MemoryStick as Memory, HardDrive, Share2, Activity, Clock, ShieldAlert, BarChart3, Database, Router, CheckCircle2, Lock, List, MapPin, Cloud } from 'lucide-react';
 import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "react-simple-maps";
+import { deterministicInt, deterministicRatio } from '../../lib/deterministicChart';
 
 // Use the robust topojson host provided
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
@@ -137,16 +138,17 @@ const NetworkNodesTable = () => (
 );
 
 const NetworkGraphPanel = ({ title, type, servers }) => {
-   const generatePath = (points, max, colorType) => {
+   const generatePath = (points, max, colorType, seed) => {
       let path = `M 0,${max}`;
+      const ratio = (index, label) => deterministicRatio(title, type, colorType, seed, index, label);
       
       let memY = 0;
       if (colorType.includes('memory')) {
-          if (colorType.includes('blue')) memY = max * (0.6 + Math.random() * 0.1);
+          if (colorType.includes('blue')) memY = max * (0.6 + ratio('initial', 'blue') * 0.1);
           if (colorType.includes('orange')) memY = max * 0.05;
           if (colorType.includes('green')) memY = max * 0.15;
       } else if (colorType.includes('connection')) {
-          if (colorType === 'connection-green') memY = max * (0.2 + Math.random() * 0.6);
+          if (colorType === 'connection-green') memY = max * (0.2 + ratio('initial', 'connection-green') * 0.6);
           if (colorType === 'connection-blue') memY = max * 0.05;
       }
 
@@ -156,31 +158,31 @@ const NetworkGraphPanel = ({ title, type, servers }) => {
          
          // Spike engine for CPU
          if (colorType === 'blue') {
-            val = Math.random() > 0.85 ? max * (Math.random() * 0.9 + 0.1) : max * (Math.random() * 0.1);
+            val = ratio(i, 'spike') > 0.85 ? max * (ratio(i, 'spike-height') * 0.9 + 0.1) : max * (ratio(i, 'baseline') * 0.1);
          } else if (colorType === 'orange') {
-            val = Math.random() > 0.95 ? max * (Math.random() * 0.1) : 0;
+            val = ratio(i, 'dpc') > 0.95 ? max * (ratio(i, 'dpc-height') * 0.1) : 0;
          } else if (colorType === 'green') {
-            val = Math.random() > 0.92 ? max * (Math.random() * 0.2) : 0;
+            val = ratio(i, 'interrupt') > 0.92 ? max * (ratio(i, 'interrupt-height') * 0.2) : 0;
          } 
          // True Plateau & Drop Engine for Connections (Squares Waves)
          else if (colorType.includes('connection')) {
             if (colorType === 'connection-green') {
                 // 2.5% chance to massively jump to a new plateau layer
-                if (Math.random() > 0.975) memY = max * (0.1 + Math.random() * 0.8);
+                if (ratio(i, 'plateau') > 0.975) memY = max * (0.1 + ratio(i, 'plateau-height') * 0.8);
                 // high-frequency jitter on top of plateau
-                let jitter = (Math.random() - 0.5) * max * 0.08;
+                let jitter = (ratio(i, 'jitter') - 0.5) * max * 0.08;
                 val = Math.max(0, Math.min(max, memY + jitter));
             } else {
                 // stable flatline bottom for connections
-                if (Math.random() > 0.99) memY = max * (0.02 + Math.random() * 0.06);
-                let jitter = (Math.random() - 0.5) * max * 0.01;
+                if (ratio(i, 'low-plateau') > 0.99) memY = max * (0.02 + ratio(i, 'low-height') * 0.06);
+                let jitter = (ratio(i, 'low-jitter') - 0.5) * max * 0.01;
                 val = Math.max(0, Math.min(max, memY + jitter));
             }
          }
          // Flat stepped engine for Memory/Disk
          else if (colorType.includes('memory')) {
-            if (Math.random() > 0.97) {
-               memY += (Math.random() - 0.5) * max * (colorType.includes('blue') ? 0.08 : 0.03);
+            if (ratio(i, 'memory-step') > 0.97) {
+               memY += (ratio(i, 'memory-delta') - 0.5) * max * (colorType.includes('blue') ? 0.08 : 0.03);
             }
             val = memY;
          }
@@ -210,31 +212,31 @@ const NetworkGraphPanel = ({ title, type, servers }) => {
                      </div>
                      {/* Floating Context/Tooltip block next to legend */}
                      <div className="flex flex-col text-[10px] font-mono leading-[15px] opacity-100 bg-[color:var(--text-primary)] w-[18px] items-center mt-[-1px] shadow-2xl border border-[#aaa]">
-                        <div className="bg-[#b3c7f9] text-[#000] w-full text-center border-b border-white font-bold">{Math.floor(Math.random() * 6 + 3)}</div>
+                        <div className="bg-[#b3c7f9] text-[#000] w-full text-center border-b border-white font-bold">{deterministicInt(3, 8, title, type, srv.name, idx, 'cpu-total')}</div>
                         <div className="bg-[color:var(--text-primary)] text-[#000] w-full text-center border-b border-white font-bold">0</div>
-                        <div className="bg-[#fcd34d] text-[#000] w-full text-center border-b border-white font-bold">{Math.floor(Math.random() * 2)}</div>
+                        <div className="bg-[#fcd34d] text-[#000] w-full text-center border-b border-white font-bold">{deterministicInt(0, 1, title, type, srv.name, idx, 'cpu-dpc')}</div>
                         <div className="bg-[color:var(--text-primary)] text-[#000] w-full text-center font-bold">0</div>
                      </div>
                   </div>
                ) : type === 'Connections' ? (
                   <div className="absolute top-[26px] left-[6px] z-20 select-none">
                      <div className="text-[10px] font-sans leading-[14px]">
-                        <div><span className="text-[#2563eb] font-bold mr-1">-</span><span className="text-[color:var(--text-muted)] tracking-tight">Connections: <span className="text-white">{Math.floor(Math.random() * 15 + 5)}</span></span></div>
-                        <div><span className="text-[#4ade80] font-bold mr-1">-</span><span className="text-[color:var(--text-muted)] tracking-tight">Sockets: <span className="text-white">{Math.floor(Math.random() * 80 + 40)}</span></span></div>
+                        <div><span className="text-[#2563eb] font-bold mr-1">-</span><span className="text-[color:var(--text-muted)] tracking-tight">Connections: <span className="text-white">{deterministicInt(5, 19, title, type, srv.name, idx, 'connections')}</span></span></div>
+                        <div><span className="text-[#4ade80] font-bold mr-1">-</span><span className="text-[color:var(--text-muted)] tracking-tight">Sockets: <span className="text-white">{deterministicInt(40, 119, title, type, srv.name, idx, 'sockets')}</span></span></div>
                      </div>
                   </div>
                ) : (
                   <div className="absolute top-[26px] left-[10px] flex gap-[9px] z-20 select-none bg-[color:var(--bg-app)]/40 p-1 rounded backdrop-blur-[1px]">
                      <div className="text-[10px] font-sans leading-[15px] flex flex-col shadow-sm">
-                        <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[#2563eb]"></div><span className="text-[color:var(--text-muted)] font-medium drop-shadow-md">{type === 'Disk' ? 'Disk Read:' : 'Allocated:'} <span className="text-white">{srv.memory} MB{type === 'Disk' ? '/s' : ''}, {Math.floor(Math.random() * 10 + 60)}%</span></span></div>
-                        <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[color:var(--text-muted)]"></div><span className="text-[color:var(--text-muted)] font-medium drop-shadow-md">{type === 'Disk' ? 'Disk Write:' : 'System:'} <span className="text-white">{Math.floor(Math.random() * 5 + 5)}%</span></span></div>
+                        <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[#2563eb]"></div><span className="text-[color:var(--text-muted)] font-medium drop-shadow-md">{type === 'Disk' ? 'Disk Read:' : 'Allocated:'} <span className="text-white">{srv.memory} MB{type === 'Disk' ? '/s' : ''}, {deterministicInt(60, 69, title, type, srv.name, idx, 'allocated')}%</span></span></div>
+                        <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[color:var(--text-muted)]"></div><span className="text-[color:var(--text-muted)] font-medium drop-shadow-md">{type === 'Disk' ? 'Disk Write:' : 'System:'} <span className="text-white">{deterministicInt(5, 9, title, type, srv.name, idx, 'system')}%</span></span></div>
                         <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[#f59e0b]"></div><span className="text-[color:var(--text-muted)] font-medium drop-shadow-md">{type === 'Disk' ? 'Active Time:' : 'Cache:'} <span className="text-white">{type === 'Disk' ? '12%' : 'Active'}</span></span></div>
                         <div className="flex items-center gap-1.5"><div className="w-[7px] h-[3px] bg-[#4ade80]"></div><span className="text-[color:var(--text-muted)] font-medium drop-shadow-md">{type === 'Disk' ? 'Queue Length:' : 'Page Faults:'} <span className="text-white">0</span></span></div>
                      </div>
                      {/* Floating Context/Tooltip block next to legend */}
                      <div className="flex flex-col text-[10px] font-mono leading-[15px] opacity-100 bg-[color:var(--text-primary)] w-[18px] items-center mt-[-1px] shadow-2xl border border-[#aaa]">
-                        <div className="bg-[#b3c7f9] text-[#000] w-full text-center border-b border-white font-bold">{Math.floor(Math.random() * 10 + 60)}</div>
-                        <div className="bg-[color:var(--text-primary)] text-[#000] w-full text-center border-b border-white font-bold">{Math.floor(Math.random() * 5 + 5)}</div>
+                        <div className="bg-[#b3c7f9] text-[#000] w-full text-center border-b border-white font-bold">{deterministicInt(60, 69, title, type, srv.name, idx, 'allocated-tooltip')}</div>
+                        <div className="bg-[color:var(--text-primary)] text-[#000] w-full text-center border-b border-white font-bold">{deterministicInt(5, 9, title, type, srv.name, idx, 'system-tooltip')}</div>
                         <div className="bg-[#fcd34d] text-[#000] w-full text-center border-b border-white font-bold">1</div>
                         <div className="bg-[color:var(--text-primary)] text-[#000] w-full text-center font-bold">0</div>
                      </div>
@@ -253,10 +255,10 @@ const NetworkGraphPanel = ({ title, type, servers }) => {
                      <path d="M 0,100 L 100,100" fill="none" stroke="var(--bg-surface-1)" strokeWidth="1" vectorEffect="non-scaling-stroke"/>
                      
                      {/* Sub-Metric Graphs */}
-                     <path d={generatePath(type === 'CPU' ? 500 : (type === 'Connections' ? 400 : 100), 100, type === 'CPU' ? 'green' : (type === 'Connections' ? 'connection-green' : 'memory-green'))} fill="none" stroke="#4ade80" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-                     {type !== 'Connections' && <path d={generatePath(type === 'CPU' ? 500 : 100, 100, type === 'CPU' ? 'orange' : 'memory-orange')} fill="none" stroke="#f59e0b" strokeWidth="0.8" vectorEffect="non-scaling-stroke" />}
+                     <path d={generatePath(type === 'CPU' ? 500 : (type === 'Connections' ? 400 : 100), 100, type === 'CPU' ? 'green' : (type === 'Connections' ? 'connection-green' : 'memory-green'), srv.name)} fill="none" stroke="#4ade80" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                     {type !== 'Connections' && <path d={generatePath(type === 'CPU' ? 500 : 100, 100, type === 'CPU' ? 'orange' : 'memory-orange', srv.name)} fill="none" stroke="#f59e0b" strokeWidth="0.8" vectorEffect="non-scaling-stroke" />}
                      {/* Primary Main Metric (Blue) */}
-                     <path d={generatePath(type === 'CPU' ? 500 : (type === 'Connections' ? 400 : 100), 100, type === 'CPU' ? 'blue' : (type === 'Connections' ? 'connection-blue' : 'memory-blue'))} fill="none" stroke="#3b82f6" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
+                     <path d={generatePath(type === 'CPU' ? 500 : (type === 'Connections' ? 400 : 100), 100, type === 'CPU' ? 'blue' : (type === 'Connections' ? 'connection-blue' : 'memory-blue'), srv.name)} fill="none" stroke="#3b82f6" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
                   </svg>
                </div>
 

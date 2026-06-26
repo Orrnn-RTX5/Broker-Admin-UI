@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Settings, RefreshCw, ChevronDown, ChevronRight, Cpu, HardDrive, Globe, Monitor } from 'lucide-react';
+import { deterministicRatio } from '../../lib/deterministicChart';
 
 // Sub-component tailored specifically to replicate the 8 dense miniature graphs via localized svg mathematical maps
 const OverviewMiniGraph = ({ type }) => {
@@ -72,22 +73,23 @@ const OverviewMiniGraph = ({ type }) => {
     const genPath = (style) => {
        const max = 100, pts = 600;
        let path = `M 0,${max}`, memY = max * 0.2;
+       const ratio = (index, label) => deterministicRatio('overview', type, style, index, label);
        
        for (let i = 0; i <= pts; i++) {
           let val = 0;
-          if (style === 'spike-blue') val = Math.random() > 0.98 ? max * (0.2 + Math.random() * 0.7) : max * 0.02;
+          if (style === 'spike-blue') val = ratio(i, 'spike') > 0.98 ? max * (0.2 + ratio(i, 'spike-height') * 0.7) : max * 0.02;
           else if (style === 'flat') val = 0.5;
-          else if (style === 'traffic-blue') { val = max * 0.15 + (Math.random() * max * 0.1); if (i > pts * 0.65 && i < pts * 0.66) val = max * 0.8; }
-          else if (style === 'traffic-green') { val = max * 0.05 + (Math.random() * max * 0.05); if (i > pts * 0.65 && i < pts * 0.66) val = max * 0.95; }
+          else if (style === 'traffic-blue') { val = max * 0.15 + (ratio(i, 'traffic-blue') * max * 0.1); if (i > pts * 0.65 && i < pts * 0.66) val = max * 0.8; }
+          else if (style === 'traffic-green') { val = max * 0.05 + (ratio(i, 'traffic-green') * max * 0.05); if (i > pts * 0.65 && i < pts * 0.66) val = max * 0.95; }
           else if (style === 'sawtooth-blue') val = (i % 40 < 4) ? max * 0.9 : 0;
-          else if (style === 'erratic-green') val = max * 0.3 + (Math.random() * max * 0.5);
+          else if (style === 'erratic-green') val = max * 0.3 + (ratio(i, 'erratic') * max * 0.5);
           else if (style === 'steady-blue') {
-              if (Math.random() > 0.95) memY += (Math.random() - 0.5) * max * 0.15;
+              if (ratio(i, 'steady-step') > 0.95) memY += (ratio(i, 'steady-delta') - 0.5) * max * 0.15;
               memY = Math.max(max * 0.1, Math.min(max * 0.9, memY));
-              val = memY + Math.random() * max * 0.05;
+              val = memY + ratio(i, 'steady-jitter') * max * 0.05;
           }
-          else if (style === 'high-flat') val = max * 0.6 + (Math.random() * max * 0.01);
-          else if (style === 'low-flat') val = max * 0.1 + (Math.random() * max * 0.01);
+          else if (style === 'high-flat') val = max * 0.6 + (ratio(i, 'high-flat') * max * 0.01);
+          else if (style === 'low-flat') val = max * 0.1 + (ratio(i, 'low-flat') * max * 0.01);
 
           path += ` L ${(i / pts) * 100},${max - val}`;
        }
@@ -193,19 +195,20 @@ const StackedGraphRow = ({ isLast, isShort, cfg }) => {
     const genPath = (style) => {
        const max = 100, pts = 600;
        let path = `M 0,${max}`;
+       const ratio = (index, label) => deterministicRatio('stacked', cfg.labels?.[0]?.t || '', style, index, label);
        
        for (let i = 0; i <= pts; i++) {
           let val = 0;
-          if (style === 'spike-blue') val = Math.random() > 0.96 ? max * (0.2 + Math.random() * 0.7) : max * 0.02;
+          if (style === 'spike-blue') val = ratio(i, 'spike') > 0.96 ? max * (0.2 + ratio(i, 'spike-height') * 0.7) : max * 0.02;
           else if (style === 'flat-bottom') val = 0.5;
           else if (style === 'flat-zero') val = 1;
-          else if (style === 'threads-blue') val = max * 0.75 + (Math.random() > 0.95 ? max * 0.04 : Math.random() * max * 0.01);
-          else if (style === 'handles-blue') val = max * 0.75 + Math.random() * max * 0.02;
-          else if (style === 'memory-free') val = max * 0.70 + Math.random() * max * 0.01;
-          else if (style === 'memory-process') val = max * 0.80 + (i > 450 ? max * 0.05 : 0) + Math.random() * max * 0.005;
-          else if (style === 'page-faults') val = Math.random() > 0.985 ? max * (0.4 + Math.random() * 0.5) : 0;
-          else if (style === 'iops-blue') val = max * 0.2 + Math.random() * max * 0.15 + (Math.random() > 0.95 ? max * 0.4 : 0);
-          else if (style === 'latency-blue') val = (i % 30 < 2 && Math.random() > 0.3) ? max * Math.random() * 0.8 : max * 0.02;
+          else if (style === 'threads-blue') val = max * 0.75 + (ratio(i, 'thread-spike') > 0.95 ? max * 0.04 : ratio(i, 'thread-jitter') * max * 0.01);
+          else if (style === 'handles-blue') val = max * 0.75 + ratio(i, 'handles') * max * 0.02;
+          else if (style === 'memory-free') val = max * 0.70 + ratio(i, 'memory-free') * max * 0.01;
+          else if (style === 'memory-process') val = max * 0.80 + (i > 450 ? max * 0.05 : 0) + ratio(i, 'memory-process') * max * 0.005;
+          else if (style === 'page-faults') val = ratio(i, 'fault') > 0.985 ? max * (0.4 + ratio(i, 'fault-height') * 0.5) : 0;
+          else if (style === 'iops-blue') val = max * 0.2 + ratio(i, 'iops') * max * 0.15 + (ratio(i, 'iops-spike') > 0.95 ? max * 0.4 : 0);
+          else if (style === 'latency-blue') val = (i % 30 < 2 && ratio(i, 'latency') > 0.3) ? max * ratio(i, 'latency-height') * 0.8 : max * 0.02;
           else if (style === 'sawtooth-blue') val = (i % 26 < 2) ? max * 0.4 : 0;
 
           path += ` L ${(i / pts) * 100},${max - val}`;

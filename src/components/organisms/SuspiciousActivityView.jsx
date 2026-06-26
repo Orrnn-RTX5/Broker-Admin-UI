@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { RiskManagementService } from '../../services/riskManagement.service';
 import { RefreshCw, BarChart2 } from 'lucide-react';
 
@@ -18,26 +18,36 @@ const SuspiciousActivityView = () => {
   const [reviewForm, setReviewForm] = useState({ action: 'warn', notes: '' });
   const [saving, setSaving] = useState(false);
 
-  const fetchList = async () => {
+  const loadSuspicious = useCallback(async ({ reviewedFilter, patternFilter }) => {
     setLoading(true);
     try {
       const params = {};
-      if (reviewed !== '') params.reviewed = reviewed;
-      if (patternType) params.pattern_type = patternType;
+      if (reviewedFilter !== '') params.reviewed = reviewedFilter;
+      if (patternFilter) params.pattern_type = patternFilter;
       const res = await RiskManagementService.listSuspicious(params);
       setData(Array.isArray(res) ? res : []);
     } catch { setData([]); }
     finally { setLoading(false); }
-  };
+  }, []);
 
-  const fetchStats = async () => {
+  const fetchList = useCallback(() => {
+    return loadSuspicious({ reviewedFilter: reviewed, patternFilter: patternType });
+  }, [loadSuspicious, patternType, reviewed]);
+
+  const fetchStats = useCallback(async () => {
     try {
       const res = await RiskManagementService.getSuspiciousStats();
       setStats(Array.isArray(res) ? res : []);
     } catch { setStats([]); }
-  };
+  }, []);
 
-  useEffect(() => { fetchList(); fetchStats(); }, []);
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      loadSuspicious({ reviewedFilter: 'false', patternFilter: '' });
+      fetchStats();
+    }, 0);
+    return () => window.clearTimeout(timerId);
+  }, [fetchStats, loadSuspicious]);
 
   const handleReview = async () => {
     if (!reviewModal) return;

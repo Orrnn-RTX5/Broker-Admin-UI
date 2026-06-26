@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { X, Calendar, AlertCircle } from 'lucide-react';
 import { ManagerService } from '../../services/manager.service';
 
+const MotionDiv = motion.div;
+
 const CreateHolidayPopup = ({ onClose, onCreated }) => {
   const [formData, setFormData] = useState({
     date: '2026-12-25',
@@ -47,7 +49,7 @@ const CreateHolidayPopup = ({ onClose, onCreated }) => {
 
   return (
     <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4">
-      <motion.div
+      <MotionDiv
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
@@ -148,7 +150,7 @@ const CreateHolidayPopup = ({ onClose, onCreated }) => {
             </button>
           </div>
         </form>
-      </motion.div>
+      </MotionDiv>
     </div>
   );
 };
