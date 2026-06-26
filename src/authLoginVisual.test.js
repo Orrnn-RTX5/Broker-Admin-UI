@@ -15,6 +15,7 @@ test('login hero visual uses responsive WebP assets only', () => {
     'auth-trading-visual-960.webp',
     'auth-trading-visual-1280.webp',
     'auth-trading-visual.webp',
+    'auth-trading-visual-1920.webp',
   ];
 
   for (const asset of expectedAssets) {
@@ -24,8 +25,9 @@ test('login hero visual uses responsive WebP assets only', () => {
   }
 
   assert.match(brokerAuthScreens, /AUTH_VISUAL_SRC_SET/);
-  assert.match(brokerAuthScreens, /sizes="\(min-width: 1024px\) 60vw, 0px"/);
+  assert.match(brokerAuthScreens, /sizes="\(min-width: 1024px\) 100vw, 0px"/);
   assert.match(brokerAuthScreens, /type="image\/webp"/);
   assert.match(brokerAuthScreens, /fetchPriority="high"/);
+  assert.match(brokerAuthScreens, /authTradingVisual1920Webp/);
   assert.doesNotMatch(brokerAuthScreens, /auth-trading-visual\.png/);
 });

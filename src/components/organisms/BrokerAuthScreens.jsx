@@ -17,6 +17,7 @@ import {
 import authTradingVisual960Webp from '../../assets/auth-trading-visual-960.webp';
 import authTradingVisual1280Webp from '../../assets/auth-trading-visual-1280.webp';
 import authTradingVisualWebp from '../../assets/auth-trading-visual.webp';
+import authTradingVisual1920Webp from '../../assets/auth-trading-visual-1920.webp';
 import {
   clearBrokerInfo,
   discoverBrokerById,
@@ -92,6 +93,7 @@ const AUTH_VISUAL_SRC_SET = [
   `${authTradingVisual960Webp} 960w`,
   `${authTradingVisual1280Webp} 1280w`,
   `${authTradingVisualWebp} 1672w`,
+  `${authTradingVisual1920Webp} 1920w`,
 ].join(', ');
 
 // ---------------------------------------------------------------------------
@@ -117,16 +119,16 @@ const AuthShell = ({ children }) => (
       <picture>
         <source
           srcSet={AUTH_VISUAL_SRC_SET}
-          sizes="(min-width: 1024px) 60vw, 0px"
+          sizes="(min-width: 1024px) 100vw, 0px"
           type="image/webp"
         />
         <img
           src={authTradingVisualWebp}
           srcSet={AUTH_VISUAL_SRC_SET}
-          sizes="(min-width: 1024px) 60vw, 0px"
+          sizes="(min-width: 1024px) 100vw, 0px"
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover brightness-[1.03] contrast-[1.08] saturate-[1.08]"
           decoding="async"
           fetchPriority="high"
           loading="eager"
