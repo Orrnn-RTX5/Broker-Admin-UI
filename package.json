@@ -1,7 +1,7 @@
 {
   "name": "rtx5-admin",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.2",
   "type": "module",
   "main": "electron/main.js",
   "scripts": {
@@ -28,6 +28,7 @@
       "electron/**/*",
       "package.json"
     ],
+    "afterPack": "./scripts/apply-win-icon.js",
     "publish": [
       {
         "provider": "github",
@@ -44,7 +45,7 @@
           ]
         }
       ],
-      "icon": "build/icon.ico",
+      "icon": "build/logo V2.ico",
       "signAndEditExecutable": false
     },
     "nsis": {
@@ -96,6 +97,7 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
     "postcss": "^8.5.8",
+    "rcedit": "^4.0.1",
     "sharp": "^0.34.5",
     "tailwindcss": "^4.2.2",
     "vite": "^8.0.1",

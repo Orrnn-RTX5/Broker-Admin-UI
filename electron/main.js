@@ -52,6 +52,13 @@ const CONFIGURED_BROKER_ORIGINS = new Set(collectBrokerOrigins(process.env, [API
 const dynamicBrokerOrigins = new Set();
 
 const isDev = !app.isPackaged;
+const APP_ICON_FILE = 'logo V2.ico';
+const getAppIconPath = () => (
+  isDev
+    ? path.join(__dirname, '..', 'public', APP_ICON_FILE)
+    : path.join(__dirname, '..', 'dist', APP_ICON_FILE)
+);
+
 app.setName(APP_NAME);
 nativeTheme.themeSource = 'dark';
 // DevTools is always available in dev. In a packaged build it stays closed and
@@ -311,9 +318,7 @@ function createWindow() {
     title: APP_NAME,
     backgroundColor: '#1e1e1e',
     darkTheme: true,
-    icon: isDev 
-      ? path.join(__dirname, '..', 'public', 'logo V2.ico')
-      : path.join(__dirname, '..', 'dist', 'logo V2.ico'),
+    icon: getAppIconPath(),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

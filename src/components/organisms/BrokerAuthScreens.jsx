@@ -14,6 +14,8 @@ import {
   ShieldCheck,
   User,
 } from 'lucide-react';
+import authTradingVisual960Webp from '../../assets/auth-trading-visual-960.webp';
+import authTradingVisual1280Webp from '../../assets/auth-trading-visual-1280.webp';
 import authTradingVisualWebp from '../../assets/auth-trading-visual.webp';
 import {
   clearBrokerInfo,
@@ -86,6 +88,11 @@ const getRuntimeLockedBroker = (list = []) => {
 };
 
 const RTX5_LOGO_SRC = `${import.meta.env.BASE_URL || './'}logo-full-light.webp`;
+const AUTH_VISUAL_SRC_SET = [
+  `${authTradingVisual960Webp} 960w`,
+  `${authTradingVisual1280Webp} 1280w`,
+  `${authTradingVisualWebp} 1672w`,
+].join(', ');
 
 // ---------------------------------------------------------------------------
 // Shell & shared UI primitives
@@ -108,14 +115,21 @@ const AuthShell = ({ children }) => (
   >
     <div className="relative hidden min-h-0 overflow-hidden bg-[#060b18] lg:block">
       <picture>
-        <source srcSet={authTradingVisualWebp} type="image/webp" />
+        <source
+          srcSet={AUTH_VISUAL_SRC_SET}
+          sizes="(min-width: 1024px) 60vw, 0px"
+          type="image/webp"
+        />
         <img
           src={authTradingVisualWebp}
+          srcSet={AUTH_VISUAL_SRC_SET}
+          sizes="(min-width: 1024px) 60vw, 0px"
           alt=""
           aria-hidden="true"
           className="absolute inset-0 h-full w-full object-cover"
           decoding="async"
-          fetchPriority="low"
+          fetchPriority="high"
+          loading="eager"
         />
       </picture>
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,6,23,0.05),rgba(2,6,23,0.04)_58%,rgba(2,6,23,0.22))]" />
