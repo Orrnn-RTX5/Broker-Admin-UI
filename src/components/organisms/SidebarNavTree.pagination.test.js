@@ -21,14 +21,13 @@ test('Groups sidebar node is collapsed before dynamic group children mount', () 
   );
 });
 
-test('sidebar counts for clients and symbols come from API responses', () => {
-  assert.match(src, /import \{ useAccounts \} from '\.\.\/\.\.\/hooks\/useAccounts';/);
-  assert.match(src, /import \{ useInstruments \} from '\.\.\/\.\.\/hooks\/useInstruments';/);
-  assert.match(src, /const SIDEBAR_COUNT_LIMIT = 1/);
-  assert.match(src, /useAccounts\(1,\s*SIDEBAR_COUNT_LIMIT,\s*'',\s*'',\s*'',\s*canLoadClientAccounts\)/);
-  assert.match(src, /useInstruments\(1,\s*SIDEBAR_COUNT_LIMIT,\s*'',\s*'',\s*canLoadSymbols\)/);
-  assert.match(src, /newNode\.label === 'Clients & Accounts'[\s\S]*?getKnownSidebarCount\(accountsResponse,\s*\['accounts', 'data', 'answer', 'items', 'rows'\]\)/);
-  assert.match(src, /newNode\.label === 'Symbols'[\s\S]*?getKnownSidebarCount\(symbolsResponse,\s*\['instruments', 'symbols', 'data', 'answer', 'items', 'rows', 'value'\]\)/);
+test('sidebar does not fetch heavyweight account or symbol details for counts', () => {
+  assert.doesNotMatch(src, /import \{ useAccounts \} from '\.\.\/\.\.\/hooks\/useAccounts';/);
+  assert.doesNotMatch(src, /import \{ useInstruments \} from '\.\.\/\.\.\/hooks\/useInstruments';/);
+  assert.doesNotMatch(src, /SIDEBAR_COUNT_LIMIT/);
+  assert.doesNotMatch(src, /useAccounts\(/);
+  assert.doesNotMatch(src, /useInstruments\(/);
+  assert.doesNotMatch(src, /getKnownSidebarCount/);
   assert.doesNotMatch(terminalData, /label:\s*"Clients & Accounts"[\s\S]{0,80}count:/);
   assert.doesNotMatch(terminalData, /label:\s*"Symbols"[\s\S]{0,80}count:/);
 });

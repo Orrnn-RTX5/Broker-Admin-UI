@@ -4,6 +4,10 @@ import { normalizeArrayResponse } from '../utils/apiShapes';
 import { getRuntimeValue } from '../config/runtimeConfig';
 
 const viteEnv = import.meta.env || {};
+const MANAGER_SYMBOL_NAMES_CACHE_TTL_MS = 30000;
+
+let managerSymbolNamesCache = null;
+let managerSymbolNamesPromise = null;
 
 const getInstrumentsListMode = () =>
   String(
@@ -78,14 +82,37 @@ const getRows = (response) => normalizeArrayResponse(response, [
 ]);
 
 const fetchManagerSymbolNames = async () => {
-  try {
-    const res = await api.get('/manager/SymbolsList');
-    return res.data;
-  } catch (error) {
-    if (!isNotFoundError(error)) throw error;
-    const res = await api.get('/manager/SymbolList');
-    return res.data;
+  if (
+    managerSymbolNamesCache &&
+    Date.now() - managerSymbolNamesCache.cachedAt < MANAGER_SYMBOL_NAMES_CACHE_TTL_MS
+  ) {
+    return managerSymbolNamesCache.data;
   }
+
+  if (managerSymbolNamesPromise) return managerSymbolNamesPromise;
+
+  managerSymbolNamesPromise = (async () => {
+    try {
+      const res = await api.get('/manager/SymbolsList');
+      return res.data;
+    } catch (error) {
+      if (!isNotFoundError(error)) throw error;
+      const res = await api.get('/manager/SymbolList');
+      return res.data;
+    }
+  })()
+    .then((data) => {
+      managerSymbolNamesCache = {
+        data,
+        cachedAt: Date.now(),
+      };
+      return data;
+    })
+    .finally(() => {
+      managerSymbolNamesPromise = null;
+    });
+
+  return managerSymbolNamesPromise;
 };
 
 const fetchManagerSymbolParams = async (symbols) => {

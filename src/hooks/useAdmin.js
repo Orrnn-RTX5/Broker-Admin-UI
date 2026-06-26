@@ -18,6 +18,7 @@ export function useGroups(pageOrEnabled = 1, limit = 100, search = '', enabled =
     ManagerService.getGroupList,
     { page, limit, search },
     [page, limit, search],
-    isEnabled
+    isEnabled,
+    { requestKey: 'manager:groups', cacheTtlMs: 15000 }
   );
 }

@@ -10,7 +10,13 @@ export function usePositions(params = { page: 1, limit: 100, logins: [] }, autoR
       : await ManagerService.getPositionsAll(params.page, params.limit);
   };
 
-  const hook = useDataFetch(fetcher, null, [JSON.stringify(params)], enabled);
+  const hook = useDataFetch(
+    fetcher,
+    null,
+    [JSON.stringify(params)],
+    enabled,
+    { requestKey: 'manager:positions' }
+  );
   const mutatePositions = hook.mutate;
 
   useEffect(() => {
@@ -59,7 +65,13 @@ export function useDealsSummary(from, to, login, symbol, enabled = true, options
       search,
     });
   };
-  return useDataFetch(fetcher, { from, to, login, symbol, page, limit, search }, [from, to, login, symbol, page, limit, search], enabled);
+  return useDataFetch(
+    fetcher,
+    { from, to, login, symbol, page, limit, search },
+    [from, to, login, symbol, page, limit, search],
+    enabled,
+    { requestKey: 'manager:deals' }
+  );
 }
 
 export function useOrders(params = { limit: 100, offset: 0, logins: [] }, enabled = true) {
@@ -91,6 +103,12 @@ export function useOrders(params = { limit: 100, offset: 0, logins: [] }, enable
       openOnly,
     });
   }, [from, limitParam, loginsKey, offsetParam, openOnly, search, symbol, to]);
-  return useDataFetch(fetcher, null, [from, limitParam, loginsKey, offsetParam, openOnly, search, symbol, to], enabled);
+  return useDataFetch(
+    fetcher,
+    null,
+    [from, limitParam, loginsKey, offsetParam, openOnly, search, symbol, to],
+    enabled,
+    { requestKey: 'manager:orders' }
+  );
 }
 

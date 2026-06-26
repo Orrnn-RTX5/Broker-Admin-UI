@@ -16,7 +16,7 @@ test('useOrders fetches only the current BrokerOrders page with filters', () => 
   assert.doesNotMatch(src, /seenPageSignatures/);
   assert.match(src, /ManagerService\.getBrokerOrders\(\{\s*limit,\s*offset:\s*startOffset,\s*search,\s*symbol,\s*from,\s*to,\s*openOnly,\s*\}\)/);
   assert.match(src, /\}, \[from,\s*limitParam,\s*loginsKey,\s*offsetParam,\s*openOnly,\s*search,\s*symbol,\s*to\]\)/);
-  assert.match(src, /useDataFetch\(fetcher,\s*null,\s*\[from,\s*limitParam,\s*loginsKey,\s*offsetParam,\s*openOnly,\s*search,\s*symbol,\s*to\],\s*enabled\)/);
+  assert.match(src, /useDataFetch\(\s*fetcher,\s*null,\s*\[from,\s*limitParam,\s*loginsKey,\s*offsetParam,\s*openOnly,\s*search,\s*symbol,\s*to\],\s*enabled,\s*\{\s*requestKey:\s*'manager:orders'\s*\}\s*\)/);
 });
 
 test('usePositions auto-refresh skips hidden tabs and overlapping refreshes', () => {
@@ -25,4 +25,5 @@ test('usePositions auto-refresh skips hidden tabs and overlapping refreshes', ()
   assert.match(src, /if \(refreshInFlightRef\.current\) return/);
   assert.match(src, /const mutatePositions = hook\.mutate/);
   assert.match(src, /await mutatePositions\(\)/);
+  assert.match(src, /requestKey:\s*'manager:positions'/);
 });

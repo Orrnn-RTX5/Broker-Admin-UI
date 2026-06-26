@@ -22,6 +22,9 @@ test('InstrumentsService uses manager symbols by default and keeps admin instrum
   );
   assert.match(source, /if \(!isNotFoundError\(error\)\) throw error;/);
   assert.match(source, /return getManagerInstruments\(params\);/);
+  assert.match(source, /MANAGER_SYMBOL_NAMES_CACHE_TTL_MS = 30000/);
+  assert.match(source, /managerSymbolNamesCache/);
+  assert.match(source, /managerSymbolNamesPromise/);
   assert.match(source, /api\.get\('\/manager\/SymbolsList'\)/);
   assert.match(source, /api\.get\('\/manager\/SymbolList'\)/);
   assert.match(source, /api\.get\('\/manager\/SymbolsParams',\s*\{\s*params:\s*\{ symbols \},\s*\}\)/);
