@@ -7,6 +7,8 @@ import GroupPropertiesPopup from './components/RIGHTCLICKJPOPUPS/GroupProperties
 import ManagerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ManagerPropertiesPopup';
 import ServerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ServerPropertiesPopup';
 import CreateGroupPopup from './components/RIGHTCLICKJPOPUPS/CreateGroupPopup';
+import AccountEditPopup from './components/RIGHTCLICKJPOPUPS/AccountEditPopup';
+import TradeDetailsPopup from './components/RIGHTCLICKJPOPUPS/TradeDetailsPopup';
 import { TabBar } from './components/organisms/TabBar';
 import { HelpModal } from './components/organisms/HelpModal';
 import { AboutModal } from './components/organisms/AboutModal';
@@ -22,7 +24,7 @@ import { useConnectionStore } from './store/connectionStore';
 import useSymbolStore from './store/useSymbolStore';
 import { useLocalStorage } from './lib/useLocalStorage';
 import { useKbStatus } from './lib/useKbStatus';
-import { canAccessView, requiredPermissionForView } from './utils/permissions';
+import { canAccessView, hasPermission, PERMISSION_KEYS, requiredPermissionForView } from './utils/permissions';
 import { AuthService } from './services/auth.service';
 import {
   DESKTOP_RELEASES_PAGE_URL,
@@ -80,6 +82,9 @@ const AccessDeniedPanel = ({ viewName, permission }) => (
 );
 
 const SYMBOL_FEED_VIEWS = new Set(['Market Overview']);
+const ACCOUNT_EDIT_VIEW_TYPES = new Set(['Clients', 'Trading Accounts']);
+const TRADE_DETAIL_VIEW_TYPES = new Set(['Orders', 'Positions', 'Deals']);
+const NAVIGABLE_ROW_VIEWS = new Set(['Payments', 'Clients & Accounts', 'Orders & Deals']);
 const getInitialServerTabForLabel = (label) => (
   label === 'MainTrade Backup Server' ||
   label === 'Local Main Status Server' ||
@@ -101,6 +106,9 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
   const [selectedGroup, setSelectedGroup] = React.useState(null);
   const [isPopupOpen, setIsPopupOpen] = React.useState(false);
+  const [selectedEditTarget, setSelectedEditTarget] = React.useState(null);
+  const [editingAccount, setEditingAccount] = React.useState(null);
+  const [viewingTrade, setViewingTrade] = React.useState(null);
   const [serverPopupData, setServerPopupData] = React.useState(null);
   const [isCreatingGroup, setIsCreatingGroup] = React.useState(false);
   const [refreshKey, setRefreshKey] = React.useState(0);
@@ -297,6 +305,23 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
   const canViewActive = canAccessView(currentUser, activeNode);
   const activeViewPermission = requiredPermissionForView(activeNode);
+  const isAccountEditView = ACCOUNT_EDIT_VIEW_TYPES.has(activeNode);
+  const canEditAccounts = hasPermission(currentUser, PERMISSION_KEYS.EDIT_ACCOUNTS);
+  const canEditGroups = hasPermission(currentUser, PERMISSION_KEYS.MANAGE_GROUPS);
+  const canEditSelectedTarget =
+    (selectedEditTarget?.type === 'account' && isAccountEditView && canEditAccounts) ||
+    (selectedEditTarget?.type === 'group' && selectedEditTarget.viewType === activeNode && canEditGroups) ||
+    (selectedEditTarget?.type === 'trade' && selectedEditTarget.viewType === activeNode && TRADE_DETAIL_VIEW_TYPES.has(activeNode));
+
+  React.useEffect(() => {
+    setSelectedEditTarget((target) => (target?.viewType === activeNode ? target : null));
+    if (!isAccountEditView) {
+      setEditingAccount(null);
+    }
+    if (!TRADE_DETAIL_VIEW_TYPES.has(activeNode)) {
+      setViewingTrade(null);
+    }
+  }, [activeNode, isAccountEditView]);
 
   React.useEffect(() => {
     const symbolStore = useSymbolStore.getState();
@@ -370,13 +395,98 @@ const AuthenticatedAppInner = ({ navigate }) => {
     }
   };
 
-  const handleRowDoubleClick = (group) => {
-    if (activeNode === 'Payments' || activeNode === 'Clients & Accounts' || activeNode === 'Orders & Deals') {
-      if (group.name) handleNodeSelect(group.name);
+  const getEditTargetType = React.useCallback((row, viewType = activeNode) => {
+    if (!row) return null;
+    if (ACCOUNT_EDIT_VIEW_TYPES.has(viewType)) return 'account';
+    if (TRADE_DETAIL_VIEW_TYPES.has(viewType)) return 'trade';
+    if (viewType === 'Groups' && row.iconType === 'group') return 'group';
+    if (row.iconType === 'group' && (row.group === viewType || row.name === viewType || row.id === viewType)) return 'group';
+    return null;
+  }, [activeNode]);
+
+  const buildEditTarget = React.useCallback((row, viewType = activeNode) => {
+    const type = getEditTargetType(row, viewType);
+    if (!type) return null;
+
+    return {
+      type,
+      row,
+      viewType,
+      id: row?.id ?? row?.login ?? row?.ticket ?? row?.group ?? row?.name,
+    };
+  }, [activeNode, getEditTargetType]);
+
+  const handleEditableTargetSelect = React.useCallback((target) => {
+    if (!target) {
+      setSelectedEditTarget(null);
       return;
     }
-    setSelectedGroup(group);
-    setIsPopupOpen(true);
+
+    const normalizedTarget = target.type && target.row
+      ? target
+      : buildEditTarget(target.row ?? target, target.viewType ?? activeNode);
+    setSelectedEditTarget(normalizedTarget);
+  }, [activeNode, buildEditTarget]);
+
+  const openAccountEditor = React.useCallback((account) => {
+    if (!account) return;
+    if (!canEditAccounts) {
+      notify({
+        title: 'Edit unavailable',
+        description: `Requires ${PERMISSION_KEYS.EDIT_ACCOUNTS} permission.`,
+        tone: 'warning',
+      });
+      return;
+    }
+    setEditingAccount(account);
+  }, [canEditAccounts, notify]);
+
+  const openEditTarget = React.useCallback((target) => {
+    if (!target) return false;
+
+    if (target.type === 'group') {
+      setSelectedGroup(target.row);
+      setIsPopupOpen(true);
+      return true;
+    }
+
+    if (target.type === 'account') {
+      openAccountEditor(target.row);
+      return true;
+    }
+
+    if (target.type === 'trade') {
+      setViewingTrade({ viewType: target.viewType, row: target.row });
+      return true;
+    }
+
+    return false;
+  }, [openAccountEditor]);
+
+  const handleToolbarEdit = React.useCallback(() => {
+    openEditTarget(selectedEditTarget);
+  }, [openEditTarget, selectedEditTarget]);
+
+  const handleAccountSaved = React.useCallback(() => {
+    setRefreshKey((prev) => prev + 1);
+  }, []);
+
+  const handleGroupSaved = React.useCallback(() => {
+    setRefreshKey((prev) => prev + 1);
+  }, []);
+
+  const handleRowDoubleClick = (row) => {
+    const target = buildEditTarget(row);
+    if (target) {
+      setSelectedEditTarget(target);
+      openEditTarget(target);
+      return;
+    }
+
+    if (NAVIGABLE_ROW_VIEWS.has(activeNode)) {
+      if (row.name) handleNodeSelect(row.name);
+      return;
+    }
   };
 
   const handleAddClick = () => {
@@ -531,6 +641,8 @@ const AuthenticatedAppInner = ({ navigate }) => {
       }
       if (e.key === 'Escape') {
         if (isPopupOpen) setIsPopupOpen(false);
+        else if (editingAccount) setEditingAccount(null);
+        else if (viewingTrade) setViewingTrade(null);
         else if (isCreatingGroup) setIsCreatingGroup(false);
         else if (serverPopupData) setServerPopupData(null);
         else if (helpOpen) setHelpOpen(false);
@@ -540,7 +652,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [handleRefresh, activeTab, openTabs, isPopupOpen, isCreatingGroup, serverPopupData, helpOpen, aboutOpen, searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [handleRefresh, activeTab, openTabs, isPopupOpen, editingAccount, viewingTrade, isCreatingGroup, serverPopupData, helpOpen, aboutOpen, searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const connTone = connStatus === 'error' ? 'danger' : 'success';
   const connText = connStatus === 'error' ? `Connection issue: ${connError}` : 'Connected to RTX5-PROD-01';
@@ -577,6 +689,8 @@ const AuthenticatedAppInner = ({ navigate }) => {
         onRefresh={handleRefresh}
         onExport={handleExport}
         onImport={handleImport}
+        onEditClick={handleToolbarEdit}
+        canEdit={canEditSelectedTarget}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         searchInputRef={searchInputRef}
@@ -637,6 +751,9 @@ const AuthenticatedAppInner = ({ navigate }) => {
               refreshTrigger={refreshKey}
               searchQuery={searchQuery}
               onCountChange={setRowCount}
+              onEditableTargetSelect={handleEditableTargetSelect}
+              selectedEditableTargetId={selectedEditTarget?.id}
+              selectedEditableTargetType={selectedEditTarget?.type}
             />
           ) : (
             <AccessDeniedPanel viewName={activeNode} permission={activeViewPermission} />
@@ -652,7 +769,21 @@ const AuthenticatedAppInner = ({ navigate }) => {
           <GroupPropertiesPopup
             group={selectedGroup}
             onClose={() => setIsPopupOpen(false)}
-            refreshGroups={() => setRefreshKey((p) => p + 1)}
+            onSaved={handleGroupSaved}
+          />
+        )}
+        {editingAccount && (
+          <AccountEditPopup
+            account={editingAccount}
+            onClose={() => setEditingAccount(null)}
+            onSaved={handleAccountSaved}
+          />
+        )}
+        {viewingTrade && (
+          <TradeDetailsPopup
+            viewType={viewingTrade.viewType}
+            row={viewingTrade.row}
+            onClose={() => setViewingTrade(null)}
           />
         )}
         {isCreatingGroup && (

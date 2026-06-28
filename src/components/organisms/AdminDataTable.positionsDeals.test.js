@@ -6,6 +6,7 @@ const src = readFileSync(new URL('./AdminDataTable.jsx', import.meta.url), 'utf8
 
 test('Positions table maps live manager field variants into visible cells', () => {
   assert.match(src, /const getPositionRow = \(position, idx\) => \{/);
+  assert.match(src, /raw:\s*position/);
   assert.match(src, /pickDefined\(position, \['ticket', 'positionTicket', 'Position', 'position', 'id'\], idx\)/);
   assert.match(src, /pickDefined\(position, \['login', 'Login', 'accountLogin', 'account_login'\]\)/);
   assert.match(src, /pickDefined\(position, \['symbol', 'Symbol'\]\)/);
@@ -19,6 +20,7 @@ test('Positions table maps live manager field variants into visible cells', () =
 
 test('Deals table maps live manager field variants into visible cells', () => {
   assert.match(src, /const getDealRow = \(deal, idx\) => \{/);
+  assert.match(src, /raw:\s*deal/);
   assert.match(src, /pickDefined\(deal, \['ticket', 'Ticket', 'deal', 'Deal', 'id'\], idx\)/);
   assert.match(src, /pickDefined\(deal, \['orderTicket', 'OrderTicket', 'order', 'Order'\]\)/);
   assert.match(src, /pickDefined\(deal, \['login', 'Login', 'accountLogin', 'account_login'\]\)/);

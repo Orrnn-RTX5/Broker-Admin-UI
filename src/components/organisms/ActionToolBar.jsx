@@ -22,7 +22,7 @@ const Tool = ({ icon, label, onClick, disabled }) => (
 
 const ActionToolBar = ({
   onAddClick, onUndo, onRedo, canUndo, canRedo,
-  onRefresh, onExport, onImport,
+  onRefresh, onExport, onImport, onEditClick, canEdit = false,
   searchQuery = '', onSearchChange, searchInputRef,
 }) => (
   <div className="h-10 bg-[color:var(--bg-surface-1)] flex items-center px-2 gap-0.5 border-b border-[color:var(--border-subtle)] overflow-x-auto no-scrollbar">
@@ -50,8 +50,8 @@ const ActionToolBar = ({
     <Tool icon={Check} label="Apply" disabled />
     {/* Frontend-wired */}
     <Tool icon={Plus} label="Add" onClick={onAddClick} />
-    {/* Need row selection context — disabled */}
-    <Tool icon={Pencil} label="Edit" disabled />
+    {/* Enabled when the active view has a selected editable row */}
+    <Tool icon={Pencil} label="Edit" onClick={onEditClick} disabled={!canEdit} />
     <Tool icon={Trash2} label="Delete" disabled />
     <Tool icon={ArrowUpDown} label="Sort" disabled />
     <Divider />

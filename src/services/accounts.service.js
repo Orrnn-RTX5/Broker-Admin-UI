@@ -217,6 +217,11 @@ export const AccountsService = {
     return res.data;
   },
 
+  updateAccount: async (login, data) => {
+    const res = await api.put(`/api/v2/accounts/${login}`, data);
+    return res.data;
+  },
+
   getAccounts: async (params = {}) => {
     const accountParams = buildAccountParams(params);
     const cachedResponse = getCachedAccountResponse(accountParams);

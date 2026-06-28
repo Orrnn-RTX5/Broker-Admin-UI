@@ -23,8 +23,9 @@ export const ManagerService = {
   },
 
   updateGroup: async (groupData) => {
-    const res = await api.post('/manager/GroupUpdate', groupData, {
-      params: { group_name: groupData.name }
+    const { originalName, ...payload } = groupData;
+    const res = await api.post('/manager/GroupUpdate', payload, {
+      params: { group_name: originalName || payload.name }
     });
     return res.data;
   },

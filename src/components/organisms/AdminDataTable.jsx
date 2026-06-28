@@ -117,6 +117,8 @@ const FOLDER_ONLY_VIEWS = new Set([
 const DEFAULT_PAGE_SIZE = 100;
 const PAGE_SIZE_OPTIONS = [50, 100, 250];
 const PAGED_VIEW_TYPES = new Set(['Groups', 'Clients', 'Trading Accounts', 'Symbols', 'Orders', 'Positions', 'Deals']);
+const ACCOUNT_EDIT_VIEW_TYPES = new Set(['Clients', 'Trading Accounts']);
+const TRADE_DETAIL_VIEW_TYPES = new Set(['Orders', 'Positions', 'Deals']);
 const NON_GROUP_LOOKUP_VIEWS = new Set([
   'Clients & Accounts',
   'Clients',
@@ -349,6 +351,7 @@ const renderTableValue = (value) => (
 
 const getOrderRow = (order, idx) => ({
   id: pickDefined(order, ['ticket', 'Ticket', 'order', 'Order', 'orderTicket', 'OrderTicket'], idx),
+  raw: order,
   ticket: pickDefined(order, ['ticket', 'Ticket', 'order', 'Order', 'orderTicket', 'OrderTicket']),
   login: pickDefined(order, ['login', 'Login', 'accountLogin', 'account_login']),
   time: formatTradeTimestamp(pickDefined(order, ['timeSetupFormatted', 'timeDoneFormatted', 'timeSetup', 'TimeSetup', 'timeDone', 'TimeDone', 'time', 'Time', 'openTime', 'OpenTime', 'closeTime', 'CloseTime'])),
@@ -369,6 +372,7 @@ const getPositionRow = (position, idx) => {
 
   return {
     id: ticket,
+    raw: position,
     ticket,
     login: pickDefined(position, ['login', 'Login', 'accountLogin', 'account_login']),
     time: position.timeCreateFormatted || formatTradeTimestamp(rawTime),
@@ -390,6 +394,7 @@ const getDealRow = (deal, idx) => {
 
   return {
     id: ticket,
+    raw: deal,
     ticket,
     orderTicker: pickDefined(deal, ['orderTicket', 'OrderTicket', 'order', 'Order']),
     time: deal.timeFormatted || formatTradeTimestamp(rawTime),
@@ -512,6 +517,10 @@ const getBrokerClientRow = (account, idx) => {
 
   return {
     id,
+    raw: account,
+    login,
+    group,
+    status,
     iconType: 'user',
     name,
     description: [
@@ -525,6 +534,7 @@ const getBrokerClientRow = (account, idx) => {
 
 const getAccountRow = (account, idx) => ({
   id: pickDefined(account, ['login', 'Login', 'account_login', 'accountLogin'], idx),
+  raw: account,
   login: pickDefined(account, ['login', 'Login', 'account_login', 'accountLogin']),
   name: pickDefined(account, ['name', 'Name', 'client_name', 'clientName', 'full_name', 'fullName', 'user_name', 'userName']),
   group: pickDefined(account, ['group', 'Group', 'group_name', 'groupName', 'account_group', 'accountGroup', 'accountGroupName']),
@@ -707,7 +717,18 @@ const PaginationIconButton = ({ 'aria-label': ariaLabel, onClick, disabled, chil
   </button>
 );
 
-const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerTab, refreshTrigger, searchQuery = '', onCountChange }) => {
+const AdminDataTable = ({
+  onRowDoubleClick,
+  viewType,
+  onAddClick,
+  initialServerTab,
+  refreshTrigger,
+  searchQuery = '',
+  onCountChange,
+  onEditableTargetSelect,
+  selectedEditableTargetId,
+  selectedEditableTargetType,
+}) => {
   const [contextMenu, setContextMenu] = useState({ x: 0, y: 0, visible: false });
   const [serverPopupData, setServerPopupData] = useState(null);
   const [closeAllSymbol, setCloseAllSymbol] = useState('');
@@ -1220,12 +1241,45 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
   const renderedFilteredCount = renderedTotalCount;
   const mountedRowBytes = React.useMemo(() => estimateJsonBytes(data), [data]);
   const totalPages = pagination?.hasKnownTotal ? pagination.totalPages : undefined;
+  const isAccountEditView = ACCOUNT_EDIT_VIEW_TYPES.has(viewType);
+  const isGroupEditView = viewType === 'Groups' || isGroupLookupView;
+  const isTradeDetailView = TRADE_DETAIL_VIEW_TYPES.has(viewType);
+  const selectedEditableTargetKey = selectedEditableTargetId === undefined || selectedEditableTargetId === null
+    ? ''
+    : String(selectedEditableTargetId);
+
+  const getRowEditTargetType = React.useCallback((row) => {
+    if (!row) return null;
+    if (isAccountEditView) return 'account';
+    if (isTradeDetailView) return 'trade';
+    if (isGroupEditView && row.iconType === 'group') return 'group';
+    return null;
+  }, [isAccountEditView, isGroupEditView, isTradeDetailView]);
 
   React.useEffect(() => {
     if (Number.isFinite(totalPages) && activePage > totalPages) {
       setPage(totalPages);
     }
   }, [activePage, totalPages]);
+
+  React.useEffect(() => {
+    if (!selectedEditableTargetType) return;
+    const activeTypes = new Set([
+      isAccountEditView ? 'account' : null,
+      isGroupEditView ? 'group' : null,
+      isTradeDetailView ? 'trade' : null,
+    ].filter(Boolean));
+    if (!activeTypes.has(selectedEditableTargetType)) {
+      onEditableTargetSelect?.(null);
+    }
+  }, [isAccountEditView, isGroupEditView, isTradeDetailView, onEditableTargetSelect, selectedEditableTargetType]);
+
+  React.useEffect(() => {
+    if (!selectedEditableTargetKey || !selectedEditableTargetType) return;
+    if (!data.some((row) => String(row.id) === selectedEditableTargetKey && getRowEditTargetType(row) === selectedEditableTargetType)) {
+      onEditableTargetSelect?.(null);
+    }
+  }, [data, getRowEditTargetType, onEditableTargetSelect, selectedEditableTargetKey, selectedEditableTargetType]);
 
   React.useEffect(() => {
     if (
@@ -1522,6 +1576,24 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
     setPage(1);
   };
 
+  const handleRowClick = (row) => {
+    if (isPositionsView && row.symbol) {
+      setCloseAllSymbol(row.symbol);
+      setCloseAllNotice(null);
+    }
+
+    const targetType = getRowEditTargetType(row);
+    onEditableTargetSelect?.(targetType
+      ? { type: targetType, row, viewType, id: row.id }
+      : null);
+  };
+
+  const isSelectedEditableRow = (row) => (
+    selectedEditableTargetKey &&
+    selectedEditableTargetType === getRowEditTargetType(row) &&
+    String(row.id) === selectedEditableTargetKey
+  );
+
   const closeAllSymbolOptions = isPositionsView
     ? Array.from(new Set(data.map((row) => row.symbol).filter(Boolean))).sort()
     : [];
@@ -1792,15 +1864,10 @@ const AdminDataTable = ({ onRowDoubleClick, viewType, onAddClick, initialServerT
         {data.map((row, idx) => (
           <div
             key={row.id}
-            onClick={() => {
-              if (isPositionsView && row.symbol) {
-                setCloseAllSymbol(row.symbol);
-                setCloseAllNotice(null);
-              }
-            }}
+            onClick={() => handleRowClick(row)}
             onDoubleClick={() => onRowDoubleClick && onRowDoubleClick(row)}
             onContextMenu={(e) => { e.stopPropagation(); handleContextMenu(e, row); }}
-            className={`flex cursor-pointer group border-b border-black/10 transition-colors ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-blue-600/20`}
+            className={`flex cursor-pointer group border-b border-black/10 transition-colors ${isSelectedEditableRow(row) ? 'bg-blue-600/25 ring-1 ring-inset ring-blue-500/40' : (idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]')} hover:bg-blue-600/20`}
           >
             {isClientsView ? (
               <>

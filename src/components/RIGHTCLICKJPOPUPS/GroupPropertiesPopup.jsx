@@ -3,6 +3,8 @@ import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { X, Minus, Square, HelpCircle, Users, ChevronUp, ChevronDown, Plus, Pencil, Trash2, Save } from 'lucide-react';
 import SymbolPropertiesPopup from './SymbolPropertiesPopup';
 import { ManagerService } from '../../services/manager.service';
+import { buildGroupRiskPayload } from '../../utils/adminValidation';
+import { useToast } from '../ui/useToast';
 
 const MotionDiv = motion.div;
 
@@ -10,16 +12,23 @@ const Label = ({ children, width = "w-40" }) => (
   <label className={`text-[11px] text-[color:var(--text-primary)] ${width} text-right shrink-0 select-none`}>{children}:</label>
 );
 
-const InputField = ({ label, value, type = "text", width = "w-full", labelWidth }) => (
-  <div className="flex items-center gap-3 mb-2">
-    <Label width={labelWidth}>{label}</Label>
-    <input
-      type={type}
-      defaultValue={value}
-      className={`${width} bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-2 py-0.5 text-[11px] text-[color:var(--text-primary)] focus:border-blue-500/50 focus:outline-none`}
-    />
-  </div>
-);
+const InputField = ({ label, value, type = "text", width = "w-full", labelWidth, onChange, disabled = false }) => {
+  const valueProps = onChange || disabled
+    ? { value: value ?? '', onChange: onChange || (() => {}) }
+    : { defaultValue: value };
+
+  return (
+    <div className="flex items-center gap-3 mb-2">
+      <Label width={labelWidth}>{label}</Label>
+      <input
+        type={type}
+        {...valueProps}
+        disabled={disabled}
+        className={`${width} ${disabled ? 'opacity-60 cursor-not-allowed' : ''} bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-2 py-0.5 text-[11px] text-[color:var(--text-primary)] focus:border-blue-500/50 focus:outline-none`}
+      />
+    </div>
+  );
+};
 
 const SelectField = ({ label, options, defaultValue, value, onChange, width = "w-full", labelWidth, disabled = false }) => (
   <div className="flex items-center gap-3 mb-2">
@@ -55,8 +64,57 @@ const SideButton = ({ icon: Icon, label, onClick }) => (
   </button>
 );
 
-const GroupPropertiesPopup = ({ group, onClose }) => {
+const pickDefined = (source, keys, fallback = '') => {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (value !== undefined && value !== null && value !== '') return value;
+  }
+  return fallback;
+};
+
+const parseLeverageValue = (value, fallback = 100) => {
+  const match = String(value ?? '').match(/(\d+)\s*$/);
+  return match ? Number(match[1]) : fallback;
+};
+
+const normalizeCsv = (value) => (
+  Array.isArray(value) ? value.join(', ') : String(value ?? '')
+);
+
+const buildInitialGroupForm = (group) => {
+  const name = group?.group || group?.name || '';
+
+  return {
+    originalName: name,
+    name,
+    description: pickDefined(group, ['description', 'company'], ''),
+    accountType: pickDefined(group, ['accountType', 'type'], 'standard'),
+    bookType: pickDefined(group, ['bookType'], 'b'),
+    commissionRate: pickDefined(group, ['commissionRate'], 0),
+    commissionType: pickDefined(group, ['commissionType'], 'per_lot'),
+    currency: pickDefined(group, ['currency'], 'USD'),
+    demo: Boolean(pickDefined(group, ['demo'], false)),
+    executionMode: pickDefined(group, ['executionMode', 'risk'], 'market'),
+    leverage: parseLeverageValue(pickDefined(group, ['leverage'], 100), 100),
+    lotDivisor: pickDefined(group, ['lotDivisor'], 1),
+    marginCallLevel: pickDefined(group, ['marginCallLevel'], 100),
+    maxLotPerTrade: pickDefined(group, ['maxLotPerTrade'], 100),
+    maxTotalLots: pickDefined(group, ['maxTotalLots'], 500),
+    negativeBalanceProtection: Boolean(pickDefined(group, ['negativeBalanceProtection'], true)),
+    spreadMarkup: pickDefined(group, ['spreadMarkup'], 0),
+    stopOutLevel: pickDefined(group, ['stopOutLevel'], 50),
+    swapMultiplier: pickDefined(group, ['swapMultiplier'], 1),
+    symbolsAllowed: normalizeCsv(pickDefined(group, ['symbolsAllowed'], '')),
+    symbolsBlocked: normalizeCsv(pickDefined(group, ['symbolsBlocked'], '')),
+    tradeAllowed: pickDefined(group, ['tradeAllowed'], true) !== false,
+  };
+};
+
+const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
   const [activeTab, setActiveTab] = useState('Common');
+  const [formData, setFormData] = useState(() => buildInitialGroupForm(group));
+  const [isSavingGroup, setIsSavingGroup] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   const [selectedSymbol, setSelectedSymbol] = useState(null);
   const [showAddCommission, setShowAddCommission] = useState(false);
   const [isCreatingCommission, setIsCreatingCommission] = useState(false);
@@ -80,6 +138,7 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
   const [genStatements, setGenStatements] = useState(false);
   const [sendEmail, setSendEmail] = useState(false);
   const dragControls = useDragControls();
+  const { notify } = useToast();
 
   const [stats, setStats] = useState(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
@@ -87,6 +146,28 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
   const [groupSymbols, setGroupSymbols] = useState([]);
   const [isLoadingSymbols, setIsLoadingSymbols] = useState(false);
   const [hasFetchedSymbols, setHasFetchedSymbols] = useState(false);
+
+  const setFormField = (field) => (event) => {
+    const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
+    setFormData((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleSaveGroup = async () => {
+    setIsSavingGroup(true);
+    setSaveError(null);
+
+    try {
+      const payload = buildGroupRiskPayload(formData);
+      await ManagerService.updateGroup(payload);
+      notify({ title: 'Group updated', description: formData.name, tone: 'success' });
+      onSaved?.();
+      onClose();
+    } catch (error) {
+      setSaveError(error?.response?.data?.message || error?.message || 'Failed to update group.');
+    } finally {
+      setIsSavingGroup(false);
+    }
+  };
 
   React.useEffect(() => {
     if (activeTab === 'Statistics' && !stats) {
@@ -274,21 +355,21 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
                 <div className="space-y-1">
                   <div className="grid grid-cols-2 gap-x-8">
                     <div>
-                      <InputField label="Name" value={currentGroupName || 'StarrFX\\ACH'} width="w-64" />
+                      <InputField label="Name" value={formData.name} onChange={setFormField('name')} width="w-64" />
                       <SelectField label="Trade server" options={["Main Trade Server, 1", "Backup Server"]} defaultValue="Main Trade Server, 1" />
                       <SelectField label="Authentication" options={["Normal", "LDAP", "OAuth"]} defaultValue="Normal" />
                       <SelectField label="One-time password" options={["Disabled", "Email", "SMS"]} defaultValue="Disabled" />
                       <SelectField label="Push notifications" options={["None", "Enabled"]} defaultValue="None" />
                     </div>
                     <div>
-                      <SelectField label="Currency" options={["USD", "EUR", "GBP",'JPY','CHF',"RUR"]} defaultValue="USD" width="w-24" />
+                      <SelectField label="Currency" options={["USD", "EUR", "GBP",'JPY','CHF',"RUR"]} value={formData.currency} onChange={setFormField('currency')} width="w-24" />
                       <SelectField label="Digits" options={["2", "3", "5"]} defaultValue="2" width="w-24" />
                       <InputField label="Minimum password length" value="8" width="w-16" />
                       <CheckboxField label="Force one-time password usage" ml="ml-16 mt-4" />
                     </div>
                   </div>
                   <div className="mt-4 border-t border-white/5 pt-4">
-                    <CheckboxField label="Enable connections" checked={true} />
+                    <CheckboxField label="Enable connections" checked={formData.tradeAllowed} onChange={setFormField('tradeAllowed')} />
                     <CheckboxField label="Enable certificate confirmation" />
                     <CheckboxField label="Change password at first login" />
                     <CheckboxField label="Show the risk warning window after connection" />
@@ -348,6 +429,7 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
               {activeTab === 'Company' && (
                 <div className="space-y-1 pr-4">
                    <SelectField label="Company" options={["Flexy Markets Limited", "Global Trades Corp"]} defaultValue="Flexy Markets Limited" width="w-full" />
+                   <InputField label="Description" value={formData.description} onChange={setFormField('description')} />
                    <InputField label="Company site" value="" />
                    <InputField label="Company email" value="" />
                    <div className="h-4"></div>
@@ -363,12 +445,12 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
               {/* --- MARGIN TAB --- */}
               {activeTab === 'Margin' && (
                 <div className="space-y-4">
-                   <SelectField label="Risk management" options={["for Retail Forex, CFD, Futures with hedged positions", "Netting", "Exchange"]} defaultValue="for Retail Forex, CFD, Futures with hedged positions" />
+                   <SelectField label="Risk management" options={["market", "instant"]} value={formData.executionMode} onChange={setFormField('executionMode')} />
                    <div className="flex items-center gap-3 ml-4">
                       <Label width="w-36">Margin call level</Label>
-                      <input type="text" defaultValue="150.00" className="w-20 bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-2 py-0.5 text-[11px] text-white" />
+                      <input type="text" value={formData.marginCallLevel} onChange={setFormField('marginCallLevel')} className="w-20 bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-2 py-0.5 text-[11px] text-white" />
                       <Label width="w-32">Stop out level</Label>
-                      <input type="text" defaultValue="30.00" className="w-20 bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-2 py-0.5 text-[11px] text-white" />
+                      <input type="text" value={formData.stopOutLevel} onChange={setFormField('stopOutLevel')} className="w-20 bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-2 py-0.5 text-[11px] text-white" />
                       <select className="bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-1 py-0.5 text-[11px] text-[color:var(--text-primary)] outline-none">
                          <option value="percent">in %, percent</option>
                       </select>
@@ -577,7 +659,7 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
                     <div>
                       <SelectField label="Available history" options={["All", "Last 3 months"]} defaultValue="All" width="w-32" />
                       <SelectField label="Maximum orders" options={["unlimited", "100"]} defaultValue="unlimited" width="w-32" />
-                      <SelectField label="Leverage by default" options={["1 : 1000", "1 : 500"]} defaultValue="1 : 1000" width="w-32" />
+                      <SelectField label="Leverage by default" options={["1000", "500", "100", "50"]} value={String(formData.leverage)} onChange={setFormField('leverage')} width="w-32" />
                     </div>
                   </div>
 
@@ -630,8 +712,9 @@ const GroupPropertiesPopup = ({ group, onClose }) => {
 
         {/* Footer Area */}
         <div className="h-14 bg-[color:var(--bg-surface-1)] border-t border-black/40 flex items-center justify-end px-6 gap-2">
-           <button onClick={onClose} className="px-8 py-1.5 bg-[#404040] hover:bg-[color:var(--border-strong)] text-[12px] text-white border border-black/60 rounded-sm shadow-md transition-shadow active:shadow-none hover:border-black/80">OK</button>
-           <button onClick={onClose} className="px-8 py-1.5 bg-[#404040] hover:bg-[color:var(--border-strong)] text-[12px] text-white border border-black/60 rounded-sm shadow-md transition-shadow active:shadow-none hover:border-black/80">Cancel</button>
+           {saveError && <span className="mr-auto max-w-[360px] truncate text-[11px] text-red-400" title={saveError}>{saveError}</span>}
+           <button onClick={handleSaveGroup} disabled={isSavingGroup} className="px-8 py-1.5 bg-[#404040] hover:bg-[color:var(--border-strong)] text-[12px] text-white border border-black/60 rounded-sm shadow-md transition-shadow active:shadow-none hover:border-black/80 disabled:opacity-50">{isSavingGroup ? 'Saving...' : 'OK'}</button>
+           <button onClick={onClose} disabled={isSavingGroup} className="px-8 py-1.5 bg-[#404040] hover:bg-[color:var(--border-strong)] text-[12px] text-white border border-black/60 rounded-sm shadow-md transition-shadow active:shadow-none hover:border-black/80 disabled:opacity-50">Cancel</button>
            <button className="px-8 py-1.5 bg-[#404040] hover:bg-[color:var(--border-strong)] text-[12px] text-white border border-black/60 rounded-sm shadow-md transition-shadow active:shadow-none hover:border-black/80 ml-6">Help</button>
         </div>
       </MotionDiv>

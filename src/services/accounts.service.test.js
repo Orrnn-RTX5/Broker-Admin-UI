@@ -2,8 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 let requestedUrl = '';
+let requestedMethod = '';
 let requestedAllowAuthFailure = false;
 let requestedParams = null;
+let requestedData = null;
 let requestCount = 0;
 let mockResponseData = {
   answer: [
@@ -37,8 +39,10 @@ const { AccountsService } = await import('./accounts.service.js');
 
 api.interceptors.request.use((config) => {
   requestedUrl = config.url;
+  requestedMethod = config.method;
   requestedAllowAuthFailure = config._allowAuthFailure === true;
   requestedParams = config.params;
+  requestedData = config.data;
   requestCount += 1;
   return {
     ...config,
@@ -52,6 +56,10 @@ api.interceptors.request.use((config) => {
     }),
   };
 });
+
+const parseRequestData = () => (
+  typeof requestedData === 'string' ? JSON.parse(requestedData) : requestedData
+);
 
 test('Trading Accounts list uses broker manager account details and does not expire login on list failure', async () => {
   requestCount = 0;
@@ -139,4 +147,22 @@ test('AccountDetailsMany legacy full-array responses are paged before reaching R
   assert.equal(pageThree.answer.length, 50);
   assert.equal(pageThree.answer[0].Login, 990200);
   assert.equal(pageThree.total, 250);
+});
+
+test('updateAccount sends changed account fields through the account REST update endpoint', async () => {
+  requestCount = 0;
+  mockResponseData = { ok: true };
+
+  const payload = {
+    name: 'Updated Trader',
+    email: 'updated@example.com',
+    group: 'real\\standard',
+  };
+
+  const response = await AccountsService.updateAccount(990701, payload);
+
+  assert.equal(requestedUrl, '/api/v2/accounts/990701');
+  assert.equal(requestedMethod, 'put');
+  assert.deepEqual(parseRequestData(), payload);
+  assert.deepEqual(response, { ok: true });
 });

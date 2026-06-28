@@ -14,3 +14,11 @@ test('BrokerOrders uses the live API limit/offset contract', () => {
   assert.match(methodBlock, /params\s*\n\s*\}\)/);
   assert.doesNotMatch(methodBlock, /params:\s*\{\s*page,\s*limit\s*\}/);
 });
+
+test('GroupUpdate strips UI-only originalName and uses it as the update target', () => {
+  const methodBlock = src.match(/updateGroup:\s*async[\s\S]*?return res\.data;\s*\n\s*},/)?.[0] ?? '';
+
+  assert.match(methodBlock, /const \{ originalName, \.\.\.payload \} = groupData;/);
+  assert.match(methodBlock, /api\.post\('\/manager\/GroupUpdate', payload,/);
+  assert.match(methodBlock, /params:\s*\{ group_name: originalName \|\| payload\.name \}/);
+});
