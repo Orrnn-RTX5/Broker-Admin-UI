@@ -1,14 +1,69 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, Copy, ToggleLeft, ToggleRight, Edit2, Loader2, ChevronDown, X } from 'lucide-react';
 import {
-  symbolList, symbolAdd, symbolUpdate,
+  symbolAdd, symbolUpdate,
   symbolClone, symbolCategoryList,
 } from '../../../services/api';
 import { InstrumentsService } from '../../../services/instruments.service';
 import { buildFeedWsUrl } from '../../../config/endpoints';
-import { getApiErrorMessage } from '../../../utils/apiShapes';
+import { getApiErrorMessage, normalizeArrayResponse } from '../../../utils/apiShapes';
 import { buildActionableErrorState } from '../../../utils/errorState';
 import ActionableErrorState from '../../atoms/ActionableErrorState';
+
+const SYMBOL_MANAGEMENT_LIMIT = 5000;
+const CATEGORY_LOAD_TIMEOUT_MS = 7000;
+const SYMBOL_RESPONSE_KEYS = ['instruments', 'symbols', 'data', 'answer', 'items', 'rows', 'value'];
+const CATEGORY_RESPONSE_KEYS = ['categories', 'data', 'answer', 'items', 'rows', 'value'];
+
+const withTimeout = (promise, timeoutMs, message) => new Promise((resolve, reject) => {
+  const timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+
+  Promise.resolve(promise)
+    .then((value) => {
+      clearTimeout(timer);
+      resolve(value);
+    })
+    .catch((error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+});
+
+const normalizeSymbolManagementRows = (response) =>
+  normalizeArrayResponse(response, SYMBOL_RESPONSE_KEYS)
+    .map((row) => {
+      if (typeof row === 'string') {
+        return { symbol: row, name: row, symbolType: 'base', enabled: true };
+      }
+
+      if (!row || typeof row !== 'object') return null;
+
+      const symbol = row.symbol || row.Symbol || row.name || row.Name || '';
+      if (!symbol) return null;
+      const parentSymbol = row.parentSymbol || row.ParentSymbol || row.parent_symbol || '';
+
+      return {
+        ...row,
+        symbol,
+        name: row.name || row.Name || symbol,
+        symbolType: row.symbolType || row.SymbolType || row.symbol_type || (parentSymbol ? 'derived' : 'base'),
+        parentSymbol,
+        category: row.category || row.Category || '',
+        enabled: row.enabled ?? row.Enabled ?? true,
+      };
+    })
+    .filter(Boolean);
+
+const normalizeCategoryRows = (response) =>
+  normalizeArrayResponse(response, CATEGORY_RESPONSE_KEYS)
+    .map((row) => {
+      if (typeof row === 'string') return { name: row };
+      if (!row || typeof row !== 'object') return null;
+
+      const name = row.name || row.Name || row.category || row.Category || '';
+      return name ? { ...row, name } : null;
+    })
+    .filter(Boolean);
 
 // ─── Add / Edit Modal ──────────────────────────────────────────────────────────
 const SymbolFormModal = ({ symbol: existing, categories, onClose, onSuccess }) => {
@@ -329,16 +384,23 @@ const SymbolsTab = () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const [symsResult, catsResult] = await Promise.allSettled([symbolList(), symbolCategoryList()]);
+      const [symsResult, catsResult] = await Promise.allSettled([
+        InstrumentsService.getInstruments({ page: 1, limit: SYMBOL_MANAGEMENT_LIMIT, search: '', enabled: '' }),
+        withTimeout(
+          symbolCategoryList(),
+          CATEGORY_LOAD_TIMEOUT_MS,
+          'category list request timed out'
+        ),
+      ]);
       const failures = [];
       if (symsResult.status === 'fulfilled') {
-        setSymbols(Array.isArray(symsResult.value) ? symsResult.value : []);
+        setSymbols(normalizeSymbolManagementRows(symsResult.value));
       } else {
         setSymbols([]);
         failures.push(`Symbols: ${getApiErrorMessage(symsResult.reason, 'symbol list request failed')}`);
       }
       if (catsResult.status === 'fulfilled') {
-        setCategories(Array.isArray(catsResult.value) ? catsResult.value : []);
+        setCategories(normalizeCategoryRows(catsResult.value));
       } else {
         setCategories([]);
         failures.push(`Categories: ${getApiErrorMessage(catsResult.reason, 'category list request failed')}`);
@@ -448,7 +510,7 @@ const SymbolsTab = () => {
                 <tr><td colSpan={9} className="text-center py-10 text-sm" style={{ color: 'var(--muted)' }}>No symbols found.</td></tr>
               ) : filtered.map(s => (
                 <tr key={s.symbol}>
-                  <td style={{ color: 'var(--accent-text)', fontWeight: 500 }}>
+                  <td style={{ color: 'var(--text)', fontWeight: 500 }}>
                     {s.symbol}
                     {s.symbolType === 'derived' && s.parentSymbol && (
                       <span className="ml-2 ui-badge ui-badge-primary text-[10px]">derived: {s.parentSymbol}</span>

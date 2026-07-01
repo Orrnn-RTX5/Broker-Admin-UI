@@ -1,9 +1,15 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { AnalyticsService } from '../../services/analytics.service';
 import { RefreshCw } from 'lucide-react';
+import { useCachedTabRequest } from '../../hooks/useCachedTabRequest';
+import ActionableErrorState from '../atoms/ActionableErrorState';
 
 const TAB_TOP = 'Top Traders';
 const TAB_WORST = 'Worst Traders';
+const TRADER_RANKING_LOADERS = {
+  [TAB_TOP]: () => AnalyticsService.getTopTraders(),
+  [TAB_WORST]: () => AnalyticsService.getWorstTraders(),
+};
 
 const fmt = (v) => typeof v === 'number' ? v.toFixed(2) : String(v ?? '—');
 const pnlColor = (v) => (v > 0 ? 'text-[#4ec9b0]' : v < 0 ? 'text-[#f48771]' : 'text-[color:var(--text-primary)]');
@@ -38,27 +44,9 @@ const TradersTable = ({ data }) => {
 
 const AnalyticsTradersView = () => {
   const [tab, setTab] = useState(TAB_TOP);
-  const [results, setResults] = useState({});
-  const [loading, setLoading] = useState(false);
-
-  const load = useCallback(async (key) => {
-    if (results[key]) return;
-    setLoading(true);
-    try {
-      const res = key === TAB_TOP
-        ? await AnalyticsService.getTopTraders()
-        : await AnalyticsService.getWorstTraders();
-      setResults(r => ({ ...r, [key]: Array.isArray(res) ? res : [] }));
-    } catch (err) {
-      alert('Failed: ' + (err.response?.data?.message || err.message));
-    } finally { setLoading(false); }
-  }, [results]);
-
-  const refresh = () => {
-    setResults(r => { const copy = { ...r }; delete copy[tab]; return copy; });
-  };
-
-  useEffect(() => { load(tab); }, [load, tab]);
+  const { data, loading, error, refresh } = useCachedTabRequest(tab, TRADER_RANKING_LOADERS, {
+    fallback: 'Trader rankings failed to load.',
+  });
 
   return (
     <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden">
@@ -78,7 +66,9 @@ const AnalyticsTradersView = () => {
 
       {loading
         ? <div className="flex items-center justify-center flex-1 text-[#888] text-[11px]">Loading…</div>
-        : <TradersTable data={results[tab] ?? null} />}
+        : error
+          ? <ActionableErrorState title="Unable to load data" message={error} actionLabel="Refresh" onAction={refresh} />
+          : <TradersTable data={Array.isArray(data) ? data : []} />}
     </div>
   );
 };

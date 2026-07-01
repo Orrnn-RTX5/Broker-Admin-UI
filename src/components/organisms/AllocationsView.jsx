@@ -26,7 +26,7 @@ const allocationsTopData = [
 const allocationsTableData = [
   { group: "preliminary", desc: "Preliminary Account", currency: "USD", type: "Hedged", server: "Main Trade Server", countries: "All countries", leverages: "", kyc: "Documents, Auto check", descBg: "" },
   { group: "demo\\forex-hedge-usd-01", desc: "Flexy Markets", currency: "USD", type: "Hedged", server: "Main Trade Server", countries: "All countries", leverages: "1000", kyc: "", descBg: "" },
-  { group: "demo\\STD", desc: "Preliminary Account", currency: "USD", type: "Hedged", server: "Main Trade Server", countries: "All countries", leverages: "", kyc: "", descBg: "bg-red-900/60 text-red-100" },
+  { group: "demo\\STD", desc: "Preliminary Account", currency: "USD", type: "Hedged", server: "Main Trade Server", countries: "All countries", leverages: "", kyc: "", descBg: "" },
 ];
 
 const AllocationsView = () => {

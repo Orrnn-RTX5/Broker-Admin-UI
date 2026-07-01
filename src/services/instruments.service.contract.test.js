@@ -28,7 +28,21 @@ test('InstrumentsService uses manager symbols by default and keeps admin instrum
   assert.match(source, /api\.get\('\/manager\/SymbolsList'\)/);
   assert.match(source, /api\.get\('\/manager\/SymbolList'\)/);
   assert.match(source, /api\.get\('\/manager\/SymbolsParams',\s*\{\s*params:\s*\{ symbols \},\s*\}\)/);
+  assert.match(source, /MANAGER_SYMBOL_PARAMS_TIMEOUT_MS = 7000/);
+  assert.match(source, /withTimeout\(\s*api\.get\('\/manager\/SymbolsParams'/);
+  assert.match(source, /catch\s*\{\s*return \[\];\s*\}/);
   assert.match(source, /total:\s*searchedNames\.length/);
   assert.match(source, /page:\s*safePage/);
   assert.match(source, /limit:\s*safeLimit/);
+});
+
+test('InstrumentsService normalizes fields required by Symbol Management', () => {
+  assert.match(source, /symbolType:\s*normalizeSymbolType\(source\)/);
+  assert.match(source, /category:\s*category \|\| ''/);
+  assert.match(source, /contractSize:\s*toNumber\(firstDefined\(source\.contractSize/);
+  assert.match(source, /spread:\s*toNumber\(firstDefined\(source\.spread/);
+  assert.match(source, /calcMode:\s*firstDefined\(source\.calcMode/);
+  assert.match(source, /parentSymbol:\s*parentSymbol \|\| ''/);
+  assert.match(source, /spreadMarkupPips:\s*toNumber\(firstDefined\(source\.spreadMarkupPips/);
+  assert.match(source, /enabled:\s*normalizeEnabledValue\(source\)/);
 });

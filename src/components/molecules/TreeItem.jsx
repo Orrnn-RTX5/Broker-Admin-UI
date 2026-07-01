@@ -38,12 +38,12 @@ const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, onLockedDropdownCl
         onClick={handleRowClick}
         onDoubleClick={() => onDoubleClick && onDoubleClick(item)}
         className={cn(
-          'flex items-center h-7 pr-2 select-none text-[12px]',
+          'mx-1 flex items-center h-8 pr-2 select-none text-[12px] rounded-[var(--radius-sm)]',
           isBlockedNavigation ? 'cursor-not-allowed' : 'cursor-default',
           'transition-colors duration-100',
           isActive
-            ? 'bg-[color:var(--bg-surface-3)] text-[color:var(--text-primary)] font-medium'
-            : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-surface-2)]'
+            ? 'bg-[color:var(--accent-500)]/16 text-[color:var(--text-primary)] font-semibold shadow-[inset_2px_0_0_var(--accent-500)]'
+            : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-surface-3)] hover:text-[color:var(--text-primary)]'
         )}
         style={{ paddingLeft: `${level * 14 + 6}px` }}
       >
@@ -51,7 +51,7 @@ const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, onLockedDropdownCl
           type="button"
           onClick={handleArrowClick}
           className={cn(
-            'w-4 h-4 flex items-center justify-center shrink-0 rounded-sm hover:bg-[color:var(--bg-surface-3)] focus:outline-none',
+            'w-5 h-5 flex items-center justify-center shrink-0 rounded-sm hover:bg-[color:var(--bg-surface-3)] focus:outline-none',
             item.lockedDropdown ? 'cursor-not-allowed' : 'cursor-default'
           )}
           tabIndex={-1}
@@ -60,14 +60,14 @@ const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, onLockedDropdownCl
             <ChevronRight
               size={11}
               className={cn(
-                'text-[color:var(--text-muted)] transition-transform duration-150',
+                'text-[color:var(--text-secondary)] transition-transform duration-150',
                 !item.lockedDropdown && isOpen && 'rotate-90'
               )}
             />
           )}
         </button>
 
-        <div className="w-4 h-4 flex items-center justify-center shrink-0 text-[color:var(--text-muted)]">
+        <div className={cn('w-4 h-4 flex items-center justify-center shrink-0', isActive ? 'text-[color:var(--accent-600)]' : 'text-[color:var(--text-muted)]')}>
           <Icon size={12} />
         </div>
 

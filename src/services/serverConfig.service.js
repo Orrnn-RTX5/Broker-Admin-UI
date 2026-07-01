@@ -1,28 +1,32 @@
 import { api } from '../lib/api';
 
 const EXT = '/ext-api';
+export const SERVER_CONFIG_READ_TIMEOUT_MS = 8000;
+
+const getConfig = (path, config = {}) =>
+  api.get(`${EXT}${path}`, { timeout: SERVER_CONFIG_READ_TIMEOUT_MS, ...config }).then(r => r.data);
 
 export const ServerConfigService = {
   // --- Server Settings ---
   getServerSetting: (key) =>
-    api.get(`${EXT}/ServerSettingGet`, { params: { key } }).then(r => r.data),
+    getConfig('/ServerSettingGet', { params: { key } }),
 
   listServerSettings: () =>
-    api.get(`${EXT}/ServerSettingList`).then(r => r.data),
+    getConfig('/ServerSettingList'),
 
   setServerSetting: (key, value) =>
     api.get(`${EXT}/ServerSettingSet`, { params: { key, value } }).then(r => r.data),
 
   // --- Server Status ---
   getServerStatus: () =>
-    api.get(`${EXT}/ServerStatus`).then(r => r.data),
+    getConfig('/ServerStatus'),
 
   // --- Swap Rates ---
   getSwapRate: (symbol) =>
-    api.get(`${EXT}/SwapRateGet`, { params: { symbol } }).then(r => r.data),
+    getConfig('/SwapRateGet', { params: { symbol } }),
 
   listSwapRates: () =>
-    api.get(`${EXT}/SwapRateList`).then(r => r.data),
+    getConfig('/SwapRateList'),
 
   setSwapRate: (symbol, long, short) =>
     api.get(`${EXT}/SwapRateSet`, { params: { symbol, ...(long != null ? { long } : {}), ...(short != null ? { short } : {}) } }).then(r => r.data),

@@ -6,14 +6,14 @@ import { cn } from '../../lib/cn';
 
 const contentCls = cn(
   'z-50 min-w-[180px] overflow-hidden',
-  'bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)]',
+  'bg-[color:var(--bg-surface-1)] border border-[color:var(--border-strong)]',
   'rounded-[var(--radius-sm)] shadow-[var(--shadow-md)] p-1'
 );
 
 const itemCls = cn(
   'relative flex items-center gap-2 h-7 px-2 text-[12px] rounded-[var(--radius-sm)]',
   'text-[color:var(--text-primary)] cursor-default select-none outline-none',
-  'data-[highlighted]:bg-[color:var(--bg-surface-2)]',
+  'data-[highlighted]:bg-[color:var(--bg-surface-3)]',
   'data-[disabled]:text-[color:var(--text-muted)] data-[disabled]:pointer-events-none'
 );
 

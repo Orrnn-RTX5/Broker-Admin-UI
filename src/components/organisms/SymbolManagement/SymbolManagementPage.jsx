@@ -20,8 +20,8 @@ const SymbolManagementPage = () => {
   const [activeTab, setActiveTab] = useState('symbols');
 
   return (
-    <div className="p-6 w-full h-full flex flex-col gap-4 overflow-hidden" style={{ background: 'var(--bg)' }}>
-      <div className="flex items-end justify-between shrink-0">
+    <div className="p-5 w-full h-full flex flex-col gap-4 overflow-hidden" style={{ background: 'var(--bg)' }}>
+      <div className="flex items-end justify-between shrink-0 border-b pb-4" style={{ borderColor: 'var(--border-2)' }}>
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Settings2 size={20} style={{ color: 'var(--accent)' }} />
@@ -34,16 +34,16 @@ const SymbolManagementPage = () => {
       </div>
 
       {/* Tab bar */}
-      <div className="flex items-center gap-1 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
+      <div className="flex items-center gap-1 border-b shrink-0 overflow-x-auto no-scrollbar" style={{ borderColor: 'var(--border)' }}>
         {TABS.map(({ id, label, icon }) => (
           <button
             key={id}
             onClick={() => setActiveTab(id)}
-            className="flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium rounded-t transition-colors"
+            className="flex h-10 shrink-0 items-center gap-1.5 px-3 text-[13px] font-medium rounded-t transition-colors"
             style={{
               color: activeTab === id ? 'var(--accent-text)' : 'var(--text-3)',
               borderBottom: activeTab === id ? '2px solid var(--accent)' : '2px solid transparent',
-              background: 'transparent',
+              background: activeTab === id ? 'var(--accent-soft-2)' : 'transparent',
             }}
           >
             {React.createElement(icon, { size: 13 })}

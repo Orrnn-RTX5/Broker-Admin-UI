@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Loader2, ChevronRight, ChevronDown, FolderOpen, Folder, X } from 'lucide-react';
-import { symbolCategoryList, symbolCategoryCreate, symbolCategoryUpdate, symbolCategoryDelete } from '../../../services/api';
+import { symbolCategoryList, symbolCategoryCreate, symbolCategoryUpdate, symbolCategoryDelete, symbolsByCategory } from '../../../services/api';
+import { getApiErrorMessage } from '../../../utils/apiShapes';
+import { buildActionableErrorState } from '../../../utils/errorState';
+import ActionableErrorState from '../../atoms/ActionableErrorState';
+import { normalizeCategoryRows, normalizeSymbolOptions } from './symbolManagementData';
 
 // ─── Category Form Modal ───────────────────────────────────────────────────────
 const CategoryFormModal = ({ category: existing, allCategories, onClose, onSuccess }) => {
@@ -90,7 +94,8 @@ const CategoryTreeNode = ({ cat, allCategories, depth = 0, onEdit, onDelete, del
   const [expanded, setExpanded] = useState(depth === 0);
   const [symbols, setSymbols] = useState(null);
   const [loadingSymbols, setLoadingSymbols] = useState(false);
-  const children = allCategories.filter(c => c.parentId === (cat.id || cat.name));
+  const parentKey = String(cat.id || cat.name);
+  const children = allCategories.filter(c => String(c.parentId || '') === parentKey);
 
   const toggleExpand = async () => {
     const nextExpanded = !expanded;
@@ -98,9 +103,8 @@ const CategoryTreeNode = ({ cat, allCategories, depth = 0, onEdit, onDelete, del
     if (nextExpanded && symbols === null) {
       setLoadingSymbols(true);
       try {
-        const { symbolsByCategory } = await import('../../../services/api');
         const data = await symbolsByCategory(cat.name);
-        setSymbols(Array.isArray(data) ? data : []);
+        setSymbols(normalizeSymbolOptions(data));
       } catch {
         setSymbols([]);
       } finally {
@@ -191,14 +195,20 @@ const CategoriesTab = () => {
   const [modal, setModal] = useState(null);
   const [editTarget, setEditTarget] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const [loadError, setLoadError] = useState(null);
 
   const load = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await symbolCategoryList();
-      setCategories(Array.isArray(data) ? data : []);
-    } catch {
+      setCategories(normalizeCategoryRows(data));
+    } catch (err) {
       setCategories([]);
+      setLoadError(buildActionableErrorState(getApiErrorMessage(err, 'category list request failed'), {
+        title: 'Categories failed to load',
+        actionLabel: 'Retry',
+      }));
     } finally {
       setLoading(false);
     }
@@ -231,6 +241,9 @@ const CategoriesTab = () => {
           <Plus size={13} /> New Category
         </button>
       </div>
+      {loadError && (
+        <ActionableErrorState state={loadError} onAction={load} compact className="m-0 shrink-0" />
+      )}
 
       <div className="ui-card flex-1 overflow-auto p-2">
         {loading ? (

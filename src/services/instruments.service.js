@@ -5,6 +5,7 @@ import { getRuntimeValue } from '../config/runtimeConfig';
 
 const viteEnv = import.meta.env || {};
 const MANAGER_SYMBOL_NAMES_CACHE_TTL_MS = 30000;
+const MANAGER_SYMBOL_PARAMS_TIMEOUT_MS = 7000;
 
 let managerSymbolNamesCache = null;
 let managerSymbolNamesPromise = null;
@@ -30,6 +31,9 @@ const isNotFoundError = (error) => (
   /\b404\b|not found/i.test(String(error?.response?.data || error?.message || ''))
 );
 
+const firstDefined = (...values) =>
+  values.find((value) => value !== undefined && value !== null && value !== '') ?? undefined;
+
 const pickSymbolName = (symbol) => {
   if (typeof symbol === 'string') return symbol;
   return symbol?.symbol || symbol?.Symbol || symbol?.name || symbol?.Name || symbol?.symbol_name || symbol?.SymbolName || '';
@@ -52,24 +56,78 @@ const normalizeEnabled = (value) => {
   return value;
 };
 
+const normalizeEnabledValue = (source) => {
+  const enabled = normalizeEnabled(firstDefined(
+    source.enabled,
+    source.Enabled,
+    source.enable,
+    source.Enable,
+    source.is_enabled,
+    source.IsEnabled,
+    source.visible,
+    source.Visible
+  ));
+
+  if (typeof enabled === 'boolean') return enabled;
+  if (enabled === undefined || enabled === null) return true;
+  return Boolean(enabled);
+};
+
+const normalizeSymbolType = (source) => {
+  const explicitType = firstDefined(source.symbolType, source.SymbolType, source.symbol_type);
+  if (explicitType) return String(explicitType).trim().toLowerCase();
+
+  const parentSymbol = firstDefined(source.parentSymbol, source.ParentSymbol, source.parent_symbol, source.parent);
+  return parentSymbol ? 'derived' : 'base';
+};
+
 const normalizeSymbolRow = (symbol, fallbackName = '') => {
   const name = pickSymbolName(symbol) || fallbackName;
   const source = typeof symbol === 'object' && symbol !== null ? symbol : {};
+  const category = firstDefined(source.category, source.Category, source.path, source.Path);
+  const parentSymbol = firstDefined(source.parentSymbol, source.ParentSymbol, source.parent_symbol, source.parent);
 
   return {
     ...source,
     id: source.id || source.ID || name,
     symbol: name,
     name,
-    description: source.description || source.Description || source.path || source.Path || source.category || source.Category || '',
+    description: firstDefined(source.description, source.Description, source.path, source.Path, category) || '',
     digits: toNumber(source.digits ?? source.Digits ?? source.digits_currency ?? source.DigitsCurrency),
+    category: category || '',
+    contractSize: toNumber(firstDefined(source.contractSize, source.ContractSize, source.contract_size)),
+    spread: toNumber(firstDefined(source.spread, source.Spread, source.spread_float, source.SpreadFloat)),
+    calcMode: firstDefined(source.calcMode, source.CalcMode, source.calc_mode, source.calculation_mode) || '',
+    symbolType: normalizeSymbolType(source),
+    parentSymbol: parentSymbol || '',
+    spreadMarkupPips: toNumber(firstDefined(source.spreadMarkupPips, source.SpreadMarkupPips, source.spread_markup_pips), 0),
     type: source.trade_mode || source.TradeMode || source.type || source.Type || source.mode || source.Mode || '',
     execution: source.execution || source.Execution || source.execution_mode || source.ExecutionMode || '',
     expiration: source.expiration || source.Expiration || source.expiration_mode || source.ExpirationMode || '',
     background: source.background || source.Background || '',
-    enabled: normalizeEnabled(source.enabled ?? source.Enabled ?? source.enable ?? source.Enable),
+    enabled: normalizeEnabledValue(source),
   };
 };
+
+const withTimeout = (promise, timeoutMs, message) => new Promise((resolve, reject) => {
+  let settled = false;
+  const timer = setTimeout(() => {
+    settled = true;
+    reject(new Error(message));
+  }, timeoutMs);
+
+  Promise.resolve(promise)
+    .then((value) => {
+      if (settled) return;
+      clearTimeout(timer);
+      resolve(value);
+    })
+    .catch((error) => {
+      if (settled) return;
+      clearTimeout(timer);
+      reject(error);
+    });
+});
 
 const getRows = (response) => normalizeArrayResponse(response, [
   'instruments',
@@ -119,9 +177,13 @@ const fetchManagerSymbolParams = async (symbols) => {
   if (!symbols.length) return [];
 
   try {
-    const res = await api.get('/manager/SymbolsParams', {
-      params: { symbols },
-    });
+    const res = await withTimeout(
+      api.get('/manager/SymbolsParams', {
+        params: { symbols },
+      }),
+      MANAGER_SYMBOL_PARAMS_TIMEOUT_MS,
+      'manager symbol params request timed out'
+    );
     return getRows(res.data);
   } catch {
     return [];

@@ -9,11 +9,11 @@ export const Input = React.forwardRef(function Input(
     <input
       ref={ref}
       className={cn(
-        'h-8 w-full px-2.5 text-[13px] rounded-[var(--radius-sm)]',
+        'h-9 w-full px-3 text-[13px] rounded-[var(--radius-sm)]',
         'bg-[color:var(--bg-surface-1)] text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)]',
-        'border border-[color:var(--border-default)]',
-        'transition-colors duration-150',
-        'focus:outline-none focus:border-[color:var(--text-primary)]',
+        'border border-[color:var(--border-strong)] shadow-[var(--shadow-sm)]',
+        'transition-[background-color,border-color,box-shadow] duration-150',
+        'focus:outline-none focus:border-[color:var(--accent-500)] focus:ring-2 focus:ring-[color:var(--accent-500)]/20',
         'disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-[color:var(--bg-surface-2)]',
         invalid && 'border-[color:var(--danger-500)] focus:border-[color:var(--danger-500)]',
         className

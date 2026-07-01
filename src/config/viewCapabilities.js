@@ -132,6 +132,12 @@ export const VIEW_CAPABILITIES = Object.freeze({
     'This Platform Config option is not enabled yet.',
     'info'
   ),
+  'Network Cluster': capability(
+    LOCKED_NO_API,
+    'Network Cluster is locked',
+    'This network cluster section is locked for now.',
+    'info'
+  ),
   'Risk Management': capability(
     CONTAINER_ONLY,
     'Risk Management is a folder',

@@ -240,10 +240,6 @@ const IntegrationsView = () => {
         <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <h1 className="text-[20px] font-semibold tracking-tight text-[color:var(--text-primary)]">Integration</h1>
-            <a href="https://www.mql5.com" className="mt-1 inline-flex items-center gap-1 text-[11.5px] text-[#3b82f6] hover:text-blue-300 hover:underline">
-              www.mql5.com
-              <ExternalLink size={11} />
-            </a>
           </div>
           <div className="grid min-w-[300px] grid-cols-3 overflow-hidden rounded-[2px] border border-[color:var(--border-default)] bg-[color:var(--bg-app)]">
             <div className="border-r border-black/25 px-3 py-2">

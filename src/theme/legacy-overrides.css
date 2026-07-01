@@ -147,6 +147,39 @@
 
 
 [data-theme="dark"] {
+  .text-\[\#ccc\],
+  .text-\[\#cccccc\],
+  .text-\[\#ddd\],
+  .text-\[\#dddddd\] { color: var(--text-secondary) !important; }
+
+  .text-\[\#888\],
+  .text-\[\#999\],
+  .text-\[\#999999\],
+  .text-\[\#aaa\],
+  .text-\[\#aaaaaa\],
+  .text-\[\#808080\] { color: var(--text-muted) !important; }
+
+  .hover\:text-\[\#ccc\]:hover,
+  .hover\:text-\[\#dddddd\]:hover,
+  .hover\:text-white:hover { color: var(--text-primary) !important; }
+
+  .bg-\[\#222\],
+  .bg-\[\#222222\],
+  .bg-\[\#252526\] { background-color: var(--bg-surface-1) !important; }
+
+  .bg-\[\#333\],
+  .bg-\[\#333333\],
+  .bg-\[\#3e3e3e\],
+  .bg-\[\#3e3e42\],
+  .bg-\[\#404040\],
+  .bg-\[\#444\],
+  .bg-\[\#444444\] { background-color: var(--bg-surface-3) !important; }
+
+  .hover\:bg-white\/5:hover,
+  .hover\:bg-white\/10:hover,
+  .hover\:bg-\[\#444\]:hover,
+  .hover\:bg-\[\#555\]:hover { background-color: var(--bg-surface-3) !important; }
+
   .border-black\/40,
   .border-black\/30,
   .border-black\/20,

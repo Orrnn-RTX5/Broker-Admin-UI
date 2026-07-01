@@ -65,6 +65,7 @@ test('non-working options are locked behind an informational toast', () => {
     'Leverages',
     'Leverage Schedules',
     'Swap-Free Configs',
+    'Network Cluster',
     'Providers',
     'Charts & Ticks',
     'Subscriptions',

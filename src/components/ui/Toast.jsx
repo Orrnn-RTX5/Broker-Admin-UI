@@ -29,8 +29,8 @@ export const ToastProvider = ({ children }) => {
             key={t.id}
             onOpenChange={(open) => !open && dismiss(t.id)}
             className={cn(
-              'flex items-start gap-3 p-3 pr-8 w-80',
-              'bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)]',
+              'flex items-start gap-3 p-3 pr-8 w-80 max-w-[calc(100vw-2rem)]',
+              'bg-[color:var(--bg-surface-1)] border border-[color:var(--border-strong)]',
               'rounded-[var(--radius-sm)] shadow-[var(--shadow-lg)]',
               'data-[state=open]:animate-in data-[state=closed]:animate-out'
             )}

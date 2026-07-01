@@ -72,8 +72,8 @@ test('Orders date filters use native calendar pickers', () => {
   assert.match(src, /aria-label="Select orders to date"/);
 });
 
-test('Orders filter dropdown arrows open the native picker and use dark theme colors', () => {
-  assert.match(src, /const orderFilterSelectShellClassName = '.*cursor-pointer.*hover:bg-white\/10/);
+test('Orders filter dropdown arrows open the native picker and use tokenized theme colors', () => {
+  assert.match(src, /const orderFilterSelectShellClassName = '.*cursor-pointer.*hover:bg-\[color:var\(--bg-surface-3\)\]/);
   assert.match(src, /const orderFilterSelectClassName = '.*text-\[color:var\(--text-primary\)\].*\[color-scheme:dark\]/);
   assert.match(src, /const orderFilterSelectOptionClassName = '.*bg-\[color:var\(--bg-surface-2\)\].*text-\[color:var\(--text-primary\)\]/);
   assert.match(src, /const orderFilterSelectOptionStyle = \{\s*backgroundColor: 'var\(--bg-surface-2\)',\s*color: 'var\(--text-primary\)'/);

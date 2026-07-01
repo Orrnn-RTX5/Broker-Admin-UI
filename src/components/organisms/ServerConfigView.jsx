@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ServerConfigService } from '../../services/serverConfig.service';
 import { RefreshCw, Save, Search, ShieldOff, ShieldCheck } from 'lucide-react';
+import ActionableErrorState from '../atoms/ActionableErrorState';
+import { getApiErrorMessage } from '../../utils/apiShapes';
 
 const TABS = ['Server Status', 'Server Settings', 'Swap Rates', 'Trading Halt'];
 
@@ -8,17 +10,23 @@ const TABS = ['Server Status', 'Server Settings', 'Swap Rates', 'Trading Halt'];
 const ServerStatusTab = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const load = async () => {
     setLoading(true);
+    setError('');
     try { setData(await ServerConfigService.getServerStatus()); }
-    catch (err) { alert('Failed: ' + (err.response?.data?.message || err.message)); }
+    catch (err) {
+      setData(null);
+      setError(getApiErrorMessage(err, 'Server status failed to load.'));
+    }
     finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
 
   if (loading) return <div className="flex items-center justify-center flex-1 text-[#888] text-[11px]">Loading…</div>;
+  if (error) return <ActionableErrorState title="Unable to load data" message={error} actionLabel="Refresh" onAction={load} />;
   if (!data) return <div className="flex items-center justify-center flex-1 text-[#555] text-[11px]">No data.</div>;
 
   const { db_pool, ...top } = data;
@@ -70,6 +78,7 @@ const ServerStatusTab = () => {
 const ServerSettingsTab = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [editKey, setEditKey] = useState(null);
   const [editVal, setEditVal] = useState('');
   const [saving, setSaving] = useState(false);
@@ -79,8 +88,12 @@ const ServerSettingsTab = () => {
 
   const loadAll = async () => {
     setLoading(true);
+    setError('');
     try { setData(await ServerConfigService.listServerSettings() ?? []); }
-    catch (err) { alert('Failed: ' + (err.response?.data?.message || err.message)); }
+    catch (err) {
+      setData([]);
+      setError(getApiErrorMessage(err, 'Server settings failed to load.'));
+    }
     finally { setLoading(false); }
   };
 
@@ -142,7 +155,9 @@ const ServerSettingsTab = () => {
       <div className="flex-1 overflow-auto">
         {loading
           ? <div className="flex items-center justify-center h-24 text-[#888] text-[11px]">Loading…</div>
-          : data.length === 0
+          : error
+            ? <ActionableErrorState title="Unable to load data" message={error} actionLabel="Refresh" onAction={loadAll} compact />
+            : data.length === 0
             ? <div className="flex items-center justify-center h-24 text-[#555] text-[11px]">No settings found.</div>
             : data.map((row, i) => (
               <div key={row.key}
@@ -181,6 +196,7 @@ const ServerSettingsTab = () => {
 const SwapRatesTab = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [symbolSearch, setSymbolSearch] = useState('');
   const [searchResult, setSearchResult] = useState(null);
   const [editRow, setEditRow] = useState(null); // { symbol, long, short }
@@ -188,8 +204,12 @@ const SwapRatesTab = () => {
 
   const loadAll = async () => {
     setLoading(true);
+    setError('');
     try { setData(await ServerConfigService.listSwapRates() ?? []); }
-    catch (err) { alert('Failed: ' + (err.response?.data?.message || err.message)); }
+    catch (err) {
+      setData([]);
+      setError(getApiErrorMessage(err, 'Swap rates failed to load.'));
+    }
     finally { setLoading(false); }
   };
 
@@ -257,6 +277,8 @@ const SwapRatesTab = () => {
       <div className="flex-1 overflow-auto">
         {loading
           ? <div className="flex items-center justify-center h-24 text-[#888] text-[11px]">Loading…</div>
+          : error
+            ? <ActionableErrorState title="Unable to load data" message={error} actionLabel="Refresh" onAction={loadAll} compact />
           : data.length === 0
             ? <div className="flex items-center justify-center h-24 text-[#555] text-[11px]">No swap rates found.</div>
             : data.map((row, i) => (

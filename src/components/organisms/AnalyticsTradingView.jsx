@@ -1,6 +1,8 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { AnalyticsService } from '../../services/analytics.service';
 import { RefreshCw } from 'lucide-react';
+import { useCachedTabRequest } from '../../hooks/useCachedTabRequest';
+import ActionableErrorState from '../atoms/ActionableErrorState';
 
 const TABS = [
   { key: 'pnl', label: 'PnL' },
@@ -10,6 +12,15 @@ const TABS = [
   { key: 'groups', label: 'Group Stats' },
   { key: 'symbols', label: 'Symbol Stats' },
 ];
+
+const TRADING_ANALYTICS_LOADERS = {
+  pnl: () => AnalyticsService.getPnL(),
+  volume: () => AnalyticsService.getVolume(),
+  patterns: () => AnalyticsService.getTradingPatterns(),
+  margin: () => AnalyticsService.getMarginUtilization(),
+  groups: () => AnalyticsService.getGroupStats(),
+  symbols: () => AnalyticsService.getSymbolStats(),
+};
 
 const NUMERIC_COLUMN_RE = /(avg|total|count|revenue|volume|balance|equity|margin|utilization|pnl|profit|loss|rate|amount|trades|orders)/i;
 const INTEGER_COLUMN_RE = /(count|accounts|clients|trades|orders)$/i;
@@ -135,37 +146,9 @@ const ResultTable = ({ data }) => {
 
 const AnalyticsTradingView = () => {
   const [tab, setTab] = useState('pnl');
-  const [results, setResults] = useState({});
-  const [loading, setLoading] = useState(false);
-
-  const load = useCallback(async (key) => {
-    if (results[key]) return;
-    setLoading(true);
-    try {
-      let res;
-      if (key === 'pnl') res = await AnalyticsService.getPnL();
-      else if (key === 'volume') res = await AnalyticsService.getVolume();
-      else if (key === 'patterns') res = await AnalyticsService.getTradingPatterns();
-      else if (key === 'margin') res = await AnalyticsService.getMarginUtilization();
-      else if (key === 'groups') res = await AnalyticsService.getGroupStats();
-      else if (key === 'symbols') res = await AnalyticsService.getSymbolStats();
-      setResults((current) => ({ ...current, [key]: res ?? [] }));
-    } catch (err) {
-      alert('Failed: ' + (err.response?.data?.message || err.message));
-    } finally {
-      setLoading(false);
-    }
-  }, [results]);
-
-  const refresh = () => {
-    setResults((current) => {
-      const copy = { ...current };
-      delete copy[tab];
-      return copy;
-    });
-  };
-
-  useEffect(() => { load(tab); }, [load, tab]);
+  const { data, loading, error, refresh } = useCachedTabRequest(tab, TRADING_ANALYTICS_LOADERS, {
+    fallback: 'Trading analytics failed to load.',
+  });
 
   return (
     <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden">
@@ -190,8 +173,15 @@ const AnalyticsTradingView = () => {
 
       {loading ? (
         <div className="flex items-center justify-center flex-1 text-[#888] text-[11px]">Loading...</div>
+      ) : error ? (
+        <ActionableErrorState
+          title="Unable to load data"
+          message={error}
+          actionLabel="Refresh"
+          onAction={refresh}
+        />
       ) : (
-        <ResultTable data={results[tab] ?? null} />
+        <ResultTable data={data} />
       )}
     </div>
   );

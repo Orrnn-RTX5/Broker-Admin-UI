@@ -132,15 +132,15 @@ const NON_GROUP_LOOKUP_VIEWS = new Set([
   'Security',
   'Time',
 ]);
-const orderFilterSelectShellClassName = 'flex border border-[color:var(--border-strong)] bg-transparent h-[22px] items-center text-[color:var(--text-primary)] cursor-pointer hover:bg-white/10';
+const orderFilterSelectShellClassName = 'flex border border-[color:var(--border-strong)] bg-[color:var(--bg-surface-1)] h-[26px] items-center text-[color:var(--text-primary)] cursor-pointer hover:bg-[color:var(--bg-surface-3)] rounded-[2px]';
 const orderFilterSelectClassName = 'bg-[color:var(--bg-surface-1)] border-none outline-none w-full h-full text-[11px] px-1 appearance-none cursor-pointer text-[color:var(--text-primary)] [color-scheme:dark]';
 const orderFilterSelectOptionClassName = 'bg-[color:var(--bg-surface-2)] text-[color:var(--text-primary)]';
 const orderFilterSelectOptionStyle = {
   backgroundColor: 'var(--bg-surface-2)',
   color: 'var(--text-primary)',
 };
-const paginationButtonClassName = 'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[3px] border border-[color:var(--border-strong)] bg-[color:var(--bg-app)] text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--bg-surface-3)] hover:text-[color:var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent-500)] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-[color:var(--bg-app)]';
-const paginationFieldClassName = 'h-7 rounded-[3px] border border-[color:var(--border-strong)] bg-[color:var(--bg-app)] text-[11px] text-[color:var(--text-primary)] outline-none focus-visible:border-[color:var(--accent-500)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
+const paginationButtonClassName = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[3px] border border-[color:var(--border-strong)] bg-[color:var(--bg-surface-1)] text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--bg-surface-3)] hover:text-[color:var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent-500)] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-[color:var(--bg-surface-1)]';
+const paginationFieldClassName = 'h-8 rounded-[3px] border border-[color:var(--border-strong)] bg-[color:var(--bg-surface-1)] text-[11px] text-[color:var(--text-primary)] outline-none focus-visible:border-[color:var(--accent-500)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 
 const SUPPORT_CENTER_VIEWS = new Set([
   'Support Center', 'News', 'Articles', 'Orrnn Leads', 'Automation',
@@ -684,20 +684,20 @@ const DEAL_COLUMNS = [
 ];
 
 const TimePropertyRow = ({ idx, icon, label, value }) => (
-  <div className={`flex items-center text-[12px] border-b border-black/20 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-blue-600/20 cursor-default`}>
-    <div className="w-[320px] flex items-center gap-2 px-3 py-[3px] border-r border-black/20 shrink-0">
-      {React.createElement(icon, { size: 13, className: 'text-[#3B82F6]' })}
+  <div className={`flex min-h-[var(--row-h)] items-center text-[12px] border-b border-[color:var(--border-subtle)] ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-[color:var(--bg-surface-3)] cursor-default`}>
+    <div className="w-[320px] flex items-center gap-2 px-3 py-[5px] border-r border-[color:var(--border-subtle)] shrink-0">
+      {React.createElement(icon, { size: 13, className: 'text-[color:var(--accent-500)]' })}
       <span className="text-[color:var(--text-primary)]">{label}</span>
     </div>
-    <div className="flex-1 px-3 py-[3px] text-[color:var(--text-primary)]">
+    <div className="flex-1 px-3 py-[5px] text-[color:var(--text-primary)]">
       {value}
     </div>
   </div>
 );
 
 const TimeGroupHeader = ({ title }) => (
-  <div className="flex border-b border-black/20 bg-[color:var(--bg-app)] cursor-default">
-    <div className="w-[320px] px-3 py-1 text-[11px] font-bold text-white border-r border-black/20 shrink-0">
+  <div className="flex border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface-2)] cursor-default">
+    <div className="w-[320px] px-3 py-1.5 text-[11px] font-bold text-[color:var(--text-primary)] border-r border-[color:var(--border-subtle)] shrink-0">
       {title}
     </div>
     <div className="flex-1"></div>
@@ -1599,9 +1599,9 @@ const AdminDataTable = ({
     : [];
 
   const closeAllNoticeClass = {
-    success: 'text-[#4ec9b0]',
-    error: 'text-[#f48771]',
-    warning: 'text-[#dcdcaa]',
+    success: 'text-[color:var(--success-500)]',
+    error: 'text-[color:var(--danger-500)]',
+    warning: 'text-[color:var(--warning-500)]',
     info: 'text-[color:var(--text-secondary)]',
   }[closeAllNotice?.tone] || 'text-[color:var(--text-secondary)]';
 
@@ -1609,9 +1609,9 @@ const AdminDataTable = ({
   if (viewType === 'Time') {
     return (
       <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative" onContextMenu={(e) => e.preventDefault()}>
-        <div className="flex border-b border-black/40 bg-[color:var(--bg-surface-2)] sticky top-0 z-10 shadow-sm">
-          <div className="w-[320px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 hover:bg-[color:var(--bg-surface-3)] cursor-default shrink-0">Property</div>
-          <div className="flex-1 px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)] cursor-default">Value</div>
+        <div className="flex border-b border-[color:var(--border-strong)] bg-[color:var(--bg-surface-2)] sticky top-0 z-10 shadow-sm">
+          <div className="w-[320px] px-3 py-2 text-[11px] font-semibold text-[color:var(--text-primary)] border-r border-[color:var(--border-subtle)] hover:bg-[color:var(--bg-surface-3)] cursor-default shrink-0">Property</div>
+          <div className="flex-1 px-3 py-2 text-[11px] font-semibold text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)] cursor-default">Value</div>
         </div>
         <div className="flex-1 overflow-auto no-scrollbar bg-[color:var(--bg-app)]">
           <TimeGroupHeader title="Common settings" />
@@ -1626,8 +1626,8 @@ const AdminDataTable = ({
 
           {/* Placeholder fill */}
           {[...Array(25)].map((_, i) => (
-            <div key={i} className={`flex border-b border-black/5 opacity-40 ${i % 2 !== 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
-              <div className="w-[320px] h-6 border-r border-black/10"></div>
+            <div key={i} className={`flex border-b border-[color:var(--border-subtle)] opacity-40 ${i % 2 !== 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
+              <div className="w-[320px] h-7 border-r border-[color:var(--border-subtle)]"></div>
               <div className="flex-1 h-6"></div>
             </div>
           ))}
@@ -1651,8 +1651,8 @@ const AdminDataTable = ({
       {/* Search Filters Bar for Orders, Deals, Positions */}
 
       {showSearchFilters && (
-        <div className="flex items-center px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 text-[11px] shrink-0 overflow-x-auto no-scrollbar whitespace-nowrap">
-          <div className="flex border border-[color:var(--border-strong)] bg-transparent h-[22px] items-center text-[color:var(--text-muted)] mr-1">
+        <div className="flex items-center px-3 py-2 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] text-[11px] shrink-0 overflow-x-auto no-scrollbar whitespace-nowrap shadow-[var(--shadow-sm)]">
+          <div className="flex border border-[color:var(--border-strong)] bg-[color:var(--bg-surface-1)] h-[26px] items-center text-[color:var(--text-muted)] mr-1 rounded-[2px]">
             <div className="px-1.5"><Search size={10} /></div>
             <input
               type="text"
@@ -1670,7 +1670,7 @@ const AdminDataTable = ({
               placeholder="Group or Accounts [1,2,..,1000] or Orders (#1,#2,..#1000)"
               className="bg-transparent border-none outline-none w-[280px] text-[11px] text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)]"
             />
-            <div className="border-l border-[color:var(--border-strong)] px-1 hover:bg-white/10 cursor-pointer h-full flex items-center">
+            <div className="border-l border-[color:var(--border-strong)] px-1 hover:bg-[color:var(--bg-surface-3)] cursor-pointer h-full flex items-center">
               <ChevronDown size={12} />
             </div>
           </div>
@@ -1698,12 +1698,12 @@ const AdminDataTable = ({
             <div className="px-1 pointer-events-none text-[color:var(--text-muted)]"><ChevronDown size={12} /></div>
           </div>
 
-          <label className="flex items-center gap-1.5 text-[color:var(--text-primary)] cursor-pointer mr-2 border border-transparent hover:border-[color:var(--border-strong)] px-1 h-[22px] rounded-sm">
+          <label className="flex items-center gap-1.5 text-[color:var(--text-primary)] cursor-pointer mr-2 border border-transparent hover:border-[color:var(--border-strong)] px-1.5 h-[26px] rounded-sm">
             <input
               type="checkbox"
               checked={viewType === 'Orders' ? orderFilters.openOnly : false}
               onChange={viewType === 'Orders' ? handleOrderOpenOnlyChange : undefined}
-              className="w-[11px] h-[11px] accent-[#3B82F6]"
+              className="w-[12px] h-[12px] accent-[color:var(--accent-500)]"
             />
             Open only
           </label>
@@ -1726,7 +1726,7 @@ const AdminDataTable = ({
             <div className="px-1 pointer-events-none text-[color:var(--text-muted)]"><ChevronDown size={12} /></div>
           </div>
 
-          <div className="flex border border-[color:var(--border-strong)] bg-transparent h-[22px] items-center text-[color:var(--text-primary)] mr-1">
+          <div className="flex border border-[color:var(--border-strong)] bg-[color:var(--bg-surface-1)] h-[26px] items-center text-[color:var(--text-primary)] mr-1 rounded-[2px]">
             <input
               ref={orderFromDateInputRef}
               type="datetime-local"
@@ -1746,14 +1746,14 @@ const AdminDataTable = ({
             <button
               type="button"
               onClick={() => openOrderDatePicker(orderFromDateInputRef)}
-              className="border-l border-[color:var(--border-strong)] px-1.5 text-blue-400 hover:bg-white/10 cursor-pointer h-full flex items-center"
+              className="border-l border-[color:var(--border-strong)] px-1.5 text-[color:var(--accent-500)] hover:bg-[color:var(--bg-surface-3)] cursor-pointer h-full flex items-center"
               aria-label="Select orders from date"
             >
               <Calendar size={12} />
             </button>
           </div>
 
-          <div className="flex border border-[color:var(--border-strong)] bg-transparent h-[22px] items-center text-[color:var(--text-primary)] mr-2">
+          <div className="flex border border-[color:var(--border-strong)] bg-[color:var(--bg-surface-1)] h-[26px] items-center text-[color:var(--text-primary)] mr-2 rounded-[2px]">
             <input
               ref={orderToDateInputRef}
               type="datetime-local"
@@ -1773,7 +1773,7 @@ const AdminDataTable = ({
             <button
               type="button"
               onClick={() => openOrderDatePicker(orderToDateInputRef)}
-              className="border-l border-[color:var(--border-strong)] px-1.5 text-blue-400 hover:bg-white/10 cursor-pointer h-full flex items-center"
+              className="border-l border-[color:var(--border-strong)] px-1.5 text-[color:var(--accent-500)] hover:bg-[color:var(--bg-surface-3)] cursor-pointer h-full flex items-center"
               aria-label="Select orders to date"
             >
               <Calendar size={12} />
@@ -1813,7 +1813,7 @@ const AdminDataTable = ({
                 list="close-all-symbol-options"
                 aria-label="Close all positions symbol"
                 placeholder="Symbol"
-                className="bg-[color:var(--bg-app)] border border-[color:var(--border-strong)] text-[color:var(--text-primary)] text-[11px] h-[22px] px-2 rounded-[2px] outline-none w-[110px] focus:border-[#777777] disabled:opacity-50"
+                className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-strong)] text-[color:var(--text-primary)] text-[11px] h-[26px] px-2 rounded-[2px] outline-none w-[110px] focus:border-[color:var(--accent-500)] disabled:opacity-50"
                 title={closeAllAction.hasClosePermission ? 'Symbol to close' : closeAllAction.disabledReason}
               />
               <datalist id="close-all-symbol-options">
@@ -1826,7 +1826,7 @@ const AdminDataTable = ({
                 onClick={handleCloseAllBySymbol}
                 disabled={!closeAllAction.canSubmit}
                 title={closeAllAction.disabledReason || `Close all positions for ${closeAllAction.normalizedSymbol}`}
-                className="inline-flex items-center gap-1 h-[22px] px-2.5 bg-[#3a1f1f] border border-[#7f3b34] rounded-[2px] text-[#f48771] hover:bg-[#4a2727] hover:border-[#a44b42] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="inline-flex items-center gap-1 h-[26px] px-2.5 bg-[color:var(--danger-500)]/16 border border-[color:var(--danger-500)]/45 rounded-[2px] text-[color:var(--danger-500)] hover:bg-[color:var(--danger-500)]/24 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 <ShieldAlert size={12} />
                 {closeAllBusy ? 'Closing' : 'Close All'}
@@ -1846,17 +1846,17 @@ const AdminDataTable = ({
       )}
 
       {/* Table Header */}
-      <div className="flex border-b border-black/40 bg-[color:var(--bg-surface-2)] sticky top-0 z-10 shadow-sm">
+      <div className="flex border-b border-[color:var(--border-strong)] bg-[color:var(--bg-surface-2)] sticky top-0 z-10 shadow-sm">
         {columns.map((col, idx) => (
           <div
             key={idx}
-            className={`${col.width} px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 hover:bg-[color:var(--bg-surface-3)] cursor-default flex items-center shrink-0`}
+            className={`${col.width} px-3 py-2 text-[11px] font-semibold text-[color:var(--text-primary)] border-r border-[color:var(--border-subtle)] hover:bg-[color:var(--bg-surface-3)] cursor-default flex items-center shrink-0`}
           >
             {col.label}
           </div>
         ))}
         {/* Fill remaining space if needed */}
-        {viewType === 'Groups' && <div className="flex-1 border-b border-black/20 bg-[color:var(--bg-surface-2)]"></div>}
+        {viewType === 'Groups' && <div className="flex-1 border-b border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-2)]"></div>}
       </div>
 
       {/* Table Body */}
@@ -1867,28 +1867,28 @@ const AdminDataTable = ({
             onClick={() => handleRowClick(row)}
             onDoubleClick={() => onRowDoubleClick && onRowDoubleClick(row)}
             onContextMenu={(e) => { e.stopPropagation(); handleContextMenu(e, row); }}
-            className={`flex cursor-pointer group border-b border-black/10 transition-colors ${isSelectedEditableRow(row) ? 'bg-blue-600/25 ring-1 ring-inset ring-blue-500/40' : (idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]')} hover:bg-blue-600/20`}
+            className={`flex min-h-[var(--row-h)] cursor-pointer group border-b border-[color:var(--border-subtle)] transition-colors ${isSelectedEditableRow(row) ? 'bg-[color:var(--accent-500)]/18 ring-1 ring-inset ring-[color:var(--accent-500)]/50' : (idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]')} hover:bg-[color:var(--bg-surface-3)]`}
           >
             {isClientsView ? (
               <>
-                <div className="w-64 px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10 shrink-0">
+                <div className="w-64 px-3 py-1.5 text-[12px] flex items-center gap-2 border-r border-[color:var(--border-subtle)] shrink-0">
                   {row.iconType === 'group' ? <YellowFolderIcon /> : <BlueUserIcon />}
                   <span className="text-[color:var(--text-primary)] truncate font-normal">{row.name}</span>
                 </div>
-                <div className="flex-1 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 truncate">{row.description}</div>
+                <div className="flex-1 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] truncate">{row.description}</div>
               </>
             ) : isSymbolsView ? (
               <>
-                <div className="w-48 px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10 shrink-0">
+                <div className="w-48 px-3 py-1.5 text-[12px] flex items-center gap-2 border-r border-[color:var(--border-subtle)] shrink-0">
                   <OrangeSquareSIcon />
                   <span className="text-[color:var(--text-primary)] truncate font-normal">{row.symbol}</span>
                 </div>
-                <div className="w-72 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.description}</div>
-                <div className="w-24 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.digits}</div>
-                <div className="w-32 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.type}</div>
-                <div className="w-48 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.execution}</div>
-                <div className="w-32 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.expiration}</div>
-                <div className="flex-1 border-b border-white/5 bg-transparent"></div>
+                <div className="w-72 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.description}</div>
+                <div className="w-24 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.digits}</div>
+                <div className="w-32 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.type}</div>
+                <div className="w-48 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.execution}</div>
+                <div className="w-32 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.expiration}</div>
+                <div className="flex-1 bg-transparent"></div>
               </>
             ) : isPositionsView ? (
               <>
@@ -1915,7 +1915,7 @@ const AdminDataTable = ({
                   if (col.label === 'Comment') val = row.comment;
 
                   return (
-                    <div key={cIdx} className={`${col.width} px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 ${col.label === 'Profit' && row.profit > 0 ? 'text-green-400' : ''} ${col.label === 'Profit' && row.profit < 0 ? 'text-red-400' : ''} truncate`}>
+                    <div key={cIdx} className={`${col.width} px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 ${col.label === 'Profit' && row.profit > 0 ? 'text-green-400' : ''} ${col.label === 'Profit' && row.profit < 0 ? 'text-red-400' : ''} truncate`}>
                        {renderTableValue(val)}
                     </div>
                   );
@@ -1923,33 +1923,33 @@ const AdminDataTable = ({
               </>
             ) : isAccountsView ? (
               <>
-                <div className="w-32 px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10 shrink-0">
+                <div className="w-32 px-3 py-1.5 text-[12px] flex items-center gap-2 border-r border-[color:var(--border-subtle)] shrink-0">
                   <BlueUserIcon />
                   <span className="text-[color:var(--text-primary)] truncate font-normal">{row.login}</span>
                 </div>
-                <div className="w-48 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.name}</div>
-                <div className="w-48 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.group}</div>
-                <div className="w-32 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.balance}</div>
-                <div className="w-32 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.equity}</div>
-                <div className="w-24 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.currency}</div>
-                <div className="w-32 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.status}</div>
-                <div className="flex-1 border-b border-white/5 bg-transparent"></div>
+                <div className="w-48 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.name}</div>
+                <div className="w-48 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.group}</div>
+                <div className="w-32 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.balance}</div>
+                <div className="w-32 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.equity}</div>
+                <div className="w-24 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.currency}</div>
+                <div className="w-32 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.status}</div>
+                <div className="flex-1 bg-transparent"></div>
               </>
             ) : (
               <>
-                <div className="w-64 px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10 shrink-0">
+                <div className="w-64 px-3 py-1.5 text-[12px] flex items-center gap-2 border-r border-[color:var(--border-subtle)] shrink-0">
                   {row.iconType === 'group' ? <YellowFolderIcon /> : <BlueUserIcon />}
                   <span className="text-[color:var(--text-primary)] truncate font-normal">{row.group}</span>
                 </div>
-                <div className="w-48 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.server}</div>
-                <div className="w-64 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate">{row.company}</div>
-                <div className="w-32 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0">{row.type}</div>
-                <div className="w-40 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0">{row.auth}</div>
-                <div className="w-48 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0">{row.risk}</div>
-                <div className="w-32 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0">{row.margin}</div>
-                <div className="w-56 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0">{row.leverage}</div>
-                <div className="w-24 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0">{row.currency}</div>
-                <div className={`flex-1 border-b border-white/5 ${idx % 2 === 0 ? 'bg-transparent' : 'bg-transparent'} group-hover:bg-blue-600/20`}></div>
+                <div className="w-48 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.server}</div>
+                <div className="w-64 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.company}</div>
+                <div className="w-32 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">{row.type}</div>
+                <div className="w-40 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">{row.auth}</div>
+                <div className="w-48 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">{row.risk}</div>
+                <div className="w-32 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">{row.margin}</div>
+                <div className="w-56 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">{row.leverage}</div>
+                <div className="w-24 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">{row.currency}</div>
+                <div className="flex-1 bg-transparent"></div>
               </>
             )}
           </div>
@@ -1958,7 +1958,7 @@ const AdminDataTable = ({
           <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">Loading data...</div>
         )}
         {!isLoading && activeError && (
-          <div className="p-4 text-[#f48771] text-[12px] bg-[#f48771]/10 border-b border-[#f48771]/20">
+          <div className="p-4 text-[color:var(--danger-500)] text-[12px] bg-[color:var(--danger-500)]/12 border-b border-[color:var(--danger-500)]/30">
             {activeErrorMessage}
           </div>
         )}
@@ -1967,28 +1967,28 @@ const AdminDataTable = ({
         )}
         {/* Placeholder Rows to fill screen */}
         {[...Array(30)].map((_, i) => (
-          <div key={i} className={`flex border-b border-black/5 opacity-40 ${(data.length + i) % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
-            <div className="w-full h-6 border-r border-black/10"></div>
+          <div key={i} className={`flex border-b border-[color:var(--border-subtle)] opacity-40 ${(data.length + i) % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
+            <div className="w-full h-7 border-r border-[color:var(--border-subtle)]"></div>
           </div>
         ))}
       </div>
 
       {/* Bottom Tab Bar (MT5 Style) */}
-      <div className="min-h-9 bg-[color:var(--bg-surface-1)] border-t border-black/40 flex flex-wrap items-center gap-1.5 px-1.5 py-1">
+      <div className="min-h-10 bg-[color:var(--bg-surface-1)] border-t border-[color:var(--border-default)] flex flex-wrap items-center gap-1.5 px-2 py-1.5 shadow-[var(--shadow-sm)]">
         <div className="flex min-w-0 shrink-0 items-center gap-1 overflow-hidden">
           {viewType === 'Orders' ? (
             <>
               <button
                 type="button"
                 onClick={() => handleOrderModeChange('open')}
-                className={`h-7 shrink-0 px-3 text-[11px] flex items-center border border-black/40 rounded-[3px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent-500)] ${ordersMode !== 'all' ? 'bg-[#3e3e3e] text-white shadow-sm' : 'text-[#999999] hover:text-[color:var(--text-secondary)] hover:bg-white/5'}`}
+                className={`h-8 shrink-0 px-3 text-[11px] flex items-center border border-[color:var(--border-strong)] rounded-[3px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent-500)] ${ordersMode !== 'all' ? 'bg-[color:var(--accent-500)]/18 text-[color:var(--text-primary)] shadow-sm' : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)]'}`}
               >
                 Orders
               </button>
               <button
                 type="button"
                 onClick={() => handleOrderModeChange('all')}
-                className={`h-7 shrink-0 px-3 text-[11px] flex items-center border border-black/40 rounded-[3px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent-500)] ${ordersMode === 'all' ? 'bg-[#3e3e3e] text-white shadow-sm' : 'text-[#999999] hover:text-[color:var(--text-secondary)] hover:bg-white/5'}`}
+                className={`h-8 shrink-0 px-3 text-[11px] flex items-center border border-[color:var(--border-strong)] rounded-[3px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent-500)] ${ordersMode === 'all' ? 'bg-[color:var(--accent-500)]/18 text-[color:var(--text-primary)] shadow-sm' : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)]'}`}
               >
                 All Orders
               </button>
@@ -1996,12 +1996,12 @@ const AdminDataTable = ({
           ) : (
             <>
               <div
-                className="h-7 max-w-[220px] truncate px-3 bg-[#3e3e3e] text-white text-[11px] flex items-center border border-black/40 rounded-[3px] shadow-sm cursor-default"
+                className="h-8 max-w-[220px] truncate px-3 bg-[color:var(--accent-500)]/18 text-[color:var(--text-primary)] text-[11px] flex items-center border border-[color:var(--accent-500)]/45 rounded-[3px] shadow-sm cursor-default"
                 title={activeFooterTabLabel}
               >
                 <span className="truncate">{activeFooterTabLabel}</span>
               </div>
-              <div className="hidden h-7 max-w-[160px] truncate px-2 text-[#999999] hover:text-[color:var(--text-secondary)] text-[11px] sm:flex items-center cursor-default transition-colors">
+              <div className="hidden h-8 max-w-[160px] truncate px-2 text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] text-[11px] sm:flex items-center cursor-default transition-colors">
                 All {viewType}
               </div>
             </>
@@ -2010,7 +2010,7 @@ const AdminDataTable = ({
         {isPagedView && (
           <div className="ml-auto flex min-w-0 max-w-full items-center justify-end gap-1.5 overflow-x-auto no-scrollbar whitespace-nowrap text-[11px] text-[color:var(--text-muted)]">
             <div
-              className="flex h-7 min-w-[132px] shrink-0 items-center gap-1.5 rounded-[3px] border border-[color:var(--border-subtle)] bg-[color:var(--bg-app)] px-2"
+              className="flex h-8 min-w-[132px] shrink-0 items-center gap-1.5 rounded-[3px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] px-2"
               aria-live="polite"
               aria-label={paginationRangeAriaLabel}
             >
@@ -2031,7 +2031,7 @@ const AdminDataTable = ({
             >
               <ChevronLeft size={14} strokeWidth={1.8} aria-hidden="true" />
             </PaginationIconButton>
-            <label className="flex h-7 shrink-0 items-center gap-1.5 rounded-[3px] border border-[color:var(--border-subtle)] bg-[color:var(--bg-app)] px-1.5 text-[color:var(--text-muted)]">
+            <label className="flex h-8 shrink-0 items-center gap-1.5 rounded-[3px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] px-1.5 text-[color:var(--text-muted)]">
               <span className="text-[10px]">Page</span>
               <input
                 aria-label="Page number"

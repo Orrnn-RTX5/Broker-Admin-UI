@@ -29,3 +29,8 @@ test('Integration view preserves existing service content', () => {
     assert.match(src, new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   });
 });
+
+test('Integration header does not render the MQL5 external link', () => {
+  assert.doesNotMatch(src, /www\.mql5\.com/);
+  assert.doesNotMatch(src, /href="https:\/\/www\.mql5\.com"/);
+});

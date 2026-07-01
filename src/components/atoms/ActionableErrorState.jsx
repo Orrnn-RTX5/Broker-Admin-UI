@@ -10,20 +10,20 @@ const ActionableErrorState = ({ state, title, message, actionLabel, onAction, co
   return (
     <div
       role="alert"
-      className={`flex items-start gap-2 border border-red-500/30 bg-red-500/10 text-[11px] rounded-[2px] ${compact ? 'p-2' : 'm-3 p-3'} ${className}`}
+      className={`flex items-start gap-2 border border-[color:var(--danger-500)]/40 bg-[color:var(--danger-500)]/12 text-[11px] rounded-[2px] ${compact ? 'p-2' : 'm-3 p-3'} ${className}`}
     >
-      <AlertCircle size={compact ? 13 : 15} className="text-red-400 shrink-0 mt-0.5" />
+      <AlertCircle size={compact ? 13 : 15} className="text-[color:var(--danger-500)] shrink-0 mt-0.5" />
       <div className="min-w-0 flex-1">
-        <div className="font-medium text-red-300">{errorState.title}</div>
+        <div className="font-medium text-[color:var(--danger-500)]">{errorState.title}</div>
         {errorState.detail && (
-          <div className="mt-0.5 text-[#ccc] break-words">{errorState.detail}</div>
+          <div className="mt-0.5 text-[color:var(--text-secondary)] break-words">{errorState.detail}</div>
         )}
       </div>
       {onAction && (
         <button
           type="button"
           onClick={onAction}
-          className="shrink-0 inline-flex items-center gap-1 h-[22px] px-2 bg-red-500/20 hover:bg-red-500/30 text-red-100 border border-red-500/30 rounded-[2px]"
+          className="shrink-0 inline-flex items-center gap-1 h-[24px] px-2 bg-[color:var(--danger-500)]/18 hover:bg-[color:var(--danger-500)]/26 text-[color:var(--text-primary)] border border-[color:var(--danger-500)]/40 rounded-[2px]"
         >
           <RefreshCw size={11} />
           {errorState.actionLabel || 'Retry'}

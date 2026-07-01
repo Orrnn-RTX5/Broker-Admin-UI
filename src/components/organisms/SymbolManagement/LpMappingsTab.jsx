@@ -1,6 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Plus, Search, Loader2, X } from 'lucide-react';
 import { symbolMappingList, symbolMappingCreate } from '../../../services/api';
+import { getApiErrorMessage } from '../../../utils/apiShapes';
+import { buildActionableErrorState } from '../../../utils/errorState';
+import ActionableErrorState from '../../atoms/ActionableErrorState';
+import { normalizeMappingRows } from './symbolManagementData';
 
 const MappingFormModal = ({ onClose, onSuccess }) => {
   const [form, setForm] = useState({ lpName: '', lpSymbol: '', internalSymbol: '' });
@@ -61,14 +65,20 @@ const LpMappingsTab = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [loadError, setLoadError] = useState(null);
 
   const load = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await symbolMappingList();
-      setMappings(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.error(e);
+      setMappings(normalizeMappingRows(data));
+    } catch (err) {
+      setMappings([]);
+      setLoadError(buildActionableErrorState(getApiErrorMessage(err, 'mapping list request failed'), {
+        title: 'LP mappings failed to load',
+        actionLabel: 'Retry',
+      }));
     } finally {
       setLoading(false);
     }
@@ -98,6 +108,9 @@ const LpMappingsTab = () => {
           <Plus size={13} /> Add Mapping
         </button>
       </div>
+      {loadError && (
+        <ActionableErrorState state={loadError} onAction={load} compact className="m-0 shrink-0" />
+      )}
 
       <div className="ui-card flex-1 overflow-auto">
         {loading ? (

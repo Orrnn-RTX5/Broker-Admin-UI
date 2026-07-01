@@ -7,12 +7,12 @@ export const Select = ({ value, onValueChange, placeholder, options = [], classN
   <RSelect.Root value={value} onValueChange={onValueChange} disabled={disabled}>
     <RSelect.Trigger
       className={cn(
-        'inline-flex items-center justify-between gap-2 h-8 px-2.5 w-full',
+        'inline-flex items-center justify-between gap-2 h-9 px-3 w-full',
         'text-[13px] rounded-[var(--radius-sm)]',
         'bg-[color:var(--bg-surface-1)] text-[color:var(--text-primary)]',
-        'border border-[color:var(--border-default)]',
+        'border border-[color:var(--border-strong)] shadow-[var(--shadow-sm)]',
         'hover:bg-[color:var(--bg-surface-2)] transition-colors duration-150',
-        'focus:outline-none focus:border-[color:var(--text-primary)]',
+        'focus:outline-none focus:border-[color:var(--accent-500)] focus:ring-2 focus:ring-[color:var(--accent-500)]/20',
         'data-[placeholder]:text-[color:var(--text-muted)]',
         'disabled:opacity-40 disabled:cursor-not-allowed',
         className
@@ -27,7 +27,7 @@ export const Select = ({ value, onValueChange, placeholder, options = [], classN
         sideOffset={4}
         className={cn(
           'z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden',
-          'bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)]',
+          'bg-[color:var(--bg-surface-1)] border border-[color:var(--border-strong)]',
           'rounded-[var(--radius-sm)] shadow-[var(--shadow-md)]'
         )}
       >
@@ -39,7 +39,7 @@ export const Select = ({ value, onValueChange, placeholder, options = [], classN
               className={cn(
                 'relative flex items-center h-7 px-2 pr-7 text-[13px] rounded-[var(--radius-sm)]',
                 'text-[color:var(--text-primary)] cursor-default select-none',
-                'data-[highlighted]:bg-[color:var(--bg-surface-2)] data-[highlighted]:outline-none'
+                'data-[highlighted]:bg-[color:var(--bg-surface-3)] data-[highlighted]:outline-none'
               )}
             >
               <RSelect.ItemText>{opt.label}</RSelect.ItemText>

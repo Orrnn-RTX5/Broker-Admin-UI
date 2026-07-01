@@ -9,7 +9,7 @@ import { Tooltip } from '../ui/Tooltip';
 import { Input } from '../ui/Input';
 
 const Divider = () => (
-  <div className="w-px h-5 bg-[color:var(--border-subtle)] mx-1" />
+  <div className="w-px h-6 bg-[color:var(--border-default)] mx-1.5" />
 );
 
 const Tool = ({ icon, label, onClick, disabled }) => (
@@ -25,7 +25,7 @@ const ActionToolBar = ({
   onRefresh, onExport, onImport, onEditClick, canEdit = false,
   searchQuery = '', onSearchChange, searchInputRef,
 }) => (
-  <div className="h-10 bg-[color:var(--bg-surface-1)] flex items-center px-2 gap-0.5 border-b border-[color:var(--border-subtle)] overflow-x-auto no-scrollbar">
+  <div className="h-12 bg-[color:var(--bg-surface-1)] flex items-center px-3 gap-1 border-b border-[color:var(--border-default)] shadow-[var(--shadow-sm)] overflow-x-auto no-scrollbar">
     {/* No backend — disabled */}
     <Tool icon={XOctagon} label="Disconnect" disabled />
     <Divider />
@@ -60,7 +60,7 @@ const ActionToolBar = ({
     <Tool icon={Play} label="Start" disabled />
     <Tool icon={Pause} label="Pause" disabled />
 
-    <div className="ml-auto flex items-center gap-2">
+    <div className="ml-auto flex items-center gap-2 pl-3">
       <div className="relative">
         <Search
           size={12}
@@ -71,7 +71,7 @@ const ActionToolBar = ({
           placeholder="Search current view…  (Ctrl+F)"
           value={searchQuery}
           onChange={(e) => onSearchChange?.(e.target.value)}
-          className="w-56 pr-7 h-7 text-[12px]"
+          className="w-64 pr-7 h-8 text-[12px]"
         />
       </div>
     </div>

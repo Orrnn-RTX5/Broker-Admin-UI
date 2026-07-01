@@ -20,7 +20,7 @@ const ContextMenuItem = ({ icon: Icon, iconColor, label, shortcut, rightArrow, c
   return (
     <div
       onClick={handleClick}
-      className="flex items-center w-full py-[3px] hover:bg-[color:var(--border-default)] text-[11.5px] text-[color:var(--text-secondary)] hover:text-white transition-none group px-1"
+      className="flex items-center w-full py-[4px] rounded-[2px] hover:bg-[color:var(--accent-500)]/18 text-[11.5px] text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] transition-colors group px-1"
     >
       <div className="w-6 flex items-center justify-center shrink-0">
         {checked && <Check size={12} className="text-[color:var(--text-primary)]" />}
@@ -28,7 +28,7 @@ const ContextMenuItem = ({ icon: Icon, iconColor, label, shortcut, rightArrow, c
       </div>
       <div className="flex-1 flex items-center justify-between pr-2 pl-1">
         <span>{label}</span>
-        <div className="flex items-center text-[color:var(--text-muted)] font-mono text-[10px] group-hover:text-white">
+        <div className="flex items-center text-[color:var(--text-muted)] font-mono text-[10px] group-hover:text-[color:var(--text-primary)]">
           {shortcut && <span>{shortcut}</span>}
           {rightArrow && <ChevronRight size={12} />}
         </div>
@@ -62,7 +62,7 @@ const ContextMenu = ({ x, y, onClose, onAdd, onEdit, onDelete, selectedRow }) =>
   return (
     <div 
       ref={menuRef}
-      className="fixed z-[9999] w-[240px] bg-[color:var(--bg-app)] border border-[color:var(--border-default)] shadow-[4px_4px_10px_rgba(0,0,0,0.5)] py-1 select-none"
+      className="fixed z-[9999] w-[240px] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-strong)] shadow-[var(--shadow-lg)] p-1 select-none rounded-[var(--radius-sm)]"
       style={style}
       onContextMenu={(e) => e.preventDefault()}
     >

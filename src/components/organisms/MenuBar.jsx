@@ -50,6 +50,7 @@ const MenuBar = ({
   onUndo, onRedo, onRefresh, onExport, onExportCsv, onImport, onHelp, onAbout,
   canUndo, canRedo,
 }) => {
+  const activeNodeLabel = activeNode;
   const handleLogout = () => AuthService.logout();
 
   const handleExit = () => {
@@ -62,7 +63,7 @@ const MenuBar = ({
   };
 
   return (
-    <div className="h-9 bg-[color:var(--bg-surface-1)] flex items-center px-1 border-b border-[color:var(--border-subtle)] select-none">
+    <div className="h-10 bg-[color:var(--bg-surface-1)] flex items-center px-2 border-b border-[color:var(--border-default)] shadow-[var(--shadow-sm)] select-none">
       {/* FILE */}
       <DropdownMenu>
         <MenuTrigger label="File" />
@@ -147,7 +148,7 @@ const MenuBar = ({
 
       <div className="ml-auto flex items-center pr-3 gap-3">
         <span className="text-[11px] text-[color:var(--text-muted)] font-mono">
-          RTX 5 · {activeNode || '—'}
+          RTX 5 · {activeNodeLabel || '—'}
         </span>
       </div>
     </div>

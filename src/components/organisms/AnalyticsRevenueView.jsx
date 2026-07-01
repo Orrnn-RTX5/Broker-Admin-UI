@@ -1,25 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { AnalyticsService } from '../../services/analytics.service';
 import { RefreshCw } from 'lucide-react';
+import { useCachedTabRequest } from '../../hooks/useCachedTabRequest';
+import ActionableErrorState from '../atoms/ActionableErrorState';
+
+const REVENUE_LOADERS = {
+  revenue: () => AnalyticsService.getRevenueForecast(),
+};
 
 const fmt = (v) => typeof v === 'number' ? v.toFixed(2) : String(v ?? '—');
 const pnlColor = (v) => (v > 0 ? 'text-[#4ec9b0]' : v < 0 ? 'text-[#f48771]' : 'text-[color:var(--text-primary)]');
 
 const AnalyticsRevenueView = () => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await AnalyticsService.getRevenueForecast();
-      setData(res);
-    } catch (err) {
-      alert('Failed: ' + (err.response?.data?.message || err.message));
-    } finally { setLoading(false); }
-  };
-
-  useEffect(() => { load(); }, []);
+  const { data, loading, error, refresh } = useCachedTabRequest('revenue', REVENUE_LOADERS, {
+    fallback: 'Revenue forecast failed to load.',
+  });
 
   const renderData = () => {
     if (!data) return <div className="text-[#555] text-[11px]">No forecast data available.</div>;
@@ -65,7 +60,7 @@ const AnalyticsRevenueView = () => {
       {/* Header */}
       <div className="flex items-center px-3 h-[30px] bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0">
         <span className="text-[11px] font-semibold text-[#9cdcfe] flex-1">Revenue Forecast Analytics</span>
-        <button onClick={load} className="flex items-center gap-1.5 h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]">
+        <button onClick={refresh} className="flex items-center gap-1.5 h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]">
           <RefreshCw size={11} /> Refresh
         </button>
       </div>
@@ -73,7 +68,9 @@ const AnalyticsRevenueView = () => {
       <div className="flex-1 overflow-auto p-6">
         {loading
           ? <div className="text-[#888] text-[11px]">Loading…</div>
-          : renderData()}
+          : error
+            ? <ActionableErrorState title="Unable to load data" message={error} actionLabel="Refresh" onAction={refresh} compact className="m-0" />
+            : renderData()}
       </div>
     </div>
   );

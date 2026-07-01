@@ -1,6 +1,8 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { AnalyticsService } from '../../services/analytics.service';
 import { RefreshCw } from 'lucide-react';
+import { useCachedTabRequest } from '../../hooks/useCachedTabRequest';
+import ActionableErrorState from '../atoms/ActionableErrorState';
 
 const TABS = [
   { key: 'clv', label: 'Client Lifetime Value' },
@@ -8,6 +10,13 @@ const TABS = [
   { key: 'retention', label: 'Retention' },
   { key: 'deposits', label: 'Deposits' },
 ];
+
+const CLIENT_ANALYTICS_LOADERS = {
+  clv: () => AnalyticsService.getCLV(),
+  churn: () => AnalyticsService.getChurnPrediction(),
+  retention: () => AnalyticsService.getRetention(),
+  deposits: () => AnalyticsService.getDeposits(),
+};
 
 const NUMERIC_COLUMN_RE = /(avg|total|count|revenue|volume|balance|clv|days|rate|probability|amount|deposit)/i;
 const INTEGER_COLUMN_RE = /(count|accounts|clients|trades|orders)$/i;
@@ -133,35 +142,9 @@ const ResultTable = ({ data }) => {
 
 const AnalyticsClientView = () => {
   const [tab, setTab] = useState('clv');
-  const [results, setResults] = useState({});
-  const [loading, setLoading] = useState(false);
-
-  const load = useCallback(async (key) => {
-    if (results[key]) return;
-    setLoading(true);
-    try {
-      let res;
-      if (key === 'clv') res = await AnalyticsService.getCLV();
-      else if (key === 'churn') res = await AnalyticsService.getChurnPrediction();
-      else if (key === 'retention') res = await AnalyticsService.getRetention();
-      else if (key === 'deposits') res = await AnalyticsService.getDeposits();
-      setResults((current) => ({ ...current, [key]: res ?? [] }));
-    } catch (err) {
-      alert('Failed: ' + (err.response?.data?.message || err.message));
-    } finally {
-      setLoading(false);
-    }
-  }, [results]);
-
-  const refresh = async () => {
-    setResults((current) => {
-      const copy = { ...current };
-      delete copy[tab];
-      return copy;
-    });
-  };
-
-  useEffect(() => { load(tab); }, [load, tab]);
+  const { data, loading, error, refresh } = useCachedTabRequest(tab, CLIENT_ANALYTICS_LOADERS, {
+    fallback: 'Client analytics failed to load.',
+  });
 
   return (
     <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden">
@@ -186,8 +169,15 @@ const AnalyticsClientView = () => {
 
       {loading ? (
         <div className="flex items-center justify-center flex-1 text-[#888] text-[11px]">Loading...</div>
+      ) : error ? (
+        <ActionableErrorState
+          title="Unable to load data"
+          message={error}
+          actionLabel="Refresh"
+          onAction={refresh}
+        />
       ) : (
-        <ResultTable data={results[tab] ?? null} />
+        <ResultTable data={data} />
       )}
     </div>
   );

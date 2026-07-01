@@ -5,21 +5,21 @@
 :root,
 [data-theme="light"] {
   /* Surfaces — warm near-whites, very subtle separation between layers */
-  --bg-app: #ffffff;
+  --bg-app: #f5f7fb;
   --bg-surface-1: #ffffff;
-  --bg-surface-2: #fafafa;
-  --bg-surface-3: #f4f4f5;
-  --bg-overlay: rgba(24, 24, 27, 0.32);
+  --bg-surface-2: #eef2f7;
+  --bg-surface-3: #e2e8f0;
+  --bg-overlay: rgba(15, 23, 42, 0.36);
 
   /* Borders — hairline, neutral gray */
-  --border-subtle: #efeff1;
-  --border-default: #e4e4e7;
-  --border-strong: #d4d4d8;
+  --border-subtle: #dbe3ed;
+  --border-default: #cbd5e1;
+  --border-strong: #94a3b8;
 
   /* Text — flat neutral scale, no blue tint */
-  --text-primary: #18181b;
-  --text-secondary: #3f3f46;
-  --text-muted: #71717a;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
   --text-inverse: #ffffff;
 
   /* Professional muted slate-blue accent.
@@ -38,9 +38,9 @@
   --info-500:    #1d4ed8;
 
   /* Shadows — barely-there, premium feel */
-  --shadow-sm: 0 1px 0 0 rgba(24, 24, 27, 0.04);
-  --shadow-md: 0 1px 2px 0 rgba(24, 24, 27, 0.04), 0 2px 8px -2px rgba(24, 24, 27, 0.06);
-  --shadow-lg: 0 8px 24px -8px rgba(24, 24, 27, 0.12);
+  --shadow-sm: 0 1px 0 0 rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 1px 2px 0 rgba(15, 23, 42, 0.08), 0 8px 18px -14px rgba(15, 23, 42, 0.28);
+  --shadow-lg: 0 18px 40px -24px rgba(15, 23, 42, 0.38);
 
   --radius-sm: 3px;
   --radius-md: 6px;
@@ -65,50 +65,50 @@
    Density — compact (default) vs cozy. Applied via data-density on <html>.
    ============================================================ */
 [data-density="cozy"] {
-  --row-py: 6px;
-  --row-h:  32px;
+  --row-py: 7px;
+  --row-h:  34px;
 }
 [data-density="compact"],
 :root {
-  --row-py: 2px;
-  --row-h:  24px;
+  --row-py: 4px;
+  --row-h:  28px;
 }
 [data-density="cozy"] table td,
 [data-density="cozy"] table th { padding-top: 6px !important; padding-bottom: 6px !important; }
 
 [data-theme="dark"] {
   /* Match the original MT5 terminal palette — warm neutral gray, not pure black. */
-  --bg-app: #1e1e1e;
-  --bg-surface-1: #252526;
-  --bg-surface-2: #333333;
-  --bg-surface-3: #3e3e42;
-  --bg-overlay: rgba(0, 0, 0, 0.6);
+  --bg-app: #111418;
+  --bg-surface-1: #171b21;
+  --bg-surface-2: #202631;
+  --bg-surface-3: #2b3440;
+  --bg-overlay: rgba(3, 7, 18, 0.72);
 
-  --border-subtle: #2b2b2b;
-  --border-default: #3e3e42;
-  --border-strong: #555555;
+  --border-subtle: #28313d;
+  --border-default: #394555;
+  --border-strong: #526173;
 
-  --text-primary: #d1d1d1;
-  --text-secondary: #a0a0a0;
-  --text-muted: #808080;
-  --text-inverse: #1e1e1e;
+  --text-primary: #f3f7fb;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-inverse: #0f172a;
 
   /* MT5 chrome blue as accent (the original status bar color). */
-  --accent-50:  #0f2240;
-  --accent-100: #1e3a8a;
-  --accent-500: #007acc;
-  --accent-600: #0088e0;
-  --accent-700: #1a8ad4;
+  --accent-50:  #082033;
+  --accent-100: #0f3a5c;
+  --accent-500: #2ea8ff;
+  --accent-600: #55b8ff;
+  --accent-700: #1f8de0;
   --accent-contrast: #ffffff;
 
-  --success-500: #22c55e;
-  --warning-500: #f59e0b;
-  --danger-500:  #ef4444;
-  --info-500:    #3b82f6;
+  --success-500: #4ade80;
+  --warning-500: #fbbf24;
+  --danger-500:  #f87171;
+  --info-500:    #60a5fa;
 
-  --shadow-sm: 0 1px 0 0 rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 1px 2px 0 rgba(0, 0, 0, 0.4), 0 2px 8px -2px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 8px 24px -8px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 1px 0 0 rgba(0, 0, 0, 0.48);
+  --shadow-md: 0 1px 2px 0 rgba(0, 0, 0, 0.48), 0 12px 24px -18px rgba(0, 0, 0, 0.76);
+  --shadow-lg: 0 24px 50px -28px rgba(0, 0, 0, 0.88);
 
   color-scheme: dark;
 }

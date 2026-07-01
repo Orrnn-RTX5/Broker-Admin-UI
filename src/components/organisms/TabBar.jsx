@@ -71,14 +71,14 @@ export const TabBar = ({ tabs, activeTab, onSelect, onClose }) => {
   };
 
   return (
-    <div className="flex h-8 shrink-0 items-stretch bg-[color:var(--bg-surface-2)] border-b border-[color:var(--border-subtle)]">
+    <div className="flex h-9 shrink-0 items-stretch bg-[color:var(--bg-surface-2)] border-b border-[color:var(--border-default)] shadow-[var(--shadow-sm)]">
       {tabs.length > 1 && (
         <button
           type="button"
           aria-label="Scroll tabs left"
           onClick={() => scrollTabs(-1)}
           disabled={!scrollState.left}
-          className="w-7 shrink-0 border-r border-[color:var(--border-subtle)] text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-1)] disabled:opacity-35 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+          className="w-8 shrink-0 border-r border-[color:var(--border-default)] text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-1)] disabled:opacity-35 disabled:hover:bg-transparent disabled:cursor-not-allowed"
         >
           <ChevronLeft size={13} className="mx-auto" aria-hidden="true" />
         </button>
@@ -106,10 +106,10 @@ export const TabBar = ({ tabs, activeTab, onSelect, onClose }) => {
               onClick={() => onSelect(t)}
               onKeyDown={(event) => handleTabKeyDown(event, t, index)}
               className={cn(
-                'group relative flex h-full min-w-[104px] max-w-[180px] items-center gap-1.5 border-r border-[color:var(--border-subtle)] px-2.5 text-[12px] outline-none select-none cursor-default',
+                'group relative flex h-full min-w-[112px] max-w-[190px] items-center gap-1.5 border-r border-[color:var(--border-default)] px-3 text-[12px] outline-none select-none cursor-default',
                 'focus-visible:bg-[color:var(--bg-surface-1)] focus-visible:text-[color:var(--text-primary)]',
                 active
-                  ? 'bg-[color:var(--bg-surface-1)] text-[color:var(--text-primary)] font-medium shadow-[inset_0_-2px_0_var(--accent-500)]'
+                  ? 'bg-[color:var(--bg-surface-1)] text-[color:var(--text-primary)] font-semibold shadow-[inset_0_-3px_0_var(--accent-500)]'
                   : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-surface-1)] hover:text-[color:var(--text-primary)]'
               )}
             >
@@ -139,12 +139,12 @@ export const TabBar = ({ tabs, activeTab, onSelect, onClose }) => {
             aria-label="Scroll tabs right"
             onClick={() => scrollTabs(1)}
             disabled={!scrollState.right}
-            className="w-7 shrink-0 border-l border-[color:var(--border-subtle)] text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-1)] disabled:opacity-35 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+            className="w-8 shrink-0 border-l border-[color:var(--border-default)] text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-1)] disabled:opacity-35 disabled:hover:bg-transparent disabled:cursor-not-allowed"
           >
             <ChevronRight size={13} className="mx-auto" aria-hidden="true" />
           </button>
           <div
-            className="hidden w-10 shrink-0 items-center justify-center border-l border-[color:var(--border-subtle)] font-mono text-[10px] text-[color:var(--text-muted)] sm:flex"
+            className="hidden w-10 shrink-0 items-center justify-center border-l border-[color:var(--border-default)] font-mono text-[10px] text-[color:var(--text-muted)] sm:flex"
             title={`${tabs.length} open tabs`}
           >
             {tabs.length}

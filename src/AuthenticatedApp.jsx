@@ -31,7 +31,7 @@ import {
   getLatestDesktopInstaller,
 } from './config/desktopRelease';
 import { getViewCapabilityToast, shouldBlockViewNavigation } from './config/viewCapabilities';
-import { Download, Network, Globe, RefreshCcw, ShieldAlert } from 'lucide-react';
+import { Download, Network, RefreshCcw, ShieldAlert } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { TooltipProvider } from './components/ui/Tooltip';
 import { ToastProvider, ToastViewport } from './components/ui/Toast';
@@ -40,27 +40,6 @@ import { StatusDot } from './components/ui/Badge';
 
 const formatTime = (d) =>
   `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
-
-const formatCount = (value) => (
-  Number.isFinite(value) ? new Intl.NumberFormat().format(value) : '0'
-);
-
-const formatBytes = (value) => {
-  const bytes = Number(value);
-  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
-
-  const units = ['B', 'KB', 'MB', 'GB'];
-  let size = bytes;
-  let unitIndex = 0;
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex += 1;
-  }
-
-  if (unitIndex === 0) return `${Math.round(size)} ${units[unitIndex]}`;
-  const formatted = size >= 10 ? size.toFixed(0) : size.toFixed(1);
-  return `${formatted} ${units[unitIndex]}`;
-};
 
 const AccessDeniedPanel = ({ viewName, permission }) => (
   <div className="flex-1 flex items-center justify-center bg-[color:var(--bg-app)] select-none">
@@ -142,11 +121,6 @@ const AuthenticatedAppInner = ({ navigate }) => {
     setSavedSearches((prev) => ({ ...prev, [activeNode]: q }));
 
   const searchInputRef = React.useRef(null);
-  const activeViewMetricLabel = React.useMemo(() => {
-    const visibleRows = Number(rowCount.visible) || 0;
-    return `${formatCount(visibleRows)} / ${formatBytes(rowCount.bytes)}`;
-  }, [rowCount.bytes, rowCount.visible]);
-
   React.useEffect(() => {
     if (!isAuthenticated || !accessToken) return undefined;
 
@@ -704,7 +678,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
           selectedNodeLabel={activeNode}
         />
 
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden border-l border-[color:var(--border-subtle)]">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden border-l border-[color:var(--border-default)] bg-[color:var(--bg-app)]">
           <TabBar
             tabs={openTabs}
             activeTab={activeTab}
@@ -718,7 +692,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
             onClose={closeTab}
           />
 
-          <div className="h-8 bg-[color:var(--bg-surface-2)] border-b border-[color:var(--border-subtle)] flex items-center px-3 gap-4 text-[11px] text-[color:var(--text-muted)]">
+          <div className="h-9 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] flex items-center px-4 gap-4 text-[11px] text-[color:var(--text-muted)] shadow-[var(--shadow-sm)]">
             <div className="flex items-center gap-1.5 text-[color:var(--text-primary)] font-medium">
               <Network size={12} className="text-[color:var(--text-muted)]" />
               <span>{activeNode}</span>
@@ -730,16 +704,6 @@ const AuthenticatedAppInner = ({ navigate }) => {
                   : `${rowCount.total} rows`}
               </span>
             )}
-            <div className="flex items-center gap-1.5 ml-auto text-[color:var(--text-secondary)]">
-              <Globe size={12} />
-              <span
-                className="font-mono tracking-tight"
-                title="Mounted rows / estimated row payload"
-                aria-label={`Mounted rows and estimated row payload: ${activeViewMetricLabel}`}
-              >
-                {activeViewMetricLabel}
-              </span>
-            </div>
           </div>
 
           {canViewActive ? (
@@ -805,7 +769,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
       <HelpModal open={helpOpen} onOpenChange={setHelpOpen} />
       <AboutModal open={aboutOpen} onOpenChange={setAboutOpen} />
 
-      <footer className="h-7 bg-[color:var(--bg-surface-2)] border-t border-[color:var(--border-subtle)] flex items-center gap-2 px-3 justify-between select-none text-[11px] text-[color:var(--text-secondary)]">
+      <footer className="h-8 bg-[color:var(--bg-surface-1)] border-t border-[color:var(--border-default)] flex items-center gap-2 px-3 justify-between select-none text-[11px] text-[color:var(--text-secondary)] shadow-[var(--shadow-sm)]">
         <div className="flex min-w-0 items-center gap-2" title={connText}>
           <StatusDot tone={connTone} />
           <span className="truncate font-medium">{connText}</span>
@@ -818,7 +782,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
               rel="noopener noreferrer"
               download={desktopInstaller?.fileName || undefined}
               onClick={handleDesktopDownloadClick}
-              className="h-5 inline-flex items-center gap-1.5 rounded-[2px] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-1)] px-2 font-sans text-[11px] font-medium text-[color:var(--text-secondary)] hover:border-[color:var(--accent-500)] hover:text-[color:var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--accent-500)]"
+              className="h-6 inline-flex items-center gap-1.5 rounded-[2px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-2)] px-2 font-sans text-[11px] font-medium text-[color:var(--text-secondary)] hover:border-[color:var(--accent-500)] hover:text-[color:var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--accent-500)]"
               title={desktopInstaller ? `Download RTX5 Broker Admin v${desktopInstaller.version}` : 'Open latest desktop app download'}
               aria-label={desktopInstaller ? `Download desktop app version ${desktopInstaller.version}` : 'Download desktop app'}
             >
@@ -835,7 +799,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
             <button
               type="button"
               onClick={handleCheckForUpdates}
-              className="h-5 inline-flex items-center gap-1.5 rounded-[2px] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-1)] px-2 font-sans text-[11px] font-medium text-[color:var(--text-secondary)] hover:border-[color:var(--accent-500)] hover:text-[color:var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--accent-500)]"
+              className="h-6 inline-flex items-center gap-1.5 rounded-[2px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-2)] px-2 font-sans text-[11px] font-medium text-[color:var(--text-secondary)] hover:border-[color:var(--accent-500)] hover:text-[color:var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--accent-500)]"
               title="Check for desktop app updates"
               aria-label="Check for desktop app updates"
             >

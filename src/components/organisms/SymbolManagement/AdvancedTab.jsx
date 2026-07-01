@@ -1,25 +1,56 @@
 import { useCallback, useState, useEffect } from 'react';
-import { Save, Loader2, Plus, Trash2, X } from 'lucide-react';
+import { Save, Loader2, Plus, X } from 'lucide-react';
 import {
   marketDepthConfigGet, marketDepthConfigSet,
   symbolVisibilityList, symbolVisibilitySet,
 } from '../../../services/api';
-import { buildFeedWsUrl } from '../../../config/endpoints';
+import { getApiErrorMessage } from '../../../utils/apiShapes';
+import { buildActionableErrorState } from '../../../utils/errorState';
+import ActionableErrorState from '../../atoms/ActionableErrorState';
+import {
+  loadSymbolOptions,
+  normalizeMarketDepthConfig,
+  normalizeVisibilityRows,
+} from './symbolManagementData';
 
 // ─── Market Depth Section ──────────────────────────────────────────────────────
+const isMissingMarketDepthConfig = (error) => {
+  const status = Number(error?.response?.status);
+  if (status === 404) return true;
+
+  const message = getApiErrorMessage(error, '').toLowerCase();
+  return /\bmarket depth config\b.*\bnot found\b|\bnot found\b.*\bmarket depth config\b/.test(message);
+};
+
 const MarketDepthSection = ({ allSymbols, loadingSymbols }) => {
   const [symbol, setSymbol] = useState('');
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
+  const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
-    if (!symbol) { setConfig(null); return; }
+    if (!symbol) {
+      setConfig(null);
+      setLoadError(null);
+      return;
+    }
     setLoading(true);
+    setLoadError(null);
     marketDepthConfigGet(symbol)
-      .then(d => setConfig(d || {}))
-      .catch(() => setConfig({}))
+      .then(d => setConfig(normalizeMarketDepthConfig(d)))
+      .catch((loadErr) => {
+        setConfig(normalizeMarketDepthConfig({}));
+        if (isMissingMarketDepthConfig(loadErr)) {
+          return;
+        }
+
+        setLoadError(buildActionableErrorState(getApiErrorMessage(loadErr, 'market depth config request failed'), {
+          title: 'Market depth config failed to load',
+          actionLabel: 'Retry',
+        }));
+      })
       .finally(() => setLoading(false));
   }, [symbol]);
 
@@ -61,6 +92,13 @@ const MarketDepthSection = ({ allSymbols, loadingSymbols }) => {
         )}
       </div>
       {loading && <div className="text-xs" style={{ color: 'var(--muted)' }}><Loader2 size={12} className="animate-spin inline mr-1" />Loading…</div>}
+      {loadError && (
+        <ActionableErrorState state={loadError} onAction={() => {
+          const current = symbol;
+          setSymbol('');
+          window.setTimeout(() => setSymbol(current), 0);
+        }} compact className="m-0" />
+      )}
       {config && !loading && (
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
@@ -157,10 +195,21 @@ const VisibilitySection = ({ allSymbols, loadingSymbols }) => {
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [loadError, setLoadError] = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
-    symbolVisibilityList().then(d => setRules(Array.isArray(d) ? d : [])).catch(() => {}).finally(() => setLoading(false));
+    setLoadError(null);
+    symbolVisibilityList()
+      .then(d => setRules(normalizeVisibilityRows(d)))
+      .catch((err) => {
+        setRules([]);
+        setLoadError(buildActionableErrorState(getApiErrorMessage(err, 'symbol visibility request failed'), {
+          title: 'Symbol visibility failed to load',
+          actionLabel: 'Retry',
+        }));
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -180,6 +229,8 @@ const VisibilitySection = ({ allSymbols, loadingSymbols }) => {
         <div className="text-xs text-center py-4" style={{ color: 'var(--muted)' }}>
           <Loader2 size={13} className="animate-spin inline mr-1" />Loading…
         </div>
+      ) : loadError ? (
+        <ActionableErrorState state={loadError} onAction={load} compact className="m-0" />
       ) : (
         <table className="ui-grid w-full text-xs">
           <thead>
@@ -222,47 +273,34 @@ const VisibilitySection = ({ allSymbols, loadingSymbols }) => {
 const AdvancedTab = () => {
   const [allSymbols, setAllSymbols] = useState([]);
   const [loadingSymbols, setLoadingSymbols] = useState(true);
+  const [symbolLoadError, setSymbolLoadError] = useState(null);
+
+  const loadSymbols = async () => {
+    setLoadingSymbols(true);
+    setSymbolLoadError(null);
+    try {
+      setAllSymbols(await loadSymbolOptions());
+    } catch (err) {
+      setAllSymbols([]);
+      setSymbolLoadError(buildActionableErrorState(getApiErrorMessage(err, 'symbol list request failed'), {
+        title: 'Symbols failed to load',
+        actionLabel: 'Retry',
+      }));
+    } finally {
+      setLoadingSymbols(false);
+    }
+  };
 
   useEffect(() => {
-    const ws = new WebSocket(buildFeedWsUrl());
-    const symbolSet = new Set();
-    
-    ws.onopen = () => ws.send(JSON.stringify({ type: 'subscribe', symbols: ['*'] }));
-    ws.onmessage = (e) => {
-      try {
-        const messages = e.data.trim().split('\n');
-        for (let i = 0; i < messages.length; i++) {
-          if (!messages[i]) continue;
-          const msg = JSON.parse(messages[i]);
-          if (msg.symbol) symbolSet.add(msg.symbol);
-        }
-      } catch {
-        // Ignore malformed feed messages.
-      }
-    };
-
-    const timer = setTimeout(() => {
-      setAllSymbols(Array.from(symbolSet).sort());
-      setLoadingSymbols(false);
-      if (ws.readyState === WebSocket.OPEN) ws.close();
-    }, 3000);
-
-    ws.onerror = () => {
-      setAllSymbols([]);
-      setLoadingSymbols(false);
-    };
-
-    return () => {
-      clearTimeout(timer);
-      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
-        ws.onclose = null;
-        ws.close();
-      }
-    };
+    const timer = window.setTimeout(loadSymbols, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   return (
     <div className="h-full flex flex-col gap-4 overflow-auto">
+      {symbolLoadError && (
+        <ActionableErrorState state={symbolLoadError} onAction={loadSymbols} compact className="m-0 shrink-0" />
+      )}
       <MarketDepthSection allSymbols={allSymbols} loadingSymbols={loadingSymbols} />
       <VisibilitySection allSymbols={allSymbols} loadingSymbols={loadingSymbols} />
     </div>

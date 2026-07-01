@@ -5,8 +5,16 @@ import {
   dynamicLeverageList, dynamicLeverageCreate, dynamicLeverageDelete,
   swapFreeGroupList, swapFreeGroupSet, swapFreeGroupDelete,
 } from '../../../services/api';
-import { buildFeedWsUrl } from '../../../config/endpoints';
+import { getApiErrorMessage } from '../../../utils/apiShapes';
 import { parseNonNegativeNumber, parsePositiveInteger } from '../../../utils/adminValidation';
+import { buildActionableErrorState } from '../../../utils/errorState';
+import ActionableErrorState from '../../atoms/ActionableErrorState';
+import {
+  loadSymbolOptions,
+  normalizeCommissionRows,
+  normalizeLeverageRows,
+  normalizeSwapFreeRows,
+} from './symbolManagementData';
 
 // ─── Generic delete-capable table ─────────────────────────────────────────────
 const DeletableTable = ({ rows, columns, idKey, onDelete, deletingId, emptyMsg }) => (
@@ -52,11 +60,29 @@ const CommissionSection = ({ symbol }) => {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [err, setErr] = useState('');
+  const [loadError, setLoadError] = useState(null);
 
-  const load = useCallback(() => {
-    if (!symbol) return;
+  const load = useCallback(async () => {
+    if (!symbol) {
+      setSchedules([]);
+      setLoading(false);
+      setLoadError(null);
+      return;
+    }
     setLoading(true);
-    commissionScheduleList(symbol).then(d => setSchedules(Array.isArray(d) ? d : [])).catch(() => undefined).finally(() => setLoading(false));
+    setLoadError(null);
+    try {
+      const data = await commissionScheduleList(symbol);
+      setSchedules(normalizeCommissionRows(data));
+    } catch (loadErr) {
+      setSchedules([]);
+      setLoadError(buildActionableErrorState(getApiErrorMessage(loadErr, 'commission schedule request failed'), {
+        title: 'Commission schedules failed to load',
+        actionLabel: 'Retry',
+      }));
+    } finally {
+      setLoading(false);
+    }
   }, [symbol]);
 
   useEffect(() => {
@@ -127,6 +153,9 @@ const CommissionSection = ({ symbol }) => {
           <button type="button" onClick={() => setShowForm(false)} className="ui-btn ui-btn-ghost ui-btn-sm"><X size={12} /></button>
         </form>
       )}
+      {loadError && (
+        <ActionableErrorState state={loadError} onAction={load} compact className="m-0" />
+      )}
       {loading ? (
         <div className="text-xs text-center py-4" style={{ color: 'var(--muted)' }}><Loader2 size={13} className="animate-spin inline mr-1" />Loading…</div>
       ) : (
@@ -158,11 +187,29 @@ const DynamicLeverageSection = ({ symbol }) => {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [err, setErr] = useState('');
+  const [loadError, setLoadError] = useState(null);
 
-  const load = useCallback(() => {
-    if (!symbol) return;
+  const load = useCallback(async () => {
+    if (!symbol) {
+      setTiers([]);
+      setLoading(false);
+      setLoadError(null);
+      return;
+    }
     setLoading(true);
-    dynamicLeverageList(symbol).then(d => setTiers(Array.isArray(d) ? d : [])).catch(() => undefined).finally(() => setLoading(false));
+    setLoadError(null);
+    try {
+      const data = await dynamicLeverageList(symbol);
+      setTiers(normalizeLeverageRows(data));
+    } catch (loadErr) {
+      setTiers([]);
+      setLoadError(buildActionableErrorState(getApiErrorMessage(loadErr, 'dynamic leverage request failed'), {
+        title: 'Dynamic leverage failed to load',
+        actionLabel: 'Retry',
+      }));
+    } finally {
+      setLoading(false);
+    }
   }, [symbol]);
 
   useEffect(() => {
@@ -232,6 +279,9 @@ const DynamicLeverageSection = ({ symbol }) => {
           <button type="button" onClick={() => setShowForm(false)} className="ui-btn ui-btn-ghost ui-btn-sm"><X size={12} /></button>
         </form>
       )}
+      {loadError && (
+        <ActionableErrorState state={loadError} onAction={load} compact className="m-0" />
+      )}
       {loading ? (
         <div className="text-xs text-center py-4" style={{ color: 'var(--muted)' }}><Loader2 size={13} className="animate-spin inline mr-1" />Loading…</div>
       ) : (
@@ -261,10 +311,23 @@ const SwapFreeSection = () => {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [err, setErr] = useState('');
+  const [loadError, setLoadError] = useState(null);
 
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     setLoading(true);
-    swapFreeGroupList().then(d => setGroups(Array.isArray(d) ? d : [])).catch(() => undefined).finally(() => setLoading(false));
+    setLoadError(null);
+    try {
+      const data = await swapFreeGroupList();
+      setGroups(normalizeSwapFreeRows(data));
+    } catch (loadErr) {
+      setGroups([]);
+      setLoadError(buildActionableErrorState(getApiErrorMessage(loadErr, 'swap-free group request failed'), {
+        title: 'Swap-free groups failed to load',
+        actionLabel: 'Retry',
+      }));
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -322,6 +385,9 @@ const SwapFreeSection = () => {
           <button type="button" onClick={() => setShowForm(false)} className="ui-btn ui-btn-ghost ui-btn-sm"><X size={12} /></button>
         </form>
       )}
+      {loadError && (
+        <ActionableErrorState state={loadError} onAction={load} compact className="m-0" />
+      )}
       {loading ? (
         <div className="text-xs text-center py-4" style={{ color: 'var(--muted)' }}><Loader2 size={13} className="animate-spin inline mr-1" />Loading…</div>
       ) : (
@@ -346,43 +412,27 @@ const CommissionSwapTab = () => {
   const [allSymbols, setAllSymbols] = useState([]);
   const [loadingSymbols, setLoadingSymbols] = useState(true);
   const [selectedSymbol, setSelectedSymbol] = useState('');
+  const [symbolLoadError, setSymbolLoadError] = useState(null);
+
+  const loadSymbols = async () => {
+    setLoadingSymbols(true);
+    setSymbolLoadError(null);
+    try {
+      setAllSymbols(await loadSymbolOptions());
+    } catch (err) {
+      setAllSymbols([]);
+      setSymbolLoadError(buildActionableErrorState(getApiErrorMessage(err, 'symbol list request failed'), {
+        title: 'Symbols failed to load',
+        actionLabel: 'Retry',
+      }));
+    } finally {
+      setLoadingSymbols(false);
+    }
+  };
 
   useEffect(() => {
-    const ws = new WebSocket(buildFeedWsUrl());
-    const symbolSet = new Set();
-    
-    ws.onopen = () => ws.send(JSON.stringify({ type: 'subscribe', symbols: ['*'] }));
-    ws.onmessage = (e) => {
-      try {
-        const messages = e.data.trim().split('\n');
-        for (let i = 0; i < messages.length; i++) {
-          if (!messages[i]) continue;
-          const msg = JSON.parse(messages[i]);
-          if (msg.symbol) symbolSet.add(msg.symbol);
-        }
-      } catch {
-        /* Ignore malformed feed frames. */
-      }
-    };
-
-    const timer = setTimeout(() => {
-      setAllSymbols(Array.from(symbolSet).sort());
-      setLoadingSymbols(false);
-      if (ws.readyState === WebSocket.OPEN) ws.close();
-    }, 3000);
-
-    ws.onerror = () => {
-      setAllSymbols([]);
-      setLoadingSymbols(false);
-    };
-
-    return () => {
-      clearTimeout(timer);
-      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
-        ws.onclose = null;
-        ws.close();
-      }
-    };
+    const timer = window.setTimeout(loadSymbols, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   return (
@@ -400,6 +450,9 @@ const CommissionSwapTab = () => {
           </select>
         )}
       </div>
+      {symbolLoadError && (
+        <ActionableErrorState state={symbolLoadError} onAction={loadSymbols} compact className="m-0 shrink-0" />
+      )}
       <CommissionSection symbol={selectedSymbol} />
       <DynamicLeverageSection symbol={selectedSymbol} />
       <SwapFreeSection />

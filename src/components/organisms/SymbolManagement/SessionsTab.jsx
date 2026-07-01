@@ -4,8 +4,10 @@ import {
   symbolSessionGet, symbolSessionSet,
   sessionOverrideList, sessionOverrideSet, sessionOverrideDelete,
 } from '../../../services/api';
-
-import { buildFeedWsUrl } from '../../../config/endpoints';
+import { getApiErrorMessage } from '../../../utils/apiShapes';
+import { buildActionableErrorState } from '../../../utils/errorState';
+import ActionableErrorState from '../../atoms/ActionableErrorState';
+import { loadSymbolOptions, normalizeOverrideRows, normalizeSessionRows } from './symbolManagementData';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -125,62 +127,82 @@ const SessionsTab = () => {
   const [savingBase, setSavingBase] = useState(false);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [symbolLoadError, setSymbolLoadError] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+
+  const emptySessions = () => DAYS.map((_, i) => ({ day_of_week: i, quoteStart: '', quoteEnd: '', tradeStart: '', tradeEnd: '' }));
+
+  const loadSymbols = async () => {
+    setLoadingSymbols(true);
+    setSymbolLoadError(null);
+    try {
+      setAllSymbols(await loadSymbolOptions());
+    } catch (err) {
+      setAllSymbols([]);
+      setSymbolLoadError(buildActionableErrorState(getApiErrorMessage(err, 'symbol list request failed'), {
+        title: 'Symbols failed to load',
+        actionLabel: 'Retry',
+      }));
+    } finally {
+      setLoadingSymbols(false);
+    }
+  };
 
   useEffect(() => {
-    setLoadingSymbols(true);
-    const ws = new WebSocket(buildFeedWsUrl());
-    const symbolSet = new Set();
-    
-    ws.onopen = () => ws.send(JSON.stringify({ type: 'subscribe', symbols: ['*'] }));
-    ws.onmessage = (e) => {
-      try {
-        const messages = e.data.trim().split('\n');
-        for (let i = 0; i < messages.length; i++) {
-          if (!messages[i]) continue;
-          const msg = JSON.parse(messages[i]);
-          if (msg.symbol) symbolSet.add(msg.symbol);
-        }
-      } catch {
-        // Ignore malformed feed messages.
-      }
-    };
-
-    const timer = setTimeout(() => {
-      setAllSymbols(Array.from(symbolSet).sort());
-      setLoadingSymbols(false);
-      if (ws.readyState === WebSocket.OPEN) ws.close();
-    }, 3000);
-
-    ws.onerror = () => {
-      setAllSymbols([]);
-      setLoadingSymbols(false);
-    };
-
-    return () => {
-      clearTimeout(timer);
-      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
-        ws.onclose = null;
-        ws.close();
-      }
-    };
+    const timer = window.setTimeout(loadSymbols, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    if (!selectedSymbol) return;
+  const loadSelectedSymbol = async (symbol) => {
+    if (!symbol) {
+      setBaseSessions(emptySessions());
+      setOverrides([]);
+      setLoadError(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    Promise.all([
-      symbolSessionGet(selectedSymbol).catch(() => null),
-      sessionOverrideList({ symbol: selectedSymbol }).catch(() => []),
-    ]).then(([sessions, ovr]) => {
-      if (sessions && Array.isArray(sessions)) {
-        const mapped = DAYS.map((_, i) => {
-          const s = sessions.find(x => x.day_of_week === i) || {};
-          return { day_of_week: i, quoteStart: s.quoteStart || '', quoteEnd: s.quoteEnd || '', tradeStart: s.tradeStart || '', tradeEnd: s.tradeEnd || '' };
+    setLoadError(null);
+    try {
+      const [sessionsResult, overridesResult] = await Promise.allSettled([
+        symbolSessionGet(symbol),
+        sessionOverrideList({ symbol }),
+      ]);
+      const failures = [];
+
+      if (sessionsResult.status === 'fulfilled') {
+        const sessions = normalizeSessionRows(sessionsResult.value);
+        const mapped = emptySessions().map((empty) => {
+          const row = sessions.find(x => x.day_of_week === empty.day_of_week) || {};
+          return { ...empty, ...row };
         });
         setBaseSessions(mapped);
+      } else {
+        setBaseSessions(emptySessions());
+        failures.push(`Sessions: ${getApiErrorMessage(sessionsResult.reason, 'session request failed')}`);
       }
-      setOverrides(Array.isArray(ovr) ? ovr : []);
-    }).finally(() => setLoading(false));
+
+      if (overridesResult.status === 'fulfilled') {
+        setOverrides(normalizeOverrideRows(overridesResult.value));
+      } else {
+        setOverrides([]);
+        failures.push(`Overrides: ${getApiErrorMessage(overridesResult.reason, 'override request failed')}`);
+      }
+
+      if (failures.length > 0) {
+        setLoadError(buildActionableErrorState(failures.join(' '), {
+          title: 'Sessions partially loaded',
+          actionLabel: 'Retry',
+        }));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSelectedSymbol(selectedSymbol);
   }, [selectedSymbol]);
 
   const updateBaseRow = (dayIdx, field, val) => {
@@ -232,6 +254,12 @@ const SessionsTab = () => {
           </select>
         )}
       </div>
+      {symbolLoadError && (
+        <ActionableErrorState state={symbolLoadError} onAction={loadSymbols} compact className="m-0 shrink-0" />
+      )}
+      {loadError && selectedSymbol && (
+        <ActionableErrorState state={loadError} onAction={() => loadSelectedSymbol(selectedSymbol)} compact className="m-0 shrink-0" />
+      )}
 
       {!selectedSymbol ? (
         <p className="text-sm" style={{ color: 'var(--muted)' }}>Select a symbol to view and edit its sessions.</p>
@@ -322,7 +350,9 @@ const SessionsTab = () => {
           onClose={() => setShowOverrideModal(false)}
           onSuccess={() => {
             setShowOverrideModal(false);
-            sessionOverrideList({ symbol: selectedSymbol }).then(data => setOverrides(Array.isArray(data) ? data : [])).catch(() => {});
+            sessionOverrideList({ symbol: selectedSymbol })
+              .then(data => setOverrides(normalizeOverrideRows(data)))
+              .catch(() => {});
           }}
         />
       )}

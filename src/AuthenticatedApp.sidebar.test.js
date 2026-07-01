@@ -101,8 +101,8 @@ test('configured sidebar dropdowns stay locked to parent pages only', () => {
 
   assert.match(
     sidebarSource,
-    /LOCKED_DROPDOWN_LABELS\s*=\s*new Set\(\['Automations', 'Security', 'Platform Config', 'Risk Management', 'Communications', 'Support Center'\]\)/,
-    'Automations, Security, Platform Config, Risk Management, Communications, and Support Center should be locked to parent selection only'
+    /LOCKED_DROPDOWN_LABELS\s*=\s*new Set\(\['Automations', 'Security', 'Platform Config', 'Network Cluster', 'Risk Management', 'Communications', 'Support Center'\]\)/,
+    'Automations, Security, Platform Config, Network Cluster, Risk Management, Communications, and Support Center should be locked to parent selection only'
   );
   assert.match(
     sidebarSource,
@@ -187,15 +187,15 @@ test('sidebar parent row clicks toggle normal dropdowns but not locked dropdowns
   );
 });
 
-test('header data metric is derived from active table rows, not hardcoded', () => {
+test('header omits mounted row payload metric badge', () => {
   const appSource = readSource('AuthenticatedApp.jsx');
   const tableSource = readSource('components/organisms/AdminDataTable.jsx');
 
   assert.doesNotMatch(appSource, /4482\s*\/\s*8 KB/);
-  assert.match(appSource, /const formatBytes = \(value\) => \{/);
-  assert.match(appSource, /const activeViewMetricLabel = React\.useMemo\(\(\) => \{/);
-  assert.match(appSource, /title="Mounted rows \/ estimated row payload"/);
-  assert.match(appSource, /\{activeViewMetricLabel\}/);
+  assert.doesNotMatch(appSource, /const formatBytes = \(value\) => \{/);
+  assert.doesNotMatch(appSource, /const activeViewMetricLabel = React\.useMemo\(\(\) => \{/);
+  assert.doesNotMatch(appSource, /title="Mounted rows \/ estimated row payload"/);
+  assert.doesNotMatch(appSource, /\{activeViewMetricLabel\}/);
   assert.match(tableSource, /const mountedRowBytes = React\.useMemo\(\(\) => estimateJsonBytes\(data\), \[data\]\);/);
   assert.match(tableSource, /visible:\s*data\.length/);
   assert.match(tableSource, /bytes:\s*mountedRowBytes/);
