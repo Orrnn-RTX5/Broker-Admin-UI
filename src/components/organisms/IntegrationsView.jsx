@@ -1,16 +1,62 @@
 import {
   AtSign,
-  BarChart3,
   CheckCircle2,
-  Cloud,
   ExternalLink,
   Info,
-  MessageSquare,
   Server,
-  ShieldCheck,
-  Smartphone,
   XCircle,
 } from 'lucide-react';
+
+const serviceLogos = {
+  finteza: {
+    label: 'FZ',
+    variant: 'analytics',
+    background: 'linear-gradient(135deg, #0f766e 0%, #0369a1 54%, #111827 100%)',
+    borderColor: 'rgba(56, 189, 248, 0.38)',
+    accentColor: '#67e8f9',
+    shadowColor: 'rgba(56, 189, 248, 0.22)',
+  },
+  vps: {
+    label: 'VPS',
+    variant: 'server',
+    background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 45%, #0f172a 100%)',
+    borderColor: 'rgba(147, 197, 253, 0.38)',
+    accentColor: '#bfdbfe',
+    shadowColor: 'rgba(59, 130, 246, 0.2)',
+  },
+  mail: {
+    label: 'MAIL',
+    variant: 'mail',
+    background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 48%, #111827 100%)',
+    borderColor: 'rgba(196, 181, 253, 0.36)',
+    accentColor: '#ddd6fe',
+    shadowColor: 'rgba(124, 58, 237, 0.2)',
+  },
+  sms: {
+    label: 'SMS',
+    variant: 'message',
+    background: 'linear-gradient(135deg, #ea580c 0%, #f97316 46%, #111827 100%)',
+    borderColor: 'rgba(253, 186, 116, 0.38)',
+    accentColor: '#fed7aa',
+    shadowColor: 'rgba(249, 115, 22, 0.2)',
+  },
+  messenger: {
+    label: 'MSG',
+    variant: 'chat',
+    background: 'linear-gradient(135deg, #0891b2 0%, #2563eb 48%, #111827 100%)',
+    borderColor: 'rgba(125, 211, 252, 0.38)',
+    accentColor: '#bae6fd',
+    shadowColor: 'rgba(14, 165, 233, 0.2)',
+  },
+  kyc: {
+    label: 'KYC',
+    variant: 'shield',
+    background: 'linear-gradient(135deg, #15803d 0%, #16a34a 44%, #111827 100%)',
+    borderColor: 'rgba(134, 239, 172, 0.36)',
+    accentColor: '#bbf7d0',
+    shadowColor: 'rgba(34, 197, 94, 0.18)',
+  },
+};
 
 const toneClasses = {
   danger: {
@@ -39,7 +85,7 @@ const integrationSections = [
   {
     id: 'finteza',
     title: 'Finteza Analytics',
-    icon: BarChart3,
+    logo: serviceLogos.finteza,
     statuses: [
       { label: 'Not Activated', icon: XCircle, tone: 'danger' },
       { label: 'MasterSite ID:', value: 'not specified', icon: Info, tone: 'info', valueTone: 'danger' },
@@ -51,7 +97,7 @@ const integrationSections = [
   {
     id: 'vps',
     title: 'Sponsored VPS',
-    icon: Cloud,
+    logo: serviceLogos.vps,
     statuses: [
       { label: 'Not Activated', icon: XCircle, tone: 'danger' },
       { label: 'Spent:', value: '0 USD', tone: 'neutral' },
@@ -63,7 +109,7 @@ const integrationSections = [
   {
     id: 'mail',
     title: 'Mail Servers',
-    icon: AtSign,
+    logo: serviceLogos.mail,
     statuses: [
       { label: 'Used', icon: CheckCircle2, tone: 'success' },
       { label: 'Mail accounts:', value: '1', icon: AtSign, tone: 'neutral' },
@@ -76,7 +122,7 @@ const integrationSections = [
   {
     id: 'sms',
     title: 'SMS Gateways',
-    icon: Smartphone,
+    logo: serviceLogos.sms,
     statuses: [
       { label: 'Providers:', value: '1', icon: CheckCircle2, tone: 'success' },
       { label: 'Balance:', value: '11 usd', tone: 'neutral', valueTone: 'success' },
@@ -90,7 +136,7 @@ const integrationSections = [
   {
     id: 'messenger',
     title: 'Messenger Channels',
-    icon: MessageSquare,
+    logo: serviceLogos.messenger,
     statuses: [
       { label: 'Not configured', icon: XCircle, tone: 'danger' },
     ],
@@ -108,7 +154,7 @@ const integrationSections = [
   {
     id: 'kyc',
     title: 'KYC Checks',
-    icon: ShieldCheck,
+    logo: serviceLogos.kyc,
     statuses: [
       { label: 'Not configured', icon: XCircle, tone: 'danger' },
       { label: 'Countries:', value: '0', tone: 'neutral' },
@@ -136,6 +182,82 @@ const statusTotals = integrationSections.reduce(
 );
 
 const getTone = (tone = 'neutral') => toneClasses[tone] || toneClasses.neutral;
+
+const ServiceLogo = ({ logo }) => {
+  const sharedStyle = {
+    background: logo.background,
+    borderColor: logo.borderColor,
+    boxShadow: `0 0 18px ${logo.shadowColor}`,
+  };
+
+  return (
+    <div
+      aria-hidden="true"
+      className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[6px] border text-white ring-1 ring-white/10"
+      style={sharedStyle}
+    >
+      <div className="absolute inset-x-1 top-1 h-px bg-white/35" />
+      <div className="absolute -right-3 -top-3 h-7 w-7 rounded-full bg-white/20 blur-[1px]" />
+
+      {logo.variant === 'analytics' && (
+        <div className="relative flex h-6 items-end gap-[3px]">
+          {[9, 14, 18, 12].map((height, index) => (
+            <span
+              key={`${logo.label}-${height}-${index}`}
+              className="w-[4px] rounded-t-[2px] bg-white/85"
+              style={{ height }}
+            />
+          ))}
+        </div>
+      )}
+
+      {logo.variant === 'server' && (
+        <div className="relative grid gap-[3px]">
+          {[0, 1, 2].map((item) => (
+            <span key={`${logo.label}-${item}`} className="flex h-[5px] w-6 items-center rounded-[2px] bg-white/85 px-1">
+              <span className="h-[2px] w-[2px] rounded-full" style={{ backgroundColor: logo.accentColor }} />
+            </span>
+          ))}
+        </div>
+      )}
+
+      {logo.variant === 'mail' && (
+        <div className="relative h-[21px] w-7 rounded-[4px] border border-white/85 bg-white/10">
+          <div className="absolute left-[5px] top-[4px] h-[12px] w-[12px] rotate-45 border-b border-r border-white/80" />
+        </div>
+      )}
+
+      {logo.variant === 'message' && (
+        <div className="relative flex h-6 w-7 items-center justify-center rounded-[6px] bg-white/90 text-[8px] font-bold text-[#111827]">
+          {logo.label}
+          <span className="absolute -bottom-[3px] left-2 h-2 w-2 rotate-45 bg-white/90" />
+        </div>
+      )}
+
+      {logo.variant === 'chat' && (
+        <div className="relative h-7 w-7">
+          <span className="absolute left-0 top-1 h-[17px] w-[22px] rounded-[6px] bg-white/85" />
+          <span className="absolute bottom-0 right-0 h-[17px] w-[22px] rounded-[6px] border border-white/80 bg-[#111827]/70" />
+          <span className="absolute bottom-[7px] right-[7px] h-[3px] w-[3px] rounded-full bg-white" />
+          <span className="absolute bottom-[7px] right-[12px] h-[3px] w-[3px] rounded-full bg-white" />
+        </div>
+      )}
+
+      {logo.variant === 'shield' && (
+        <div
+          className="relative flex h-7 w-6 items-center justify-center bg-white/90"
+          style={{ clipPath: 'polygon(50% 0%, 88% 15%, 80% 70%, 50% 100%, 20% 70%, 12% 15%)' }}
+        >
+          <span className="h-[9px] w-[14px] rotate-[-45deg] border-b-[3px] border-l-[3px] border-[#166534]" />
+        </div>
+      )}
+
+      <span className="absolute bottom-1 right-1 rounded-[2px] bg-black/45 px-[3px] py-px text-[8px] font-bold leading-none text-white/95">
+        {logo.label}
+      </span>
+    </div>
+  );
+};
 
 const StatusChip = ({ status }) => {
   const tone = getTone(status.tone);
@@ -198,15 +320,11 @@ const ServiceLink = ({ linkText }) => {
 };
 
 const IntegrationRow = ({ item, index }) => {
-  const Icon = item.icon;
-
   return (
     <div className={`grid min-h-[92px] grid-cols-[minmax(420px,1fr)_minmax(300px,420px)] border-b border-black/25 ${index % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} last:border-b-0`}>
       <div className="min-w-0 border-r border-black/25 px-4 py-3">
         <div className="flex min-w-0 items-start gap-3">
-          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-[3px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-2)] text-[#3b82f6]">
-            <Icon size={15} />
-          </div>
+          <ServiceLogo logo={item.logo} />
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <h3 className="truncate text-[14px] font-semibold text-[color:var(--text-primary)]">{item.title}</h3>
