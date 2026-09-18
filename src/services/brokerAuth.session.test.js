@@ -295,6 +295,38 @@ test('loginAdmin omits server when the caller does not explicitly supply one', a
   assert.equal(response.token, 'admin-token');
 });
 
+test('loginAdmin uses the local Vite proxy path on localhost web', async () => {
+  installBrowserGlobals({ USE_DEV_PROXY: 'true' });
+  globalThis.window.location = {
+    protocol: 'http:',
+    hostname: 'localhost',
+    host: 'localhost:5174',
+    origin: 'http://localhost:5174',
+  };
+  let postedUrl = '';
+  globalThis.fetch = async (url, options) => {
+    postedUrl = url;
+    assert.equal(options.credentials, 'same-origin');
+    return {
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ token: 'admin-token', broker_id: 'gta_broker' }),
+    };
+  };
+
+  const brokerAuth = await importFreshBrokerAuth();
+  await brokerAuth.loginAdmin(
+    {
+      broker_id: 'gta_broker',
+      name: 'Grow Trading Academy',
+      backend_url: 'https://services.growtradingacademy.com',
+    },
+    { user: '10015', password: 'secret' }
+  );
+
+  assert.equal(postedUrl, '/manager/api/v2/admin/login');
+});
+
 test('loginAdmin preserves authorization header tokens when the body has no token', async () => {
   installBrowserGlobals();
   globalThis.fetch = async () => ({

@@ -1,6 +1,11 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import {
+  DEV_PROXY_BACKEND_COOKIE,
+  DEV_PROXY_EXT_COOKIE,
+} from './src/config/devProxy.js'
+import { createBrokerProxy } from './src/config/devBrokerProxy.js'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -17,35 +22,15 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         // Gateway LP API
-        '/api/v1': {
-          target: apiHost,
-          changeOrigin: true,
-          secure: false,
-        },
-        '/api/v2': {
-          target: apiHost,
-          changeOrigin: true,
-          secure: false,
-        },
-        '/manager': {
-          target: apiHost,
-          changeOrigin: true,
-          secure: false,
-        },
-        '/Manager': {
-          target: apiHost,
-          changeOrigin: true,
-          secure: false,
-        },
+        '/api/v1': createBrokerProxy(apiHost, DEV_PROXY_BACKEND_COOKIE),
+        '/api/v2': createBrokerProxy(apiHost, DEV_PROXY_BACKEND_COOKIE),
+        '/manager': createBrokerProxy(apiHost, DEV_PROXY_BACKEND_COOKIE),
+        '/Manager': createBrokerProxy(apiHost, DEV_PROXY_BACKEND_COOKIE),
         // Port 8091 APIs: MarketDepth, SessionOverride, SpreadSchedule
-        '/ext-api': {
-          target: apiHostExt,
-          changeOrigin: true,
-          secure: false,
+        '/ext-api': createBrokerProxy(apiHostExt, DEV_PROXY_EXT_COOKIE, {
           rewrite: (path) => path.replace(/^\/ext-api/, ''),
-        },
+        }),
       }
     }
   }
 })
-

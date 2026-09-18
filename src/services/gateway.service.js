@@ -55,3 +55,13 @@ export const gatewaySaveFeedConfig = (payload) =>
 
 export const gatewayApplyFeedConfig = () =>
   api.post(`${FEED_BASE}/config/apply`).then(extractData).catch(handleError);
+
+const RELAY_BASE = '/api/v1/manager/gateway/fix-relay';
+export const gatewayGetRelayConfig = () =>
+  api.get(`${RELAY_BASE}/config`, { _noRetry: true }).then(extractData).catch(handleError);
+export const gatewaySaveRelayConfig = (payload) =>
+  api.put(`${RELAY_BASE}/config`, payload).then(extractData).catch(handleError);
+export const gatewayApplyRelayConfig = () =>
+  api.post(`${RELAY_BASE}/apply`, {}, { _noRetry: true }).then(extractData).catch(handleError);
+export const gatewayGetRelayStatus = () =>
+  api.get(`${RELAY_BASE}/status`, { _noRetry: true }).then(extractData).catch(handleError);

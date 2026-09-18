@@ -7,6 +7,7 @@ import {
 } from '../../services/gateway.service';
 import { buildFeedConfigPayload, normalizeFeedProvider } from '../../lib/feedConfigPayload';
 import { useToast } from '../ui/useToast';
+import FixRelayConfigPanel from './FixRelayConfigPanel';
 
 const PROVIDER_OPTIONS = [
   { value: 'rtxmd', label: 'RTX Market Data FIX' },
@@ -231,6 +232,7 @@ const GatewaysView = () => {
       </div>
 
       <div className="p-5 pb-12">
+        {import.meta.env.VITE_FIX_RELAY_ENABLED === 'true' && <FixRelayConfigPanel />}
         <form
           onSubmit={handleSubmit}
           className="flex max-w-[980px] flex-col gap-4 rounded-xl border p-4"

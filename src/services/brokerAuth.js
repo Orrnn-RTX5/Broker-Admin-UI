@@ -510,7 +510,9 @@ const postJson = async (url, body) => {
   try {
     response = await fetch(url, {
       method: 'POST',
-      credentials: 'omit',
+      // Local Vite routing needs its broker-selection cookie. Cross-origin
+      // broker requests still omit cookies with this policy.
+      credentials: 'same-origin',
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',

@@ -21,6 +21,20 @@ const installWindow = (config = {}) => {
 
 const importFreshEndpoints = () => import(`./endpoints.js?case=${++importId}`);
 
+test('configured direct broker keeps login and flat manager paths inside the local proxy namespace', async () => {
+  installWindow({ BACKEND_TARGET: 'web', USE_DEV_PROXY: 'true', DIRECT_MANAGER_ORIGINS: 'https://broker.example' });
+  installStorage({ broker_info: JSON.stringify({ broker_id: 'demo', backend_url: 'https://broker.example' }) });
+  const endpoints = await importFreshEndpoints();
+  assert.equal(endpoints.buildManagerApiUrl('/api/v2/admin/login'), '/manager/api/v2/admin/login');
+  assert.equal(endpoints.buildManagerApiUrl('/manager/api/v2/auth/me'), '/manager/api/v1/manager/auth/me');
+  assert.equal(endpoints.buildManagerApiUrl('/api/v2/auth/login'), '/manager/api/v1/manager/auth/login');
+  assert.equal(endpoints.buildManagerApiUrl('/api/v1/auth/refresh'), '/manager/api/v1/manager/auth/refresh');
+  assert.equal(endpoints.buildManagerApiUrl('/manager/GroupList'), '/manager/GroupList');
+  sessionStorage.setItem('broker_info', JSON.stringify({ broker_id: 'other', backend_url: 'https://other.example' }));
+  assert.equal(endpoints.buildManagerApiUrl('/api/v2/admin/login'), '/manager/api/v2/admin/login');
+  assert.equal(endpoints.buildManagerApiUrl('/api/v2/auth/me'), '/manager/api/v2/auth/me');
+});
+
 test('dynamic endpoints do not derive ext host from discovered HTTPS 443 server_url', async () => {
   installWindow({ BACKEND_TARGET: 'web' });
   installStorage({
@@ -76,6 +90,57 @@ test('dynamic endpoints call discovered service-domain ext endpoints without ext
     endpoints.buildExtApiUrl('/ext-api/ServerStatus'),
     'https://services.myprop.trade/ServerStatus'
   );
+});
+
+test('local web dev proxy keeps manager login on the Vite origin', async () => {
+  const cookies = {};
+  globalThis.document = {
+    get cookie() {
+      return Object.entries(cookies)
+        .map(([key, value]) => `${key}=${value}`)
+        .join('; ');
+    },
+    set cookie(value) {
+      const [pair] = String(value).split(';');
+      const separator = pair.indexOf('=');
+      const key = pair.slice(0, separator).trim();
+      const cookieValue = pair.slice(separator + 1);
+      if (String(value).includes('Max-Age=0')) delete cookies[key];
+      else cookies[key] = cookieValue;
+    },
+  };
+  installWindow({
+    BACKEND_TARGET: 'web',
+    USE_DEV_PROXY: 'true',
+  });
+  globalThis.window.location = {
+    protocol: 'http:',
+    hostname: 'localhost',
+    host: 'localhost:5174',
+    origin: 'http://localhost:5174',
+  };
+  installStorage({
+    broker_info: JSON.stringify({
+      broker_id: 'gta_broker',
+      server: 'broker-server-2',
+      backend_url: 'https://services.growtradingacademy.com',
+    }),
+  });
+
+  const endpoints = await importFreshEndpoints();
+
+  assert.equal(endpoints.shouldUseLocalDevProxy(), true);
+  assert.equal(endpoints.API_HOST, 'https://services.growtradingacademy.com');
+  assert.equal(
+    endpoints.buildManagerApiUrl('/api/v2/admin/login'),
+    '/manager/api/v2/admin/login'
+  );
+  assert.equal(
+    endpoints.buildExtApiUrl('/SessionOverrideSet'),
+    '/ext-api/SessionOverrideSet'
+  );
+  assert.match(document.cookie, /rtx5_dev_backend=/);
+  assert.match(decodeURIComponent(document.cookie), /https:\/\/services\.growtradingacademy\.com/);
 });
 
 test('GTA web services host keeps manager API calls on the manager proxy namespace', async () => {

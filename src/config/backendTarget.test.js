@@ -1,6 +1,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
+test('direct manager origin configuration applies only to exact origins and respects broker metadata', async () => {
+  installWindowConfig({ BACKEND_TARGET: 'web', DIRECT_MANAGER_ORIGINS: 'https://broker.example, invalid://[' });
+  const { isDirectBrokerBackendUrl } = await importFreshBackendTarget();
+  assert.equal(isDirectBrokerBackendUrl('https://broker.example'), true);
+  assert.equal(isDirectBrokerBackendUrl('https://broker.example/', { direct_manager_paths: false }), false);
+  assert.equal(isDirectBrokerBackendUrl('https://other.example'), false);
+  assert.equal(isDirectBrokerBackendUrl('https://broker.example.attacker.example'), false);
+  assert.equal(isDirectBrokerBackendUrl('http://broker.example'), false);
+  assert.equal(isDirectBrokerBackendUrl('https://broker.example:8443'), false);
+});
+
 let importId = 0;
 
 const installWindowConfig = (config = {}) => {

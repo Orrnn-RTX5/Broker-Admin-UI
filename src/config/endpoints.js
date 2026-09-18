@@ -2,11 +2,19 @@
 // Components should import from here instead of hardcoding a host.
 import { getRuntimeValue } from './runtimeConfig.js';
 import {
+  isDesktopBackendTarget,
   isDirectBrokerBackendUrl,
   resolveBrokerBackendUrl,
   resolveBrokerExtApiUrl,
   resolveBrokerWsUrl,
 } from './backendTarget.js';
+import {
+  DEV_PROXY_BACKEND_COOKIE,
+  DEV_PROXY_EXT_COOKIE,
+  DEV_PROXY_DIRECT_MANAGER_COOKIE,
+  isLocalWebHostname,
+  parseDevProxyTarget,
+} from './devProxy.js';
 import { appendWsAuthParams, readWsAuthContext } from '../utils/wsAuth.js';
 
 const viteEnv = import.meta.env || {};
@@ -132,6 +140,46 @@ const resolveMt5Server = (brokerInfo, backendUrl) => {
   }
 };
 
+const readDevProxyFlag = () =>
+  String(
+    getRuntimeValue('USE_DEV_PROXY', 'VITE_USE_DEV_PROXY') ?? viteEnv.VITE_USE_DEV_PROXY ?? ''
+  )
+    .trim()
+    .toLowerCase();
+
+export const shouldUseLocalDevProxy = () => {
+  if (isDesktopBackendTarget()) return false;
+
+  const flag = readDevProxyFlag();
+  if (['false', '0', 'no', 'off'].includes(flag)) return false;
+  if (['true', '1', 'yes', 'on'].includes(flag)) return true;
+
+  const isViteDev = viteEnv.DEV === true || viteEnv.MODE === 'development';
+  if (!isViteDev || typeof window === 'undefined') return false;
+
+  return isLocalWebHostname(window.location?.hostname);
+};
+
+const writeDevProxyCookie = (name, value) => {
+  if (typeof document === 'undefined') return;
+
+  const target = parseDevProxyTarget(value);
+  if (!target) {
+    document.cookie = `${name}=; Path=/; Max-Age=0; SameSite=Lax`;
+    return;
+  }
+
+  document.cookie = `${name}=${encodeURIComponent(target)}; Path=/; SameSite=Lax`;
+};
+
+const syncDevProxyCookies = () => {
+  if (!shouldUseLocalDevProxy()) return;
+  writeDevProxyCookie(DEV_PROXY_BACKEND_COOKIE, API_HOST);
+  writeDevProxyCookie(DEV_PROXY_EXT_COOKIE, API_HOST_EXT || API_HOST);
+  writeDevProxyCookie(DEV_PROXY_DIRECT_MANAGER_COOKIE,
+    isDirectBrokerBackendUrl(API_HOST, readBrokerInfo() || {}) ? API_HOST : '');
+};
+
 export const updateDynamicEndpoints = () => {
   try {
     const info = readBrokerInfo();
@@ -145,6 +193,7 @@ export const updateDynamicEndpoints = () => {
       WS_HOST = resolveBrokerWsUrl(info) || buildWsHost(backendUrl);
       API_HOST_EXT = resolveBrokerExtApiUrl(info, backendUrl);
       DEFAULT_MT5_SERVER = resolveMt5Server(info, backendUrl);
+      syncDevProxyCookies();
       return;
     }
   } catch (error) {
@@ -155,6 +204,7 @@ export const updateDynamicEndpoints = () => {
   WS_HOST = DEFAULTS.WS_HOST;
   API_HOST_EXT = DEFAULTS.API_HOST_EXT;
   DEFAULT_MT5_SERVER = DEFAULTS.DEFAULT_MT5_SERVER;
+  syncDevProxyCookies();
 };
 
 updateDynamicEndpoints();
@@ -175,13 +225,19 @@ export const buildManagerApiUrl = (endpoint = '') => {
 
   updateDynamicEndpoints();
 
-  const path = raw
+  let path = raw
     .replace(/^\/api\/manager(?=\/|\?|$)/, '')
     .replace(/^\/manager(?=\/|\?|$)/, '');
 
   // For broker backend (103.91.186.142:8091), don't add /manager/ prefix
   // Just use the path directly (e.g., /GroupList, /ManagerOnline)
   const isBrokerBackend = API_HOST && isDirectBrokerBackendUrl(API_HOST, readBrokerInfo() || {});
+  if (isBrokerBackend) {
+    // The public gateway owns /api/v2/auth/me for trader JWTs. Manager sessions
+    // must use their canonical namespace on backends exposing root routes.
+    path = path.replace(/^\/api\/v[12]\/auth\/(login|me|refresh)(?=\?|$)/,
+      '/api/v1/manager/auth/$1');
+  }
 
   let managerPath;
   if (isBrokerBackend) {
@@ -190,6 +246,14 @@ export const buildManagerApiUrl = (endpoint = '') => {
   } else {
     // Add /manager/ prefix for other backends (testbrokerbackend.orrnn.com, etc)
     managerPath = path
+      ? `/manager${path.startsWith('/') || path.startsWith('?') ? path : `/${path}`}`
+      : '/manager';
+  }
+
+  if (shouldUseLocalDevProxy()) {
+    // Keep flat manager routes (e.g. GroupList) inside Vite's proxy namespace.
+    // The origin-bound routing cookie tells Vite when to strip this prefix.
+    return path
       ? `/manager${path.startsWith('/') || path.startsWith('?') ? path : `/${path}`}`
       : '/manager';
   }
@@ -205,6 +269,10 @@ export const buildExtApiUrl = (endpoint = '') => {
   const extPath = path
     ? path.startsWith('/') || path.startsWith('?') ? path : `/${path}`
     : '';
+
+  if (shouldUseLocalDevProxy()) {
+    return `/ext-api${extPath}`;
+  }
 
   return API_HOST_EXT ? joinUrl(API_HOST_EXT, extPath) : `/ext-api${extPath}`;
 };

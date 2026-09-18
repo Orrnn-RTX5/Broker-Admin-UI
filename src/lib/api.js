@@ -10,7 +10,7 @@ import { useConnectionStore } from '../store/connectionStore.js';
 import { redactForLog, redactUrlForLog } from './logRedaction.js';
 
 
-import { API_HOST, buildExtApiUrl, buildManagerApiUrl } from '../config/endpoints.js';
+import { API_HOST, buildExtApiUrl, buildManagerApiUrl, shouldUseLocalDevProxy } from '../config/endpoints.js';
 
 const AUTH_REJECTION_RE = /\b(not authenticated|unauthenticated|unauthorized|missing authorization|missing bearer|invalid token|token expired|expired token|invalid session|session expired|invalid jwt|jwt expired)\b/i;
 const AUTH_QUERY_PARAM_RE = /^(token|access_token|refresh_token|session|session_token|auth|authorization|jwt)$/i;
@@ -157,7 +157,7 @@ api.interceptors.request.use((config) => {
       }
       config.url = resolvedUrl;
     } else if (config.url.startsWith('/')) {
-      if (API_HOST) {
+      if (API_HOST && !shouldUseLocalDevProxy()) {
         config.url = `${API_HOST}${config.url}`;
       }
     }

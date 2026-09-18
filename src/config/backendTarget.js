@@ -472,6 +472,14 @@ export const isDirectBrokerBackendUrl = (backendUrl = '', brokerInfo = {}) => {
     const url = new URL(ensureUrl(trimmed));
     // FXTrust exposes the broker API directly, including on its HTTPS origin.
     if (url.hostname === 'fxtrustbrokerbackend.orrnn.com') return true;
+    const directOrigins = String(
+      getRuntimeValue('DIRECT_MANAGER_ORIGINS', 'VITE_DIRECT_MANAGER_ORIGINS') ??
+        viteEnv.VITE_DIRECT_MANAGER_ORIGINS ?? ''
+    ).split(',').map((value) => value.trim()).filter(Boolean);
+    if (directOrigins.some((value) => {
+      try { return new URL(ensureUrl(value)).origin === url.origin; }
+      catch { return false; }
+    })) return true;
     if (url.port === String(DEFAULT_BROKER_PORT) && isDesktopBackendTarget()) return true;
     if (url.hostname === 'localhost' && url.port === String(DEFAULT_BROKER_PORT)) return true;
   } catch {
