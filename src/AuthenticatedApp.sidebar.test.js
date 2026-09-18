@@ -94,99 +94,29 @@ test('tab selection also warns and blocks locked non-working views', () => {
   );
 });
 
-test('configured sidebar dropdowns stay locked to parent pages only', () => {
-  const appSource = readSource('AuthenticatedApp.jsx');
+test('unavailable sidebar entries remain visible and cannot activate', () => {
   const sidebarSource = readSource('components/organisms/SidebarNavTree.jsx');
   const treeItemSource = readSource('components/molecules/TreeItem.jsx');
 
-  assert.match(
-    sidebarSource,
-    /LOCKED_DROPDOWN_LABELS\s*=\s*new Set\(\['Automations', 'Security', 'Platform Config', 'Network Cluster', 'Risk Management', 'Communications', 'Support Center'\]\)/,
-    'Automations, Security, Platform Config, Network Cluster, Risk Management, Communications, and Support Center should be locked to parent selection only'
-  );
-  assert.match(
-    sidebarSource,
-    /LOCKED_DROPDOWN_LABELS\.has\(newNode\.label\)[\s\S]*?newNode\.lockedDropdown\s*=\s*true;[\s\S]*?newNode\.initiallyExpanded\s*=\s*false;/,
-    'locked sidebar nodes should keep a visible chevron but start collapsed'
-  );
-  assert.match(
-    treeItemSource,
-    /const showArrow = hasChildren \|\| item\.lockedDropdown;/,
-    'locked dropdowns should still render the sidebar chevron'
-  );
-  assert.match(
-    treeItemSource,
-    /if \(item\.lockedDropdown\) \{[\s\S]*?onLockedDropdownClick && onLockedDropdownClick\(item\);[\s\S]*?return;[\s\S]*?\}/,
-    'clicking a locked dropdown chevron should trigger the popup callback instead of selecting the row'
-  );
-  assert.match(
-    treeItemSource,
-    /hasChildren && !item\.lockedDropdown && isOpen/,
-    'locked dropdowns must not render their children'
-  );
-  assert.match(
-    sidebarSource,
-    /onLockedDropdownClick=\{onLockedDropdownClick\}/,
-    'sidebar should pass the locked-dropdown chevron callback into TreeItem'
-  );
-  assert.match(
-    appSource,
-    /const handleLockedDropdownClick = \(nodeOrLabel\) => \{[\s\S]*?const viewCapabilityToast = getViewCapabilityToast\(label\);[\s\S]*?if \(viewCapabilityToast\) notify\(viewCapabilityToast\);[\s\S]*?\};/,
-    'locked dropdown chevron clicks should show the view capability popup'
-  );
+  assert.match(sidebarSource, /newNode\.blockedNavigation\s*=\s*shouldBlockViewNavigation\(newNode\.label\);/);
+  assert.match(treeItemSource, /const showArrow = hasChildren \|\| item\.lockedDropdown;/);
+  assert.match(treeItemSource, /Boolean\(item\.blockedNavigation \|\| item\.lockedDropdown \|\| item\.disabled\)/);
+  assert.match(treeItemSource, /const handleArrowClick = \(e\) => \{\s*e\.stopPropagation\(\);\s*if \(isBlockedNavigation\) return;/);
+  assert.match(treeItemSource, /const handleRowClick = \(\) => \{\s*if \(isBlockedNavigation\) return;/);
+  assert.match(treeItemSource, /onDoubleClick=\{\(\) => !isBlockedNavigation && onDoubleClick && onDoubleClick\(item\)\}/);
+  assert.match(treeItemSource, /disabled=\{isBlockedNavigation \|\| !hasChildren\}/);
+  assert.match(treeItemSource, /aria-disabled=\{isBlockedNavigation \|\| undefined\}/);
+  assert.match(treeItemSource, /cursor-not-allowed opacity-50/);
+  assert.match(treeItemSource, /isBlockedNavigation && <LockKeyhole/);
+  assert.doesNotMatch(treeItemSource, /onLockedDropdownClick/);
 });
 
-test('locked sidebar options show a blocked cursor', () => {
-  const sidebarSource = readSource('components/organisms/SidebarNavTree.jsx');
+test('available sidebar folders still expand and select', () => {
   const treeItemSource = readSource('components/molecules/TreeItem.jsx');
-
-  assert.match(
-    sidebarSource,
-    /import \{ shouldBlockViewNavigation \} from '\.\.\/\.\.\/config\/viewCapabilities';/,
-    'sidebar should derive locked cursor state from the central capability map'
-  );
-  assert.match(
-    sidebarSource,
-    /newNode\.blockedNavigation\s*=\s*shouldBlockViewNavigation\(newNode\.label\);/,
-    'blocked navigation rows should be marked before rendering TreeItem'
-  );
-  assert.match(
-    treeItemSource,
-    /const isBlockedNavigation = Boolean\(item\.blockedNavigation\);/,
-    'TreeItem should normalize blocked navigation state'
-  );
-  assert.match(
-    treeItemSource,
-    /isBlockedNavigation \? 'cursor-not-allowed' : 'cursor-default'/,
-    'locked rows should use the blocked cursor'
-  );
-  assert.match(
-    treeItemSource,
-    /item\.lockedDropdown \? 'cursor-not-allowed' : 'cursor-default'/,
-    'locked dropdown arrows should use the blocked cursor'
-  );
+  assert.match(treeItemSource, /if \(hasChildren && !item\.lockedDropdown\) \{\s*setIsOpen\(\(current\) => !current\);/);
+  assert.match(treeItemSource, /onSelect && onSelect\(item\)/);
+  assert.match(treeItemSource, /hasChildren && !item\.lockedDropdown && isOpen/);
 });
-
-test('sidebar parent row clicks toggle normal dropdowns but not locked dropdowns', () => {
-  const treeItemSource = readSource('components/molecules/TreeItem.jsx');
-
-  assert.match(
-    treeItemSource,
-    /const handleRowClick = \(\) => \{[\s\S]*?if \(hasChildren && !item\.lockedDropdown\) \{[\s\S]*?setIsOpen\(\(current\) => !current\);[\s\S]*?\}/,
-    'clicking a normal parent row should toggle its dropdown'
-  );
-  assert.match(
-    treeItemSource,
-    /if \(item\.lockedDropdown && isBlockedNavigation\) \{[\s\S]*?onLockedDropdownClick && onLockedDropdownClick\(item\);[\s\S]*?return;/,
-    'clicking a locked blocked parent row should show the lock handler instead of opening children'
-  );
-  assert.match(
-    treeItemSource,
-    /onClick=\{handleRowClick\}/,
-    'the full sidebar row should use the shared row click handler'
-  );
-});
-
 test('header omits mounted row payload metric badge', () => {
   const appSource = readSource('AuthenticatedApp.jsx');
   const tableSource = readSource('components/organisms/AdminDataTable.jsx');

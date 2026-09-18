@@ -25,7 +25,7 @@ const ActionToolBar = ({
   onRefresh, onExport, onImport, onEditClick, canEdit = false,
   searchQuery = '', onSearchChange, searchInputRef,
 }) => (
-  <div className="h-12 bg-[color:var(--bg-surface-1)] flex items-center px-3 gap-1 border-b border-[color:var(--border-default)] shadow-[var(--shadow-sm)] overflow-x-auto no-scrollbar">
+  <div className="h-10 shrink-0 bg-[color:var(--bg-toolbar)] flex items-center px-3 gap-1 border-b border-[color:var(--border-default)] overflow-x-auto no-scrollbar">
     {/* No backend — disabled */}
     <Tool icon={XOctagon} label="Disconnect" disabled />
     <Divider />

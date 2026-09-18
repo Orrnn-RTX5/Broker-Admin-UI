@@ -34,7 +34,7 @@ const CheckboxIcon = ({ checked, indeterminate, isRedCross }) => {
 const ManagerPropertiesPopup = ({ manager, onClose }) => {
   const [activeTab, setActiveTab] = useState('Common');
   const [roleId, setRoleId] = useState(() => manager?.role_id || '');
-  
+
   const { data: rolesResponse } = useRoles();
   const roles = rolesResponse?.roles || [];
 
@@ -48,7 +48,7 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
       alert("Failed to update manager settings: " + err.message);
     }
   };
-  
+
   const tabs = ['Common', 'Permissions', 'Reports', 'IP Access List'];
 
   const renderContent = () => {
@@ -60,9 +60,9 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
               <div className="w-16 flex flex-col items-center gap-4 shrink-0">
                 <BlueUserLargeIcon />
                 <div className="mt-auto flex flex-col gap-1.5 w-full pb-2">
-                   <button className="w-full h-[22px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] border border-[color:var(--border-strong)] rounded text-[11px] text-white">Add</button>
-                   <button className="w-full h-[22px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] border border-[color:var(--border-strong)] rounded text-[11px] text-white">Edit</button>
-                   <button className="w-full h-[22px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] border border-[color:var(--border-strong)] rounded text-[11px] text-white">Delete</button>
+                   <button className="w-full h-[22px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] border border-[color:var(--border-strong)] rounded text-[11px] text-[color:var(--text-primary)]">Add</button>
+                   <button className="w-full h-[22px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] border border-[color:var(--border-strong)] rounded text-[11px] text-[color:var(--text-primary)]">Edit</button>
+                   <button className="w-full h-[22px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] border border-[color:var(--border-strong)] rounded text-[11px] text-[color:var(--text-primary)]">Delete</button>
                 </div>
               </div>
               <div className="flex-1 flex flex-col min-h-0">
@@ -72,27 +72,27 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
                 <div className="flex gap-6 mb-4">
                   <div className="flex items-center gap-2">
                     <label className="text-[12px]">Login:</label>
-                    <input 
-                      type="text" 
-                      defaultValue={manager?.login || "900546"} 
-                      className="bg-transparent border border-[color:var(--border-strong)] px-1 py-0.5 text-[12px] w-32 focus:outline-none focus:border-blue-500 text-white" 
+                    <input
+                      type="text"
+                      defaultValue={manager?.login || "900546"}
+                      className="bg-transparent border border-[color:var(--border-strong)] px-1 py-0.5 text-[12px] w-32 focus:outline-none focus:border-blue-500 text-[color:var(--text-primary)]"
                     />
                   </div>
                   <div className="flex items-center gap-2">
                     <label className="text-[12px]">Mailbox name:</label>
-                    <input 
-                      type="text" 
-                      className="bg-transparent border border-[color:var(--border-strong)] px-1 py-0.5 text-[12px] w-48 focus:outline-none focus:border-blue-500 text-white" 
+                    <input
+                      type="text"
+                      className="bg-transparent border border-[color:var(--border-strong)] px-1 py-0.5 text-[12px] w-48 focus:outline-none focus:border-blue-500 text-[color:var(--text-primary)]"
                     />
                   </div>
                 </div>
                 <div className="flex gap-2 flex-1 min-h-0">
                   <label className="text-[12px] mt-1 shrink-0">Groups:</label>
                   <div className="flex-1 border border-[color:var(--border-strong)] bg-transparent overflow-y-auto min-h-0">
-                    <div className="bg-[color:var(--bg-surface-1)] px-2 py-1 flex items-center text-[12px] text-white hover:bg-blue-600/30 cursor-pointer">
+                    <div className="bg-[color:var(--bg-surface-1)] px-2 py-1 flex items-center text-[12px] text-[color:var(--text-primary)] hover:bg-blue-600/30 cursor-pointer">
                       <span className="text-blue-400 mr-2">👥</span> demo\Propfirm
                     </div>
-                    <div className="px-2 py-1 flex items-center text-[12px] text-white hover:bg-blue-600/30 cursor-pointer border-t border-[color:var(--bg-surface-2)]">
+                    <div className="px-2 py-1 flex items-center text-[12px] text-[color:var(--text-primary)] hover:bg-blue-600/30 cursor-pointer border-t border-[color:var(--bg-surface-2)]">
                       <span className="text-blue-400 mr-2">👥</span> Demo\propfirm
                     </div>
                   </div>
@@ -115,23 +115,23 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
                 <div className="flex justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span className="text-[12px] whitespace-nowrap">Available logs:</span>
-                    <select className="bg-transparent border border-[color:var(--border-strong)] text-[12px] px-1 py-0.5 text-white w-28 outline-none">
+                    <select className="bg-transparent border border-[color:var(--border-strong)] text-[12px] px-1 py-0.5 text-[color:var(--text-primary)] w-28 outline-none">
                       <option>All</option>
                     </select>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-[12px] whitespace-nowrap">Available reports:</span>
-                    <select className="bg-transparent border border-[color:var(--border-strong)] text-[12px] px-1 py-0.5 text-white w-28 outline-none">
+                    <select className="bg-transparent border border-[color:var(--border-strong)] text-[12px] px-1 py-0.5 text-[color:var(--text-primary)] w-28 outline-none">
                       <option>All</option>
                     </select>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-[12px] w-8">Role:</span>
-                  <select 
+                  <select
                     value={roleId}
                     onChange={(e) => setRoleId(e.target.value)}
-                    className="bg-transparent border border-[color:var(--border-strong)] text-[12px] px-1 py-0.5 text-white w-48 outline-none shrink-0"
+                    className="bg-transparent border border-[color:var(--border-strong)] text-[12px] px-1 py-0.5 text-[color:var(--text-primary)] w-48 outline-none shrink-0"
                   >
                     <option value="">Select Role...</option>
                     {roles.map(r => (
@@ -139,29 +139,29 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
                     ))}
                   </select>
                   <div className="ml-auto flex gap-2 w-full justify-end">
-                    <button className="px-3 h-[22px] bg-[color:var(--bg-surface-2)] border border-[color:var(--border-strong)] rounded text-[11px] text-white hover:bg-[color:var(--bg-surface-3)] whitespace-nowrap">Save As</button>
-                    <button className="px-3 h-[22px] bg-[color:var(--bg-surface-2)] border border-[color:var(--border-strong)] rounded text-[11px] text-white hover:bg-[color:var(--bg-surface-3)] whitespace-nowrap">Delete</button>
+                    <button className="px-3 h-[22px] bg-[color:var(--bg-surface-2)] border border-[color:var(--border-strong)] rounded text-[11px] text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)] whitespace-nowrap">Save As</button>
+                    <button className="px-3 h-[22px] bg-[color:var(--bg-surface-2)] border border-[color:var(--border-strong)] rounded text-[11px] text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)] whitespace-nowrap">Delete</button>
                   </div>
                 </div>
                 <div className="flex gap-2 flex-1 min-h-0">
                   <label className="text-[12px] w-16 shrink-0">Permissions:</label>
                   <div className="flex-1 border border-[color:var(--border-strong)] bg-transparent overflow-y-auto pt-1 pb-2 min-h-0">
-                    
+
                     {/* Tree Node 1 */}
                     <div className="px-2 flex flex-col">
                       <div className="flex items-center gap-1.5 py-[2px] hover:bg-white/5">
                         <span className="text-[color:var(--text-muted)] text-[10px] w-3 flex justify-center">v</span>
                         <CheckboxIcon indeterminate={true} />
-                        <span className="text-[12px] text-white">Connection type</span>
+                        <span className="text-[12px] text-[color:var(--text-primary)]">Connection type</span>
                       </div>
                       <div className="pl-6 flex flex-col border-l border-dotted border-[color:var(--text-muted)] ml-2.5">
                         <div className="flex items-center gap-1.5 py-[2px] relative before:absolute before:content-[''] before:w-3.5 before:h-[1px] before:border-t before:border-dotted before:border-[color:var(--text-muted)] before:-left-1.5 before:top-1/2 hover:bg-white/5">
                           <CheckboxIcon isRedCross={true} />
-                          <span className="text-[12px] text-white">Connect using RTX5 Administrator</span>
+                          <span className="text-[12px] text-[color:var(--text-primary)]">Connect using RTX5 Administrator</span>
                         </div>
                         <div className="flex items-center gap-1.5 py-[2px] relative before:absolute before:content-[''] before:w-3.5 before:h-[1px] before:border-t before:border-dotted before:border-[color:var(--text-muted)] before:-left-1.5 before:top-1/2 hover:bg-white/5">
                           <CheckboxIcon checked={true} />
-                          <span className="text-[12px] text-white">Connect using RTX5 Manager</span>
+                          <span className="text-[12px] text-[color:var(--text-primary)]">Connect using RTX5 Manager</span>
                         </div>
                       </div>
                     </div>
@@ -170,31 +170,31 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
                       <div className="flex items-center gap-1.5 py-[2px] hover:bg-white/5">
                         <span className="text-[color:var(--text-muted)] text-[10px] w-3 flex justify-center">v</span>
                         <CheckboxIcon isRedCross={true} />
-                        <span className="text-[12px] text-white">Configuration setup</span>
+                        <span className="text-[12px] text-[color:var(--text-primary)]">Configuration setup</span>
                       </div>
                       <div className="pl-6 flex flex-col border-l border-dotted border-[color:var(--text-muted)] ml-2.5">
                         <div className="flex items-center gap-1.5 py-[2px] relative before:absolute before:content-[''] before:w-3.5 before:h-[1px] before:border-t before:border-dotted before:border-[color:var(--text-muted)] before:-left-1.5 before:top-1/2 hover:bg-white/5">
                           <CheckboxIcon isRedCross={true} />
-                          <span className="text-[12px] text-white">Configure network</span>
+                          <span className="text-[12px] text-[color:var(--text-primary)]">Configure network</span>
                         </div>
                         <div className="flex flex-col relative before:absolute before:content-[''] before:w-3.5 before:h-[1px] before:border-t before:border-dotted before:border-[color:var(--text-muted)] before:-left-1.5 before:top-[11px] hover:bg-white/5">
                           <div className="flex items-center gap-1.5 py-[2px]">
                             <span className="text-[color:var(--text-muted)] text-[10px] w-3 flex justify-center absolute -left-4">v</span>
                             <CheckboxIcon isRedCross={true} />
-                            <span className="text-[12px] text-white">Configure integrations</span>
+                            <span className="text-[12px] text-[color:var(--text-primary)]">Configure integrations</span>
                           </div>
                           <div className="pl-6 flex flex-col border-l border-dotted border-[color:var(--text-muted)] ml-[5px]">
                             <div className="flex items-center gap-1.5 py-[2px] relative before:absolute before:content-[''] before:w-3.5 before:h-[1px] before:border-t before:border-dotted before:border-[color:var(--text-muted)] before:-left-1.5 before:top-1/2 hover:bg-white/5">
                               <CheckboxIcon isRedCross={true} />
-                              <span className="text-[12px] text-white">Configure sponsored VPS</span>
+                              <span className="text-[12px] text-[color:var(--text-primary)]">Configure sponsored VPS</span>
                             </div>
                             <div className="flex items-center gap-1.5 py-[2px] relative before:absolute before:content-[''] before:w-3.5 before:h-[1px] before:border-t before:border-dotted before:border-[color:var(--text-muted)] before:-left-1.5 before:top-1/2 hover:bg-white/5">
                               <CheckboxIcon isRedCross={true} />
-                              <span className="text-[12px] text-white">Configure mail servers</span>
+                              <span className="text-[12px] text-[color:var(--text-primary)]">Configure mail servers</span>
                             </div>
                             <div className="flex items-center gap-1.5 py-[2px] relative before:absolute before:content-[''] before:w-3.5 before:h-[1px] before:border-t before:border-dotted before:border-[color:var(--text-muted)] before:-left-1.5 before:top-1/2 hover:bg-white/5">
                               <CheckboxIcon isRedCross={true} />
-                              <span className="text-[12px] text-white">Configure SMS gateways and messenger channels</span>
+                              <span className="text-[12px] text-[color:var(--text-primary)]">Configure SMS gateways and messenger channels</span>
                             </div>
                           </div>
                         </div>
@@ -213,13 +213,13 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
               <div className="w-16 flex flex-col items-center gap-4 shrink-0">
                  <BlueUserLargeIcon />
                  <div className="flex flex-col gap-1.5 mt-2">
-                   <button className="w-14 h-[22px] bg-[color:var(--bg-surface-2)] border border-[color:var(--border-strong)] rounded text-[11px] text-white">Up</button>
-                   <button className="w-14 h-[22px] bg-[color:var(--bg-surface-2)] border border-[color:var(--border-strong)] rounded text-[11px] text-white">Down</button>
+                   <button className="w-14 h-[22px] bg-[color:var(--bg-surface-2)] border border-[color:var(--border-strong)] rounded text-[11px] text-[color:var(--text-primary)]">Up</button>
+                   <button className="w-14 h-[22px] bg-[color:var(--bg-surface-2)] border border-[color:var(--border-strong)] rounded text-[11px] text-[color:var(--text-primary)]">Down</button>
                  </div>
                  <div className="mt-auto flex flex-col gap-1.5">
-                   <button className="w-14 h-[22px] bg-[color:var(--bg-surface-2)] border border-[color:var(--border-strong)] rounded text-[11px] text-white">Add</button>
-                   <button className="w-14 h-[22px] bg-[color:var(--bg-surface-2)] border border-[color:var(--border-strong)] rounded text-[11px] text-white">Edit</button>
-                   <button className="w-14 h-[22px] bg-[color:var(--bg-surface-2)] border border-[color:var(--border-strong)] rounded text-[11px] text-white">Delete</button>
+                   <button className="w-14 h-[22px] bg-[color:var(--bg-surface-2)] border border-[color:var(--border-strong)] rounded text-[11px] text-[color:var(--text-primary)]">Add</button>
+                   <button className="w-14 h-[22px] bg-[color:var(--bg-surface-2)] border border-[color:var(--border-strong)] rounded text-[11px] text-[color:var(--text-primary)]">Edit</button>
+                   <button className="w-14 h-[22px] bg-[color:var(--bg-surface-2)] border border-[color:var(--border-strong)] rounded text-[11px] text-[color:var(--text-primary)]">Delete</button>
                  </div>
               </div>
               <div className="flex-1 pr-4 flex flex-col min-h-0">
@@ -227,16 +227,16 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
                   Set up access to the server reports for the manager, including the ability to save reports to files and the amount of available data. You can provide access to individual reports or groups of reports.
                 </p>
                 <div className="border border-[color:var(--border-strong)] flex-1 bg-transparent mt-2 overflow-y-auto min-h-0">
-                  <div className="flex border-b border-[color:var(--border-strong)] text-[11px] text-white bg-[#222] sticky top-0 py-1 px-2 z-10">
+                  <div className="flex border-b border-[color:var(--border-strong)] text-[11px] text-[color:var(--text-primary)] bg-[color:var(--bg-surface-2)] sticky top-0 py-1 px-2 z-10">
                     <div className="flex-1">Reports</div>
                     <div className="w-12 text-center">View</div>
                     <div className="w-12 text-center">Ex...</div>
                     <div className="w-24 text-right">History, days</div>
                   </div>
-                  
+
                   {/* Row 1 */}
                   <div className="flex items-center py-1 px-2 border-b border-[color:var(--bg-surface-2)] hover:bg-blue-600/30">
-                    <div className="flex-1 flex items-center text-[12px] text-white">
+                    <div className="flex-1 flex items-center text-[12px] text-[color:var(--text-primary)]">
                       <span className="text-yellow-500 mr-1.5">📁</span> *
                     </div>
                     <div className="w-12 flex justify-center"><CheckboxIcon checked={true} /></div>
@@ -245,7 +245,7 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
                   </div>
                   {/* Row 2 */}
                   <div className="flex items-center py-1 px-2 border-b border-[color:var(--bg-surface-2)] hover:bg-blue-600/30">
-                    <div className="flex-1 flex items-center text-[12px] text-white">
+                    <div className="flex-1 flex items-center text-[12px] text-[color:var(--text-primary)]">
                       <span className="text-yellow-500 mr-1.5">📁</span> *
                     </div>
                     <div className="w-12 flex justify-center"><CheckboxIcon checked={true} /></div>
@@ -271,9 +271,9 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
               <div className="w-16 flex flex-col items-center gap-4 shrink-0">
                  <BlueUserLargeIcon />
                  <div className="mt-auto flex flex-col gap-1.5 w-full pb-2">
-                   <button className="w-full h-[22px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] border border-[color:var(--border-strong)] rounded text-[11px] text-white">Add</button>
-                   <button className="w-full h-[22px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] border border-[color:var(--border-strong)] rounded text-[11px] text-white">Edit</button>
-                   <button className="w-full h-[22px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] border border-[color:var(--border-strong)] rounded text-[11px] text-white">Delete</button>
+                   <button className="w-full h-[22px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] border border-[color:var(--border-strong)] rounded text-[11px] text-[color:var(--text-primary)]">Add</button>
+                   <button className="w-full h-[22px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] border border-[color:var(--border-strong)] rounded text-[11px] text-[color:var(--text-primary)]">Edit</button>
+                   <button className="w-full h-[22px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] border border-[color:var(--border-strong)] rounded text-[11px] text-[color:var(--text-primary)]">Delete</button>
                  </div>
               </div>
               <div className="flex-1 pr-4 flex flex-col min-h-0">
@@ -281,16 +281,16 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
                   The adjustment of access list is intended for limitation of manager access to the system by IP addresses. Please specify the range of allowed addresses.
                 </p>
                 <div className="border border-[color:var(--border-strong)] flex-1 bg-transparent mt-2 overflow-y-auto min-h-0">
-                  <div className="flex border-b border-[color:var(--border-strong)] text-[11px] text-white bg-[#222] sticky top-0 py-1 px-2 z-10">
+                  <div className="flex border-b border-[color:var(--border-strong)] text-[11px] text-[color:var(--text-primary)] bg-[color:var(--bg-surface-2)] sticky top-0 py-1 px-2 z-10">
                     <div className="flex-1">From</div>
                     <div className="flex-1">To</div>
                   </div>
-                  
+
                   <div className="flex items-center py-1 px-2 border-b border-[color:var(--bg-surface-2)] hover:bg-blue-600/30">
-                    <div className="flex-1 flex items-center text-[12px] text-white">
+                    <div className="flex-1 flex items-center text-[12px] text-[color:var(--text-primary)]">
                       <span className="text-green-500 mr-2 border border-green-500 rounded-sm w-[14px] h-[10px] relative"><span className="absolute top-[2px] left-[-2px] w-[16px] border-b border-green-500"></span></span> 81.29.145.69
                     </div>
-                    <div className="flex-1 text-[12px] text-white">81.29.145.69</div>
+                    <div className="flex-1 text-[12px] text-[color:var(--text-primary)]">81.29.145.69</div>
                   </div>
 
                 </div>
@@ -340,8 +340,8 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-3 py-1.5 text-[12px] relative ${
-                activeTab === tab 
-                  ? 'text-white' 
+                activeTab === tab
+                  ? 'text-[color:var(--text-primary)]'
                   : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)] hover:bg-white/5'
               }`}
             >
@@ -357,23 +357,23 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
         <div className="flex-1 flex flex-col relative px-3 py-2 bg-[color:var(--bg-app)] min-h-0 overflow-hidden">
           {renderContent()}
         </div>
-          
+
         {/* Bottom Action Bar */}
         <div className="px-3 pb-3 pt-2 bg-[color:var(--bg-app)] flex justify-end gap-2 shrink-0 border-t border-white/5">
-          <button 
+          <button
             onClick={handleSave}
-            className="px-6 h-[24px] bg-transparent border border-[color:var(--border-strong)] rounded text-[12px] text-white hover:bg-white/10 hover:border-[#777777] transition-all focus:outline-none focus:border-blue-500 focus:bg-[color:var(--bg-surface-2)]"
+            className="px-6 h-[24px] bg-transparent border border-[color:var(--border-strong)] rounded text-[12px] text-[color:var(--text-primary)] hover:bg-white/10 hover:border-[#777777] transition-all focus:outline-none focus:border-blue-500 focus:bg-[color:var(--bg-surface-2)]"
           >
             OK
           </button>
-          <button 
+          <button
             onClick={onClose}
-            className="px-6 h-[24px] bg-transparent border border-[color:var(--border-strong)] rounded text-[12px] text-white hover:bg-white/10 hover:border-[#777777] transition-all focus:outline-none focus:border-blue-500 focus:bg-[color:var(--bg-surface-2)]"
+            className="px-6 h-[24px] bg-transparent border border-[color:var(--border-strong)] rounded text-[12px] text-[color:var(--text-primary)] hover:bg-white/10 hover:border-[#777777] transition-all focus:outline-none focus:border-blue-500 focus:bg-[color:var(--bg-surface-2)]"
           >
             Cancel
           </button>
-          <button 
-            className="px-6 h-[24px] bg-transparent border border-[color:var(--border-strong)] rounded text-[12px] text-white hover:bg-white/10 hover:border-[#777777] transition-all focus:outline-none focus:border-blue-500 focus:bg-[color:var(--bg-surface-2)]"
+          <button
+            className="px-6 h-[24px] bg-transparent border border-[color:var(--border-strong)] rounded text-[12px] text-[color:var(--text-primary)] hover:bg-white/10 hover:border-[#777777] transition-all focus:outline-none focus:border-blue-500 focus:bg-[color:var(--bg-surface-2)]"
           >
             Help
           </button>

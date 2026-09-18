@@ -238,6 +238,9 @@ const getManagerInstruments = async (params = {}) => {
 };
 
 export const InstrumentsService = {
+  // Names only: Market Watch must not fetch full parameters for every symbol.
+  getMarketSymbols: async () => getRows(await fetchManagerSymbolNames())
+    .map(pickSymbolName).filter(Boolean),
   getInstruments: async (params = {}) => {
     if (!shouldUseAdminInstrumentsList()) return getManagerInstruments(params);
 

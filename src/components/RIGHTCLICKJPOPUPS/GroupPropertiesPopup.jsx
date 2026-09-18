@@ -297,7 +297,7 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
         {/* Title Bar */}
         <div 
           onPointerDown={(e) => dragControls.start(e)}
-          className="h-8 bg-[#323233] flex items-center px-3 justify-between select-none cursor-move"
+          className="h-8 bg-[color:var(--bg-surface-2)] border-b border-[color:var(--border-default)] flex items-center px-3 justify-between select-none cursor-move"
         >
           <div className="flex items-center gap-2">
             <Users size={14} className="text-emerald-400" />
@@ -317,7 +317,7 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-3 py-1.5 text-[11px] transition-colors relative whitespace-nowrap ${
-                activeTab === tab ? 'text-white bg-[color:var(--bg-app)] border-t border-l border-r border-[color:var(--border-default)] rounded-t-sm' : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)]'
+                activeTab === tab ? 'text-[color:var(--text-primary)] bg-[color:var(--bg-app)] border-t border-l border-r border-[color:var(--border-default)] rounded-t-sm' : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)]'
               }`}
             >
               {tab}

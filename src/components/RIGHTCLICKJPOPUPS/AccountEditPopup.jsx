@@ -71,14 +71,14 @@ const buildChangedProfilePayload = (form, original) => (
 );
 
 const Field = ({ label, children }) => (
-  <div className="flex items-center gap-3">
+  <div className="flex min-w-0 items-center gap-3">
     <label className="text-[12px] w-24 shrink-0 text-right text-[color:var(--text-secondary)]">{label}</label>
     {children}
   </div>
 );
 
-const inputClassName = 'flex-1 bg-[color:var(--bg-app)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:outline-none focus:border-blue-500 rounded-sm disabled:opacity-60';
-const selectClassName = 'flex-1 bg-[color:var(--bg-surface-1)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:outline-none focus:border-blue-500 rounded-sm cursor-pointer disabled:opacity-60';
+const inputClassName = 'min-w-0 w-full flex-1 bg-[color:var(--bg-surface-1)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-[color:var(--text-primary)] focus:outline-none focus:border-blue-500 rounded-sm disabled:opacity-60';
+const selectClassName = 'min-w-0 w-full flex-1 bg-[color:var(--bg-surface-1)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-[color:var(--text-primary)] focus:outline-none focus:border-blue-500 rounded-sm cursor-pointer disabled:opacity-60';
 
 const AccountEditPopup = ({ account, onClose, onSaved }) => {
   const original = useMemo(() => buildFormState(account), [account]);
@@ -144,7 +144,10 @@ const AccountEditPopup = ({ account, onClose, onSaved }) => {
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.1 }}
-        className="w-[520px] bg-[color:var(--bg-app)] border border-[color:var(--bg-surface-3)] rounded-[6px] shadow-2xl flex flex-col overflow-hidden max-h-[90vh]"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Edit account"
+        className="w-[520px] max-w-[calc(100vw-32px)] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-[6px] shadow-2xl flex flex-col overflow-hidden max-h-[90vh]"
       >
         <div className="flex justify-between items-center h-8 bg-[color:var(--bg-app)] px-3 border-b border-white/5 select-none shrink-0">
           <div className="text-[12px] text-[color:var(--text-primary)]">Edit Account {login ? `#${login}` : ''}</div>
@@ -173,7 +176,7 @@ const AccountEditPopup = ({ account, onClose, onSaved }) => {
             <input value={form.currency} onChange={setField('currency')} className={inputClassName} />
           </Field>
 
-          <div className="grid grid-cols-2 gap-3 pt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <Field label="Balance:">
               <input value={form.balance} disabled className={inputClassName} />
             </Field>

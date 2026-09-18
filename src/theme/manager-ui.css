@@ -10,14 +10,14 @@
   --text: var(--text-primary);
   --text-2: var(--text-secondary);
   --text-3: var(--text-muted);
-  --muted: var(--text-muted);
+  --muted: var(--text-placeholder);
 
   --accent: var(--accent-500);
   --accent-hover: var(--accent-600);
   --accent-press: var(--accent-700);
-  --accent-soft: color-mix(in srgb, var(--accent-500) 16%, transparent);
-  --accent-soft-2: color-mix(in srgb, var(--accent-500) 9%, transparent);
-  --accent-border: color-mix(in srgb, var(--accent-500) 46%, transparent);
+  --accent-soft: #eaf2ff;
+  --accent-soft-2: #f4f8ff;
+  --accent-border: #a9c7fa;
   --accent-text: var(--accent-600);
 
   --ok: var(--success-500);
@@ -43,25 +43,18 @@
   --ring: 0 0 0 3px color-mix(in srgb, var(--accent-500) 24%, transparent);
 
   --shadow-xs: var(--shadow-sm);
-  --shadow-sm: var(--shadow-md);
-  --shadow-md: var(--shadow-md);
-  --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-lg);
   --shadow-2xl: var(--shadow-lg);
 
   --radius-xs: var(--radius-sm);
-  --radius-sm: var(--radius-sm);
-  --radius-md: var(--radius-md);
-  --radius-lg: var(--radius-lg);
-  --radius-xl: var(--radius-xl);
   --radius-2xl: var(--radius-xl);
 }
 
 [data-theme="dark"] {
-  --accent-soft: color-mix(in srgb, var(--accent-500) 24%, transparent);
-  --accent-soft-2: color-mix(in srgb, var(--accent-500) 14%, transparent);
-  --accent-border: color-mix(in srgb, var(--accent-500) 58%, transparent);
-  --accent-text: #9bd8ff;
+  --accent-soft: rgba(76, 141, 246, .14);
+  --accent-soft-2: rgba(76, 141, 246, .08);
+  --accent-border: rgba(106, 162, 255, .38);
+  --accent-text: #a9ccff;
 
   --ok-soft: color-mix(in srgb, var(--success-500) 22%, transparent);
   --ok-text: #86efac;

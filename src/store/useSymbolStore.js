@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { buildFeedWsUrl } from '../config/endpoints';
+import { extractMarketTicks, validMarketPrice } from '../utils/marketWatch';
 
 const CATEGORIES = {
   METALS: 'Metals',
@@ -37,7 +38,7 @@ const buildFeedStatusUrl = () => {
   try {
     const url = new URL(wsUrl, typeof window !== 'undefined' ? window.location.href : 'http://localhost');
     url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:';
-    url.pathname = '/ws/feed/status';
+    url.pathname = `${url.pathname.replace(/\/$/, '')}/status`;
     url.hash = '';
     return url.toString();
   } catch {
@@ -61,6 +62,7 @@ const useSymbolStore = create(
       symbolMetadata: [], // Stable list of metadata
       ws: null,
       isConnected: false,
+      feedError: '',
       shouldReconnect: false,
       reconnectTimer: null,
 
@@ -72,14 +74,17 @@ const useSymbolStore = create(
 
           dataArray.forEach(data => {
             const { symbol, bid, ask } = data;
+            if (!symbol || (!validMarketPrice(bid) && !validMarketPrice(ask))) return;
             if (!nextSymbols[symbol]) metadataUpdated = true;
             
             const category = getCategory(symbol);
             nextSymbols[symbol] = {
               ...(nextSymbols[symbol] || {}),
               symbol,
-              bid: bid !== undefined && bid !== null ? Number(bid).toFixed(5) : (nextSymbols[symbol]?.bid || '0.00000'),
-              ask: ask !== undefined && ask !== null ? Number(ask).toFixed(5) : (nextSymbols[symbol]?.ask || '0.00000'),
+              bid: validMarketPrice(bid) ? Number(bid).toFixed(5) : (nextSymbols[symbol]?.bid || null),
+              ask: validMarketPrice(ask) ? Number(ask).toFixed(5) : (nextSymbols[symbol]?.ask || null),
+              dir: validMarketPrice(bid) && validMarketPrice(nextSymbols[symbol]?.bid) && Number(bid) < Number(nextSymbols[symbol].bid) ? 'down' : 'up',
+              live: true,
               lastUpdate: now,
               category,
             };
@@ -104,33 +109,40 @@ const useSymbolStore = create(
 
         const existingTimer = get().reconnectTimer;
         if (existingTimer) clearTimeout(existingTimer);
-        set({ shouldReconnect: true, reconnectTimer: null });
+        set(state => ({ shouldReconnect: true, reconnectTimer: null, feedError: '', symbols: Object.fromEntries(Object.entries(state.symbols).map(([key, value]) => [key, { ...value, live: false }])) }));
 
         const connect = () => {
           if (!get().shouldReconnect) return;
 
-          const ws = new WebSocket(buildFeedWsUrl());
+          let ws;
+          try { ws = new WebSocket(buildFeedWsUrl()); } catch {
+            set({ isConnected: false, feedError: 'Market feed unavailable. Check the feed configuration.' });
+            return;
+          }
+          const watchdog = setTimeout(() => { if (get().ws === ws && ws.readyState === 0) ws.close(); }, 10000);
+          let batchTimer;
+          const pending = new Map();
           
           ws.onopen = () => {
+            clearTimeout(watchdog);
+            if (get().ws !== ws) { ws.close(); return; }
             console.log('[SymbolStore] Connected to WebSocket');
-            set({ isConnected: true });
+            set({ isConnected: true, feedError: '' });
             ws.send(JSON.stringify({ type: 'subscribe', symbols: ["*"] }));
             get().syncAvailableSymbols();
           };
 
           ws.onmessage = (e) => {
+            if (get().ws !== ws) return;
             try {
-              const messages = e.data.trim().split('\n');
-              const updates = [];
-              messages.forEach(msgStr => {
-                if (!msgStr) return;
-                const msg = JSON.parse(msgStr);
-                if (msg.symbol && (msg.bid !== undefined || msg.ask !== undefined)) {
-                  updates.push(msg);
-                }
-              });
+              const updates = extractMarketTicks(e.data);
               if (updates.length > 0) {
-                get().upsertSymbols(updates);
+                updates.forEach(tick => pending.set(tick.symbol, { ...pending.get(tick.symbol), ...tick }));
+                if (!batchTimer) batchTimer = setTimeout(() => {
+                  batchTimer = null;
+                  if (get().ws === ws) get().upsertSymbols([...pending.values()]);
+                  pending.clear();
+                }, 100);
               }
             } catch (err) {
               console.error('[SymbolStore] WS parse error:', err);
@@ -138,9 +150,13 @@ const useSymbolStore = create(
           };
 
           ws.onclose = () => {
+            clearTimeout(watchdog);
+            clearTimeout(batchTimer);
+            pending.clear();
+            if (get().ws !== ws) return;
             const shouldReconnect = get().shouldReconnect;
             console.log(shouldReconnect ? '[SymbolStore] Disconnected. Reconnecting...' : '[SymbolStore] Disconnected.');
-            set({ isConnected: false, ws: null });
+            set(state => ({ isConnected: false, ws: null, feedError: 'Market feed unavailable. Reconnecting…', symbols: Object.fromEntries(Object.entries(state.symbols).map(([key, value]) => [key, { ...value, live: false }])) }));
             if (shouldReconnect) {
               const reconnectTimer = setTimeout(connect, 5000);
               set({ reconnectTimer });
@@ -159,6 +175,7 @@ const useSymbolStore = create(
       },
 
       syncAvailableSymbols: async () => {
+        const sourceSocket = get().ws;
         let statusUrl;
         try {
           statusUrl = buildFeedStatusUrl();
@@ -171,6 +188,7 @@ const useSymbolStore = create(
           const res = await fetch(statusUrl, { credentials: 'include' });
           if (!res.ok) return;
           const payload = await res.json();
+          if (get().ws !== sourceSocket || !get().shouldReconnect) return;
           const allowed = extractStatusSymbols(payload);
           if (allowed.size === 0) return;
 

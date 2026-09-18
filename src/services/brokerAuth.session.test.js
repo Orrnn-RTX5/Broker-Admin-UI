@@ -35,6 +35,49 @@ const installBrowserGlobals = (runtimeConfig = {}) => {
 
 const importFreshBrokerAuth = () => import(`./brokerAuth.js?case=${++importId}`);
 
+for (const target of ['web', 'desktop']) {
+  test(`TEST discovery and admin login use the live backend's direct API in ${target}`, async () => {
+    installBrowserGlobals({
+      BACKEND_TARGET: target,
+      BROKER_ID: 'TEST',
+      API_HOST: 'https://fxtrustbrokerbackend.orrnn.com',
+      DEFAULT_DISCOVERY_BASE_URL: 'https://fxtrustbrokerbackend.orrnn.com',
+      DISCOVERY_BASE_URL: 'https://fxtrustbrokerbackend.orrnn.com',
+    });
+    const calls = [];
+    globalThis.fetch = async (url, options) => {
+      calls.push({ url, options });
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify(options.method === 'GET' ? [{
+          broker_id: 'TEST',
+          broker_name: 'RTX5-Local-Test-Broker',
+          enabled: true,
+          server: 'broker-server-5',
+        }] : { token: 'test-admin-token' }),
+      };
+    };
+    const auth = await importFreshBrokerAuth();
+    const [broker] = await auth.fetchBrokerList();
+    assert.equal(broker.broker_id, 'TEST');
+    assert.equal(broker.server, 'broker-server-5');
+    await auth.loginAdmin(broker, { user: '10018', password: 'test-password' });
+    assert.equal(calls[0].url, 'https://fxtrustbrokerbackend.orrnn.com/api/v2/broker/servers');
+    assert.equal(calls[1].url, 'https://fxtrustbrokerbackend.orrnn.com/api/v2/admin/login');
+    assert.deepEqual(JSON.parse(calls[1].options.body), { user: '10018', password: 'test-password' });
+  });
+}
+
+test('live discovery never fabricates TEST when it is missing or disabled', async () => {
+  installBrowserGlobals({ BROKER_ID: 'TEST' });
+  const auth = await importFreshBrokerAuth();
+  for (const records of [[], [{ broker_id: 'TEST', enabled: false, server: 'broker-server-5' }]]) {
+    globalThis.fetch = async () => ({ ok: true, status: 200, text: async () => JSON.stringify(records) });
+    assert.deepEqual(await auth.fetchBrokerList(), []);
+  }
+});
+
 test('setBrokerInfo strips raw license secrets and registers selected broker origins', async () => {
   const { registeredOrigins } = installBrowserGlobals();
   const brokerAuth = await importFreshBrokerAuth();

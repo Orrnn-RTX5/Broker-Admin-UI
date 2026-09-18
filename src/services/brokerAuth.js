@@ -1,6 +1,6 @@
 import { buildManagerApiUrl, updateDynamicEndpoints } from '../config/endpoints.js';
 import { getRuntimeValue } from '../config/runtimeConfig.js';
-import { isDesktopBackendTarget, resolveBrokerBackendUrl, resolveBrokerExtApiUrl } from '../config/backendTarget.js';
+import { isDesktopBackendTarget, isTestBrokerInfo, resolveBrokerBackendUrl, resolveBrokerExtApiUrl } from '../config/backendTarget.js';
 import { redactForLog, redactUrlForLog } from '../lib/logRedaction.js';
 import { normalizeTokenExpiresAt } from '../store/authStore.js';
 import {
@@ -16,7 +16,11 @@ const BROKER_INFO_KEY = 'broker_info';
 const AUTH_KEY = 'auth';
 const RECENT_BROKERS_KEY = 'recent_brokers';
 const ADMIN_LOGIN_PORT = 8091;
-const DEFAULT_DISCOVERY_BASE_URL = 'https://superbackend.orrnn.com';
+const DEFAULT_DISCOVERY_BASE_URL = String(
+  getRuntimeValue('DEFAULT_DISCOVERY_BASE_URL', 'VITE_DEFAULT_DISCOVERY_BASE_URL') ||
+  viteEnv.VITE_DEFAULT_DISCOVERY_BASE_URL ||
+  'https://superbackend.orrnn.com'
+).replace(/\/+$/, '');
 export const BROKER_DISCOVERY_PATH = '/api/v2/broker/servers';
 const GTA_LOGIN_SERVER_HANDLE = 'broker-server-2';
 const GTA_BROKER_ALIASES = new Set(['gta_broker', 'grow-trading-academy']);
@@ -99,6 +103,16 @@ export const RUNTIME_DEFAULT_MT5_SERVER =
 // Each entry must have broker_id, name, status, backend_url, and opaque server.
 // ---------------------------------------------------------------------------
 const MOCK_BROKER_LIST = [
+  {
+    broker_id: 'TEST',
+    name: 'FXTrust / Test Broker',
+    status: 'active',
+    server: '100.120.168.28',
+    backend_url: 'https://fxtrustbrokerbackend.orrnn.com',
+    server_ip: '100.120.168.28',
+    server_port: 8091,
+    ws_url: 'wss://fxtrustbrokerbackend.orrnn.com/ws/feed',
+  },
   {
     broker_id: 'testorrnn',
     name: 'Test Orrnn Broker (Demo)',
@@ -330,7 +344,7 @@ const normalizeBrokerInfo = (info) => {
     name: safeInfo.name || safeInfo.broker_name || safeInfo.brokerName || brokerId,
     status: safeInfo.status || 'active',
     backend_url,
-    server_ip: safeInfo.server_ip || safeInfo.host || '',
+    server_ip: safeInfo.server_ip || safeInfo.host || (isTestBrokerInfo(safeInfo) ? '100.120.168.28' : ''),
   };
 };
 
@@ -468,10 +482,12 @@ export const fetchBrokerList = async () => {
 
   // API may return an array directly or wrapped: { servers: [...] } / { brokers: [...] } / { data: [...] } / { value: [...] }
   const list = extractBrokerRecords(data);
-  return list
+  const normalized = list
     .filter(isActiveBrokerRecord)
     .map(normalizeBrokerInfo)
     .filter((broker) => broker.broker_id && broker.server);
+
+  return normalized;
 };
 
 

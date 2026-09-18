@@ -1850,7 +1850,7 @@ const AdminDataTable = ({
         {columns.map((col, idx) => (
           <div
             key={idx}
-            className={`${col.width} px-3 py-2 text-[11px] font-semibold text-[color:var(--text-primary)] border-r border-[color:var(--border-subtle)] hover:bg-[color:var(--bg-surface-3)] cursor-default flex items-center shrink-0`}
+            className={`admin-column-header ${col.width} px-3 py-2 text-[10px] font-semibold text-[color:var(--text-tertiary)] border-r border-[color:var(--border-subtle)] hover:bg-[color:var(--bg-surface-3)] cursor-default flex items-center shrink-0`}
           >
             {col.label}
           </div>

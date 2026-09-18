@@ -89,6 +89,24 @@ const GTA_LEGACY_DESKTOP_BACKEND_URL =
   viteEnv.VITE_GTA_LEGACY_DESKTOP_BACKEND_URL ||
   'http://103.91.186.142:8091';
 
+const TEST_LEGACY_MATCHES = [
+  '100.120.168.28',
+  'fxtrustbrokerbackend.orrnn.com',
+  'fxtrust',
+  'rtx5-local-test-broker',
+  'test broker',
+];
+
+const TEST_LEGACY_WEB_BACKEND_URL =
+  getRuntimeValue('TEST_LEGACY_WEB_BACKEND_URL', 'VITE_TEST_LEGACY_WEB_BACKEND_URL') ||
+  viteEnv.VITE_TEST_LEGACY_WEB_BACKEND_URL ||
+  'https://fxtrustbrokerbackend.orrnn.com';
+
+const TEST_LEGACY_DESKTOP_BACKEND_URL =
+  getRuntimeValue('TEST_LEGACY_DESKTOP_BACKEND_URL', 'VITE_TEST_LEGACY_DESKTOP_BACKEND_URL') ||
+  viteEnv.VITE_TEST_LEGACY_DESKTOP_BACKEND_URL ||
+  'https://fxtrustbrokerbackend.orrnn.com';
+
 export const trimTrailingSlash = (value = '') => String(value || '').replace(/\/+$/, '');
 
 const hasProtocol = (value = '') => /^[a-z][a-z\d+.-]*:\/\//i.test(value);
@@ -265,6 +283,45 @@ const resolveLegacyGtaBackendUrl = (brokerInfo = {}, fallbackUrl = '') => {
   return isDesktopBackendTarget() ? GTA_LEGACY_DESKTOP_BACKEND_URL : GTA_LEGACY_WEB_BACKEND_URL;
 };
 
+export const hasLegacyTestMatch = (...values) =>
+  values
+    .filter((value) => value !== undefined && value !== null)
+    .some((value) => {
+      const normalized = String(value).trim().toLowerCase();
+      return (
+        normalized === 'test' ||
+        normalized === 'test-broker' ||
+        TEST_LEGACY_MATCHES.some((match) => normalized.includes(match))
+      );
+    });
+
+export const isTestBrokerInfo = (brokerInfo = {}, fallbackUrl = '') =>
+  hasLegacyTestMatch(
+    fallbackUrl,
+    brokerInfo?.broker_id,
+    brokerInfo?.brokerId,
+    brokerInfo?.id,
+    brokerInfo?.name,
+    brokerInfo?.broker_name,
+    brokerInfo?.server,
+    brokerInfo?.server_ip,
+    brokerInfo?.host,
+    brokerInfo?.backend_url,
+    brokerInfo?.api_url,
+    brokerInfo?.server_url,
+    brokerInfo?.domain,
+    brokerInfo?.domain_name,
+    JSON.stringify(brokerInfo?.env || {})
+  );
+
+const resolveLegacyTestBackendUrl = (brokerInfo = {}, fallbackUrl = '') => {
+  if (!isTestBrokerInfo(brokerInfo, fallbackUrl)) {
+    return '';
+  }
+
+  return isDesktopBackendTarget() ? TEST_LEGACY_DESKTOP_BACKEND_URL : TEST_LEGACY_WEB_BACKEND_URL;
+};
+
 const buildWebBackendUrl = (brokerInfo = {}) => {
   const explicitUrl = getFirstValue(brokerInfo, WEB_BACKEND_FIELDS);
   if (explicitUrl) return ensureUrl(explicitUrl, brokerInfo.https === false ? 'http' : 'https');
@@ -326,10 +383,13 @@ export const resolveBrokerBackendUrl = (brokerInfo = {}, fallbackUrl = '') => {
   }
 
   const targetUrl = isDesktopBackendTarget() ? buildDesktopBackendUrl(info) : buildWebBackendUrl(info);
+  const legacyTestUrl = resolveLegacyTestBackendUrl(info, fallback);
   const legacyUrl = resolveLegacyGtaBackendUrl(info, fallback);
 
+  if (legacyTestUrl && (!targetUrl || hasLegacyTestMatch(targetUrl))) return legacyTestUrl;
   if (legacyUrl && (!targetUrl || hasLegacyGtaMatch(targetUrl))) return legacyUrl;
   if (targetUrl) return targetUrl;
+  if (legacyTestUrl) return legacyTestUrl;
   if (legacyUrl) return legacyUrl;
 
   return trimTrailingSlash(fallback);
@@ -373,7 +433,12 @@ export const resolveBrokerWsUrl = (brokerInfo = {}) => {
   }
 
   const explicitUrl = getFirstValue(brokerInfo, WS_FIELDS);
-  if (!explicitUrl) return '';
+  if (!explicitUrl) {
+    if (isTestBrokerInfo(brokerInfo)) {
+      return 'wss://fxtrustbrokerbackend.orrnn.com/ws/feed';
+    }
+    return '';
+  }
 
   const trimmed = trimTrailingSlash(explicitUrl);
   if (/^wss?:\/\//i.test(trimmed)) return trimmed;
@@ -405,6 +470,8 @@ export const isDirectBrokerBackendUrl = (backendUrl = '', brokerInfo = {}) => {
 
   try {
     const url = new URL(ensureUrl(trimmed));
+    // FXTrust exposes the broker API directly, including on its HTTPS origin.
+    if (url.hostname === 'fxtrustbrokerbackend.orrnn.com') return true;
     if (url.port === String(DEFAULT_BROKER_PORT) && isDesktopBackendTarget()) return true;
     if (url.hostname === 'localhost' && url.port === String(DEFAULT_BROKER_PORT)) return true;
   } catch {

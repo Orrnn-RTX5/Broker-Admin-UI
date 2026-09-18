@@ -102,3 +102,34 @@ test('runtime VITE_API_URL alias can identify the current web deployment', async
     'https://services.myprop.trade'
   );
 });
+
+test('TEST broker automatically resolves backend_url and ws_url when missing', async () => {
+  installWindowConfig({ BACKEND_TARGET: 'web' });
+  const { resolveBrokerBackendUrl, resolveBrokerWsUrl, isTestBrokerInfo } = await importFreshBackendTarget();
+
+  const testBrokerFromDiscovery = {
+    broker_id: 'TEST',
+    name: 'RTX-5 Local Test Broker',
+    status: 'active',
+    server: 'broker-server-3',
+  };
+
+  assert.equal(isTestBrokerInfo(testBrokerFromDiscovery), true);
+  assert.equal(resolveBrokerBackendUrl(testBrokerFromDiscovery), 'https://fxtrustbrokerbackend.orrnn.com');
+  assert.equal(resolveBrokerWsUrl(testBrokerFromDiscovery), 'wss://fxtrustbrokerbackend.orrnn.com/ws/feed');
+});
+
+test('TEST broker recognizes direct IP and fxtrust naming variants', async () => {
+  installWindowConfig({ BACKEND_TARGET: 'desktop' });
+  const { resolveBrokerBackendUrl, isTestBrokerInfo } = await importFreshBackendTarget();
+
+  const directBroker = {
+    broker_id: 'TEST',
+    name: 'FXTrust / Test Broker',
+    server_ip: '100.120.168.28',
+    server: '100.120.168.28',
+  };
+
+  assert.equal(isTestBrokerInfo(directBroker), true);
+  assert.equal(resolveBrokerBackendUrl(directBroker), 'https://fxtrustbrokerbackend.orrnn.com');
+});

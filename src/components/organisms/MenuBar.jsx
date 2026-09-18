@@ -15,7 +15,7 @@ import {
 const MenuTrigger = ({ label }) => (
   <DropdownMenuTrigger asChild>
     <button
-      className="px-2.5 h-full text-[12px] text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-2)] data-[state=open]:bg-[color:var(--bg-surface-2)] data-[state=open]:text-[color:var(--text-primary)] transition-colors focus:outline-none"
+      className="px-2.5 h-full text-[12px] font-normal text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-2)] data-[state=open]:bg-[color:var(--bg-surface-2)] data-[state=open]:text-[color:var(--text-primary)] transition-colors focus:outline-none"
     >
       {label}
     </button>
@@ -63,7 +63,7 @@ const MenuBar = ({
   };
 
   return (
-    <div className="h-10 bg-[color:var(--bg-surface-1)] flex items-center px-2 border-b border-[color:var(--border-default)] shadow-[var(--shadow-sm)] select-none">
+    <div className="h-10 shrink-0 bg-[color:var(--bg-chrome)] flex items-center px-2 border-b border-[color:var(--border-default)] select-none">
       {/* FILE */}
       <DropdownMenu>
         <MenuTrigger label="File" />
