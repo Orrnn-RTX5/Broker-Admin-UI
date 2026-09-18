@@ -11,6 +11,7 @@ Create these repository secrets:
 | `BROKERS_JSON` | Optional JSON broker list override. If empty, CI/CD reads the checked-in `brokers.json`. |
 | `BROKER_SSH_PRIVATE_KEY` | Private SSH key that can log in to each broker server listed in `BROKERS_JSON`. |
 | `BROKER_ENV_GTA` | Runtime env file for the Grow Trading Academy broker. Referenced by `env_secret` in `BROKERS_JSON`. |
+| `BROKER_ENV_TEST` | Runtime env file for the FXTrust / TEST broker. Referenced by `env_secret` in `BROKERS_JSON`. |
 | `GHCR_USERNAME` | GitHub user or machine account used by broker servers to pull from GHCR. |
 | `GHCR_TOKEN` | GitHub token with permission to read the GHCR package. For private packages, use `read:packages` plus repo access. |
 | `LETSENCRYPT_EMAIL` | Email used by Certbot for HTTPS certificates. Optional if each broker entry has `ssl_email`. |
@@ -57,6 +58,8 @@ USE_MOCK_DISCOVERY=false
 ```
 
 Add another workflow env mapping if you create a new `env_secret` name for another broker.
+
+For the TEST broker, keep the feed token in `BROKER_ENV_TEST` or the hosting platform's runtime secret store, not in `brokers.json` or source control.
 
 The broker `domain` is the deployed admin UI host. The frontend backend API should use `backend_url`/`API_HOST`, such as `https://services.growtradingacademy.com`. The host Nginx config can still proxy `/api/`, `/manager/`, `/Manager/`, `/ext-api/`, and `/ws/` to `backend_host:backend_port` when a broker uses its admin domain as the API origin. Only set `nginx.listen_host` when every public HTTPS vhost on that IP is also configured for the same exact listen address; on a shared-IP server, leave it empty so nginx can select by SNI/server name.
 

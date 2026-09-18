@@ -2,6 +2,7 @@ import React from 'react';
 import MenuBar from './components/organisms/MenuBar';
 import ActionToolBar from './components/organisms/ActionToolBar';
 import SidebarNavTree from './components/organisms/SidebarNavTree';
+import MarketWatchDock from './components/organisms/MarketWatchDock';
 import AdminDataTable from './components/organisms/AdminDataTable';
 import GroupPropertiesPopup from './components/RIGHTCLICKJPOPUPS/GroupPropertiesPopup';
 import ManagerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ManagerPropertiesPopup';
@@ -60,7 +61,6 @@ const AccessDeniedPanel = ({ viewName, permission }) => (
   </div>
 );
 
-const SYMBOL_FEED_VIEWS = new Set(['Market Overview']);
 const ACCOUNT_EDIT_VIEW_TYPES = new Set(['Clients', 'Trading Accounts']);
 const TRADE_DETAIL_VIEW_TYPES = new Set(['Orders', 'Positions', 'Deals']);
 const NAVIGABLE_ROW_VIEWS = new Set(['Payments', 'Clients & Accounts', 'Orders & Deals']);
@@ -299,13 +299,13 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
   React.useEffect(() => {
     const symbolStore = useSymbolStore.getState();
-    if (isAuthenticated && SYMBOL_FEED_VIEWS.has(activeNode)) {
+    if (isAuthenticated) {
       symbolStore.initWebSocket();
-      return;
+      return () => symbolStore.disconnectWebSocket();
     }
 
     symbolStore.disconnectWebSocket();
-  }, [isAuthenticated, activeNode]);
+  }, [isAuthenticated]);
 
   const openTab = React.useCallback((label) => {
     setOpenTabs((prev) => (prev.includes(label) ? prev : [...prev, label]));
@@ -671,14 +671,16 @@ const AuthenticatedAppInner = ({ navigate }) => {
       />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
+        <MarketWatchDock>
         <SidebarNavTree
           onNodeSelect={handleNodeSelect}
           onNodeDoubleClick={handleNodeDoubleClick}
           onLockedDropdownClick={handleLockedDropdownClick}
           selectedNodeLabel={activeNode}
         />
+        </MarketWatchDock>
 
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden border-l border-[color:var(--border-default)] bg-[color:var(--bg-app)]">
+        <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden border-l border-[color:var(--border-default)] bg-[color:var(--bg-app)]">
           <TabBar
             tabs={openTabs}
             activeTab={activeTab}
@@ -692,6 +694,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
             onClose={closeTab}
           />
 
+          {!(canViewActive && activeNode === 'Integrations') && (
           <div className="h-9 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] flex items-center px-4 gap-4 text-[11px] text-[color:var(--text-muted)] shadow-[var(--shadow-sm)]">
             <div className="flex items-center gap-1.5 text-[color:var(--text-primary)] font-medium">
               <Network size={12} className="text-[color:var(--text-muted)]" />
@@ -705,6 +708,8 @@ const AuthenticatedAppInner = ({ navigate }) => {
               </span>
             )}
           </div>
+
+          )}
 
           {canViewActive ? (
             <AdminDataTable

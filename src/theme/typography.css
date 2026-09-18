@@ -1,0 +1,59 @@
+/* Manager reference: src/index.css. Keep the admin's functional components
+   on the same 10px/12px scale, including dialogs portaled outside #root. */
+body {
+  font-family: var(--font-sans);
+  font-size: var(--ui-font-base);
+  font-weight: var(--ui-weight-regular);
+  letter-spacing: -0.005em;
+}
+
+:is(#root, [data-radix-portal], [role="dialog"], [role="menu"]) :where(
+  .text-xs, .text-\[6px\], .text-\[8px\], .text-\[9px\], .text-\[10px\]
+) {
+  font-size: var(--ui-font-small) !important;
+  line-height: 1.4;
+}
+
+:is(#root, [data-radix-portal], [role="dialog"], [role="menu"]) :where(
+  .text-sm, .text-base, .text-lg, .text-xl, .text-2xl,
+  .text-\[11px\], .text-\[12px\], .text-\[13px\], .text-\[14px\],
+  .text-\[15px\], .text-\[16px\], .text-\[18px\], .text-\[20px\],
+  .text-\[22px\], .text-\[24px\], .text-\[26px\], .text-\[28px\]
+) {
+  font-size: var(--ui-font-base) !important;
+  line-height: 1.4;
+}
+
+:is(#root, [role="dialog"], [role="menu"]) :where(h1, h2, h3, h4, h5, h6) {
+  font-size: var(--ui-font-base) !important;
+  font-weight: var(--ui-weight-semibold) !important;
+  line-height: 1.35;
+}
+
+:is(#root, [role="dialog"], [role="menu"]) :where(button, input, select, textarea) {
+  font-size: var(--ui-font-base);
+  font-weight: var(--ui-weight-medium);
+}
+
+:is(#root, [role="dialog"], [role="menu"]) :where(.font-normal) { font-weight: 400 !important; }
+:is(#root, [role="dialog"], [role="menu"]) :where(.font-medium) { font-weight: 500 !important; }
+:is(#root, [role="dialog"], [role="menu"]) :where(.font-semibold, .font-bold, .font-extrabold, .font-black) {
+  font-weight: 600 !important;
+}
+
+.ui-btn, .ui-input, .ui-select, .ui-textarea, .ui-grid,
+.ui-modal-header, .ui-modal-body { font-size: var(--ui-font-base); }
+.ui-grid thead th { font-size: var(--ui-font-small); }
+input::placeholder, textarea::placeholder { color: var(--text-placeholder); }
+
+/* The rendered command-center navigator overrides the base manager scale. */
+#root .admin-tree-label { font-size: 9px !important; font-weight: 400 !important; line-height: 1.35; }
+#root .admin-tree-branch > .admin-tree-label { font-weight: 500 !important; color: var(--text-primary); }
+
+/* Shared native and div-based data grids use the manager's quiet headings. */
+#root .admin-column-header,
+:is(#root, [role="dialog"]) :where(th) {
+  font-size: var(--ui-font-small) !important;
+  font-weight: var(--ui-weight-semibold) !important;
+  color: var(--text-tertiary);
+}

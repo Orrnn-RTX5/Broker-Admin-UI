@@ -6,6 +6,7 @@
 @import "./theme/tokens.css";
 @import "./theme/manager-ui.css";
 @import "./theme/legacy-overrides.css";
+@import "./theme/typography.css";
 
 @theme {
   --color-app: var(--bg-app);

@@ -1,31 +1,34 @@
-/* RTX5 Admin — premium white professional terminal.
-   Restrained: one neutral scale, one accent, semantic status colors reserved
-   for data (P/L, connection state) — never for chrome. */
+/* RTX5 Admin workspace. Visual reference: manager styles/command-center.css.
+   Financial success/loss colors remain semantic; workspace chrome is shared. */
 
 :root,
 [data-theme="light"] {
   /* Surfaces — warm near-whites, very subtle separation between layers */
-  --bg-app: #f5f7fb;
+  --bg-app: #f3f6fa;
   --bg-surface-1: #ffffff;
-  --bg-surface-2: #eef2f7;
-  --bg-surface-3: #e2e8f0;
+  --bg-surface-2: #f7f9fc;
+  --bg-surface-3: #eaf1fb;
+  --bg-chrome: #f8fafc;
+  --bg-toolbar: #f3f7fc;
   --bg-overlay: rgba(15, 23, 42, 0.36);
 
   /* Borders — hairline, neutral gray */
-  --border-subtle: #dbe3ed;
-  --border-default: #cbd5e1;
-  --border-strong: #94a3b8;
+  --border-subtle: #e3eaf1;
+  --border-default: #c9d5e2;
+  --border-strong: #9eafc1;
 
   /* Text — flat neutral scale, no blue tint */
-  --text-primary: #0f172a;
-  --text-secondary: #334155;
-  --text-muted: #64748b;
+  /* Rendered manager workspace: styles/command-center.css. */
+  --text-primary: #172033;
+  --text-secondary: #4f6074;
+  --text-muted: #4f6074;
+  --text-tertiary: #75869a;
   --text-inverse: #ffffff;
 
   /* Professional muted slate-blue accent.
      Reserved for primary actions and active states. */
-  --accent-50:  #eef2f7;
-  --accent-100: #dbe3ec;
+  --accent-50:  #f4f8ff;
+  --accent-100: #eaf2ff;
   --accent-500: #2563eb;
   --accent-600: #1d4ed8;
   --accent-700: #1e40af;
@@ -38,11 +41,11 @@
   --info-500:    #1d4ed8;
 
   /* Shadows — barely-there, premium feel */
-  --shadow-sm: 0 1px 0 0 rgba(15, 23, 42, 0.08);
-  --shadow-md: 0 1px 2px 0 rgba(15, 23, 42, 0.08), 0 8px 18px -14px rgba(15, 23, 42, 0.28);
-  --shadow-lg: 0 18px 40px -24px rgba(15, 23, 42, 0.38);
+  --shadow-sm: 0 2px 6px rgba(28, 45, 74, .09);
+  --shadow-md: 0 10px 24px rgba(28, 45, 74, .13);
+  --shadow-lg: 0 12px 30px rgba(28, 45, 74, .16);
 
-  --radius-sm: 3px;
+  --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
   --radius-xl: 10px;
@@ -55,8 +58,14 @@
   --space-8: 32px;
 
   --font-auth: 'Manrope', 'Roboto', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-sans: 'Roboto', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: 'Roboto Mono', 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, Menlo, monospace;
+  --ui-font-small: 10px;
+  --ui-font-base: 12px;
+  --ui-weight-regular: 400;
+  --ui-weight-medium: 500;
+  --ui-weight-semibold: 600;
+  --text-placeholder: #75869a;
 
   color-scheme: light;
 }
@@ -77,28 +86,32 @@
 [data-density="cozy"] table th { padding-top: 6px !important; padding-bottom: 6px !important; }
 
 [data-theme="dark"] {
-  /* Match the original MT5 terminal palette — warm neutral gray, not pure black. */
-  --bg-app: #111418;
-  --bg-surface-1: #171b21;
-  --bg-surface-2: #202631;
-  --bg-surface-3: #2b3440;
+  /* Manager command-center dark workspace. */
+  --bg-app: #0b1218;
+  --bg-surface-1: #101820;
+  --bg-surface-2: #16212b;
+  --bg-surface-3: #1c2a35;
+  --bg-chrome: #0c141b;
+  --bg-toolbar: #0f1820;
   --bg-overlay: rgba(3, 7, 18, 0.72);
 
-  --border-subtle: #28313d;
-  --border-default: #394555;
-  --border-strong: #526173;
+  --border-subtle: #1d2a34;
+  --border-default: #2a3a46;
+  --border-strong: #3c4e5c;
 
-  --text-primary: #f3f7fb;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
+  --text-primary: #eef3f6;
+  --text-secondary: #b2bec8;
+  --text-muted: #b2bec8;
+  --text-tertiary: #83919d;
+  --text-placeholder: #83919d;
   --text-inverse: #0f172a;
 
   /* MT5 chrome blue as accent (the original status bar color). */
-  --accent-50:  #082033;
-  --accent-100: #0f3a5c;
-  --accent-500: #2ea8ff;
-  --accent-600: #55b8ff;
-  --accent-700: #1f8de0;
+  --accent-50:  rgba(76, 141, 246, .08);
+  --accent-100: rgba(76, 141, 246, .14);
+  --accent-500: #4c8df6;
+  --accent-600: #6aa2ff;
+  --accent-700: #2f73df;
   --accent-contrast: #ffffff;
 
   --success-500: #4ade80;
@@ -106,9 +119,9 @@
   --danger-500:  #f87171;
   --info-500:    #60a5fa;
 
-  --shadow-sm: 0 1px 0 0 rgba(0, 0, 0, 0.48);
-  --shadow-md: 0 1px 2px 0 rgba(0, 0, 0, 0.48), 0 12px 24px -18px rgba(0, 0, 0, 0.76);
-  --shadow-lg: 0 24px 50px -28px rgba(0, 0, 0, 0.88);
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, .24);
+  --shadow-md: 0 10px 24px rgba(0, 0, 0, .28);
+  --shadow-lg: 0 12px 30px rgba(0, 0, 0, .38);
 
   color-scheme: dark;
 }

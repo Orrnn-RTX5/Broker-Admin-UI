@@ -9,12 +9,12 @@ test('theme refresh keeps active and semantic colors readable in both themes', (
   const tokens = src('src/theme/tokens.css');
   const managerUi = src('src/theme/manager-ui.css');
 
-  assert.match(tokens, /--bg-app:\s*#f5f7fb;/, 'light theme should use a distinct workbench background');
-  assert.match(tokens, /--text-primary:\s*#f3f7fb;/, 'dark primary text should be high contrast');
-  assert.match(tokens, /--text-secondary:\s*#cbd5e1;/, 'dark secondary text should remain readable');
-  assert.match(tokens, /--accent-500:\s*#2ea8ff;/, 'dark accent should be bright enough for active states');
+  assert.match(tokens, /--bg-app:\s*#f3f6fa;/, 'light workspace matches manager');
+  assert.match(tokens, /--text-primary:\s*#eef3f6;/, 'dark primary text matches manager workspace');
+  assert.match(tokens, /--text-secondary:\s*#b2bec8;/, 'dark secondary text matches manager workspace');
+  assert.match(tokens, /--accent-500:\s*#4c8df6;/, 'dark accent matches manager');
 
-  assert.match(managerUi, /\[data-theme="dark"\]\s*\{[\s\S]*--accent-text:\s*#9bd8ff;/);
+  assert.match(managerUi, /\[data-theme="dark"\]\s*\{[\s\S]*--accent-text:\s*#a9ccff;/);
   assert.doesNotMatch(managerUi, /--accent-text:\s*var\(--accent-100\)/);
   assert.match(managerUi, /\.ui-badge-primary\s*\{/);
   assert.match(managerUi, /\.ui-badge-warning\s*\{/);

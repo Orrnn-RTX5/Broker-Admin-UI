@@ -15,6 +15,24 @@
       "backend_host": "127.0.0.1",
       "backend_port": 8091,
       "app_port": 8080
+    },
+    {
+      "id": "test-broker",
+      "broker_id": "TEST",
+      "name": "FXTrust / Test Broker",
+      "host": "100.120.168.28",
+      "user": "root",
+      "port": 40111,
+      "channel": "canary",
+      "enabled": true,
+      "env_secret": "BROKER_ENV_TEST",
+      "domain": "fxtrustbrokerbackend.orrnn.com",
+      "https": true,
+      "backend_url": "https://fxtrustbrokerbackend.orrnn.com",
+      "server_ip": "100.120.168.28",
+      "backend_host": "127.0.0.1",
+      "backend_port": 8091,
+      "app_port": 8080
     }
   ]
 }

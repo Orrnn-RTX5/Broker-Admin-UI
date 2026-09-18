@@ -37,6 +37,7 @@ window.__RTX5_RUNTIME_CONFIG__ = {
   WS_HOST: "$(js_escape "$ws_host")",
   API_HOST_EXT: "$(js_escape "$api_host_ext")",
   DEFAULT_MT5_SERVER: "$(js_escape "$default_mt5_server")",
+  DEFAULT_DISCOVERY_BASE_URL: "$(js_escape "$default_discovery_base_url")",
   DISCOVERY_BASE_URL: "$(js_escape "$discovery_base_url")",
   USE_MOCK_DISCOVERY: "$(js_escape "$use_mock_discovery")"
 };

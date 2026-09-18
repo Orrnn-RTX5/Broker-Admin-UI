@@ -244,7 +244,7 @@ const BrokerDropdown = ({ brokers, selectedId, disabled, onChange }) => {
         <BrokerLogo broker={selectedBroker} size={34} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[15px] font-semibold leading-5">
-            {selectedBroker?.name || 'Select broker'}
+            {selectedBroker?.broker_id || selectedBroker?.name || 'Select broker'}
           </span>
         </span>
         <ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#6b7280]" aria-hidden="true" />
@@ -273,7 +273,7 @@ const BrokerDropdown = ({ brokers, selectedId, disabled, onChange }) => {
               >
                 <BrokerLogo broker={broker} size={34} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px] font-semibold text-[#111827]">{broker.name}</span>
+                  <span className="block truncate text-[14px] font-semibold text-[#111827]">{broker.broker_id || broker.name}</span>
                 </span>
                 {selected && <Check size={15} className="text-[#2563eb]" aria-hidden="true" />}
               </button>
@@ -292,12 +292,12 @@ const LockedBrokerDisplay = ({ broker }) => (
   <div
     id="broker-select"
     className="flex min-h-[56px] w-full min-w-0 items-center gap-3 rounded-[8px] border border-[#dce3ec] bg-[#f8fafc] px-4 py-2.5 text-left text-[#111827]"
-    aria-label={`Locked broker: ${broker?.name || 'Selected broker'}`}
+    aria-label={`Locked broker: ${broker?.broker_id || broker?.name || 'Selected broker'}`}
   >
     <BrokerLogo broker={broker} size={34} />
     <span className="min-w-0 flex-1">
       <span className="block truncate text-[15px] font-semibold leading-5">
-        {broker?.name || 'Selected broker'}
+        {broker?.broker_id || broker?.name || 'Selected broker'}
       </span>
     </span>
   </div>
