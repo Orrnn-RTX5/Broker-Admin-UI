@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-CONFIG_FILE=/usr/share/nginx/html/runtime-config.js
+CONFIG_FILE="${DIST_DIR:-/app/dist}/runtime-config.js"
 
 js_escape() {
   printf '%s' "${1:-}" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'
@@ -42,3 +42,5 @@ window.__RTX5_RUNTIME_CONFIG__ = {
   USE_MOCK_DISCOVERY: "$(js_escape "$use_mock_discovery")"
 };
 EOF
+
+exec "$@"
