@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 env:
-  IMAGE_NAME: ghcr.io/${{ github.repository }}
+  IMAGE_NAME: ghcr.io/orrnn-rtx5/broker-admin-ui
 
 concurrency:
   group: ui-image-${{ github.ref }}
