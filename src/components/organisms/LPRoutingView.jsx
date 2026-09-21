@@ -6,11 +6,13 @@ import { gatewayGetRoutingOptions } from '../../services/gateway.service';
 import LPRouteFormPopup from '../popups/LPRouteFormPopup';
 
 const ROUTING_MODE_COLOR = {
+  b_book: 'text-[#16a34a]',
   a_book: 'text-[#d97706]',
   hybrid:  'text-[#3b82f6]',
 };    
 
 const ROUTING_MODE_LABEL = {
+  b_book: 'B-Book',
   a_book: 'A-Book',
   hybrid:  'Hybrid',
 };
@@ -90,7 +92,7 @@ const LpRoutingOptionsPanel = () => {
             </div>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-xs" style={{ color: 'var(--text-3)' }}>
-                {options.length} routes active
+                {err ? 'Unable to load LP routes' : `${options.length} LP routes available`}
               </span>
               <span className="text-xs" style={{ color: 'var(--text-3)' }}>· Available LP endpoints</span>
             </div>

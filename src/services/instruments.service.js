@@ -238,6 +238,15 @@ const getManagerInstruments = async (params = {}) => {
 };
 
 export const InstrumentsService = {
+  // Management edits require complete gateway specifications, never manager fallbacks.
+  getConfiguredInstruments: async (params = {}) => {
+    const res = await api.get('/api/v2/admin/instruments', {params: cleanParams(params)});
+    return {...res.data, instruments: getRows(res.data).map(row => normalizeSymbolRow(row))};
+  },
+  getInstrumentCatalogue: async () => {
+    const res = await api.get('/api/v2/admin/instrument-catalogue');
+    return getRows(res.data);
+  },
   // Names only: Market Watch must not fetch full parameters for every symbol.
   getMarketSymbols: async () => getRows(await fetchManagerSymbolNames())
     .map(pickSymbolName).filter(Boolean),
@@ -262,7 +271,7 @@ export const InstrumentsService = {
   },
 
   updateInstrument: async (symbol, data) => {
-    const res = await api.put(`/api/v2/admin/instruments/${symbol}`, data);
+    const res = await api.put(`/api/v2/admin/instruments/${encodeURIComponent(symbol)}`, data);
     return res.data;
   },
 

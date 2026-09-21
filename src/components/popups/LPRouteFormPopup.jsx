@@ -6,9 +6,12 @@ import { ManagerService } from '../../services/manager.service';
 import { gatewayGetRoutingOptions } from '../../services/gateway.service';
 import { validateDispatchDelay, validateHiddenMarkup, validateLpRouteForm } from '../../utils/adminValidation';
 
+import { selectRouteOption, selectRoutingMode } from '../../utils/lpRouting.js';
+
 const MotionDiv = motion.div;
 
 const ROUTING_MODES = [
+  { value: 'b_book', label: 'B-Book (Internal)' },
   { value: 'a_book', label: 'A-Book (External LP)' },
   { value: 'hybrid', label: 'Hybrid (Mixed)' },
 ];
@@ -331,7 +334,23 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
   const [error, setError] = useState(null);
   const [groups, setGroups] = useState([]);
   const [lpOptions, setLpOptions] = useState([]);
+  const [lpLoading, setLpLoading] = useState(true);
+  const [lpError, setLpError] = useState('');
   const [activeTab, setActiveTab] = useState('basic');
+
+  const loadLpOptions = useCallback(async () => {
+    setLpLoading(true);
+    setLpError('');
+    setLpOptions([]);
+    try {
+      const res = await gatewayGetRoutingOptions();
+      setLpOptions(res.items);
+    } catch (err) {
+      setLpError(err.message || 'Failed to load LP routes.');
+    } finally {
+      setLpLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     ManagerService.getGroupList()
@@ -341,20 +360,22 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
       })
       .catch(() => undefined);
 
-    gatewayGetRoutingOptions()
-      .then(res => {
-        setLpOptions(res.items || []);
-      })
-      .catch(() => undefined);
-  }, []);
+    const timer = setTimeout(loadLpOptions, 0);
+    return () => clearTimeout(timer);
+  }, [loadLpOptions]);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (lpLoading || lpError || !lpOptions.length) return;
     if (!form.group_name.trim())     { setError('Group name is required.');            return; }
     if (!form.symbol_pattern.trim()) { setError('Symbol pattern is required (use * for all).'); return; }
     if (!form.lp_name.trim())        { setError('LP name is required.');               return; }
+    if (!lpOptions.some(option => (option.route_value || option.name) === form.lp_name)) {
+      setError('The selected LP is no longer available. Select an available LP route.');
+      return;
+    }
 
     setSubmitting(true);
     setError(null);
@@ -465,13 +486,22 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
                 <select
                   className={selectCls}
                   value={form.lp_name}
-                  onChange={(e) => set('lp_name', e.target.value)}
+                  disabled={lpLoading || !!lpError}
+                  onChange={(e) => setForm(current => selectRouteOption(current,
+                    lpOptions.find(opt => (opt.route_value || opt.name) === e.target.value)))}
                 >
                   <option value="">Select LP Route…</option>
                   {lpOptions.map(opt => (
-                    <option key={opt.id} value={opt.name}>{opt.name}</option>
+                    <option key={opt.id} value={opt.route_value || opt.name}>{opt.name}</option>
                   ))}
                 </select>
+                {lpLoading && <span role="status">Loading LP routes...</span>}
+                {!lpLoading && (lpError || lpOptions.length === 0) && (
+                  <div role="alert" className="text-red-400">
+                    <p>{lpError || 'No LP routes are configured. Configure an LP in Gateways, then retry.'}</p>
+                    <button type="button" onClick={loadLpOptions} className="underline mt-1">Retry loading LP routes</button>
+                  </div>
+                )}
               </Field>
             </div>
           </div>
@@ -481,7 +511,7 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
             <p className="text-[10px] uppercase tracking-widest text-[#555] font-semibold">Execution Settings</p>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Routing Mode">
-                <select className={selectCls} value={form.routing_mode} onChange={(e) => set('routing_mode', e.target.value)}>
+                <select className={selectCls} value={form.routing_mode} onChange={(e) => setForm(current => selectRoutingMode(current, e.target.value, lpOptions))}>
                   {ROUTING_MODES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
                 </select>
               </Field>
@@ -652,7 +682,7 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
               </button>
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || lpLoading || !!lpError || !lpOptions.length}
                 className="px-5 py-2 bg-[color:var(--accent-500)] hover:opacity-90 text-white rounded-[3px] transition-colors disabled:opacity-50 min-w-[120px] flex justify-center font-medium text-[12px]"
               >
                 {submitting ? 'Saving...' : isEdit ? 'Update Route' : 'Create Route'}

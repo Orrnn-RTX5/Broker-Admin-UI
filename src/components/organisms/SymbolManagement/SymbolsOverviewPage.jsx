@@ -1,6 +1,5 @@
 import { LayoutGrid, TrendingUp, Coins, BarChart3, Droplets, Hash, ChevronRight } from 'lucide-react';
-import { useShallow } from 'zustand/react/shallow';
-import useSymbolStore from '../../../store/useSymbolStore';
+import { marketGroupCounts } from '../../../utils/marketCatalogue';
 
 const CATEGORY_META = {
   'Metals': { icon: TrendingUp, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
@@ -11,8 +10,8 @@ const CATEGORY_META = {
   'Others': { icon: Hash, color: 'text-gray-500', bg: 'bg-gray-500/10' },
 };
 
-const SymbolsOverviewPage = ({ onSelectCategory }) => {
-  const counts = useSymbolStore(useShallow(state => state.getGroupCounts()));
+const SymbolsOverviewPage = ({ onSelectCategory, catalogue = [] }) => {
+  const counts = marketGroupCounts(catalogue);
 
   return (
     <div className="p-6 w-full h-full flex flex-col gap-6 overflow-y-auto" style={{ background: 'var(--bg)' }}>
@@ -22,7 +21,8 @@ const SymbolsOverviewPage = ({ onSelectCategory }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Object.entries(CATEGORY_META).map(([name, meta]) => {
+        {Object.keys(counts).map(name => {
+          const meta = CATEGORY_META[name] || CATEGORY_META.Others;
           const count = counts[name] || 0;
           return (
             <div

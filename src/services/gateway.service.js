@@ -1,4 +1,4 @@
-import { api } from '../lib/api';
+import { api } from '../lib/api.js';
 
 const BASE = '/api/v1/manager/gateway/lp';
 
@@ -39,7 +39,12 @@ export const gatewayDisconnect = (role = 'both') =>
   api.post(`${BASE}/disconnect`, { role }).then(extractData).catch(handleError);
 
 export const gatewayGetRoutingOptions = () =>
-  api.get(`${BASE}/routing-options`).then(extractData).catch(handleError);
+  api.get('/manager/LPRoutingOptions', { timeout: 15000 }).then(extractData).then((data) => {
+    if (!Array.isArray(data?.items)) {
+      throw new Error(data?.message || data?.error || 'Invalid LP routing options response');
+    }
+    return data;
+  }).catch(handleError);
 
 // ─── Market-data feed provider config (manager /gateway/feed contract) ────────
 // GET  …/gateway/feed/config        → { feed_provider, enabled, cserver:{…}, password_set, updated_at }

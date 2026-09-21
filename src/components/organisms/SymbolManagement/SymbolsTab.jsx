@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, Copy, ToggleLeft, ToggleRight, Edit2, Loader2, ChevronDown, X } from 'lucide-react';
 import {
-  symbolAdd, symbolUpdate,
   symbolClone, symbolCategoryList,
 } from '../../../services/api';
 import { InstrumentsService } from '../../../services/instruments.service';
 import { buildFeedWsUrl } from '../../../config/endpoints';
 import { getApiErrorMessage, normalizeArrayResponse } from '../../../utils/apiShapes';
 import { buildActionableErrorState } from '../../../utils/errorState';
+import SymbolFormModal from './SymbolFormModal';
 import ActionableErrorState from '../../atoms/ActionableErrorState';
 
 const SYMBOL_MANAGEMENT_LIMIT = 5000;
@@ -66,93 +66,6 @@ const normalizeCategoryRows = (response) =>
     .filter(Boolean);
 
 // ─── Add / Edit Modal ──────────────────────────────────────────────────────────
-const SymbolFormModal = ({ symbol: existing, categories, onClose, onSuccess }) => {
-  const isEdit = !!existing;
-  const [form, setForm] = useState({
-    symbol: existing?.symbol || '',
-    description: existing?.description || '',
-    digits: existing?.digits ?? 5,
-    contractSize: existing?.contractSize ?? 100000,
-    spread: existing?.spread ?? 0,
-    calcMode: existing?.calcMode || '',
-    category: existing?.category || '',
-    enabled: existing?.enabled ?? true,
-  });
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState('');
-
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setErr('');
-    try {
-      if (isEdit) {
-        await symbolUpdate({ symbol: form.symbol, description: form.description, digits: form.digits, contractSize: form.contractSize, spread: form.spread });
-      } else {
-        await symbolAdd({ symbol: form.symbol, description: form.description, digits: form.digits, contractSize: form.contractSize, spread: form.spread, category: form.category });
-      }
-      onSuccess();
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }}>
-      <div className="ui-card w-full max-w-md p-6 flex flex-col gap-4" style={{ background: 'var(--surface)' }}>
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold" style={{ color: 'var(--text)' }}>{isEdit ? 'Edit Symbol' : 'Add Symbol'}</h2>
-          <button onClick={onClose} className="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm"><X size={14} /></button>
-        </div>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium" style={{ color: 'var(--text-2)' }}>Symbol *</label>
-            <input className="ui-input ui-input-sm" value={form.symbol} onChange={e => set('symbol', e.target.value)} required disabled={isEdit} />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium" style={{ color: 'var(--text-2)' }}>Description</label>
-            <input className="ui-input ui-input-sm" value={form.description} onChange={e => set('description', e.target.value)} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium" style={{ color: 'var(--text-2)' }}>Digits</label>
-              <input type="number" className="ui-input ui-input-sm" value={form.digits} onChange={e => set('digits', +e.target.value)} min={0} max={8} />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium" style={{ color: 'var(--text-2)' }}>Spread (pts)</label>
-              <input type="number" className="ui-input ui-input-sm" value={form.spread} onChange={e => set('spread', +e.target.value)} min={0} />
-            </div>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium" style={{ color: 'var(--text-2)' }}>Contract Size</label>
-            <input type="number" className="ui-input ui-input-sm" value={form.contractSize} onChange={e => set('contractSize', +e.target.value)} min={1} />
-          </div>
-          {!isEdit && (
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium" style={{ color: 'var(--text-2)' }}>Category</label>
-              <select className="ui-input ui-input-sm" value={form.category} onChange={e => set('category', e.target.value)}>
-                <option value="">— none —</option>
-                {categories.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-              </select>
-            </div>
-          )}
-          {err && <p className="text-xs" style={{ color: 'var(--danger)' }}>{err}</p>}
-          <div className="flex justify-end gap-2 mt-1">
-            <button type="button" onClick={onClose} className="ui-btn ui-btn-secondary ui-btn-sm">Cancel</button>
-            <button type="submit" disabled={saving} className="ui-btn ui-btn-primary ui-btn-sm">
-              {saving ? <Loader2 size={13} className="animate-spin" /> : (isEdit ? 'Save' : 'Add Symbol')}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
 // ─── Clone Modal ───────────────────────────────────────────────────────────────
 // localStorage cache for symbol names (instant open after first use)
 const SYMBOL_CACHE_KEY = 'rtx-clone-symbol-names-cache';
@@ -379,13 +292,14 @@ const SymbolsTab = () => {
   const [editTarget, setEditTarget] = useState(null);
   const [togglingSymbol, setTogglingSymbol] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  const [savedNotice, setSavedNotice] = useState('');
 
   const load = async () => {
     setLoading(true);
     setLoadError(null);
     try {
       const [symsResult, catsResult] = await Promise.allSettled([
-        InstrumentsService.getInstruments({ page: 1, limit: SYMBOL_MANAGEMENT_LIMIT, search: '', enabled: '' }),
+        InstrumentsService.getConfiguredInstruments({ page: 1, limit: SYMBOL_MANAGEMENT_LIMIT, search: '', enabled: '' }),
         withTimeout(
           symbolCategoryList(),
           CATEGORY_LOAD_TIMEOUT_MS,
@@ -484,6 +398,8 @@ const SymbolsTab = () => {
         <ActionableErrorState state={loadError} onAction={load} compact className="m-0 shrink-0" />
       )}
 
+      {savedNotice && <p role="status" className="text-xs">{savedNotice}</p>}
+      <p className="text-xs" style={{color: 'var(--text-2)'}}>Enabled symbols remain subject to account group permissions, trading sessions and fresh executable quotes.</p>
       {/* Table */}
       <div className="ui-card flex-1 overflow-auto">
         {loading ? (
@@ -568,8 +484,9 @@ const SymbolsTab = () => {
         <SymbolFormModal
           symbol={editTarget}
           categories={categories}
+          instruments={symbols}
           onClose={() => { setModal(null); setEditTarget(null); }}
-          onSuccess={() => { setModal(null); setEditTarget(null); load(); }}
+          onSuccess={(saved) => { setSavedNotice(`${saved.symbol}: saved and ${saved.enabled ? 'enabled' : 'disabled'}. ${saved.enabled ? 'The terminal updates automatically. Trading requires group permission, an open session and a fresh quote.' : 'Enable after reviewing specifications.'}`); setModal(null); setEditTarget(null); load(); }}
         />
       )}
       {modal === 'clone' && (

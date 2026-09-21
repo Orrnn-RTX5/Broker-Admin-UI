@@ -1,10 +1,15 @@
 import { ArrowLeft, Search } from 'lucide-react';
 import { useState, useMemo } from 'react';
-import { useShallow } from 'zustand/react/shallow';
 import useSymbolStore from '../../../store/useSymbolStore';
 
-const SymbolListPage = ({ group, onBack }) => {
-  const symbols = useSymbolStore(useShallow(state => state.getSymbolsByCategory(group)));
+const SymbolListPage = ({ group, onBack, catalogue = [] }) => {
+  const quotes = useSymbolStore(state => state.symbols);
+  const connected = useSymbolStore(state => state.isConnected);
+  const symbols = useMemo(() => catalogue.filter(row => row.category === group).map(row => {
+    const quote = quotes[row.symbol];
+    const live = Boolean(connected && quote?.live);
+    return { ...row, bid: live ? quote.bid ?? '—' : '—', ask: live ? quote.ask ?? '—' : '—', live };
+  }), [catalogue, group, quotes, connected]);
   const [search, setSearch] = useState('');
 
   const filteredSymbols = useMemo(() => {
@@ -72,8 +77,8 @@ const SymbolListPage = ({ group, onBack }) => {
                     <td className="px-4 py-3">
                       <div className="flex justify-center items-center">
                         <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-[var(--surface-2)] border border-[var(--border)]">
-                           <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                           <span className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-3)' }}>Live</span>
+                           <div className={`w-1.5 h-1.5 rounded-full ${item.live ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
+                           <span className="text-[10px] uppercase font-bold" style={{ color: 'var(--text-3)' }}>{item.live ? 'Live' : 'No live quote'}</span>
                         </div>
                       </div>
                     </td>

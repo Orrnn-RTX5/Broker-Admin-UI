@@ -18,7 +18,7 @@ test('SymbolsTab active toggle uses InstrumentsService gateway contract', () => 
 test('SymbolsTab initial load uses InstrumentsService instead of legacy symbolList fan-out', () => {
   assert.doesNotMatch(source, /symbolList\s*,/);
   assert.doesNotMatch(source, /\bsymbolList\(\)/);
-  assert.match(source, /InstrumentsService\.getInstruments\(\{\s*page:\s*1,\s*limit:\s*SYMBOL_MANAGEMENT_LIMIT,\s*search:\s*'',\s*enabled:\s*''\s*\}\)/);
+  assert.match(source, /InstrumentsService\.getConfiguredInstruments\(\{\s*page:\s*1,\s*limit:\s*SYMBOL_MANAGEMENT_LIMIT,\s*search:\s*'',\s*enabled:\s*''\s*\}\)/);
   assert.match(source, /normalizeArrayResponse\(response,\s*SYMBOL_RESPONSE_KEYS\)/);
   assert.match(source, /withTimeout\(\s*symbolCategoryList\(\),\s*CATEGORY_LOAD_TIMEOUT_MS,/);
 });

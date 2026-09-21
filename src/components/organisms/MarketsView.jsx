@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { InstrumentsService } from '../../services/instruments.service';
+import { buildMarketCatalogue } from '../../utils/marketCatalogue';
 import { BarChart2, Settings2 } from 'lucide-react';
 
 import SymbolManagementPage from './SymbolManagement/SymbolManagementPage';
@@ -8,6 +10,32 @@ import SymbolListPage from './SymbolManagement/SymbolListPage';
 const MarketsView = () => {
   const [activeMainTab, setActiveMainTab] = useState('browser');
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [catalogue, setCatalogue] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [reload, setReload] = useState(0);
+
+  useEffect(() => {
+    if (activeMainTab !== 'browser') return;
+    let cancelled = false;
+    setLoading(true);
+    setError('');
+    Promise.allSettled([
+      InstrumentsService.getInstrumentCatalogue(),
+      InstrumentsService.getConfiguredInstruments(),
+    ]).then(([feed, configured]) => {
+      if (cancelled) return;
+      if (feed.status === 'rejected') {
+        setCatalogue([]);
+        setError('Unable to load assigned symbols. Retry to load the catalogue.');
+      } else {
+        setCatalogue(buildMarketCatalogue(feed.value, configured.status === 'fulfilled' ? configured.value : []));
+        if (configured.status === 'rejected') setError('Configured categories are unavailable. Showing default categories; retry to refresh.');
+      }
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [activeMainTab, reload]);
 
   return (
     <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden text-[color:var(--text-primary)]">
@@ -44,13 +72,15 @@ const MarketsView = () => {
       <div className="flex-1 overflow-hidden flex flex-col">
         {activeMainTab === 'browser' && (
           <div className="flex-1 w-full h-full overflow-hidden">
-            {selectedCategory ? (
+            {error && <div role="alert" className="px-6 py-2 text-sm">{error} <button className="ui-btn ui-btn-sm" onClick={() => setReload(value => value + 1)}>Retry</button></div>}
+            {loading ? <p role="status" className="p-6">Loading symbol catalogue…</p> : selectedCategory ? (
               <SymbolListPage
+                catalogue={catalogue}
                 group={selectedCategory}
                 onBack={() => setSelectedCategory(null)}
               />
             ) : (
-              <SymbolsOverviewPage onSelectCategory={setSelectedCategory} />
+              <SymbolsOverviewPage catalogue={catalogue} onSelectCategory={setSelectedCategory} />
             )}
           </div>
         )}
