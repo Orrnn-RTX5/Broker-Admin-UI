@@ -1,0 +1,65 @@
+.admin-menu-bar {
+  height: 50px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 10px 0 8px;
+  gap: 2px;
+  background: var(--bg-chrome);
+  border-bottom: 1px solid var(--border-default);
+  user-select: none;
+}
+
+[data-theme="dark"] .admin-menu-bar { background: #191919; }
+
+.admin-menu-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 78px;
+  height: 100%;
+  gap: 1px;
+  color: var(--text-primary);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.admin-menu-brand img { width: 36px; height: 24px; object-fit: contain; }
+.admin-menu-brand span { font-size: 10px; line-height: 12px; font-weight: 600; letter-spacing: .04em; }
+:root:not([data-theme="dark"]) .admin-menu-brand img { filter: brightness(0); }
+.admin-menu-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; padding-left: 10px; }
+.admin-menu-super-admin {
+  border-color: var(--accent-500);
+  background: var(--accent-50);
+  color: var(--accent-600);
+}
+.admin-menu-super-admin:hover {
+  background: var(--accent-100);
+  border-color: var(--accent-600);
+}
+.admin-menu-icon, .admin-profile-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.admin-profile-avatar { border-radius: 50%; border-color: var(--border-strong); background: var(--bg-surface-2); font-size: 11px; }
+.admin-menu-icon:hover, .admin-profile-avatar:hover,
+.admin-menu-actions [data-state="open"] { background: var(--bg-surface-3); color: var(--text-primary); }
+.admin-menu-bar button:focus-visible { outline: 2px solid var(--accent-500); outline-offset: -2px; }
+@media (max-width: 520px) {
+  .admin-menu-bar { padding-inline: 4px; gap: 0; }
+  .admin-menu-brand { flex-basis: 48px; }
+  .admin-menu-bar > button { padding-inline: 6px; font-size: 11px; }
+  .admin-menu-actions { gap: 2px; padding-left: 4px; }
+}

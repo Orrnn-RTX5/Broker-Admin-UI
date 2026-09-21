@@ -15,10 +15,10 @@
   --accent: var(--accent-500);
   --accent-hover: var(--accent-600);
   --accent-press: var(--accent-700);
-  --accent-soft: #eaf2ff;
-  --accent-soft-2: #f4f8ff;
-  --accent-border: #a9c7fa;
-  --accent-text: var(--accent-600);
+  --accent-soft: rgba(33, 150, 243, 0.14);
+  --accent-soft-2: rgba(33, 150, 243, 0.08);
+  --accent-border: rgba(66, 165, 245, 0.38);
+  --accent-text: #64b5f6;
 
   --ok: var(--success-500);
   --ok-soft: color-mix(in srgb, var(--success-500) 16%, transparent);
@@ -51,17 +51,17 @@
 }
 
 [data-theme="dark"] {
-  --accent-soft: rgba(76, 141, 246, .14);
-  --accent-soft-2: rgba(76, 141, 246, .08);
-  --accent-border: rgba(106, 162, 255, .38);
-  --accent-text: #a9ccff;
+  --accent-soft: rgba(33, 150, 243, 0.14);
+  --accent-soft-2: rgba(33, 150, 243, 0.08);
+  --accent-border: rgba(66, 165, 245, 0.38);
+  --accent-text: #64b5f6;
 
   --ok-soft: color-mix(in srgb, var(--success-500) 22%, transparent);
-  --ok-text: #86efac;
+  --ok-text: var(--success-500);
   --ok-border: color-mix(in srgb, var(--success-500) 54%, transparent);
 
   --danger-soft: color-mix(in srgb, var(--danger-500) 22%, transparent);
-  --danger-text: #fca5a5;
+  --danger-text: var(--danger-500);
   --danger-border: color-mix(in srgb, var(--danger-500) 54%, transparent);
 
   --warn-soft: color-mix(in srgb, var(--warning-500) 22%, transparent);
@@ -69,7 +69,7 @@
   --warn-border: color-mix(in srgb, var(--warning-500) 54%, transparent);
 
   --info-soft: color-mix(in srgb, var(--info-500) 22%, transparent);
-  --info-text: #bfdbfe;
+  --info-text: #93c5fd;
   --info-border: color-mix(in srgb, var(--info-500) 54%, transparent);
 }
 

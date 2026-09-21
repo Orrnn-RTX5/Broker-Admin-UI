@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Groups explorer check</title></head>
+<body style="margin:0"><div id="root"></div>
+<script type="module">
+import React, { useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import SidebarNavTree from '/src/components/organisms/SidebarNavTree.jsx';
+import GroupsExplorer from '/src/components/organisms/GroupsExplorer.jsx';
+import { ManagerService } from '/src/services/manager.service.js';
+import { AccountsService } from '/src/services/accounts.service.js';
+import { useAuthStore } from '/src/store/authStore.js';
+import { resolveGroupExplorerNode } from '/src/utils/groupExplorerNavigation.js';
+import '/src/index.css';
+
+// Browser-only fixtures. Production components still read the real services.
+useAuthStore.setState({ isAuthenticated: true, user: { permissions: ['manage_groups', 'view_accounts'] } });
+const groups = ['real', 'demo', 'empty', ...Array.from({ length: 102 }, (_, i) => `group-${i + 1}`)].map(name => ({
+  name, executionMode: 'market', marginCallLevel: 100, stopOutLevel: 50, currency: 'USD',
+}));
+const accounts = Array.from({ length: 8 }, (_, i) => ({ Login: String(i + 1), Group: i < 4 ? 'real' : 'demo', Name: `Account ${i + 1}`, Balance: 0, Currency: 'USD' }));
+accounts.push({ Login: '999', Group: 'demo-pro' });
+ManagerService.getGroupList = async ({ page, limit }) => ({ groups: groups.slice((page - 1) * limit, page * limit), total: groups.length });
+AccountsService.getAccounts = async ({ page, limit }) => ({ accounts: accounts.slice((page - 1) * limit, page * limit), total: accounts.length });
+const openedAccounts = [];
+const Preview = () => {
+  const [location, setLocation] = useState(resolveGroupExplorerNode('Groups'));
+  const [reveal, setReveal] = useState({ ...location, revision: 0 });
+  const [selected, setSelected] = useState('groups');
+  const [refresh, setRefresh] = useState(0);
+  const navigate = node => {
+    const next = resolveGroupExplorerNode(node);
+    if (!next) return;
+    setLocation(next);
+    setReveal(previous => ({ ...next, revision: previous.revision + 1 }));
+    setSelected(node.id || next.id);
+  };
+  const openAccount = node => { navigate(node); openedAccounts.push(node.login); };
+  window.refreshExplorer = () => setRefresh(value => value + 1);
+  return React.createElement('div', { style: { display: 'flex', height: '100vh' } },
+    React.createElement(SidebarNavTree, { onNodeSelect: navigate, onNodeDoubleClick: openAccount, selectedNodeLabel: 'Groups', selectedNodeId: selected, groupExplorerReveal: reveal, refreshTrigger: refresh }),
+    React.createElement(GroupsExplorer, { location, onNavigate: navigate, onAccountOpen: openAccount, selectedNodeId: selected, refreshTrigger: refresh }),
+  );
+};
+createRoot(document.getElementById('root')).render(React.createElement(Preview));
+
+const waitFor = async (condition, message) => {
+  for (let i = 0; i < 200; i += 1) {
+    if (condition()) return;
+    await new Promise(resolve => setTimeout(resolve, 30));
+  }
+  throw new Error(`Timed out: ${message}`);
+};
+const assert = (condition, message) => { if (!condition) throw new Error(message); };
+const panel = () => document.querySelector('[aria-label="Groups explorer"]');
+const row = id => [...panel().querySelectorAll('[data-node-id]')].find(element => element.dataset.nodeId === id);
+const button = label => document.querySelector(`button[aria-label="${label}"]`);
+const dblclick = element => {
+  assert(element, 'Double-click target must exist');
+  element.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+  element.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 2 }));
+  element.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, detail: 2 }));
+};
+window.runExplorerCheck = async () => {
+  await waitFor(() => row('groups:admin'), 'Admin folder in root');
+  assert(panel().querySelectorAll('tbody tr').length === 1, 'Root must show only Admin');
+  row('groups:admin').click();
+  await new Promise(resolve => setTimeout(resolve, 80));
+  assert(row('groups:admin'), 'Single click must select folder without entering');
+  dblclick(row('groups:admin'));
+  await waitFor(() => row('group:group-102'), 'all paginated groups');
+  assert(panel().querySelectorAll('tbody tr').length === 105, 'All API groups must be displayed');
+  assert(button('Collapse Admin'), 'Admin navigator path must open');
+  button('Collapse Servers').click();
+  button('Collapse RTX5 Server').click();
+  button('Collapse Administrator').click();
+  dblclick(row('group:real'));
+  await waitFor(() => row('account:real:4') && button('Collapse real'), 'real accounts and matching sidebar');
+  assert(button('Collapse Administrator') && button('Collapse RTX5 Server') && button('Collapse Groups') && button('Collapse Admin'), 'Collapsed ancestor path must reopen');
+  assert(button('Expand Servers'), 'Unrelated branch must remain collapsed');
+  assert(panel().querySelectorAll('tbody tr').length === 4, 'Only the four real accounts must appear');
+  assert(row('account:real:1').querySelector('.lucide-file-text'), 'Accounts must appear as document files');
+  assert(!row('account:demo:5') && !row('account:real:999'), 'Other groups must not leak into real');
+  dblclick(row('account:real:1'));
+  await waitFor(() => openedAccounts.includes('1'), 'account file activation');
+  const realTreeRow = button('Collapse real').parentElement;
+  dblclick(realTreeRow);
+  await new Promise(resolve => setTimeout(resolve, 100));
+  assert(button('Collapse real'), 'Double-click must not collapse an open group');
+  button('Collapse real').click();
+  window.refreshExplorer();
+  await new Promise(resolve => setTimeout(resolve, 200));
+  assert(button('Expand real'), 'Manual collapse must survive unrelated refresh');
+  button('Up one folder').click();
+  await waitFor(() => row('group:demo'), 'Up returns to Admin');
+  dblclick(row('group:demo'));
+  await waitFor(() => row('account:demo:8') && button('Collapse demo'), 'demo folder and synced navigator');
+  assert(panel().querySelectorAll('tbody tr').length === 4 && !row('account:demo:999'), 'Exact demo membership');
+  const rootCrumb = [...panel().querySelectorAll('nav button')].find(element => element.textContent === 'Groups');
+  rootCrumb.click();
+  await waitFor(() => row('groups:admin'), 'breadcrumb returns to root');
+  dblclick(row('groups:admin'));
+  await waitFor(() => row('group:empty'), 'Admin reopens');
+  dblclick(row('group:empty'));
+  await waitFor(() => panel().textContent.includes('No accounts in this group.'), 'empty group');
+  button('Up one folder').click();
+  await waitFor(() => row('group:real'), 'Admin after empty folder');
+  dblclick(row('group:real'));
+  await waitFor(() => row('account:real:4'), 'final account view');
+  return { groups: 105, accounts: 4, doubleClick: true, singleClickSelection: true, documentIcons: true, sidebarSync: true, manualCollapse: true, breadcrumbs: true, up: true, emptyState: true, accountOpen: true };
+};
+</script>
+</body>
+</html>

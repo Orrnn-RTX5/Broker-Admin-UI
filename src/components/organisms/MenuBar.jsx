@@ -3,8 +3,10 @@ import {
   Files, Loader, Activity, Percent, Users, Puzzle, Mail, BookOpen,
   ArrowLeft, ArrowRight, RefreshCcw,
   Upload, Download, Printer, LogOut, Undo2, Redo2, Palette, Power,
-  Rows3, FileSpreadsheet, Info, Keyboard, Clock,
+  Rows3, FileSpreadsheet, Info, Keyboard, Clock, Bell, Settings, ShieldCheck,
 } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
+import './MenuBar.css';
 import { AuthService } from '../../services/auth.service';
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
@@ -45,12 +47,15 @@ const SubTrigger = ({ icon: Icon, label }) => (
 );
 
 const MenuBar = ({
-  onMenuSelect, activeNode, onThemeSelect, currentTheme,
+  onMenuSelect, onThemeSelect, currentTheme,
   density, onDensityToggle,
   onUndo, onRedo, onRefresh, onExport, onExportCsv, onImport, onHelp, onAbout,
   canUndo, canRedo,
 }) => {
-  const activeNodeLabel = activeNode;
+  const user = useAuthStore((state) => state.user);
+  const adminName = String(user?.name || user?.login || 'Admin');
+  const adminLogin = String(user?.login || user?.id || '');
+  const initials = adminName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
   const handleLogout = () => AuthService.logout();
 
   const handleExit = () => {
@@ -63,7 +68,11 @@ const MenuBar = ({
   };
 
   return (
-    <div className="h-10 shrink-0 bg-[color:var(--bg-chrome)] flex items-center px-2 border-b border-[color:var(--border-default)] select-none">
+    <div className="admin-menu-bar" role="navigation" aria-label="Admin navigation">
+      <button type="button" className="admin-menu-brand" onClick={onAbout} aria-label="About RTX5 Admin">
+        <img src="./admin-symbol.png" alt="" />
+        <span>Admin</span>
+      </button>
       {/* FILE */}
       <DropdownMenu>
         <MenuTrigger label="File" />
@@ -117,6 +126,18 @@ const MenuBar = ({
         </DropdownMenuContent>
       </DropdownMenu>
 
+      <DropdownMenu>
+        <MenuTrigger label="Tools" />
+        <DropdownMenuContent align="start">
+          <Item icon={Users} label="Managers" onClick={onMenuSelect} />
+          <Item icon={Puzzle} label="Plugins" onClick={onMenuSelect} />
+          <Item icon={BookOpen} label="Journal" onClick={onMenuSelect} />
+          <DropdownMenuSeparator />
+          <Item icon={ShieldCheck} label="Platform Super Admin" onClick={() => onMenuSelect?.('SuperAdmin')} />
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+
       {/* WINDOW */}
       <DropdownMenu>
         <MenuTrigger label="Window" />
@@ -146,10 +167,57 @@ const MenuBar = ({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <div className="ml-auto flex items-center pr-3 gap-3">
-        <span className="text-[11px] text-[color:var(--text-muted)] font-mono">
-          RTX 5 · {activeNodeLabel || '—'}
-        </span>
+      <div className="admin-menu-actions">
+        <button
+          type="button"
+          onClick={() => onMenuSelect?.('SuperAdmin')}
+          className="admin-menu-super-admin px-2 py-1 rounded border text-xs font-semibold flex items-center gap-1.5 transition-colors mr-1"
+          title="Open RTX5 Super Admin Control Plane"
+        >
+          <ShieldCheck size={14} />
+          <span className="hidden md:inline">Super Admin</span>
+        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" className="admin-menu-icon" aria-label="Notifications" title="Notifications"><Bell size={14} /></button>
+
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            <div className="px-3 py-2 text-xs font-semibold">Notifications</div>
+            <div className="px-3 pb-3 text-xs text-[color:var(--text-muted)]">Check Mailbox and Journal for broker updates.</div>
+            <Item icon={Mail} label="Mailbox" onClick={onMenuSelect} />
+            <Item icon={BookOpen} label="Journal" onClick={onMenuSelect} />
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" className="admin-menu-icon" aria-label="Quick settings" title="Quick settings"><Settings size={14} /></button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <Item icon={Palette} label="Dark theme" active={currentTheme === 'dark'} onClick={() => onThemeSelect?.('dark')} />
+            <Item icon={Palette} label="Light theme" active={currentTheme === 'light'} onClick={() => onThemeSelect?.('light')} />
+            <Item icon={Palette} label="System theme" active={currentTheme === 'system'} onClick={() => onThemeSelect?.('system')} />
+            <DropdownMenuSeparator />
+            <Item icon={Rows3} label={density === 'compact' ? 'Use cozy spacing' : 'Use compact spacing'} onClick={onDensityToggle} />
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" className="admin-profile-avatar" aria-label={`Signed in as ${adminName}`} title={`${adminName}${adminLogin ? ' ? ' + adminLogin : ''}`}>
+              {initials || 'A'}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-60">
+            <div className="px-3 py-3">
+              <div className="text-[10px] uppercase tracking-wider text-[color:var(--text-muted)]">Signed-in admin</div>
+              <div className="mt-1 break-words text-sm font-semibold">{adminName}</div>
+              {adminLogin && <div className="mt-1 text-xs text-[color:var(--text-muted)]">Login: {adminLogin}</div>}
+              {user?.broker_id && <div className="mt-1 text-xs text-[color:var(--text-muted)]">Broker: {user.broker_id}</div>}
+            </div>
+            <DropdownMenuSeparator />
+            <Item icon={LogOut} label="Logout" onClick={handleLogout} />
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

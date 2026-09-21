@@ -19,7 +19,7 @@ const VendorItem = ({ logo, name, description }) => (
 );
 
 // SVG Helper for Hacker
-const HackerIcon = ({ size=20, color="#ef4444" }) => (
+const HackerIcon = ({ size=20, color="var(--danger-500)" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
     <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
@@ -82,18 +82,18 @@ const AntiDDoSView = () => {
             {/* Connection Lines to Alert Triangle */}
             <svg className="absolute left-[110px] top-0 w-[200px] h-full pointer-events-none" style={{ zIndex: 0 }}>
                {/* Red lines to X */}
-               <line x1="0" y1="28" x2="150" y2="90" stroke="#ef4444" strokeWidth="0.5" strokeDasharray="3 2" />
-               <line x1="-30" y1="68" x2="150" y2="93" stroke="#ef4444" strokeWidth="0.5" strokeDasharray="3 2" />
-               <line x1="10" y1="93" x2="150" y2="96" stroke="#ef4444" strokeWidth="0.5" strokeDasharray="3 2" />
-               <line x1="-30" y1="148" x2="150" y2="103" stroke="#ef4444" strokeWidth="0.5" strokeDasharray="3 2" />
-               <line x1="5" y1="188" x2="150" y2="106" stroke="#ef4444" strokeWidth="0.5" strokeDasharray="3 2" />
+               <line x1="0" y1="28" x2="150" y2="90" stroke="var(--danger-500)" strokeWidth="0.5" strokeDasharray="3 2" />
+               <line x1="-30" y1="68" x2="150" y2="93" stroke="var(--danger-500)" strokeWidth="0.5" strokeDasharray="3 2" />
+               <line x1="10" y1="93" x2="150" y2="96" stroke="var(--danger-500)" strokeWidth="0.5" strokeDasharray="3 2" />
+               <line x1="-30" y1="148" x2="150" y2="103" stroke="var(--danger-500)" strokeWidth="0.5" strokeDasharray="3 2" />
+               <line x1="5" y1="188" x2="150" y2="106" stroke="var(--danger-500)" strokeWidth="0.5" strokeDasharray="3 2" />
             </svg>
 
             {/* Connection Lines from Users to Shield */}
             <svg className="absolute left-[60px] top-0 w-[350px] h-full pointer-events-none" style={{ zIndex: 0 }}>
                {/* Green lines */}
-               <path d="M 0 115 Q 160 120 280 100" fill="none" stroke="#22c55e" strokeWidth="0.5" />
-               <path d="M 40 230 Q 200 240 280 120" fill="none" stroke="#22c55e" strokeWidth="0.5" />
+               <path d="M 0 115 Q 160 120 280 100" fill="none" stroke="var(--success-500)" strokeWidth="0.5" />
+               <path d="M 40 230 Q 200 240 280 120" fill="none" stroke="var(--success-500)" strokeWidth="0.5" />
             </svg>
 
             {/* Alert & Red X's */}

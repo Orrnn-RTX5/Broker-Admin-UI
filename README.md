@@ -2,6 +2,14 @@
 
 RTX5 Broker Admin is the existing Vite React admin UI used for broker operations. The same source builds both the hosted web app and the Windows desktop app.
 
+Nexa is available in the broker selector with API requests sent to
+`https://nexa.orrnn.com` and live feeds at `wss://nexa.orrnn.com/ws/feed`.
+Platform discovery records override its defaults; disabled Nexa records are
+respected. Admin login uses `/manager/api/v2/admin/login` on this backend.
+With `VITE_BROKER_ID=Nexa`, the admin selects the configured Nexa backend
+without calling platform discovery. Set `VITE_API_HOST` and
+`VITE_API_HOST_EXT` to `https://nexa.orrnn.com` for this installation.
+
 ## Web Development
 
 ```bash

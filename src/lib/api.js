@@ -207,7 +207,7 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use((response) => {
   useConnectionStore.getState().markOk();
-  console.log(`%c[API Response Success] ${response.config.method?.toUpperCase()} ${redactUrlForLog(response.config.url)}`, 'color: #4caf50; font-weight: bold;', {
+  console.log(`%c[API Response Success] ${response.config.method?.toUpperCase()} ${redactUrlForLog(response.config.url)}`, 'color: #2ebd59; font-weight: bold;', {
     status: response.status,
     data: redactForLog(response.data)
   });
@@ -216,7 +216,7 @@ api.interceptors.response.use((response) => {
   const originalRequest = error.config;
 
   if (!shouldSuppressResponseErrorLog(error, originalRequest, error.response?.status)) {
-    console.error(`%c[API Response Error] ${originalRequest?.method?.toUpperCase()} ${redactUrlForLog(originalRequest?.url)}`, 'color: #f44336; font-weight: bold;', {
+    console.error(`%c[API Response Error] ${originalRequest?.method?.toUpperCase()} ${redactUrlForLog(originalRequest?.url)}`, 'color: #e53935; font-weight: bold;', {
       status: error.response?.status,
       statusText: error.response?.statusText,
       data: redactForLog(error.response?.data),

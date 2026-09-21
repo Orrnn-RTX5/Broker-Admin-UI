@@ -562,7 +562,9 @@ export const ManagerLogin = ({ navigate, onLoginSuccess }) => {
       }}
       switchToLabel="Admin login"
       onSwitchRole={() => navigate('/admin-login')}
+      onSuperAdminLogin={() => navigate('/super-admin-login')}
     >
+
       <Field id="manager-login" label="Login" type="number" icon={User} value={user} onChange={setUser} required />
       <PasswordField id="manager-password" value={password} onChange={setPassword} />
       <Field id="manager-server" label="Broker Server" icon={Server} value={server} onChange={setServer} readOnly required />
@@ -739,7 +741,9 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
       onSwitchBroker={handleSwitchBroker}
       brokerLocked={!!runtimeLockedBroker}
       onRegisterBroker={runtimeLockedBroker ? undefined : () => navigate('/broker-manual-entry')}
+      onSuperAdminLogin={() => navigate('/super-admin-login')}
     >
+
       <div className="flex flex-col gap-2">
         <label htmlFor="broker-select" className="text-[13px] font-semibold leading-5 text-[#334155]">
           Broker
@@ -803,6 +807,7 @@ const LoginScreen = ({
   onRegisterBroker,
   switchToLabel,
   onSwitchRole,
+  onSuperAdminLogin,
   children,
 }) => {
   const supportSubtitle = getLoginSubtitle(tone, subtitle);
@@ -865,6 +870,23 @@ const LoginScreen = ({
             )}
           </div>
         )}
+
+        <div className="mt-5 pt-4 border-t border-[#edf0f4] flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-[12px] text-[#6b7280]">
+            <ShieldCheck size={14} className="text-[#4f46e5]" />
+            <span>Platform Provider</span>
+          </div>
+          <button
+            type="button"
+            onClick={onSuperAdminLogin || (() => {
+              window.history.pushState(null, '', '#super-admin-login');
+              window.dispatchEvent(new Event('popstate'));
+            })}
+            className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#4f46e5] hover:text-[#4338ca] transition-colors"
+          >
+            <span>Super Admin Portal &rarr;</span>
+          </button>
+        </div>
       </div>
     </AuthShell>
   );

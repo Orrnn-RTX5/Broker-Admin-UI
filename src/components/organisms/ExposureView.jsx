@@ -9,7 +9,7 @@ const TAB_GROUP = 'By Group';
 const TAB_ACCOUNT = 'By Account';
 
 const fmt = (v) => (typeof v === 'number' ? v.toFixed(2) : '—');
-const pnlColor = (v) => (v > 0 ? 'text-[#4ec9b0]' : v < 0 ? 'text-[#f48771]' : 'text-[color:var(--text-primary)]');
+const pnlColor = (v) => (v > 0 ? 'text-[color:var(--success-500)]' : v < 0 ? 'text-[color:var(--danger-500)]' : 'text-[color:var(--text-primary)]');
 
 const ExposureView = () => {
   const [tab, setTab] = useState(TAB_BOOK);
@@ -124,9 +124,9 @@ const ExposureView = () => {
               : bookData.length === 0 ? <div className="flex items-center justify-center h-24 text-[#555] text-[11px]">No exposure data</div>
               : bookData.map((row, i) => (
                 <div key={row.symbol} className={`flex items-center px-3 h-[22px] border-b border-black/20 select-none ${i % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-[#2a2d2e]`}>
-                  <div className="w-32 text-[11px] text-[#9cdcfe] pr-3 font-mono">{row.symbol}</div>
-                  <div className="w-28 text-[11px] text-[#4ec9b0] pr-3">{fmt(row.long_volume)}</div>
-                  <div className="w-28 text-[11px] text-[#f48771] pr-3">{fmt(row.short_volume)}</div>
+                  <div className="w-32 text-[11px] text-[color:var(--info-500)] pr-3 font-mono">{row.symbol}</div>
+                  <div className="w-28 text-[11px] text-[color:var(--info-500)] pr-3">{fmt(row.long_volume)}</div>
+                  <div className="w-28 text-[11px] text-[color:var(--danger-500)] pr-3">{fmt(row.short_volume)}</div>
                   <div className={`w-28 text-[11px] pr-3 ${pnlColor(row.net_volume)}`}>{fmt(row.net_volume)}</div>
                   <div className={`w-28 text-[11px] pr-3 ${pnlColor(row.net_pnl)}`}>{fmt(row.net_pnl)}</div>
                   <div className="w-20 text-[11px] text-[color:var(--text-primary)] pr-3">{row.long_count}</div>
@@ -161,9 +161,9 @@ const ExposureView = () => {
               : groupData.length === 0 ? <div className="flex items-center justify-center h-24 text-[#555] text-[11px]">Enter a group and click Load</div>
               : groupData.map((row, i) => (
                 <div key={row.symbol} className={`flex items-center px-3 h-[22px] border-b border-black/20 select-none ${i % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-[#2a2d2e]`}>
-                  <div className="w-32 text-[11px] text-[#9cdcfe] pr-3 font-mono">{row.symbol}</div>
-                  <div className="w-28 text-[11px] text-[#4ec9b0] pr-3">{fmt(row.long_volume)}</div>
-                  <div className="w-28 text-[11px] text-[#f48771] pr-3">{fmt(row.short_volume)}</div>
+                  <div className="w-32 text-[11px] text-[color:var(--info-500)] pr-3 font-mono">{row.symbol}</div>
+                  <div className="w-28 text-[11px] text-[color:var(--info-500)] pr-3">{fmt(row.long_volume)}</div>
+                  <div className="w-28 text-[11px] text-[color:var(--danger-500)] pr-3">{fmt(row.short_volume)}</div>
                   <div className={`w-28 text-[11px] pr-3 ${pnlColor(row.net_volume)}`}>{fmt(row.net_volume)}</div>
                   <div className={`w-28 text-[11px] pr-3 ${pnlColor(row.net_pnl)}`}>{fmt(row.net_pnl)}</div>
                   <div className="w-20 text-[11px] text-[color:var(--text-primary)] pr-3">{row.long_count}</div>
@@ -225,8 +225,8 @@ const ExposureView = () => {
                       {accountData.positions.map((p, i) => (
                         <div key={p.ticket} className={`flex items-center px-2 h-[22px] border-b border-black/20 ${i % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
                           <div className="w-24 text-[11px] text-[color:var(--text-primary)] pr-2">{p.ticket}</div>
-                          <div className="w-24 text-[11px] text-[#9cdcfe] pr-2 font-mono">{p.symbol}</div>
-                          <div className={`w-16 text-[11px] pr-2 ${p.side === 'buy' ? 'text-[#4ec9b0]' : 'text-[#f48771]'}`}>{p.side}</div>
+                          <div className="w-24 text-[11px] text-[color:var(--info-500)] pr-2 font-mono">{p.symbol}</div>
+                          <div className={`w-16 text-[11px] pr-2 ${p.side === 'buy' ? 'text-[color:var(--info-500)]' : 'text-[color:var(--danger-500)]'}`}>{p.side}</div>
                           <div className="w-20 text-[11px] text-[color:var(--text-primary)] pr-2">{p.volume}</div>
                           <div className="w-24 text-[11px] text-[color:var(--text-primary)] pr-2 font-mono">{p.price_open}</div>
                           <div className="w-24 text-[11px] text-[color:var(--text-primary)] pr-2 font-mono">{p.price_current}</div>

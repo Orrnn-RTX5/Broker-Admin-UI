@@ -76,7 +76,11 @@ const Input = ({ type = 'text', value, onChange, placeholder, required, disabled
 
 const ErrBox = ({ msg }) => msg ? (
   <div className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
-    style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }}>
+    style={{
+      background: 'color-mix(in srgb, var(--danger-500) 10%, transparent)',
+      color: 'var(--danger-500)',
+      border: '1px solid color-mix(in srgb, var(--danger-500) 25%, transparent)',
+    }}>
     <AlertCircle size={12} className="shrink-0" /> {msg}
   </div>
 ) : null;
@@ -750,7 +754,7 @@ const FeedTenantsView = () => {
                             onClick={() => handleSuspendToggle(tenant)}
                             disabled={busy}
                             className="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm"
-                            style={{ color: tenant.status === 'active' ? '#f87171' : '#4ade80' }}
+                            style={{ color: tenant.status === 'active' ? 'var(--danger-500)' : 'var(--success-500)' }}
                           >
                             {busy ? <Loader2 size={12} className="animate-spin" />
                               : tenant.status === 'active' ? <Pause size={12} /> : <Play size={12} />}

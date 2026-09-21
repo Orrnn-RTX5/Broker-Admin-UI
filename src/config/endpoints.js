@@ -279,10 +279,70 @@ export const buildExtApiUrl = (endpoint = '') => {
 
 const getBaseWsHost = () => trimTrailingSlash(WS_HOST || buildWsHost(API_HOST));
 
+export const shouldUseFeedDevProxy = () => {
+  const isDev = viteEnv.DEV === true || viteEnv.MODE === 'development';
+  if (!isDev || typeof window === 'undefined') return false;
+  const explicit = String(
+    getRuntimeValue('FEED_USE_DEV_PROXY', 'VITE_FEED_USE_DEV_PROXY') ?? viteEnv.VITE_FEED_USE_DEV_PROXY ?? 'true'
+  ).toLowerCase();
+  return explicit !== 'false' && isLocalWebHostname(window.location?.hostname);
+};
+
+export const toLocalDevFeedProxyUrl = (
+  feedUrl = '',
+  useProxy = shouldUseFeedDevProxy(),
+  localOrigin = typeof window !== 'undefined' ? window.location?.origin : ''
+) => {
+  if (!useProxy || !localOrigin) return feedUrl;
+
+  try {
+    const upstream = new URL(feedUrl, localOrigin);
+    const local = new URL(localOrigin);
+    local.pathname = upstream.pathname;
+    local.search = upstream.search;
+    local.hash = '';
+    return local.toString();
+  } catch {
+    return feedUrl;
+  }
+};
+
 export const buildFeedWsUrl = () => {
-  const base = getBaseWsHost();
-  const url = !base ? '/ws/feed' : (base.endsWith('/ws/feed') ? base : `${base}/ws/feed`);
-  return appendWsAuthParams(url, readWsAuthContext());
+  updateDynamicEndpoints();
+  const explicitWsUrl = getRuntimeValue('FEED_WS_URL', 'VITE_FEED_WS_URL') || viteEnv.VITE_FEED_WS_URL;
+  const base = explicitWsUrl || getBaseWsHost();
+  const rawUrl = !base ? '/ws/feed' : (base.endsWith('/ws/feed') ? base : `${base}/ws/feed`);
+  const authenticatedUrl = appendWsAuthParams(rawUrl, readWsAuthContext());
+  const proxiedUrl = toLocalDevFeedProxyUrl(authenticatedUrl);
+  try {
+    const url = new URL(proxiedUrl, typeof window !== 'undefined' ? window.location.href : 'http://localhost');
+    if (url.protocol === 'https:') url.protocol = 'wss:';
+    if (url.protocol === 'http:') url.protocol = 'ws:';
+    return url.toString();
+  } catch {
+    return proxiedUrl.replace(/^https:/i, 'wss:').replace(/^http:/i, 'ws:');
+  }
+};
+
+export const buildFeedStatusUrl = () => {
+  updateDynamicEndpoints();
+  const explicitStatusUrl = getRuntimeValue('FEED_STATUS_URL', 'VITE_FEED_STATUS_URL') || viteEnv.VITE_FEED_STATUS_URL;
+  if (explicitStatusUrl) {
+    return toLocalDevFeedProxyUrl(explicitStatusUrl);
+  }
+  const wsUrl = buildFeedWsUrl();
+  try {
+    const url = new URL(wsUrl, typeof window !== 'undefined' ? window.location.href : 'http://localhost');
+    url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:';
+    if (!/\/status\/?$/i.test(url.pathname)) {
+      url.pathname = `${url.pathname.replace(/\/$/, '')}/status`;
+    }
+    url.search = '';
+    url.hash = '';
+    return url.toString();
+  } catch {
+    return '/ws/feed/status';
+  }
 };
 
 export const buildMetricsWsUrl = (token, login) => {
@@ -295,3 +355,4 @@ export const buildMetricsWsUrl = (token, login) => {
     extraParams: { login },
   });
 };
+

@@ -8,6 +8,7 @@ import {
   Calendar, 
   Network, 
   Settings, 
+  Settings2,
   Activity, 
   Database, 
   ShieldCheck, 
@@ -47,7 +48,7 @@ import {
 const BlueBookRedBookmarkIcon = (props) => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
-    <path d="M14 2v7l-2-2-2 2V2" fill="#ef4444" stroke="#ef4444"/>
+    <path d="M14 2v7l-2-2-2 2V2" fill="var(--danger-500)" stroke="var(--danger-500)"/>
   </svg>
 );
 
@@ -62,7 +63,7 @@ const BlueArticlesIcon = (props) => <FileText stroke="#3b82f6" {...props} />;
 const BlueUsersIcon = (props) => <Users stroke="#3b82f6" {...props} />;
 const BlueCloudIcon = (props) => <Cloud stroke="#3b82f6" {...props} />;
 const BlueMonitorIcon = (props) => <Monitor stroke="#3b82f6" {...props} />;
-const GreenAwardIcon = (props) => <Award stroke="#22c55e" {...props} />;
+const GreenAwardIcon = (props) => <Award stroke="var(--success-500)" {...props} />;
 const BlueHeadsetIcon = (props) => <Headset stroke="#3b82f6" {...props} />;
 const BlueMessageIcon = (props) => <MessageSquare stroke="#3b82f6" {...props} />;
 const BlueSearchIcon = (props) => <Search stroke="#3b82f6" {...props} />;
@@ -89,7 +90,7 @@ const GreenHexagonIcon = (props) => (
 );
 
 const GreenServerIcon = (props) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#21BA45" strokeWidth="1.5" {...props}>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success-500)" strokeWidth="1.5" {...props}>
     <rect x="2" y="2" width="20" height="8" rx="2" ry="2"/>
     <rect x="2" y="14" width="20" height="8" rx="2" ry="2"/>
     <line x1="6" y1="6" x2="6.01" y2="6"/><line x1="10" y1="6" x2="18" y2="6"/>
@@ -98,26 +99,26 @@ const GreenServerIcon = (props) => (
 );
 
 const GreenDatabaseIcon = (props) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#21BA45" strokeWidth="1.5" {...props}>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success-500)" strokeWidth="1.5" {...props}>
     <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12" />
   </svg>
 );
 
 const RedDatabaseIcon = (props) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DB2828" strokeWidth="1.5" {...props}>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--danger-500)" strokeWidth="1.5" {...props}>
     <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12" />
   </svg>
 );
 
 const GreenCandlesIcon = (props) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#21BA45" strokeWidth="1.5" {...props}>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success-500)" strokeWidth="1.5" {...props}>
     <line x1="9" y1="2" x2="9" y2="22"/><rect x="6" y="6" width="6" height="10"/>
     <line x1="17" y1="2" x2="17" y2="22"/><rect x="14" y="10" width="6" height="8"/>
   </svg>
 );
 
 const GreenShieldIcon = (props) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#21BA45" strokeWidth="1.5" {...props}>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success-500)" strokeWidth="1.5" {...props}>
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
     <circle cx="12" cy="10" r="2" stroke="#F2711C"/>
     <path d="M9 16c0-1.66 1.34-3 3-3s3 1.34 3 3" stroke="#F2711C"/>
@@ -125,7 +126,7 @@ const GreenShieldIcon = (props) => (
 );
 
 const GreenGearPlayIcon = (props) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#21BA45" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success-500)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
     <polygon points="10 9 15 12 10 15 10 9" />
   </svg>
@@ -138,19 +139,19 @@ const GrayFolderIcon = (props) => (
 );
 
 const GreenShieldOutlineIcon = (props) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#21BA45" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success-500)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
   </svg>
 );
 
 const GreenShieldSolidIcon = (props) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="#21BA45" stroke="#21BA45" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--success-500)" stroke="var(--success-500)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
   </svg>
 );
 
 const GreenLockIcon = (props) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#21BA45" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--success-500)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
     <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
   </svg>
@@ -260,14 +261,7 @@ export const sidebarData = [
                 icon: YellowFolderIcon,
                 initiallyExpanded: false,
                 active: true,
-                children: [
-                   { label: "ACH", count: 2, icon: BlueUserIcon },
-                   { label: "Demo", count: 3, icon: BlueUserIcon },
-                   { label: "Dev", count: 3, icon: BlueUserIcon },
-                   { label: "Equiti", count: 3, icon: BlueUserIcon },
-                   { label: "FYNEX", count: 4, icon: BlueUserIcon },
-                   { label: "Flexy", count: 8, icon: BlueUserIcon },
-                ]
+                children: []
               },
               { 
                 label: "Clients & Accounts", 
@@ -371,7 +365,16 @@ export const sidebarData = [
                   { label: "Search", icon: BlueSearchIcon }
                 ]
               },
-              { label: "Market Overview", icon: TrendingUp },
+              {
+                label: "Market Overview",
+                icon: TrendingUp,
+                navigationOnly: true,
+                initiallyExpanded: true,
+                children: [
+                  { label: "Symbols Browser", icon: BarChart2 },
+                  { label: "Symbol Management", icon: Settings2 },
+                ]
+              },
               { label: "Symbols", icon: Hash },
               { label: "Market Depth", icon: Database },
               { label: "Spreads", icon: Activity },

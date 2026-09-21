@@ -1,3 +1,4 @@
+import { sortToolbarRows } from '../../utils/toolbarActions';
 import React, { useState, useEffect, useCallback } from 'react';
 import { ManagerService } from '../../services/manager.service';
 import { UserPlus, ShieldPlus, RefreshCw, Wifi, Activity, Trash2, Edit2, X, AlertCircle, Check } from 'lucide-react';
@@ -310,7 +311,8 @@ const ActivityLogModal = ({ manager, onClose }) => {
 };
 
 // ─── Main ManagersView ───────────────────────────────────────────────────────
-const ManagersView = () => {
+const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = '' }) => {
+  const matchesSearch = (row) => !searchQuery.trim() || Object.values(row).some((value) => String(value ?? '').toLowerCase().includes(searchQuery.trim().toLowerCase()));
   const [activeTab, setActiveTab] = useState('Managers');
 
   const [managers, setManagers] = useState([]);
@@ -385,7 +387,7 @@ const ManagersView = () => {
     setLoading(false);
   }, [fetchManagers, fetchRoles, fetchOnline]);
 
-  useEffect(() => { refreshAll(); }, [refreshAll]);
+  useEffect(() => { refreshAll(); }, [refreshAll, refreshTrigger]);
 
   const handleContextMenu = (e, record, type) => {
     e.preventDefault();
@@ -452,7 +454,7 @@ const ManagersView = () => {
       {/* ─── MANAGERS TAB ──────────────────────────────────────── */}
       {activeTab === 'Managers' && (
         <>
-          <div className="flex bg-[#333] border-b border-black/40 select-none shrink-0">
+          <div data-export-header="true" className="flex bg-[#333] border-b border-black/40 select-none shrink-0">
             <div className="w-[80px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Login</div>
             <div className="w-[160px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Name</div>
             <div className="w-[130px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Role</div>
@@ -466,8 +468,8 @@ const ManagersView = () => {
             {loading && <div className="p-4 text-[#888] italic text-[12px]">Loading...</div>}
             {!loading && loadErrors.managers && renderLoadError(loadErrors.managers, fetchManagers)}
             {!loading && !loadErrors.managers && managers.length === 0 && <div className="p-4 text-[#888] italic text-[12px]">No managers found.</div>}
-            {managers.map((row, idx) => (
-              <div key={row.login} onContextMenu={e => handleContextMenu(e, row, 'manager')}
+            {sortToolbarRows(managers.filter(matchesSearch), sortDirection, 'Managers').map((row, idx) => (
+              <div data-export-row="true" key={row.login} onContextMenu={e => handleContextMenu(e, row, 'manager')}
                 className={`flex cursor-default border-b border-black/10 hover:bg-blue-600/20 transition-colors ${idx%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}>
                 <div className="w-[80px]  px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10"><BlueUserIcon/>{row.login}</div>
                 <div className="w-[160px] px-3 py-1 text-[12px] text-[#ccc] border-r border-black/10 truncate">{row.name}</div>
@@ -491,7 +493,7 @@ const ManagersView = () => {
       {/* ─── ROLES TAB ─────────────────────────────────────────── */}
       {activeTab === 'Roles' && (
         <>
-          <div className="flex bg-[#333] border-b border-black/40 select-none shrink-0">
+          <div data-export-header="true" className="flex bg-[#333] border-b border-black/40 select-none shrink-0">
             <div className="w-[50px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">ID</div>
             <div className="w-[150px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Role Name</div>
             <div className="w-[200px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Description</div>
@@ -503,8 +505,8 @@ const ManagersView = () => {
             {loading && <div className="p-4 text-[#888] italic text-[12px]">Loading...</div>}
             {!loading && loadErrors.roles && renderLoadError(loadErrors.roles, fetchRoles)}
             {!loading && !loadErrors.roles && roles.length === 0 && <div className="p-4 text-[#888] italic text-[12px]">No roles found.</div>}
-            {roles.map((row, idx) => (
-              <div key={row.id} onContextMenu={e => handleContextMenu(e, row, 'role')}
+            {sortToolbarRows(roles.filter(matchesSearch), sortDirection, 'Managers').map((row, idx) => (
+              <div data-export-row="true" key={row.id} onContextMenu={e => handleContextMenu(e, row, 'role')}
                 className={`flex cursor-default border-b border-black/10 hover:bg-blue-600/20 transition-colors items-center ${idx%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}>
                 <div className="w-[50px]  px-3 py-1 text-[12px] text-[color:var(--text-primary)] border-r border-black/10">{row.id}</div>
                 <div className="w-[150px] px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10"><ShieldIcon/>{row.role_name}</div>
@@ -527,7 +529,7 @@ const ManagersView = () => {
       {/* ─── ONLINE TAB ────────────────────────────────────────── */}
       {activeTab === 'Online' && (
         <>
-          <div className="flex bg-[#333] border-b border-black/40 select-none shrink-0">
+          <div data-export-header="true" className="flex bg-[#333] border-b border-black/40 select-none shrink-0">
             <div className="w-[80px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Login</div>
             <div className="w-[180px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Name</div>
             <div className="w-[180px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Connected At</div>
@@ -538,8 +540,8 @@ const ManagersView = () => {
             {loading && <div className="p-4 text-[#888] italic text-[12px]">Loading...</div>}
             {!loading && loadErrors.online && renderLoadError(loadErrors.online, fetchOnline)}
             {!loading && !loadErrors.online && online.length === 0 && <div className="p-4 text-[#888] italic text-[12px]">No managers currently online.</div>}
-            {online.map((row, idx) => (
-              <div key={row.login} className={`flex cursor-default border-b border-black/10 hover:bg-blue-600/20 transition-colors ${idx%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}>
+            {sortToolbarRows(online.filter(matchesSearch), sortDirection, 'Managers').map((row, idx) => (
+              <div data-export-row="true" key={row.login} className={`flex cursor-default border-b border-black/10 hover:bg-blue-600/20 transition-colors ${idx%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}>
                 <div className="w-[80px]  px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0"></span>{row.login}
                 </div>

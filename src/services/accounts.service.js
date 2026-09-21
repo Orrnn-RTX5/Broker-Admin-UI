@@ -19,7 +19,15 @@ const LEGACY_ACCOUNT_CACHE_TTL_MS = 2 * 60 * 1000;
 
 let legacyAccountsCache = null;
 let legacyAccountsProbePromise = null;
+let accountCacheGeneration = 0;
 const pendingAccountRequests = new Map();
+
+const invalidateAccountsCache = () => {
+  accountCacheGeneration += 1;
+  legacyAccountsCache = null;
+  legacyAccountsProbePromise = null;
+  pendingAccountRequests.clear();
+};
 
 const cleanParams = (params = {}) => Object.fromEntries(
   Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
@@ -188,12 +196,12 @@ const cacheLegacyAccountResponse = (response, rows) => {
 
 const shouldShareLegacyProbe = (params) => !params.search && !params.group && !params.status;
 
-const normalizeAccountResponse = (response, params) => {
+const normalizeAccountResponse = (response, params, requestGeneration) => {
   const rows = normalizeArrayResponse(response, ACCOUNT_ARRAY_KEYS);
   const limit = toPositiveInteger(params.limit, DEFAULT_ACCOUNT_LIMIT);
 
   if (rows.length > limit) {
-    if (shouldShareLegacyProbe(params)) {
+    if (shouldShareLegacyProbe(params) && requestGeneration === accountCacheGeneration) {
       cacheLegacyAccountResponse(response, rows);
       return getCachedAccountResponse(params);
     }
@@ -212,6 +220,8 @@ const normalizeAccountResponse = (response, params) => {
 };
 
 export const AccountsService = {
+  invalidateCache: invalidateAccountsCache,
+
   getAccount: async (login) => {
     const res = await api.get(`/api/v2/account/${login}`);
     return res.data;
@@ -219,6 +229,7 @@ export const AccountsService = {
 
   updateAccount: async (login, data) => {
     const res = await api.put(`/api/v2/accounts/${login}`, data);
+    invalidateAccountsCache();
     return res.data;
   },
 
@@ -238,21 +249,25 @@ export const AccountsService = {
       return pendingAccountRequests.get(requestKey);
     }
 
+    const requestGeneration = accountCacheGeneration;
     const requestPromise = api.get('/manager/AccountDetailsMany', {
       params: accountParams,
       _allowAuthFailure: true,
-    }).then((res) => normalizeAccountResponse(res.data, accountParams));
+    }).then((res) => normalizeAccountResponse(res.data, accountParams, requestGeneration));
 
     const trackedPromise = requestPromise.finally(() => {
-      pendingAccountRequests.delete(requestKey);
+      if (pendingAccountRequests.get(requestKey) === trackedPromise) {
+        pendingAccountRequests.delete(requestKey);
+      }
     });
 
     pendingAccountRequests.set(requestKey, trackedPromise);
 
     if (shouldShareLegacyProbe(accountParams) && !legacyAccountsProbePromise) {
-      legacyAccountsProbePromise = trackedPromise.finally(() => {
-        legacyAccountsProbePromise = null;
+      const probePromise = trackedPromise.finally(() => {
+        if (legacyAccountsProbePromise === probePromise) legacyAccountsProbePromise = null;
       });
+      legacyAccountsProbePromise = probePromise;
     }
 
     return trackedPromise;

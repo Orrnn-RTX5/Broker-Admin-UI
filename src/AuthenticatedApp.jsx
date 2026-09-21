@@ -4,15 +4,18 @@ import ActionToolBar from './components/organisms/ActionToolBar';
 import SidebarNavTree from './components/organisms/SidebarNavTree';
 import MarketWatchDock from './components/organisms/MarketWatchDock';
 import AdminDataTable from './components/organisms/AdminDataTable';
+import GroupsExplorer from './components/organisms/GroupsExplorer';
+import { useDummyGroupsStore } from './store/useDummyGroupsStore';
 import GroupPropertiesPopup from './components/RIGHTCLICKJPOPUPS/GroupPropertiesPopup';
 import ManagerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ManagerPropertiesPopup';
 import ServerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ServerPropertiesPopup';
 import CreateGroupPopup from './components/RIGHTCLICKJPOPUPS/CreateGroupPopup';
 import AccountEditPopup from './components/RIGHTCLICKJPOPUPS/AccountEditPopup';
 import TradeDetailsPopup from './components/RIGHTCLICKJPOPUPS/TradeDetailsPopup';
-import { TabBar } from './components/organisms/TabBar';
 import { HelpModal } from './components/organisms/HelpModal';
 import { AboutModal } from './components/organisms/AboutModal';
+import { SuperAdminConsole } from './components/organisms/SuperAdminConsole';
+
 import {
   expireAuthSession,
   isAuthStorageEvent,
@@ -27,11 +30,14 @@ import { useLocalStorage } from './lib/useLocalStorage';
 import { useKbStatus } from './lib/useKbStatus';
 import { canAccessView, hasPermission, PERMISSION_KEYS, requiredPermissionForView } from './utils/permissions';
 import { AuthService } from './services/auth.service';
+import { ManagerService } from './services/manager.service';
+import { AccountsService } from './services/accounts.service';
 import {
   DESKTOP_RELEASES_PAGE_URL,
   getLatestDesktopInstaller,
 } from './config/desktopRelease';
 import { getViewCapabilityToast, shouldBlockViewNavigation } from './config/viewCapabilities';
+import { resolveGroupExplorerNode, sameGroupExplorerLocation, getHistoryEntryView } from './utils/groupExplorerNavigation';
 import { Download, Network, RefreshCcw, ShieldAlert } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { TooltipProvider } from './components/ui/Tooltip';
@@ -41,6 +47,17 @@ import { StatusDot } from './components/ui/Badge';
 
 const formatTime = (d) =>
   `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+
+const StatusClock = React.memo(function StatusClock() {
+  const [now, setNow] = React.useState(() => new Date());
+
+  React.useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  return <span className="tabular-nums text-[color:var(--text-primary)]">{formatTime(now)}</span>;
+});
 
 const AccessDeniedPanel = ({ viewName, permission }) => (
   <div className="flex-1 flex items-center justify-center bg-[color:var(--bg-app)] select-none">
@@ -84,8 +101,11 @@ const AuthenticatedAppInner = ({ navigate }) => {
   const kb = useKbStatus();
 
   const [selectedGroup, setSelectedGroup] = React.useState(null);
+  const dummyGroupsRef = React.useRef(null);
+  const groupsDataMode = useDummyGroupsStore(state => state.mode);
   const [isPopupOpen, setIsPopupOpen] = React.useState(false);
   const [selectedEditTarget, setSelectedEditTarget] = React.useState(null);
+  const [selectedSidebarNodeId, setSelectedSidebarNodeId] = React.useState(null);
   const [editingAccount, setEditingAccount] = React.useState(null);
   const [viewingTrade, setViewingTrade] = React.useState(null);
   const [serverPopupData, setServerPopupData] = React.useState(null);
@@ -93,7 +113,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
   const [refreshKey, setRefreshKey] = React.useState(0);
   const [helpOpen, setHelpOpen] = React.useState(false);
   const [aboutOpen, setAboutOpen] = React.useState(false);
-  const [now, setNow] = React.useState(() => new Date());
+  const [isSuperAdminOpen, setIsSuperAdminOpen] = React.useState(false);
   const [rowCount, setRowCount] = React.useState({ total: 0, filtered: 0, visible: 0, bytes: 0 });
   const [desktopReleaseState, setDesktopReleaseState] = React.useState({
     status: 'idle',
@@ -104,21 +124,31 @@ const AuthenticatedAppInner = ({ navigate }) => {
   const [globalTheme, setGlobalTheme] = useLocalStorage('rtx5.theme', 'light');
   const [density, setDensity] = useLocalStorage('rtx5.density', 'compact');
   const [savedSearches, setSavedSearches] = useLocalStorage('rtx5.searches', {});
-  const [openTabs, setOpenTabs] = useLocalStorage('rtx5.tabs', ['Groups']);
-  const [activeTab, setActiveTab] = useLocalStorage('rtx5.activeTab', 'Groups');
+  const defaultLandingView = canAccessView(currentUser, 'Integrations') ? 'Integrations' : 'Groups';
+  // Keep the existing storage key so the last selected page still restores.
+  const [activeTab, setActiveTab] = useLocalStorage('rtx5.activeTab', defaultLandingView);
   const [serverTargetTab, setServerTargetTab] = React.useState(() => getInitialServerTabForLabel(activeTab));
+  const [groupExplorerLocation, setGroupExplorerLocation] = React.useState(() => resolveGroupExplorerNode('Groups'));
+  const [groupExplorerReveal, setGroupExplorerReveal] = React.useState(() => (
+    activeTab === 'Groups' ? { ...resolveGroupExplorerNode('Groups'), revision: 0 } : null
+  ));
 
-  const [history, setHistory] = React.useState([activeTab || 'Groups']);
+  const [history, setHistory] = React.useState([activeTab || defaultLandingView]);
   const [currentIndex, setCurrentIndex] = React.useState(0);
-  const activeNode = activeTab || history[currentIndex];
+  const [tableSortDirection, setTableSortDirection] = React.useState('');
+  const [autoRefresh, setAutoRefresh] = React.useState(false);
+  const [isDeletingTarget, setIsDeletingTarget] = React.useState(false);
+  const activeNode = activeTab || getHistoryEntryView(history[currentIndex]);
   const canCheckForUpdates =
     typeof window !== 'undefined' &&
     typeof window.rtx5Electron?.checkForUpdates === 'function';
   const canDownloadDesktopApp = !canCheckForUpdates;
 
   const searchQuery = savedSearches[activeNode] || '';
-  const setSearchQuery = (q) =>
+  const setSearchQuery = (q) => {
+    setSelectedSidebarNodeId(null);
     setSavedSearches((prev) => ({ ...prev, [activeNode]: q }));
+  };
 
   const searchInputRef = React.useRef(null);
   React.useEffect(() => {
@@ -231,11 +261,6 @@ const AuthenticatedAppInner = ({ navigate }) => {
   }, [activeNode]);
 
   React.useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  React.useEffect(() => {
     if (!canDownloadDesktopApp) return undefined;
 
     let cancelled = false;
@@ -279,11 +304,11 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
   const canViewActive = canAccessView(currentUser, activeNode);
   const activeViewPermission = requiredPermissionForView(activeNode);
-  const isAccountEditView = ACCOUNT_EDIT_VIEW_TYPES.has(activeNode);
+  const isAccountEditView = ACCOUNT_EDIT_VIEW_TYPES.has(activeNode) || (activeNode === 'Groups' && groupExplorerLocation.type === 'group');
   const canEditAccounts = hasPermission(currentUser, PERMISSION_KEYS.EDIT_ACCOUNTS);
   const canEditGroups = hasPermission(currentUser, PERMISSION_KEYS.MANAGE_GROUPS);
   const canEditSelectedTarget =
-    (selectedEditTarget?.type === 'account' && isAccountEditView && canEditAccounts) ||
+    (selectedEditTarget?.type === 'account' && selectedEditTarget.viewType === activeNode && isAccountEditView && canEditAccounts) ||
     (selectedEditTarget?.type === 'group' && selectedEditTarget.viewType === activeNode && canEditGroups) ||
     (selectedEditTarget?.type === 'trade' && selectedEditTarget.viewType === activeNode && TRADE_DETAIL_VIEW_TYPES.has(activeNode));
 
@@ -307,35 +332,77 @@ const AuthenticatedAppInner = ({ navigate }) => {
     symbolStore.disconnectWebSocket();
   }, [isAuthenticated]);
 
-  const openTab = React.useCallback((label) => {
-    setOpenTabs((prev) => (prev.includes(label) ? prev : [...prev, label]));
+  const openView = React.useCallback((label, folderLocation = null) => {
     setActiveTab(label);
     setHistory((prev) => {
       const nextHistory = prev.slice(0, currentIndex + 1);
-      nextHistory.push(label);
+      nextHistory.push(folderLocation ? { view: label, groupExplorerLocation: folderLocation } : label);
       setCurrentIndex(nextHistory.length - 1);
       return nextHistory;
     });
-  }, [currentIndex, setOpenTabs, setActiveTab]);
+  }, [currentIndex, setActiveTab]);
 
-  const closeTab = (label) => {
-    setOpenTabs((prev) => {
-      const next = prev.filter((t) => t !== label);
-      if (next.length === 0) next.push('Groups');
-      if (label === activeTab) setActiveTab(next[next.length - 1]);
-      return next;
-    });
+  const navigateGroupExplorer = (node) => {
+    const location = resolveGroupExplorerNode(node);
+    if (!location) return false;
+    if (!canAccessView(currentUser, 'Groups')) {
+      notify({ title: 'Groups unavailable', description: `Requires ${PERMISSION_KEYS.MANAGE_GROUPS} permission.`, tone: 'warning' });
+      return false;
+    }
+    setGroupExplorerLocation(location);
+    setGroupExplorerReveal(previous => ({ ...location, revision: (previous?.revision ?? 0) + 1 }));
+    setSelectedSidebarNodeId(location.id);
+    setSelectedEditTarget(null);
+    setEditingAccount(null);
+    setServerTargetTab(null);
+    setSavedSearches(previous => ({ ...previous, Groups: '' }));
+    if (activeNode !== 'Groups' || !sameGroupExplorerLocation(groupExplorerLocation, location)) {
+      openView('Groups', location);
+    }
+    return true;
+  };
+
+  const selectGroupAccountNode = (node) => {
+    if (!canAccessView(currentUser, 'Trading Accounts')) {
+      notify({
+        title: 'Account unavailable',
+        description: `Requires ${PERMISSION_KEYS.VIEW_ACCOUNTS} permission.`,
+        tone: 'warning',
+      });
+      return false;
+    }
+
+    const login = String(node.login ?? node.account?.login ?? '').trim();
+    if (!login || !navigateGroupExplorer(node)) return false;
+    setSelectedSidebarNodeId(node.id);
+    setSelectedEditTarget({ type: 'account', row: node.account, viewType: 'Groups', id: node.account?.id ?? login });
+    return true;
   };
 
   const handleNodeSelect = (nodeOrLabel) => {
+    if (typeof nodeOrLabel !== 'string' && nodeOrLabel?.type === 'group-account') {
+      selectGroupAccountNode(nodeOrLabel);
+      return;
+    }
+    if (resolveGroupExplorerNode(nodeOrLabel)) {
+      navigateGroupExplorer(nodeOrLabel);
+      return;
+    }
+
+    setSelectedSidebarNodeId(null);
     let label = typeof nodeOrLabel === 'string' ? nodeOrLabel : nodeOrLabel.label;
+    if (label === 'SuperAdmin' || label === 'Platform Super Admin') {
+      setIsSuperAdminOpen(true);
+      return;
+    }
     const isLockedDropdownParent = typeof nodeOrLabel !== 'string' && nodeOrLabel.lockedDropdown;
+
     const viewCapabilityToast = getViewCapabilityToast(label);
     if (!isLockedDropdownParent && viewCapabilityToast) notify(viewCapabilityToast);
     if (shouldBlockViewNavigation(label)) return;
     setServerTargetTab(getInitialServerTabForLabel(label));
     if (label === activeNode) return;
-    openTab(label);
+    openView(label);
   };
 
   const handleLockedDropdownClick = (nodeOrLabel) => {
@@ -345,27 +412,54 @@ const AuthenticatedAppInner = ({ navigate }) => {
   };
 
   const handleNodeDoubleClick = (node) => {
+    if (typeof node !== 'string' && node?.type === 'group-account') {
+      if (!selectGroupAccountNode(node) || !node.account) return;
+      openAccountEditor(node.account);
+      return;
+    }
+    if (resolveGroupExplorerNode(node)) {
+      navigateGroupExplorer(node);
+      return;
+    }
+
     const label = typeof node === 'string' ? node : node.label;
     if (['Main Trade Server', 'History Server', 'MainTrade Backup Server', 'Local Main Status Server', 'Local Main Backup Server', 'TradeProcessor SQL_E', 'History Backup Server', 'Access Server'].includes(label)) {
       setServerPopupData({ isOpen: true, target: label, id: Math.floor(Math.random() * 10) + 1 });
     }
   };
 
+  const restoreHistoryEntry = (entry) => {
+    const view = getHistoryEntryView(entry);
+    setSelectedEditTarget(null);
+    setEditingAccount(null);
+    setActiveTab(view);
+    setServerTargetTab(getInitialServerTabForLabel(view));
+    if (view === 'Groups') {
+      const location = entry?.groupExplorerLocation || resolveGroupExplorerNode('Groups');
+      setGroupExplorerLocation(location);
+      setGroupExplorerReveal(previous => ({ ...location, revision: (previous?.revision ?? 0) + 1 }));
+      setSelectedSidebarNodeId(location.id);
+      setSavedSearches(previous => ({ ...previous, Groups: '' }));
+    } else {
+      setSelectedSidebarNodeId(null);
+    }
+  };
+
   const handleUndo = () => {
     if (currentIndex > 0) {
+      setSelectedSidebarNodeId(null);
       const next = currentIndex - 1;
       setCurrentIndex(next);
-      setActiveTab(history[next]);
-      setOpenTabs((prev) => (prev.includes(history[next]) ? prev : [...prev, history[next]]));
+      restoreHistoryEntry(history[next]);
     }
   };
 
   const handleRedo = () => {
     if (currentIndex < history.length - 1) {
+      setSelectedSidebarNodeId(null);
       const next = currentIndex + 1;
       setCurrentIndex(next);
-      setActiveTab(history[next]);
-      setOpenTabs((prev) => (prev.includes(history[next]) ? prev : [...prev, history[next]]));
+      restoreHistoryEntry(history[next]);
     }
   };
 
@@ -418,6 +512,11 @@ const AuthenticatedAppInner = ({ navigate }) => {
   const openEditTarget = React.useCallback((target) => {
     if (!target) return false;
 
+    if (target.type === 'group' && target.row?.isDummy) {
+      dummyGroupsRef.current?.editGroup(target.row);
+      return true;
+    }
+
     if (target.type === 'group') {
       setSelectedGroup(target.row);
       setIsPopupOpen(true);
@@ -446,6 +545,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
   }, []);
 
   const handleGroupSaved = React.useCallback(() => {
+    AccountsService.invalidateCache();
     setRefreshKey((prev) => prev + 1);
   }, []);
 
@@ -465,6 +565,10 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
   const handleAddClick = () => {
     if (activeNode === 'Groups') {
+      if (groupsDataMode === 'dummy') {
+        dummyGroupsRef.current?.addGroup();
+        return;
+      }
       setIsCreatingGroup(true);
       return;
     }
@@ -473,40 +577,200 @@ const AuthenticatedAppInner = ({ navigate }) => {
   };
 
   const handleRefresh = React.useCallback(() => {
+    AccountsService.invalidateCache();
     setRefreshKey((prev) => prev + 1);
     notify({ title: 'Refreshed', description: `at ${formatTime(new Date())}`, tone: 'success' });
   }, [notify]);
 
   const buildPayload = () => ({ view: activeNode, exportedAt: new Date().toISOString(), source: 'RTX5 Admin' });
 
-  const handleExport = () => {
-    const href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(buildPayload(), null, 2));
+  const visibleRowsRef = React.useRef([]);
+  const handleRowsChange = React.useCallback((rows) => {
+    visibleRowsRef.current = Array.isArray(rows) ? rows : [];
+  }, []);
+
+  const EXPORT_INTERNAL_KEYS = new Set(['raw']);
+  const getExportRows = () => visibleRowsRef.current.map((row) => {
+    const clean = {};
+    Object.entries(row || {}).forEach(([key, value]) => {
+      if (EXPORT_INTERNAL_KEYS.has(key)) return;
+      clean[key] = value;
+    });
+    return clean;
+  });
+
+  const csvEscape = (value) => {
+    if (value === null || value === undefined) return '""';
+    const text = typeof value === 'object' ? JSON.stringify(value) : String(value);
+    return `"${text.replace(/"/g, '""')}"`;
+  };
+
+  const downloadText = (filename, mime, text) => {
+    const href = `data:${mime};charset=utf-8,${encodeURIComponent(text)}`;
     const a = document.createElement('a');
     a.href = href;
-    a.download = `${(activeNode || 'view').replace(/[\s\\/]+/g, '_')}_${Date.now()}.json`;
+    a.download = filename;
     a.click();
   };
 
+  const handleExport = () => {
+    const rows = getExportRows();
+    const payload = { ...buildPayload(), rowCount: rows.length, rows };
+    downloadText(`${(activeNode || 'view').replace(/[\s\\/]+/g, '_')}_${Date.now()}.json`, 'text/json', JSON.stringify(payload, null, 2));
+    notify({
+      title: 'Export JSON complete',
+      description: rows.length ? `${rows.length} rows from ${activeNode}` : `View metadata for ${activeNode} (no table rows mounted)`,
+      tone: 'success',
+    });
+  };
+
   const handleExportCsv = () => {
-    const rows = [['view', 'exportedAt', 'source'], [activeNode, new Date().toISOString(), 'RTX5 Admin']];
-    const csv = rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
-    const a = document.createElement('a');
-    a.href = href;
-    a.download = `${(activeNode || 'view').replace(/[\s\\/]+/g, '_')}_${Date.now()}.csv`;
-    a.click();
+    const rows = getExportRows();
+    let csv;
+    if (rows.length) {
+      const cols = Array.from(new Set(rows.flatMap((row) => Object.keys(row))));
+      const lines = [cols.map(csvEscape).join(',')];
+      rows.forEach((row) => lines.push(cols.map((col) => csvEscape(row[col])).join(',')));
+      csv = lines.join('\n');
+    } else {
+      csv = [['view', 'exportedAt', 'source'], [activeNode, new Date().toISOString(), 'RTX5 Admin']]
+        .map((line) => line.map(csvEscape).join(','))
+        .join('\n');
+    }
+    downloadText(`${(activeNode || 'view').replace(/[\s\\/]+/g, '_')}_${Date.now()}.csv`, 'text/csv', csv);
+    notify({
+      title: 'Export CSV complete',
+      description: rows.length ? `${rows.length} rows from ${activeNode}` : `View metadata for ${activeNode} (no table rows mounted)`,
+      tone: 'success',
+    });
+  };
+
+  const parseImportFile = (text, name) => {
+    const trimmed = text.trim();
+    if (!trimmed) throw new Error('file is empty');
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      const parsed = JSON.parse(trimmed);
+      const rows = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.rows) ? parsed.rows : null;
+      if (!rows) throw new Error('JSON has no rows array');
+      return { format: 'JSON', view: parsed?.view || null, count: rows.length };
+    }
+    const lines = trimmed.split(/\r?\n/).filter((line) => line.trim() !== '');
+    if (lines.length < 2) throw new Error('CSV needs a header row and at least one data row');
+    return { format: 'CSV', view: null, count: lines.length - 1 };
   };
 
   const handleImport = () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json,.csv,.txt';
-    input.onchange = (e) => {
+    input.onchange = async (e) => {
       const f = e.target.files?.[0];
-      if (f) notify({ title: 'Import selected', description: `${f.name} (${Math.round(f.size / 1024)} KB)`, tone: 'info' });
+      if (!f) return;
+      try {
+        const summary = parseImportFile(await f.text(), f.name);
+        notify({
+          title: 'Import validated',
+          description: `${summary.format}: ${summary.count} rows in ${f.name}${summary.view ? ` (view: ${summary.view})` : ''}`,
+          tone: 'success',
+        });
+      } catch (err) {
+        notify({
+          title: 'Import failed',
+          description: `${f.name}: ${err.message}`,
+          tone: 'danger',
+        });
+      }
     };
     input.click();
   };
+
+  React.useEffect(() => {
+    if (!autoRefresh || !isAuthenticated) return undefined;
+    const intervalId = window.setInterval(() => {
+      setRefreshKey((prev) => prev + 1);
+    }, 15000);
+    return () => window.clearInterval(intervalId);
+  }, [autoRefresh, isAuthenticated]);
+
+  const handleStartAutoRefresh = React.useCallback(() => {
+    setAutoRefresh(true);
+    notify({
+      title: 'Live auto-refresh enabled',
+      description: 'Workspace automatically updates every 15s',
+      tone: 'success',
+    });
+  }, [notify]);
+
+  const handlePauseAutoRefresh = React.useCallback(() => {
+    setAutoRefresh(false);
+    notify({
+      title: 'Live auto-refresh paused',
+      description: 'Automatic polling stopped',
+      tone: 'info',
+    });
+  }, [notify]);
+
+  const handleDisconnect = React.useCallback(() => {
+    if (window.confirm('Disconnect and log out of RTX 5 Admin?')) {
+      AuthService.logout();
+    }
+  }, []);
+
+  const handleForceSync = React.useCallback(() => {
+    try {
+      useSymbolStore.getState().initWebSocket();
+    } catch { /* noop */ }
+    setRefreshKey((prev) => prev + 1);
+    notify({
+      title: 'Workspace synchronized',
+      description: 'Real-time feed reconnected and cache refreshed',
+      tone: 'success',
+    });
+  }, [notify]);
+
+  const handleSort = React.useCallback(() => {
+    setTableSortDirection((prev) => {
+      const next = prev === '' ? 'asc' : prev === 'asc' ? 'desc' : '';
+      const label = next === 'asc' ? 'Ascending' : next === 'desc' ? 'Descending' : 'Default';
+      notify({
+        title: 'Table sort updated',
+        description: `Order set to ${label}`,
+        tone: 'info',
+      });
+      return next;
+    });
+  }, [notify]);
+
+  const canDeleteSelectedTarget = Boolean(selectedEditTarget?.type === 'group' && canEditGroups);
+  const handleToolbarDelete = React.useCallback(async () => {
+    if (!selectedEditTarget) return;
+    if (selectedEditTarget.type === 'group' && selectedEditTarget.row?.isDummy) {
+      dummyGroupsRef.current?.deleteGroup(selectedEditTarget.row);
+      return;
+    }
+    if (selectedEditTarget.type === 'group') {
+      const groupName = selectedEditTarget.row?.name || selectedEditTarget.row?.group || selectedEditTarget.id;
+      if (!groupName) return;
+      if (!window.confirm(`Are you sure you want to delete group "${groupName}"?`)) return;
+      setIsDeletingTarget(true);
+      try {
+        await ManagerService.deleteGroup(groupName);
+        notify({ title: 'Group deleted', description: `Group "${groupName}" removed successfully`, tone: 'success' });
+        setSelectedEditTarget(null);
+        setRefreshKey((p) => p + 1);
+      } catch (err) {
+        notify({ title: 'Delete failed', description: err?.message || 'Unable to delete group', tone: 'danger' });
+      } finally {
+        setIsDeletingTarget(false);
+      }
+    } else {
+      notify({ title: 'Delete unavailable', description: `Deleting ${selectedEditTarget.type} is not supported from the toolbar.`, tone: 'warning' });
+    }
+  }, [selectedEditTarget, canEditGroups, notify]);
+
+  const canAdd = Boolean(canEditGroups || activeNode === 'Groups' || activeNode === 'Trading Accounts' || activeNode === 'Clients' || activeNode === 'Managers');
+  const canImport = Boolean(canEditGroups || activeNode === 'Groups');
+  const canSort = true;
 
   const handleCheckForUpdates = React.useCallback(() => {
     const checkForUpdates = window.rtx5Electron?.checkForUpdates;
@@ -556,6 +820,8 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
   React.useEffect(() => {
     const onKey = (e) => {
+      // Local group dialogs own their keyboard and drafts until saved or cancelled.
+      if (e.target?.closest?.('.dgp-modal, .dummy-group-action-dialog')) return;
       const mod = e.ctrlKey || e.metaKey;
       const tag = e.target?.tagName;
       const typing = tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable;
@@ -565,7 +831,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
         setHelpOpen(true);
         return;
       }
-      if (mod && e.key.toLowerCase() === 'r') {
+      if (mod && !e.shiftKey && e.key.toLowerCase() === 'r') {
         e.preventDefault();
         handleRefresh();
         return;
@@ -600,19 +866,6 @@ const AuthenticatedAppInner = ({ navigate }) => {
         handleRedo();
         return;
       }
-      if (mod && e.key.toLowerCase() === 'w') {
-        e.preventDefault();
-        if (openTabs.length > 1) closeTab(activeTab);
-        return;
-      }
-      if (mod && e.key === 'Tab') {
-        e.preventDefault();
-        const idx = openTabs.indexOf(activeTab);
-        const dir = e.shiftKey ? -1 : 1;
-        const next = openTabs[(idx + dir + openTabs.length) % openTabs.length];
-        if (next) setActiveTab(next);
-        return;
-      }
       if (e.key === 'Escape') {
         if (isPopupOpen) setIsPopupOpen(false);
         else if (editingAccount) setEditingAccount(null);
@@ -626,7 +879,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [handleRefresh, activeTab, openTabs, isPopupOpen, editingAccount, viewingTrade, isCreatingGroup, serverPopupData, helpOpen, aboutOpen, searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [handleRefresh, activeTab, currentIndex, history, isPopupOpen, editingAccount, viewingTrade, isCreatingGroup, serverPopupData, helpOpen, aboutOpen, searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const connTone = connStatus === 'error' ? 'danger' : 'success';
   const connText = connStatus === 'error' ? `Connection issue: ${connError}` : 'Connected to RTX5-PROD-01';
@@ -655,19 +908,39 @@ const AuthenticatedAppInner = ({ navigate }) => {
       />
 
       <ActionToolBar
+        onDisconnect={handleDisconnect}
         onAddClick={handleAddClick}
+        canAdd={canAdd}
         onUndo={handleUndo}
         onRedo={handleRedo}
         canUndo={currentIndex > 0}
         canRedo={currentIndex < history.length - 1}
         onRefresh={handleRefresh}
+        onSync={handleForceSync}
         onExport={handleExport}
+        onExportCsv={handleExportCsv}
         onImport={handleImport}
+        canImport={canImport}
         onEditClick={handleToolbarEdit}
         canEdit={canEditSelectedTarget}
+        onDeleteClick={handleToolbarDelete}
+        canDelete={canDeleteSelectedTarget}
+        deleting={isDeletingTarget}
+        onSort={handleSort}
+        canSort={canSort}
+        sortDirection={tableSortDirection}
+        autoRefresh={autoRefresh}
+        onStart={handleStartAutoRefresh}
+        onPause={handlePauseAutoRefresh}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         searchInputRef={searchInputRef}
+        activeNode={activeNode}
+        onNodeSelect={handleNodeSelect}
+        density={density}
+        onDensityToggle={() => setDensity((d) => (d === 'compact' ? 'cozy' : 'compact'))}
+        onHelp={() => setHelpOpen(true)}
+        connStatus={connStatus}
       />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
@@ -676,28 +949,18 @@ const AuthenticatedAppInner = ({ navigate }) => {
           onNodeSelect={handleNodeSelect}
           onNodeDoubleClick={handleNodeDoubleClick}
           onLockedDropdownClick={handleLockedDropdownClick}
-          selectedNodeLabel={activeNode}
+          selectedNodeLabel={activeNode === 'Market Overview' ? 'Symbols Browser' : activeNode}
+          selectedNodeId={selectedSidebarNodeId}
+          refreshTrigger={refreshKey}
+          groupExplorerReveal={groupExplorerReveal}
         />
         </MarketWatchDock>
 
-        <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden border-l border-[color:var(--border-default)] bg-[color:var(--bg-app)]">
-          <TabBar
-            tabs={openTabs}
-            activeTab={activeTab}
-            onSelect={(t) => {
-              const viewCapabilityToast = getViewCapabilityToast(t);
-              if (viewCapabilityToast) notify(viewCapabilityToast);
-              if (shouldBlockViewNavigation(t)) return;
-              setServerTargetTab(getInitialServerTabForLabel(t));
-              openTab(t);
-            }}
-            onClose={closeTab}
-          />
-
-          {!(canViewActive && activeNode === 'Integrations') && (
+        <div className={`flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden border-l border-[color:var(--border-default)] bg-[color:var(--bg-app)]${activeNode === 'Allocations' ? ' allocation-typography' : ''}`}>
+          {!(canViewActive && ['Integrations', 'Market Overview', 'Symbols Browser', 'Symbol Management'].includes(activeNode)) && (
           <div className="h-9 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] flex items-center px-4 gap-4 text-[11px] text-[color:var(--text-muted)] shadow-[var(--shadow-sm)]">
             <div className="flex items-center gap-1.5 text-[color:var(--text-primary)] font-medium">
-              <Network size={12} className="text-[color:var(--text-muted)]" />
+              {activeNode !== 'Allocations' && <Network size={12} className="text-[color:var(--text-muted)]" />}
               <span>{activeNode}</span>
             </div>
             {canViewActive && rowCount.total > 0 && (
@@ -711,15 +974,34 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
           )}
 
-          {canViewActive ? (
+          {canViewActive && activeNode === 'Groups' ? (
+            <GroupsExplorer
+              dummyActionsRef={dummyGroupsRef}
+              key={groupExplorerLocation.id}
+              location={groupExplorerLocation}
+              onNavigate={navigateGroupExplorer}
+              onAccountOpen={handleNodeDoubleClick}
+              onSelectionChange={handleEditableTargetSelect}
+              selectedNodeId={selectedSidebarNodeId}
+              onGroupEdit={(node) => openEditTarget({ type: 'group', row: node.group, viewType: 'Groups', id: node.groupName })}
+              refreshTrigger={refreshKey}
+              searchQuery={searchQuery}
+              sortDirection={tableSortDirection}
+              onCountChange={setRowCount}
+              onRowsChange={handleRowsChange}
+            />
+          ) : canViewActive ? (
             <AdminDataTable
               onRowDoubleClick={handleRowDoubleClick}
               viewType={activeNode}
               onAddClick={handleAddClick}
+              onGroupsChanged={handleGroupSaved}
               initialServerTab={serverTargetTab}
               refreshTrigger={refreshKey}
               searchQuery={searchQuery}
+              sortDirection={tableSortDirection}
               onCountChange={setRowCount}
+              onRowsChange={handleRowsChange}
               onEditableTargetSelect={handleEditableTargetSelect}
               selectedEditableTargetId={selectedEditTarget?.id}
               selectedEditableTargetType={selectedEditTarget?.type}
@@ -773,6 +1055,12 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
       <HelpModal open={helpOpen} onOpenChange={setHelpOpen} />
       <AboutModal open={aboutOpen} onOpenChange={setAboutOpen} />
+      {isSuperAdminOpen && (
+        <div className="fixed inset-0 z-[10000]">
+          <SuperAdminConsole onClose={() => setIsSuperAdminOpen(false)} />
+        </div>
+      )}
+
 
       <footer className="h-8 bg-[color:var(--bg-surface-1)] border-t border-[color:var(--border-default)] flex items-center gap-2 px-3 justify-between select-none text-[11px] text-[color:var(--text-secondary)] shadow-[var(--shadow-sm)]">
         <div className="flex min-w-0 items-center gap-2" title={connText}>
@@ -815,7 +1103,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
           <span className={kb.caps ? 'text-[color:var(--text-primary)]' : ''}>CAP</span>
           <span className={kb.num ? 'text-[color:var(--text-primary)]' : ''}>NUM</span>
           <span className={kb.scroll ? 'text-[color:var(--text-primary)]' : ''}>SCRL</span>
-          <span className="tabular-nums text-[color:var(--text-primary)]">{formatTime(now)}</span>
+          <StatusClock />
         </div>
       </footer>
 

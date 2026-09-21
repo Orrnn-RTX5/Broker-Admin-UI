@@ -16,7 +16,7 @@ const SymbolsOverviewPage = ({ onSelectCategory, catalogue = [] }) => {
   return (
     <div className="p-6 w-full h-full flex flex-col gap-6 overflow-y-auto" style={{ background: 'var(--bg)' }}>
       <div>
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--text)' }}>Symbol Browser</h1>
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--text)' }}>Symbols Browser</h1>
         <p className="text-sm" style={{ color: 'var(--text-3)' }}>Select a category to view live market symbols</p>
       </div>
 

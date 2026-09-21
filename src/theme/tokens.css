@@ -1,49 +1,48 @@
-/* RTX5 Admin workspace. Visual reference: manager styles/command-center.css.
-   Financial success/loss colors remain semantic; workspace chrome is shared. */
+/* RTX5 Admin workspace — terminal-matched dark palette.
+   Primary BG: #1e1e1e (charcoal panel) | Deep BG: #141414 | Accent/Buy: #2196f3 (blue)
+   Sell/Loss: #e53935 (red) | Profit: #2ebd59 (green) | Text: #e8e8e8 */
 
 :root,
 [data-theme="light"] {
-  /* Surfaces — warm near-whites, very subtle separation between layers */
-  --bg-app: #f3f6fa;
-  --bg-surface-1: #ffffff;
-  --bg-surface-2: #f7f9fc;
-  --bg-surface-3: #eaf1fb;
-  --bg-chrome: #f8fafc;
-  --bg-toolbar: #f3f7fc;
-  --bg-overlay: rgba(15, 23, 42, 0.36);
+  /* Surfaces — terminal charcoal palette */
+  --bg-app: #141414;
+  --bg-surface-1: #1e1e1e;
+  --bg-surface-2: #252526;
+  --bg-surface-3: #2d2d30;
+  --bg-chrome: #1b1b1b;
+  --bg-toolbar: #252526;
+  --bg-overlay: rgba(0, 0, 0, 0.65);
 
-  /* Borders — hairline, neutral gray */
-  --border-subtle: #e3eaf1;
-  --border-default: #c9d5e2;
-  --border-strong: #9eafc1;
+  /* Borders — subtle grays for separation */
+  --border-subtle: #2a2a2a;
+  --border-default: #3c3c3c;
+  --border-strong: #4a4a4a;
 
-  /* Text — flat neutral scale, no blue tint */
-  /* Rendered manager workspace: styles/command-center.css. */
-  --text-primary: #172033;
-  --text-secondary: #4f6074;
-  --text-muted: #4f6074;
-  --text-tertiary: #75869a;
-  --text-inverse: #ffffff;
+  /* Text — light scale matching terminal */
+  --text-primary: #e8e8e8;
+  --text-secondary: #cccccc;
+  --text-muted: #999999;
+  --text-tertiary: #6f6f6f;
+  --text-inverse: #1e1e1e;
 
-  /* Professional muted slate-blue accent.
-     Reserved for primary actions and active states. */
-  --accent-50:  #f4f8ff;
-  --accent-100: #eaf2ff;
-  --accent-500: #2563eb;
-  --accent-600: #1d4ed8;
-  --accent-700: #1e40af;
+  /* Blue accent — buy / active / links (#2196f3) */
+  --accent-50:  rgba(33, 150, 243, 0.08);
+  --accent-100: rgba(33, 150, 243, 0.14);
+  --accent-500: #2196f3;
+  --accent-600: #42a5f5;
+  --accent-700: #1976d2;
   --accent-contrast: #ffffff;
 
-  /* Semantic — used sparingly on data, never on chrome */
-  --success-500: #15803d;
-  --warning-500: #b45309;
-  --danger-500:  #b91c1c;
-  --info-500:    #1d4ed8;
+  /* Semantic — green profit, red sell/loss, amber warning */
+  --success-500: #2ebd59;
+  --warning-500: #f59e0b;
+  --danger-500:  #e53935;
+  --info-500:    #2196f3;
 
-  /* Shadows — barely-there, premium feel */
-  --shadow-sm: 0 2px 6px rgba(28, 45, 74, .09);
-  --shadow-md: 0 10px 24px rgba(28, 45, 74, .13);
-  --shadow-lg: 0 12px 30px rgba(28, 45, 74, .16);
+  /* Shadows — dark-mode friendly */
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.30);
+  --shadow-md: 0 10px 24px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.45);
 
   --radius-sm: 4px;
   --radius-md: 6px;
@@ -65,9 +64,9 @@
   --ui-weight-regular: 400;
   --ui-weight-medium: 500;
   --ui-weight-semibold: 600;
-  --text-placeholder: #75869a;
+  --text-placeholder: #64748b;
 
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 /* ============================================================
@@ -86,42 +85,42 @@
 [data-density="cozy"] table th { padding-top: 6px !important; padding-bottom: 6px !important; }
 
 [data-theme="dark"] {
-  /* Manager command-center dark workspace. */
-  --bg-app: #0b1218;
-  --bg-surface-1: #101820;
-  --bg-surface-2: #16212b;
-  --bg-surface-3: #1c2a35;
-  --bg-chrome: #0c141b;
-  --bg-toolbar: #0f1820;
-  --bg-overlay: rgba(3, 7, 18, 0.72);
+  /* Terminal charcoal palette — unified with root. */
+  --bg-app: #141414;
+  --bg-surface-1: #1e1e1e;
+  --bg-surface-2: #252526;
+  --bg-surface-3: #2d2d30;
+  --bg-chrome: #1b1b1b;
+  --bg-toolbar: #252526;
+  --bg-overlay: rgba(0, 0, 0, 0.72);
 
-  --border-subtle: #1d2a34;
-  --border-default: #2a3a46;
-  --border-strong: #3c4e5c;
+  --border-subtle: #2a2a2a;
+  --border-default: #3c3c3c;
+  --border-strong: #4a4a4a;
 
-  --text-primary: #eef3f6;
-  --text-secondary: #b2bec8;
-  --text-muted: #b2bec8;
-  --text-tertiary: #83919d;
-  --text-placeholder: #83919d;
-  --text-inverse: #0f172a;
+  --text-primary: #e8e8e8;
+  --text-secondary: #cccccc;
+  --text-muted: #999999;
+  --text-tertiary: #6f6f6f;
+  --text-placeholder: #6f6f6f;
+  --text-inverse: #1e1e1e;
 
-  /* MT5 chrome blue as accent (the original status bar color). */
-  --accent-50:  rgba(76, 141, 246, .08);
-  --accent-100: rgba(76, 141, 246, .14);
-  --accent-500: #4c8df6;
-  --accent-600: #6aa2ff;
-  --accent-700: #2f73df;
+  /* Blue accent — buy / active / links (#2196f3) */
+  --accent-50:  rgba(33, 150, 243, 0.08);
+  --accent-100: rgba(33, 150, 243, 0.14);
+  --accent-500: #2196f3;
+  --accent-600: #42a5f5;
+  --accent-700: #1976d2;
   --accent-contrast: #ffffff;
 
-  --success-500: #4ade80;
-  --warning-500: #fbbf24;
-  --danger-500:  #f87171;
-  --info-500:    #60a5fa;
+  --success-500: #2ebd59;
+  --warning-500: #f59e0b;
+  --danger-500:  #e53935;
+  --info-500:    #2196f3;
 
-  --shadow-sm: 0 2px 6px rgba(0, 0, 0, .24);
-  --shadow-md: 0 10px 24px rgba(0, 0, 0, .28);
-  --shadow-lg: 0 12px 30px rgba(0, 0, 0, .38);
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.30);
+  --shadow-md: 0 10px 24px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.45);
 
   color-scheme: dark;
 }

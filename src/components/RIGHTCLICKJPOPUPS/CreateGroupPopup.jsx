@@ -6,7 +6,7 @@ import { buildGroupRiskPayload } from '../../utils/adminValidation';
 
 const MotionDiv = motion.div;
 
-const CreateGroupPopup = ({ onClose, onCreated, initialData }) => {
+const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
   const [formData, setFormData] = useState(() => {
     if (initialData) {
       return {
@@ -36,7 +36,8 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData }) => {
       swapMultiplier: 1,
       symbolsAllowed: '',
       symbolsBlocked: '',
-      tradeAllowed: true
+      tradeAllowed: true,
+      ...(draftData || {})
     };
   });
   

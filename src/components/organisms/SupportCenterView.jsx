@@ -72,7 +72,7 @@ const SupportCenterView = () => {
             <div className="flex items-start gap-3">
               <div className="shrink-0 mt-0.5">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" fill="#4ade80"/>
+                  <path d="M12 2L2 7l10 5 10-5-10-5z" fill="var(--success-500)"/>
                   <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
@@ -89,7 +89,7 @@ const SupportCenterView = () => {
                   <circle cx="12" cy="12" r="10" fill="#3b82f6"/>
                   <path d="M8 12h8" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
                   <path d="M12 8v8" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
-                  <path d="M12 8l4 8-8 0z" fill="#4ade80" opacity="0.8"/>
+                  <path d="M12 8l4 8-8 0z" fill="var(--success-500)" opacity="0.8"/>
                 </svg>
               </div>
               <div className="flex flex-col">

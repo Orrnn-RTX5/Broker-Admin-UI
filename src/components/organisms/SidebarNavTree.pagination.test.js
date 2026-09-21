@@ -4,13 +4,15 @@ import { readFileSync } from 'node:fs';
 
 const src = readFileSync(new URL('./SidebarNavTree.jsx', import.meta.url), 'utf8');
 const terminalData = readFileSync(new URL('../../data/terminalData.jsx', import.meta.url), 'utf8');
+const groupsTree = readFileSync(new URL('./GroupsNavigation.jsx', import.meta.url), 'utf8');
 
-test('sidebar fetches only a capped first page of groups', () => {
-  assert.match(src, /import \{ normalizePagedResponse \} from '\.\.\/\.\.\/utils\/apiShapes';/);
-  assert.match(src, /const SIDEBAR_GROUP_LIMIT = 100/);
-  assert.match(src, /useGroups\(1,\s*SIDEBAR_GROUP_LIMIT,\s*'',\s*canLoadGroups\)/);
-  assert.match(src, /normalizePagedResponse\(groupsResponse,\s*\{/);
-  assert.match(src, /apiGroups = groupPage\.rows\.slice\(0,\s*SIDEBAR_GROUP_LIMIT\)/);
+test('sidebar delegates groups to the expandable dynamic hierarchy without a display cap', () => {
+  assert.match(src, /newNode\.component = GroupsNavigation/);
+  assert.doesNotMatch(src, /SIDEBAR_GROUP_LIMIT|\.slice\(0,/);
+  assert.match(groupsTree, /loadGroupTreePages\(\s*ManagerService\.getGroupList/);
+  assert.match(groupsTree, /loadGroups, null, \[refreshTrigger\], expanded && canLoadGroups/);
+  assert.match(groupsTree, /label: 'Admin'/);
+  assert.match(terminalData, /label:\s*"Groups"[\s\S]*?children:\s*\[\]/);
 });
 
 test('Groups sidebar node is collapsed before dynamic group children mount', () => {
@@ -21,13 +23,17 @@ test('Groups sidebar node is collapsed before dynamic group children mount', () 
   );
 });
 
-test('sidebar does not fetch heavyweight account or symbol details for counts', () => {
+test('account lists load only when their group opens with account permission', () => {
   assert.doesNotMatch(src, /import \{ useAccounts \} from '\.\.\/\.\.\/hooks\/useAccounts';/);
   assert.doesNotMatch(src, /import \{ useInstruments \} from '\.\.\/\.\.\/hooks\/useInstruments';/);
   assert.doesNotMatch(src, /SIDEBAR_COUNT_LIMIT/);
   assert.doesNotMatch(src, /useAccounts\(/);
   assert.doesNotMatch(src, /useInstruments\(/);
   assert.doesNotMatch(src, /getKnownSidebarCount/);
+  assert.match(groupsTree, /expanded && canLoadAccounts/);
+  assert.match(groupsTree, /canLoadGroups && canAccessView\(currentUser, 'Trading Accounts'\)/);
+  assert.match(groupsTree, /\{ group: group\.groupName \}/);
+  assert.match(groupsTree, /normalizeNavigationAccounts\(/);
   assert.doesNotMatch(terminalData, /label:\s*"Clients & Accounts"[\s\S]{0,80}count:/);
   assert.doesNotMatch(terminalData, /label:\s*"Symbols"[\s\S]{0,80}count:/);
 });

@@ -7,6 +7,7 @@ let requestedAllowAuthFailure = false;
 let requestedParams = null;
 let requestedData = null;
 let requestCount = 0;
+let mockAdapter = null;
 let mockResponseData = {
   answer: [
     {
@@ -46,14 +47,14 @@ api.interceptors.request.use((config) => {
   requestCount += 1;
   return {
     ...config,
-    adapter: async (requestConfig) => ({
+    adapter: mockAdapter || (async (requestConfig) => ({
       data: mockResponseData,
       status: 200,
       statusText: 'OK',
       headers: {},
       config: requestConfig,
       request: {},
-    }),
+    })),
   };
 });
 
@@ -165,4 +166,70 @@ test('updateAccount sends changed account fields through the account REST update
   assert.equal(requestedMethod, 'put');
   assert.deepEqual(parseRequestData(), payload);
   assert.deepEqual(response, { ok: true });
+});
+
+test('successful account reassignment reloads group membership instead of reusing the legacy cache', async () => {
+  AccountsService.invalidateCache();
+  requestCount = 0;
+  const originalRows = [
+    { Login: 1, Group: 'real' },
+    { Login: 2, Group: 'real' },
+    { Login: 3, Group: 'demo' },
+  ];
+  mockResponseData = { answer: originalRows };
+  await AccountsService.getAccounts({ page: 1, limit: 2 });
+  const before = await AccountsService.getAccounts({ group: 'demo', page: 1, limit: 2 });
+  assert.deepEqual(before.answer.map((row) => row.Login), [3]);
+  assert.equal(requestCount, 1, 'the initial group lookup should use the legacy cache');
+
+  mockResponseData = { ok: true };
+  await AccountsService.updateAccount(1, { group: 'demo' });
+  mockResponseData = {
+    answer: originalRows.map((row) => row.Login === 1 ? { ...row, Group: 'demo' } : row),
+  };
+  await AccountsService.getAccounts({ page: 1, limit: 2 });
+  const after = await AccountsService.getAccounts({ group: 'demo', page: 1, limit: 2 });
+  assert.deepEqual(after.answer.map((row) => row.Login), [1, 3]);
+  assert.equal(requestCount, 3, 'a successful update must be followed by one fresh list request');
+  AccountsService.invalidateCache();
+});
+
+test('manual invalidation prevents an older in-flight request from restoring stale membership', async () => {
+  AccountsService.invalidateCache();
+  requestCount = 0;
+  let releaseOldResponse;
+  let markOldRequestStarted;
+  const oldRequestStarted = new Promise((resolve) => { markOldRequestStarted = resolve; });
+  mockAdapter = (requestConfig) => new Promise((resolve) => {
+    releaseOldResponse = () => resolve({
+      data: { answer: [{ Login: 1, Group: 'real' }, { Login: 2, Group: 'real' }] },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: requestConfig,
+      request: {},
+    });
+    markOldRequestStarted();
+  });
+
+  try {
+    const oldRequest = AccountsService.getAccounts({ page: 1, limit: 1 });
+    await oldRequestStarted;
+    AccountsService.invalidateCache();
+    mockAdapter = null;
+    mockResponseData = { answer: [{ Login: 1, Group: 'demo' }, { Login: 2, Group: 'real' }] };
+    const freshResponse = await AccountsService.getAccounts({ page: 1, limit: 1 });
+    assert.equal(freshResponse.answer[0].Group, 'demo');
+    assert.equal(requestCount, 2, 'refresh must start a new request instead of reusing the old one');
+
+    releaseOldResponse();
+    await oldRequest;
+    const afterOldRequest = await AccountsService.getAccounts({ group: 'demo', page: 1, limit: 1 });
+    assert.deepEqual(afterOldRequest.answer.map((row) => row.Login), [1]);
+    assert.equal(requestCount, 2, 'the newly populated cache must survive the late old response');
+  } finally {
+    mockAdapter = null;
+    releaseOldResponse?.();
+    AccountsService.invalidateCache();
+  }
 });

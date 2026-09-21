@@ -2,6 +2,17 @@ import React, { useState } from 'react';
 import { Settings, RefreshCw, ChevronDown, ChevronRight, Cpu, HardDrive, Globe, Monitor } from 'lucide-react';
 import { deterministicRatio } from '../../lib/deterministicChart';
 
+const normalizeSemanticColor = (color) => {
+   const normalized = typeof color === 'string' ? color.toLowerCase() : color;
+   if (normalized === '#4ade80' || normalized === '#22c55e' || normalized === '#4ec9b0') {
+      return 'var(--success-500)';
+   }
+   if (normalized === '#ef4444' || normalized === '#f48771' || normalized === '#f87171') {
+      return 'var(--danger-500)';
+   }
+   return color;
+};
+
 // Sub-component tailored specifically to replicate the 8 dense miniature graphs via localized svg mathematical maps
 const OverviewMiniGraph = ({ type }) => {
     const configs = {
@@ -102,7 +113,7 @@ const OverviewMiniGraph = ({ type }) => {
           <div className="absolute top-[6px] left-[8px] z-20 flex flex-col text-[10.5px] whitespace-nowrap pointer-events-none tracking-tight">
              {cfg.labels.map((l, i) => (
                 <div key={i} className="flex">
-                   <div style={{color: l.c}} className="font-bold mr-1.5">-</div>
+                   <div style={{color: normalizeSemanticColor(l.c)}} className="font-bold mr-1.5">-</div>
                    <div className="text-[color:var(--text-muted)] drop-shadow-md">{l.t}</div>
                 </div>
              ))}
@@ -118,7 +129,7 @@ const OverviewMiniGraph = ({ type }) => {
                 <path d="M 0,100 L 100,100" fill="none" stroke="#444" strokeWidth="1" vectorEffect="non-scaling-stroke"/>
                 
                 {cfg.lines.map((line, i) => (
-                   <path key={i} d={genPath(line.s)} fill="none" stroke={line.c} strokeWidth="1.2" vectorEffect="non-scaling-stroke"/>
+                   <path key={i} d={genPath(line.s)} fill="none" stroke={normalizeSemanticColor(line.c)} strokeWidth="1.2" vectorEffect="non-scaling-stroke"/>
                 ))}
              </svg>
           </div>
@@ -222,7 +233,7 @@ const StackedGraphRow = ({ isLast, isShort, cfg }) => {
           <div className="absolute top-[6px] left-[8px] z-20 flex flex-col text-[10.5px] whitespace-nowrap pointer-events-none tracking-tight">
              {cfg.labels.map((l, i) => (
                 <div key={i} className="flex">
-                   <div style={{color: l.c}} className="font-bold mr-1.5">-</div>
+                   <div style={{color: normalizeSemanticColor(l.c)}} className="font-bold mr-1.5">-</div>
                    <div className="text-[color:var(--text-muted)] drop-shadow-md">{l.t}</div>
                 </div>
              ))}
@@ -250,7 +261,7 @@ const StackedGraphRow = ({ isLast, isShort, cfg }) => {
                 ))}
                 
                 {cfg.lines.map((line, i) => (
-                   <path key={i} d={genPath(line.s)} fill="none" stroke={line.c} strokeWidth="1.2" vectorEffect="non-scaling-stroke"/>
+                   <path key={i} d={genPath(line.s)} fill="none" stroke={normalizeSemanticColor(line.c)} strokeWidth="1.2" vectorEffect="non-scaling-stroke"/>
                 ))}
              </svg>
           </div>

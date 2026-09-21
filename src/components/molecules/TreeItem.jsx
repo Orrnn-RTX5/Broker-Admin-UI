@@ -1,36 +1,89 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ChevronRight, Folder, File, LockKeyhole } from 'lucide-react';
 import { cn } from '../../lib/cn';
 
-const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, selectedLabel }) => {
-  const [isOpen, setIsOpen] = useState(item.initiallyExpanded);
-  const hasChildren = item.children && item.children.length > 0;
+const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, selectedLabel, selectedId, onExpandedChange, expanded, refreshTrigger, groupExplorerReveal }) => {
+  const [expansion, setExpansion] = useState({ open: Boolean(item.initiallyExpanded), revealedAt: null, hasOpened: Boolean(item.initiallyExpanded) });
+  const rowRef = useRef(null);
+  const hasChildren = Boolean(item.children?.length || item.renderChildren);
   const showArrow = hasChildren || item.lockedDropdown;
   const isBlockedNavigation = Boolean(item.blockedNavigation || item.lockedDropdown || item.disabled);
-  const isActive = !isBlockedNavigation && selectedLabel === item.label;
+  const isActive = !isBlockedNavigation && (selectedId ? selectedId === item.id : selectedLabel === item.label);
   const Icon = item.icon || (hasChildren ? Folder : File);
+  const isGroupFolder = ['groups-root', 'groups-admin', 'group', 'dummy-folder'].includes(item.type);
+  const revealRevision = groupExplorerReveal && (
+    item.containsGroups
+    || item.type === 'groups-root'
+    || (item.type === 'groups-admin' && groupExplorerReveal.type !== 'root')
+    || (item.type === 'dummy-folder' && groupExplorerReveal.type === 'dummy-folder' && (
+      groupExplorerReveal.path === item.path || groupExplorerReveal.path?.startsWith(`${item.path}\\`)
+    ))
+    || (item.type === 'group' && groupExplorerReveal.type === 'group' && (
+      groupExplorerReveal.id === item.id || groupExplorerReveal.groupName === item.groupName
+    ))
+  ) ? groupExplorerReveal.revision : null;
+  const shouldReveal = expanded === undefined && !isBlockedNavigation && revealRevision !== null && revealRevision !== expansion.revealedAt;
+  const isOpen = shouldReveal || (expanded ?? expansion.open);
+
+  // A navigation event opens its ancestors once. Remember the event so a later
+  // chevron click can still collapse the folder until the next navigation.
+  if (shouldReveal || (isOpen && !expansion.hasOpened)) {
+    setExpansion({
+      open: shouldReveal || expansion.open,
+      revealedAt: shouldReveal ? revealRevision : expansion.revealedAt,
+      hasOpened: true,
+    });
+  }
+
+  useEffect(() => {
+    if (groupExplorerReveal?.id && groupExplorerReveal.id === item.id && selectedId === item.id) {
+      rowRef.current?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    }
+  }, [groupExplorerReveal?.id, groupExplorerReveal?.revision, item.id, selectedId]);
+
+  const setOpen = (next) => {
+    setExpansion(previous => ({ ...previous, open: next, hasOpened: previous.hasOpened || next }));
+    onExpandedChange?.(next);
+  };
+
+  const toggleOpen = () => {
+    setOpen(!isOpen);
+  };
 
   const handleArrowClick = (e) => {
     e.stopPropagation();
     if (isBlockedNavigation) return;
-    if (hasChildren) setIsOpen((current) => !current);
+    if (hasChildren) toggleOpen();
   };
 
   const handleRowClick = () => {
     if (isBlockedNavigation) return;
     if (hasChildren && !item.lockedDropdown) {
-      setIsOpen((current) => !current);
+      if (isGroupFolder) setOpen(true);
+      else toggleOpen();
     }
 
-    onSelect && onSelect(item);
+    if (!item.navigationOnly) onSelect && onSelect(item);
+  };
+
+  const handleRowDoubleClick = () => {
+    if (isBlockedNavigation) return;
+    if (isGroupFolder) {
+      setOpen(true);
+      onSelect?.(item);
+      return;
+    }
+    onDoubleClick?.(item);
   };
 
   return (
     <div>
       <div
+        ref={rowRef}
         onClick={handleRowClick}
-        onDoubleClick={() => !isBlockedNavigation && onDoubleClick && onDoubleClick(item)}
+        onDoubleClick={handleRowDoubleClick}
         aria-disabled={isBlockedNavigation || undefined}
+        aria-expanded={hasChildren ? Boolean(isOpen) : undefined}
         title={isBlockedNavigation ? `${item.label} — unavailable` : undefined}
         className={cn(
           'mx-1 flex items-center min-h-[23px] pr-2 select-none text-[12px] rounded-[var(--radius-sm)]',
@@ -50,11 +103,12 @@ const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, selectedLabel }) =
           disabled={isBlockedNavigation || !hasChildren}
           aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${item.label}`}
           onClick={handleArrowClick}
+          onDoubleClick={event => event.stopPropagation()}
           className={cn(
             'w-5 h-5 flex items-center justify-center shrink-0 rounded-sm enabled:hover:bg-[color:var(--bg-surface-3)] focus:outline-none',
             isBlockedNavigation ? 'cursor-not-allowed' : 'cursor-default'
           )}
-          tabIndex={-1}
+          tabIndex={hasChildren && !isBlockedNavigation ? 0 : -1}
         >
           {showArrow && (
             <ChevronRight
@@ -75,25 +129,29 @@ const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, selectedLabel }) =
           {item.label}
           {item.count !== undefined && (
             <span className="ml-1.5 text-[10px] font-mono text-[color:var(--text-muted)]">
-              {item.count}
+              {item.countInParentheses ? `(${item.count})` : item.count}
             </span>
           )}
         </span>
         {isBlockedNavigation && <LockKeyhole size={11} className="ml-2 shrink-0 text-[color:var(--text-muted)]" aria-hidden="true" />}
       </div>
 
-      {hasChildren && !item.lockedDropdown && isOpen && (
-        <div>
-          {item.children.map((child, index) => (
-            <TreeItem
-              key={`${child.label}-${index}`}
+      {hasChildren && !item.lockedDropdown && (isOpen || expansion.hasOpened) && (
+        <div hidden={!isOpen}>
+          {item.renderChildren ? item.renderChildren({ level: level + 1 }) : item.children.map((child, index) => {
+            const ChildItem = child.component || TreeItem;
+            return <ChildItem
+              key={child.id || `${child.label}-${index}`}
               item={child}
               level={level + 1}
               onSelect={onSelect}
               onDoubleClick={onDoubleClick}
               selectedLabel={selectedLabel}
-            />
-          ))}
+              selectedId={selectedId}
+              refreshTrigger={refreshTrigger}
+              groupExplorerReveal={groupExplorerReveal}
+            />;
+          })}
         </div>
       )}
     </div>

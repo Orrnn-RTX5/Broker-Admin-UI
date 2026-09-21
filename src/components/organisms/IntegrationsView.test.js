@@ -3,12 +3,32 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const src = readFileSync(new URL('./IntegrationsView.jsx', import.meta.url), 'utf8');
+const css = readFileSync(new URL('./IntegrationsView.css', import.meta.url), 'utf8');
 
-test('Integration view keeps services in a single aligned operational grid', () => {
+test('Integration view presents services as a filterable operational card grid', () => {
   assert.match(src, /const integrationSections = \[/);
-  assert.match(src, /grid-cols-\[minmax\(420px,1fr\)_minmax\(300px,420px\)\]/);
-  assert.match(src, /const ActivityMeter = \(\{ activity \}\) => \{/);
-  assert.doesNotMatch(src, /flex justify-between items-start mb-8/);
+  assert.match(src, /const \[activeFilter, setActiveFilter\] = useState\('all'\)/);
+  assert.match(src, /className="integration-grid"/);
+  assert.match(src, /const IntegrationCard = \(\{ item \}\) =>/);
+  assert.match(src, /const ActivityMeter = \(\{ activity, isConfigured \}\) => \{/);
+  assert.match(src, /aria-label="Filter integrations"/);
+});
+
+test('Integration view exposes summary and setup state clearly', () => {
+  assert.match(src, /label="Connected"/);
+  assert.match(src, /label: 'Needs setup'/);
+  assert.match(src, /label="Setup required"/);
+  assert.match(src, /statusLabel: 'Setup required'/);
+  assert.match(src, /statusLabel: 'Connected'/);
+  assert.match(src, /No activity recorded/);
+});
+
+test('Integration styling uses the restrained enterprise visual system', () => {
+  assert.match(css, /--integration-text-meta: 10px/);
+  assert.match(css, /--integration-text-page: 16px/);
+  assert.match(css, /background: var\(--bg-surface-1\)/);
+  assert.doesNotMatch(css, /font-weight: (?:550|650)/);
+  assert.doesNotMatch(src, /integration-card-accent|integration-service-icon-glow|data-service=/);
 });
 
 test('Integration view preserves existing service content', () => {

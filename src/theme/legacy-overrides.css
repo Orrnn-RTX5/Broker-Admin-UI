@@ -189,3 +189,217 @@
   .border-white\/10   { border-color: var(--border-default) !important; }
 }
 
+
+/* --------------------------------------------------------------------------
+   Semantic color compatibility
+
+   Older screens still carry literal Tailwind colors. Keep those screens on
+   the reference market palette without forcing each component to own a
+   slightly different green or red. Opacity variants retain their treatment,
+   but always derive their hue from the shared semantic tokens.
+   -------------------------------------------------------------------------- */
+
+:where(
+  [class~="text-[#00a86b]"],
+  [class~="text-[#20c997]"],
+  [class~="text-[#21BA45]"],
+  [class~="text-[#21bfa4]"],
+  [class~="text-[#22c55e]"],
+  [class~="text-[#4ade80]"],
+  [class~="text-[#4ec9b0]"]
+) { color: var(--success-500) !important; }
+
+:where(
+  [class~="text-[#DB2828]"],
+  [class~="text-[#ef4444]"],
+  [class~="text-[#f48771]"],
+  [class~="text-[#ff3333]"]
+) { color: var(--danger-500) !important; }
+
+:where(
+  [class~="hover:text-[#4ec9b0]"]:hover
+) { color: var(--success-500) !important; }
+
+:where(
+  [class~="hover:text-[#f48771]"]:hover
+) { color: var(--danger-500) !important; }
+
+:where(
+  [class~="bg-[#00a651]"],
+  [class~="bg-[#00E676]"],
+  [class~="bg-[#059669]"],
+  [class~="bg-[#10b981]"],
+  [class~="bg-[#22c55e]"],
+  [class~="bg-[#4ade80]"],
+  [class~="bg-[#4ec9b0]"],
+  [class~="bg-[#73c41d]"],
+  [class~="bg-[#a3e635]"]
+) { background-color: var(--success-500) !important; }
+
+:where(
+  [class~="bg-[#c0392b]"],
+  [class~="bg-[#c42b1c]"],
+  [class~="bg-[#e51400]"],
+  [class~="bg-[#ef4444]"]
+) { background-color: var(--danger-500) !important; }
+
+:where(
+  [class~="bg-[#e9fbf7]"],
+  [class~="bg-[#effdf9]"]
+) { background-color: var(--ok-soft) !important; }
+
+:root [class~="bg-[#0f2e1b]"],
+:root [class~="bg-[#1e3a2e]"] {
+  background-color: color-mix(in srgb, var(--success-500) 18%, var(--bg-surface-1)) !important;
+}
+
+:root [class~="bg-[#2d5a1b]"] {
+  background-color: color-mix(in srgb, var(--success-500) 38%, var(--bg-surface-1)) !important;
+}
+
+:root [class~="hover:bg-[#3a7022]"]:hover {
+  background-color: color-mix(in srgb, var(--success-500) 50%, var(--bg-surface-1)) !important;
+}
+
+:root [class~="bg-[#3a1c1c]"],
+:root [class~="bg-[#3a2a2a]"] {
+  background-color: color-mix(in srgb, var(--danger-500) 18%, var(--bg-surface-1)) !important;
+}
+
+:root [class~="hover:bg-[#4a3a3a]"]:hover {
+  background-color: color-mix(in srgb, var(--danger-500) 30%, var(--bg-surface-1)) !important;
+}
+
+:where([class~="bg-[#4ec9b0]/10"]) {
+  background-color: color-mix(in srgb, var(--success-500) 10%, transparent) !important;
+}
+
+:where(
+  [class~="bg-[#22c55e]/20"],
+  [class~="bg-[#4ec9b0]/20"]
+) { background-color: color-mix(in srgb, var(--success-500) 20%, transparent) !important; }
+
+:where([class~="bg-[#f48771]/10"]) {
+  background-color: color-mix(in srgb, var(--danger-500) 10%, transparent) !important;
+}
+
+:where(
+  [class~="bg-[#ef4444]/20"],
+  [class~="bg-[#f48771]/20"]
+) { background-color: color-mix(in srgb, var(--danger-500) 20%, transparent) !important; }
+
+:where([class~="border-[#22c55e]"]) {
+  border-color: var(--success-500) !important;
+}
+
+:where(
+  [class~="border-[#c9f2e8]"],
+  [class~="border-[#dcf7f0]"]
+) { border-color: color-mix(in srgb, var(--success-500) 28%, transparent) !important; }
+
+:where([class~="border-[#4ec9b0]/30"]) {
+  border-color: color-mix(in srgb, var(--success-500) 30%, transparent) !important;
+}
+
+:where([class~="border-[#4ec9b0]/40"]) {
+  border-color: color-mix(in srgb, var(--success-500) 40%, transparent) !important;
+}
+
+:where([class~="border-[#f48771]/20"]) {
+  border-color: color-mix(in srgb, var(--danger-500) 20%, transparent) !important;
+}
+
+:where([class~="border-[#f48771]/30"]) {
+  border-color: color-mix(in srgb, var(--danger-500) 30%, transparent) !important;
+}
+
+:where([class~="border-[#f48771]/40"]) {
+  border-color: color-mix(in srgb, var(--danger-500) 40%, transparent) !important;
+}
+
+:where([class~="border-[#f48771]/50"]) {
+  border-color: color-mix(in srgb, var(--danger-500) 50%, transparent) !important;
+}
+
+:where(
+  [class~="hover:bg-[#00964a]"]:hover,
+  [class~="hover:bg-[#00c853]"]:hover,
+  [class~="hover:bg-[#5dd9be]"]:hover,
+  [class~="hover:bg-[#5dd9c0]"]:hover,
+  [class~="hover:bg-[#5eddc0]"]:hover
+) { background-color: var(--success-500) !important; }
+
+:where(
+  [class~="hover:bg-[#c42b1c]"]:hover,
+  [class~="hover:bg-[#e51400]"]:hover,
+  [class~="hover:bg-[#e74c3c]"]:hover,
+  [class~="hover:bg-[#e81123]"]:hover,
+  [class~="hover:bg-[#ff2d00]"]:hover
+) { background-color: var(--danger-500) !important; }
+
+:where(
+  [class~="hover:bg-[#21BA45]/10"]:hover,
+  [class~="hover:bg-[#4ec9b0]/10"]:hover
+) { background-color: color-mix(in srgb, var(--success-500) 10%, transparent) !important; }
+
+:where([class~="hover:bg-[#4ec9b0]/20"]:hover) {
+  background-color: color-mix(in srgb, var(--success-500) 20%, transparent) !important;
+}
+
+:where([class~="hover:bg-[#4ec9b0]/30"]:hover) {
+  background-color: color-mix(in srgb, var(--success-500) 30%, transparent) !important;
+}
+
+:where([class~="hover:bg-[#4ec9b0]/40"]:hover) {
+  background-color: color-mix(in srgb, var(--success-500) 40%, transparent) !important;
+}
+
+:where([class~="hover:bg-[#f48771]/10"]:hover) {
+  background-color: color-mix(in srgb, var(--danger-500) 10%, transparent) !important;
+}
+
+:where([class~="hover:bg-[#f48771]/30"]:hover) {
+  background-color: color-mix(in srgb, var(--danger-500) 30%, transparent) !important;
+}
+
+:where([class~="hover:bg-[#f48771]/40"]:hover) {
+  background-color: color-mix(in srgb, var(--danger-500) 40%, transparent) !important;
+}
+
+:where([class~="hover:border-[#21BA45]"]:hover) {
+  border-color: var(--success-500) !important;
+}
+
+:where(
+  [stroke="#21BA45"],
+  [stroke="#22c55e"],
+  [stroke="#4ade80"],
+  [stroke="#4caf50"],
+  [stroke="#4ec9b0"]
+) { stroke: var(--success-500) !important; }
+
+:where(
+  [fill="#00a86b"],
+  [fill="#21BA45"],
+  [fill="#22c55e"],
+  [fill="#4ade80"],
+  [fill="#4caf50"],
+  [fill="#4ec9b0"]
+) { fill: var(--success-500) !important; }
+
+:where(
+  [stroke="#DB2828"],
+  [stroke="#e53935"],
+  [stroke="#ef4444"],
+  [stroke="#f44336"],
+  [stroke="#f48771"]
+) { stroke: var(--danger-500) !important; }
+
+:where(
+  [fill="#DB2828"],
+  [fill="#e53935"],
+  [fill="#ef4444"],
+  [fill="#f44336"],
+  [fill="#f48771"]
+) { fill: var(--danger-500) !important; }
+

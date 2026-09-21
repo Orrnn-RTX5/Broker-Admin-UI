@@ -36,6 +36,51 @@ const installBrowserGlobals = (runtimeConfig = {}) => {
 const importFreshBrokerAuth = () => import(`./brokerAuth.js?case=${++importId}`);
 
 for (const target of ['web', 'desktop']) {
+  test(`Nexa selection routes admin login to its HTTPS backend in ${target}`, async () => {
+    installBrowserGlobals({ BACKEND_TARGET: target });
+    const calls = [];
+    globalThis.fetch = async (url, options) => {
+      calls.push({ url, options });
+      return { ok: true, status: 200, text: async () => JSON.stringify(options.method === 'GET' ? [] : { token: 'test-token' }) };
+    };
+    const auth = await importFreshBrokerAuth();
+    const brokers = await auth.fetchBrokerList();
+    const nexa = auth.discoverBrokerById(brokers, 'Nexa');
+    assert.equal(nexa.backend_url, 'https://nexa.orrnn.com');
+    assert.equal(nexa.ws_url, 'wss://nexa.orrnn.com/ws/feed');
+    await auth.loginAdmin(nexa, { user: 'test-admin', password: 'test-password' });
+    assert.equal(calls[1].url, 'https://nexa.orrnn.com/manager/api/v2/admin/login');
+  });
+}
+
+test('configured Nexa admin can select its backend without platform discovery', async () => {
+  installBrowserGlobals({ BROKER_ID: 'Nexa', API_HOST: 'https://nexa.orrnn.com' });
+  globalThis.fetch = async () => { throw new Error('Unexpected discovery request'); };
+  const auth = await importFreshBrokerAuth();
+  const brokers = await auth.fetchBrokerList();
+  assert.equal(brokers.length, 1);
+  assert.equal(brokers[0].broker_id, 'Nexa');
+  assert.equal(brokers[0].backend_url, 'https://nexa.orrnn.com');
+  assert.equal(brokers[0].direct_manager_paths, false);
+});
+
+test('Nexa discovery preserves platform handles and respects disabled records', async () => {
+  installBrowserGlobals();
+  const auth = await importFreshBrokerAuth();
+  for (const enabled of [true, false]) {
+    globalThis.fetch = async () => ({ ok: true, status: 200, text: async () => JSON.stringify([
+      { broker_id: 'nexa', server: 'broker-server-nexa', enabled },
+    ]) });
+    const brokers = await auth.fetchBrokerList();
+    assert.equal(brokers.length, enabled ? 1 : 0);
+    if (enabled) {
+      assert.equal(brokers[0].server, 'broker-server-nexa');
+      assert.equal(brokers[0].backend_url, 'https://nexa.orrnn.com');
+    }
+  }
+});
+
+for (const target of ['web', 'desktop']) {
   test(`TEST discovery and admin login use the live backend's direct API in ${target}`, async () => {
     installBrowserGlobals({
       BACKEND_TARGET: target,
@@ -74,7 +119,7 @@ test('live discovery never fabricates TEST when it is missing or disabled', asyn
   const auth = await importFreshBrokerAuth();
   for (const records of [[], [{ broker_id: 'TEST', enabled: false, server: 'broker-server-5' }]]) {
     globalThis.fetch = async () => ({ ok: true, status: 200, text: async () => JSON.stringify(records) });
-    assert.deepEqual(await auth.fetchBrokerList(), []);
+    assert.deepEqual((await auth.fetchBrokerList()).map((broker) => broker.broker_id), ['Nexa']);
   }
 });
 
@@ -153,7 +198,7 @@ test('fetchBrokerList uses v2 discovery and keeps sanitized broker server handle
   const list = await brokerAuth.fetchBrokerList();
 
   assert.equal(requestedUrl, 'https://superbackend.orrnn.com/api/v2/broker/servers');
-  assert.equal(list.length, 1);
+  assert.equal(list.length, 2);
   assert.equal(list[0].broker_id, 'gta_broker');
   assert.equal(list[0].name, 'Grow Trading Academy');
   assert.equal(list[0].logo_url, 'https://superbackend.orrnn.com/api/v1/brokers/gta_broker/logo');
@@ -185,7 +230,7 @@ test('fetchBrokerList maps GTA public SuperAdmin server to the broker server han
   const brokerAuth = await importFreshBrokerAuth();
   const list = await brokerAuth.fetchBrokerList();
 
-  assert.equal(list.length, 1);
+  assert.equal(list.length, 2);
   assert.equal(list[0].broker_id, 'gta_broker');
   assert.equal(list[0].server, 'broker-server-2');
   assert.equal(brokerAuth.getBrokerDisplayServer(list[0]), '103.91.186.142');

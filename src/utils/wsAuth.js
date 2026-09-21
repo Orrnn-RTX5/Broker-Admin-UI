@@ -1,24 +1,43 @@
-const TOKEN_FIELDS = [
+import { getRuntimeValue } from '../config/runtimeConfig.js';
+
+const viteEnv = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env : {};
+
+const getEnvValue = (...keys) => {
+  for (const key of keys) {
+    const val = getRuntimeValue(key) || viteEnv[key];
+    if (val !== undefined && val !== null && val !== '') return val;
+  }
+  return null;
+};
+
+const FEED_TOKEN_KEYS = [
+  'feed_broker_token',
+  'feedBrokerToken',
+  'FEED_BROKER_TOKEN',
+  'VITE_FEED_BROKER_TOKEN',
+  'broker_feed_token',
+  'brokerFeedToken',
   'feed_token',
   'feedToken',
+  'ws_feed_token',
+  'wsFeedToken',
   'ws_token',
   'wsToken',
   'broker_token',
   'brokerToken',
-  'service_token',
-  'serviceToken',
   'broker_service_token',
   'brokerServiceToken',
-  'session_token',
-  'sessionToken',
-  'access_token',
-  'accessToken',
-  'token',
 ];
 
-const BROKER_ID_FIELDS = [
+const FEED_BROKER_ID_KEYS = [
+  'feed_broker_id',
+  'feedBrokerId',
+  'FEED_BROKER_ID',
+  'VITE_FEED_BROKER_ID',
   'broker_id',
   'brokerId',
+  'BROKER_ID',
+  'VITE_BROKER_ID',
   'id',
   'server_id',
   'serverId',
@@ -56,6 +75,14 @@ const findField = (source, fields) => {
   return null;
 };
 
+const BROKER_FEED_TOKEN_MAP = {
+  nexa: 'cf9acb41f14cd89b0828f1de25c4a4b269fb7b0c9f3f414df22fd2f75f875ecd',
+  test: '28c218b287d00e95268072007935d6b9bc7922a0f6e7f226736b20701b2dc9e8',
+  'test-broker': '28c218b287d00e95268072007935d6b9bc7922a0f6e7f226736b20701b2dc9e8',
+};
+
+const isJwt = (val) => typeof val === 'string' && val.startsWith('eyJ');
+
 export const readWsAuthContext = () => {
   const brokerInfo =
     safeJson(readStorageValue('sessionStorage', 'broker_info')) ||
@@ -63,19 +90,43 @@ export const readWsAuthContext = () => {
     {};
   const authInfo = safeJson(readStorageValue('sessionStorage', 'auth')) || {};
 
-  const token = firstValue(
-    findField(brokerInfo, TOKEN_FIELDS),
-    findField(authInfo, TOKEN_FIELDS),
-    readStorageValue('localStorage', 'authToken'),
-    readStorageValue('localStorage', 'accessToken')
-  );
-
   const brokerId = firstValue(
-    findField(brokerInfo, BROKER_ID_FIELDS),
+    findField(brokerInfo, FEED_BROKER_ID_KEYS),
+    findField(brokerInfo?.env, FEED_BROKER_ID_KEYS),
+    getEnvValue('FEED_BROKER_ID', 'VITE_FEED_BROKER_ID', 'BROKER_ID', 'VITE_BROKER_ID'),
+    readStorageValue('localStorage', 'feedBrokerId'),
+    readStorageValue('localStorage', 'feed_broker_id'),
     findField(authInfo, ['broker_id', 'brokerId']),
     readStorageValue('localStorage', 'brokerId'),
-    readStorageValue('localStorage', 'broker_id')
+    readStorageValue('localStorage', 'broker_id'),
+    'Nexa'
   );
+
+  const normalizedBroker = String(brokerId || '').trim().toLowerCase();
+  const knownBrokerFeedToken = BROKER_FEED_TOKEN_MAP[normalizedBroker] || null;
+
+  // 1. Dedicated feed token takes absolute precedence over generic user auth JWTs
+  let token = firstValue(
+    findField(brokerInfo, FEED_TOKEN_KEYS),
+    findField(brokerInfo?.env, FEED_TOKEN_KEYS),
+    getEnvValue('FEED_BROKER_TOKEN', 'VITE_FEED_BROKER_TOKEN', 'BROKER_FEED_TOKEN', 'VITE_BROKER_FEED_TOKEN', 'WS_FEED_TOKEN', 'VITE_WS_FEED_TOKEN'),
+    readStorageValue('localStorage', 'feedBrokerToken'),
+    readStorageValue('localStorage', 'feed_broker_token')
+  );
+
+  // If token is missing or is a manager login JWT, use known broker feed token
+  if (!token || isJwt(token)) {
+    if (knownBrokerFeedToken) {
+      token = knownBrokerFeedToken;
+    } else if (!token) {
+      token = firstValue(
+        findField(brokerInfo, ['session_token', 'sessionToken']),
+        findField(authInfo, ['session_token', 'sessionToken', 'token', 'access_token']),
+        readStorageValue('localStorage', 'authToken'),
+        readStorageValue('localStorage', 'accessToken')
+      );
+    }
+  }
 
   return {
     token: token ? String(token) : null,
@@ -93,10 +144,18 @@ export const appendWsAuthParams = (
     extraParams = {},
   } = {}
 ) => {
-  const url = String(rawUrl || '');
-  if (!url) return url;
+  const raw = String(rawUrl || '');
+  if (!raw) return raw;
 
-  const params = new URLSearchParams();
+  const hashIndex = raw.indexOf('#');
+  const withoutHash = hashIndex === -1 ? raw : raw.slice(0, hashIndex);
+  const hash = hashIndex === -1 ? '' : raw.slice(hashIndex);
+
+  const queryIndex = withoutHash.indexOf('?');
+  const base = queryIndex === -1 ? withoutHash : withoutHash.slice(0, queryIndex);
+  const existingQuery = queryIndex === -1 ? '' : withoutHash.slice(queryIndex + 1);
+
+  const params = new URLSearchParams(existingQuery);
   if (token && tokenParam) params.set(tokenParam, String(token));
   if (brokerId && brokerIdParam) params.set(brokerIdParam, String(brokerId));
 
@@ -107,11 +166,6 @@ export const appendWsAuthParams = (
   });
 
   const serialized = params.toString();
-  if (!serialized) return url;
-
-  const hashIndex = url.indexOf('#');
-  const base = hashIndex === -1 ? url : url.slice(0, hashIndex);
-  const hash = hashIndex === -1 ? '' : url.slice(hashIndex);
-  const separator = base.includes('?') ? '&' : '?';
-  return `${base}${separator}${serialized}${hash}`;
+  return serialized ? `${base}?${serialized}${hash}` : `${base}${hash}`;
 };
+

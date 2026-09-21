@@ -40,11 +40,6 @@ test('Main Trade Server selection clears stale server-status target tab', () => 
     /setServerTargetTab\(getInitialServerTabForLabel\(label\)\);/,
     'sidebar selection must recalculate the server target tab for every server label'
   );
-  assert.match(
-    appSource,
-    /setServerTargetTab\(getInitialServerTabForLabel\(t\)\);\s*openTab\(t\);/,
-    'tab selection must also clear stale server target tab state'
-  );
 });
 
 test('MainTrade Backup Server restores directly to the Status tab on first render', () => {
@@ -52,7 +47,7 @@ test('MainTrade Backup Server restores directly to the Status tab on first rende
 
   assert.match(
     appSource,
-    /const \[activeTab,\s*setActiveTab\] = useLocalStorage\('rtx5\.activeTab', 'Groups'\);[\s\S]*?const \[serverTargetTab,\s*setServerTargetTab\] = React\.useState\(\(\) => getInitialServerTabForLabel\(activeTab\)\);/,
+    /const \[activeTab,\s*setActiveTab\] = useLocalStorage\('rtx5\.activeTab',[^)]*\);[\s\S]*?const \[serverTargetTab,\s*setServerTargetTab\] = React\.useState\(\(\) => getInitialServerTabForLabel\(activeTab\)\);/,
     'server target tab should be initialized from the restored active tab'
   );
 });
@@ -84,16 +79,6 @@ test('sidebar selection warns and blocks locked non-working views', () => {
   );
 });
 
-test('tab selection also warns and blocks locked non-working views', () => {
-  const appSource = readSource('AuthenticatedApp.jsx');
-
-  assert.match(
-    appSource,
-    /onSelect=\{\(t\) => \{[\s\S]*?const viewCapabilityToast = getViewCapabilityToast\(t\);[\s\S]*?if \(viewCapabilityToast\) notify\(viewCapabilityToast\);[\s\S]*?if \(shouldBlockViewNavigation\(t\)\) return;[\s\S]*?setServerTargetTab\(getInitialServerTabForLabel\(t\)\);[\s\S]*?openTab\(t\);/,
-    'tab selection should share the same locked-view behavior as sidebar selection'
-  );
-});
-
 test('unavailable sidebar entries remain visible and cannot activate', () => {
   const sidebarSource = readSource('components/organisms/SidebarNavTree.jsx');
   const treeItemSource = readSource('components/molecules/TreeItem.jsx');
@@ -103,7 +88,8 @@ test('unavailable sidebar entries remain visible and cannot activate', () => {
   assert.match(treeItemSource, /Boolean\(item\.blockedNavigation \|\| item\.lockedDropdown \|\| item\.disabled\)/);
   assert.match(treeItemSource, /const handleArrowClick = \(e\) => \{\s*e\.stopPropagation\(\);\s*if \(isBlockedNavigation\) return;/);
   assert.match(treeItemSource, /const handleRowClick = \(\) => \{\s*if \(isBlockedNavigation\) return;/);
-  assert.match(treeItemSource, /onDoubleClick=\{\(\) => !isBlockedNavigation && onDoubleClick && onDoubleClick\(item\)\}/);
+  assert.match(treeItemSource, /const handleRowDoubleClick = \(\) => \{\s*if \(isBlockedNavigation\) return;/);
+  assert.match(treeItemSource, /onDoubleClick=\{handleRowDoubleClick\}/);
   assert.match(treeItemSource, /disabled=\{isBlockedNavigation \|\| !hasChildren\}/);
   assert.match(treeItemSource, /aria-disabled=\{isBlockedNavigation \|\| undefined\}/);
   assert.match(treeItemSource, /cursor-not-allowed opacity-50/);
@@ -113,9 +99,11 @@ test('unavailable sidebar entries remain visible and cannot activate', () => {
 
 test('available sidebar folders still expand and select', () => {
   const treeItemSource = readSource('components/molecules/TreeItem.jsx');
-  assert.match(treeItemSource, /if \(hasChildren && !item\.lockedDropdown\) \{\s*setIsOpen\(\(current\) => !current\);/);
+  assert.match(treeItemSource, /if \(hasChildren && !item\.lockedDropdown\) \{\s*if \(isGroupFolder\) setOpen\(true\);\s*else toggleOpen\(\);/);
+  assert.match(treeItemSource, /setExpansion\(previous => \(\{[^\n]*open: next[^\n]*\}\)\);\s*onExpandedChange\?\.\(next\);/);
   assert.match(treeItemSource, /onSelect && onSelect\(item\)/);
-  assert.match(treeItemSource, /hasChildren && !item\.lockedDropdown && isOpen/);
+  assert.match(treeItemSource, /hasChildren && !item\.lockedDropdown && \(isOpen \|\| expansion\.hasOpened\)/);
+  assert.match(treeItemSource, /hidden=\{!isOpen\}/);
 });
 test('header omits mounted row payload metric badge', () => {
   const appSource = readSource('AuthenticatedApp.jsx');

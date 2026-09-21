@@ -460,7 +460,7 @@ const SymbolsTab = () => {
                       >
                         {togglingSymbol === s.symbol
                           ? <Loader2 size={13} className="animate-spin" />
-                          : s.enabled ? <ToggleRight size={14} style={{ color: 'var(--success)' }} /> : <ToggleLeft size={14} style={{ color: 'var(--muted)' }} />
+                          : s.enabled ? <ToggleRight size={14} style={{ color: 'var(--success-500)' }} /> : <ToggleLeft size={14} style={{ color: 'var(--muted)' }} />
                         }
                       </button>
                       <button

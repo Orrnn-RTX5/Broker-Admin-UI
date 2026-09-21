@@ -8,9 +8,6 @@ const shortcuts = [
   { key: 'Ctrl + K',      desc: 'Focus search (alt)' },
   { key: 'Alt + ←',       desc: 'Navigate back' },
   { key: 'Alt + →',       desc: 'Navigate forward' },
-  { key: 'Ctrl + W',      desc: 'Close current tab' },
-  { key: 'Ctrl + Tab',    desc: 'Next tab' },
-  { key: 'Ctrl + Shift+Tab', desc: 'Previous tab' },
   { key: 'Esc',           desc: 'Close open popup / clear search' },
   { key: '?',             desc: 'Show this help' },
 ];

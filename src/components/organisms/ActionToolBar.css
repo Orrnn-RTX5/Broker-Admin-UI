@@ -1,0 +1,353 @@
+/* Authentic MetaTrader 5 Administrator Toolbar */
+.admin-action-toolbar.mt5-action-toolbar {
+  min-height: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  background: var(--bg-toolbar, #252526);
+  border-bottom: 1px solid var(--border-default, #3c3c3c);
+  user-select: none;
+}
+
+.mt5-toolbar-scroll-container {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.mt5-toolbar-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+.mt5-tool-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.mt5-toolbar-divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: var(--border-default, #353942);
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.mt5-tool-wrap {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+/* Authentic MT5 Toolbar Icon Button */
+.mt5-tool {
+  height: 24px;
+  width: 24px;
+  padding: 0;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text-secondary, #94a3b8);
+  cursor: pointer;
+  transition: background 0.1s ease, color 0.1s ease, border-color 0.1s ease;
+}
+
+.mt5-tool:hover:not(:disabled),
+.mt5-tool[data-state="open"] {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-primary, #e8e8e8);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.mt5-tool:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(1px);
+}
+
+.mt5-tool:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Active selected state — terminal blue accent */
+.mt5-tool.is-active {
+  border: 1px solid var(--accent-500, #2196f3) !important;
+  background: var(--accent-50, rgba(33, 150, 243, 0.08)) !important;
+  color: var(--accent-600, #42a5f5) !important;
+}
+
+/* New Record button — semantic success */
+.mt5-tool--add {
+  color: var(--success-500, #2ebd59) !important;
+}
+
+.mt5-tool--add:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--success-500, #2ebd59) 15%, transparent) !important;
+  border-color: var(--success-500, #2ebd59) !important;
+}
+
+/* Danger button — semantic danger */
+.mt5-tool--danger:hover:not(:disabled) {
+  color: var(--danger-500, #e53935) !important;
+  background: color-mix(in srgb, var(--danger-500, #e53935) 15%, transparent) !important;
+  border-color: var(--danger-500, #e53935) !important;
+}
+
+/* Connect Button — shared blue action treatment */
+.mt5-btn-connect {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 2px;
+  border: 1px solid var(--accent-500, #2196f3);
+  background: var(--accent-50, rgba(33, 150, 243, 0.08));
+  color: var(--accent-600, #42a5f5);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.mt5-btn-connect:hover,
+.mt5-btn-connect[data-state="open"] {
+  background: var(--accent-100, rgba(33, 150, 243, 0.14));
+  border-color: var(--accent-600, #42a5f5);
+}
+
+.mt5-btn-connect.is-error .mt5-connect-arrow {
+  color: var(--danger-500, #e53935);
+}
+
+.mt5-connect-arrow {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.mt5-connect-text {
+  font-size: 11px;
+  line-height: 1;
+}
+
+/* Automation Button — same blue palette as Filter */
+.mt5-btn-automation {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 2px;
+  border: 1px solid var(--accent-500, #2196f3);
+  background: var(--accent-50, rgba(33, 150, 243, 0.08));
+  color: var(--accent-600, #42a5f5);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  position: relative;
+}
+
+.mt5-btn-automation:hover {
+  background: var(--accent-100, rgba(33, 150, 243, 0.14));
+  border-color: var(--accent-600, #42a5f5);
+}
+
+.mt5-automation-gear {
+  line-height: 1;
+  transition: transform 0.3s ease;
+}
+
+.mt5-automation-gear.is-spinning {
+  animation: mt5Spin 6s linear infinite;
+}
+
+@keyframes mt5Spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.mt5-live-pulse-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent-600, #42a5f5);
+  animation: mt5Pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes mt5Pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+}
+
+/* MT5 More Handle (⋮) */
+.mt5-more-handle {
+  color: var(--text-muted, #64748b);
+  font-size: 13px;
+  padding: 0 2px;
+  user-select: none;
+  font-weight: bold;
+  cursor: default;
+}
+
+/* MT5 Filter Button (≡ Filter) */
+.mt5-btn-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 2px;
+  border: 1px solid var(--border-default, #353942);
+  background: var(--bg-surface-2, #23272e);
+  color: var(--text-secondary, #94a3b8);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  white-space: nowrap;
+}
+
+.mt5-btn-filter:hover,
+.mt5-btn-filter[data-state="open"] {
+  border-color: var(--border-strong, #4a515e);
+  background: var(--bg-surface-3, #2b3039);
+  color: var(--text-primary, #f1f5f9);
+}
+
+.mt5-btn-filter.is-active {
+  border-color: var(--accent-500, #2196f3);
+  color: var(--accent-600, #42a5f5);
+  background: var(--accent-50, rgba(33, 150, 243, 0.08));
+}
+
+/* MT5 Sliders Button */
+.mt5-btn-sliders {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  width: 24px;
+  border-radius: 2px;
+  border: 1px solid var(--border-default, #353942);
+  background: var(--bg-surface-2, #23272e);
+  color: var(--text-secondary, #94a3b8);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.1s ease;
+}
+
+.mt5-btn-sliders:hover {
+  border-color: var(--border-strong, #4a515e);
+  color: var(--text-primary, #f1f5f9);
+  background: var(--bg-surface-3, #2b3039);
+}
+
+.mt5-btn-sliders.is-active {
+  border-color: var(--accent-500, #2196f3);
+  color: var(--accent-600, #42a5f5);
+  background: var(--accent-50, rgba(33, 150, 243, 0.08));
+}
+
+.mt5-sliders-badge {
+  position: absolute;
+  right: 1px;
+  bottom: -1px;
+  font-size: 7px;
+  line-height: 1;
+  font-weight: 800;
+  color: var(--accent-600, #42a5f5);
+}
+
+/* Recessed Search Box */
+.mt5-toolbar-search {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  width: 145px;
+  min-width: 100px;
+  padding: 0 6px;
+  border-radius: 2px;
+  border: 1px solid var(--border-default, #3c3c3c);
+  background: var(--bg-app, #141414);
+  color: var(--text-primary, #e8e8e8);
+  transition: border-color 0.15s ease, width 0.2s ease, box-shadow 0.15s ease;
+}
+
+.mt5-toolbar-search:focus-within {
+  width: 175px;
+  border-color: var(--accent-500, #2196f3);
+  box-shadow: 0 0 0 1px var(--accent-500, #2196f3);
+}
+
+.mt5-toolbar-search input {
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font-size: 11px;
+  line-height: 1;
+  padding: 0;
+}
+
+.mt5-toolbar-search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.mt5-search-icon {
+  flex-shrink: 0;
+  opacity: 0.55;
+  color: var(--text-muted, #94a3b8);
+  margin-left: 3px;
+}
+
+.mt5-toolbar-search:focus-within .mt5-search-icon {
+  opacity: 1;
+  color: var(--accent-500, #2196f3);
+}
+
+.mt5-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  margin-left: 2px;
+}
+
+.mt5-search-clear:hover {
+  color: var(--text-primary, #f1f5f9);
+}
+
+.admin-action-toolbar button:focus-visible {
+  outline: 1px solid var(--accent-500, #2196f3);
+  outline-offset: 1px;
+}
+
+

@@ -75,12 +75,12 @@ const getCellAlignment = (key, value) => (
 
 const ResultTable = ({ data }) => {
   if (!data) {
-    return <div className="flex items-center justify-center h-24 text-[#555] text-[11px]">Loading...</div>;
+    return <div className="flex items-center justify-center h-24 text-[color:var(--text-muted)] text-[11px]">Loading...</div>;
   }
 
   if (Array.isArray(data)) {
     if (data.length === 0) {
-      return <div className="flex items-center justify-center h-24 text-[#555] text-[11px]">No data available.</div>;
+      return <div className="flex items-center justify-center h-24 text-[color:var(--text-muted)] text-[11px]">No data available.</div>;
     }
 
     const cols = Object.keys(data[0]);
@@ -90,13 +90,13 @@ const ResultTable = ({ data }) => {
       <div className="flex flex-col flex-1 overflow-hidden">
         <div className="flex-1 overflow-auto">
           <div
-            className="grid sticky top-0 z-10 min-w-max h-[28px] bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0"
+            className="grid sticky top-0 z-10 min-w-max h-[28px] bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] shrink-0"
             style={{ gridTemplateColumns }}
           >
             {cols.map((column) => (
               <div
                 key={column}
-                className={`flex items-center px-3 text-[10px] font-semibold text-[#888] uppercase tracking-wider border-r border-black/20 last:border-r-0 ${getCellAlignment(column)}`}
+                className={`flex items-center px-3 text-[10px] font-semibold text-[color:var(--text-muted)] uppercase tracking-wider border-r border-[color:var(--border-subtle)] last:border-r-0 ${getCellAlignment(column)}`}
                 title={String(column)}
               >
                 <span className="truncate w-full">{formatHeader(column)}</span>
@@ -107,7 +107,7 @@ const ResultTable = ({ data }) => {
           {data.map((row, index) => (
             <div
               key={index}
-              className={`grid min-w-max min-h-[26px] border-b border-black/20 ${index % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-[#2a2d2e]`}
+              className={`grid min-w-max min-h-[26px] border-b border-[color:var(--border-subtle)] ${index % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-[color:var(--bg-surface-2)]`}
               style={{ gridTemplateColumns }}
             >
               {cols.map((column) => {
@@ -116,7 +116,7 @@ const ResultTable = ({ data }) => {
                 return (
                   <div
                     key={column}
-                    className={`flex items-center px-3 text-[11px] text-[color:var(--text-primary)] font-mono border-r border-black/10 last:border-r-0 min-w-0 ${getCellAlignment(column, row[column])}`}
+                    className={`flex items-center px-3 text-[11px] text-[color:var(--text-primary)] font-mono border-r border-[color:var(--border-subtle)] last:border-r-0 min-w-0 ${getCellAlignment(column, row[column])}`}
                     title={value}
                   >
                     <span className="truncate w-full">{value}</span>
@@ -132,11 +132,11 @@ const ResultTable = ({ data }) => {
 
   return (
     <div className="p-4 max-w-[480px]">
-      <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--bg-surface-2)] rounded-[3px] divide-y divide-black/30">
+      <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-[3px] divide-y divide-[color:var(--border-default)]">
         {Object.entries(data).map(([key, value]) => (
           <div key={key} className="flex items-center px-4 h-[32px]">
-            <span className="text-[11px] text-[#888] flex-1">{formatHeader(key)}</span>
-            <span className="text-[12px] font-mono text-[#9cdcfe]">{fmt(key, value)}</span>
+            <span className="text-[11px] text-[color:var(--text-muted)] flex-1">{formatHeader(key)}</span>
+            <span className="text-[12px] font-mono text-[color:var(--info-500)]">{fmt(key, value)}</span>
           </div>
         ))}
       </div>
@@ -152,12 +152,12 @@ const AnalyticsTradingView = () => {
 
   return (
     <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden">
-      <div className="flex items-center bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0 overflow-x-auto">
+      <div className="flex items-center bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] shrink-0 overflow-x-auto">
         {TABS.map((item) => (
           <button
             key={item.key}
             onClick={() => setTab(item.key)}
-            className={`px-4 h-[30px] text-[11px] border-r border-black/30 whitespace-nowrap transition-colors ${tab === item.key ? 'bg-[color:var(--bg-app)] text-[color:var(--text-primary)] border-t-2 border-t-[color:var(--accent-500)]' : 'text-[#888] hover:text-[#ccc]'}`}
+            className={`px-4 h-[30px] text-[11px] border-r border-[color:var(--border-subtle)] whitespace-nowrap transition-colors ${tab === item.key ? 'bg-[color:var(--bg-app)] text-[color:var(--text-primary)] border-t-2 border-t-[color:var(--accent-500)]' : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)]'}`}
           >
             {item.label}
           </button>
@@ -165,14 +165,14 @@ const AnalyticsTradingView = () => {
         <div className="flex-1" />
         <button
           onClick={refresh}
-          className="flex items-center gap-1.5 h-[24px] px-3 mr-2 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px] shrink-0"
+          className="flex items-center gap-1.5 h-[24px] px-3 mr-2 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[color:var(--text-secondary)] text-[11px] rounded-[2px] shrink-0"
         >
           <RefreshCw size={11} /> Refresh
         </button>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center flex-1 text-[#888] text-[11px]">Loading...</div>
+        <div className="flex items-center justify-center flex-1 text-[color:var(--text-muted)] text-[11px]">Loading...</div>
       ) : error ? (
         <ActionableErrorState
           title="Unable to load data"

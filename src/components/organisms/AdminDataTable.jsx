@@ -1,3 +1,4 @@
+import { sortToolbarRows } from '../../utils/toolbarActions';
 import React, { useState } from 'react';
 import {
   clientsAccountsTableData,
@@ -165,6 +166,8 @@ const SERVER_STATUS_VIEWS = new Set([
 
 const IMPORTED_VIEW_TYPES = new Set([
   'Market Overview',
+  'Symbols Browser',
+  'Symbol Management',
   'Swap-Free Configs',
   'Leverages',
   'LP Routing',
@@ -721,10 +724,13 @@ const AdminDataTable = ({
   onRowDoubleClick,
   viewType,
   onAddClick,
+  onGroupsChanged,
   initialServerTab,
   refreshTrigger,
   searchQuery = '',
+  sortDirection = '',
   onCountChange,
+  onRowsChange,
   onEditableTargetSelect,
   selectedEditableTargetId,
   selectedEditableTargetType,
@@ -920,6 +926,7 @@ const AdminDataTable = ({
       try {
         await ManagerService.deleteGroup(contextMenu.selectedGroup.name);
         refetchGroups();
+        onGroupsChanged?.();
       } catch (err) {
         alert(err.message || 'Error deleting group');
       }
@@ -1225,7 +1232,7 @@ const AdminDataTable = ({
 
   const {
     columns,
-    data,
+    data: unsortedData,
     isClientsView,
     isSymbolsView,
     isPositionsView,
@@ -1235,6 +1242,7 @@ const AdminDataTable = ({
     orderSymbolOptions,
     pagination,
   } = tableState;
+  const data = React.useMemo(() => sortToolbarRows(unsortedData, sortDirection, viewType), [unsortedData, sortDirection, viewType]);
 
   const knownTotalCount = pagination?.hasKnownTotal ? pagination.total : undefined;
   const renderedTotalCount = Number.isFinite(knownTotalCount) ? knownTotalCount : data.length;
@@ -1299,6 +1307,10 @@ const AdminDataTable = ({
     }
   }, [data.length, mountedRowBytes, renderedTotalCount, renderedFilteredCount, onCountChange]);
 
+  React.useEffect(() => {
+    onRowsChange?.(data);
+  }, [data, onRowsChange]);
+
   // --- COMING SOON: sidebar views that have no backend yet ---
   // Renders a lightweight empty state so clicking these items doesn't show
   // a blank table. Remove an entry once that view gets wired to an API.
@@ -1346,8 +1358,11 @@ const AdminDataTable = ({
   }
 
   // --- IMPORTED VIEWS ---
-  if (viewType === 'Market Overview') {
+  if (viewType === 'Market Overview' || viewType === 'Symbols Browser') {
     return <MarketsView />;
+  }
+  if (viewType === 'Symbol Management') {
+    return <MarketsView section="management" />;
   }
   if (viewType === 'Swap-Free Configs') {
     return <SwapFreeGroupsView />;
@@ -1425,7 +1440,7 @@ const AdminDataTable = ({
     return <ServerConfigView />;
   }
   if (viewType === 'Managers') {
-    return <ManagersView />;
+    return <ManagersView refreshTrigger={refreshTrigger} searchQuery={searchQuery} sortDirection={sortDirection} />;
   }
 
   // --- NETWORK CLUSTER INJECTION ---
@@ -1846,7 +1861,7 @@ const AdminDataTable = ({
       )}
 
       {/* Table Header */}
-      <div className="flex border-b border-[color:var(--border-strong)] bg-[color:var(--bg-surface-2)] sticky top-0 z-10 shadow-sm">
+      <div data-export-header="true" className="flex border-b border-[color:var(--border-strong)] bg-[color:var(--bg-surface-2)] sticky top-0 z-10 shadow-sm">
         {columns.map((col, idx) => (
           <div
             key={idx}
@@ -1864,6 +1879,7 @@ const AdminDataTable = ({
         {data.map((row, idx) => (
           <div
             key={row.id}
+            data-export-row="true"
             onClick={() => handleRowClick(row)}
             onDoubleClick={() => onRowDoubleClick && onRowDoubleClick(row)}
             onContextMenu={(e) => { e.stopPropagation(); handleContextMenu(e, row); }}
@@ -1914,8 +1930,12 @@ const AdminDataTable = ({
                   if (col.label === 'Status') val = row.status;
                   if (col.label === 'Comment') val = row.comment;
 
+                  const isSideCol = col.label === 'Side' || col.label === 'Action';
+                  const sideIsBuy = isSideCol && String(val).toLowerCase() === 'buy';
+                  const sideIsSell = isSideCol && String(val).toLowerCase() === 'sell';
+
                   return (
-                    <div key={cIdx} className={`${col.width} px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 ${col.label === 'Profit' && row.profit > 0 ? 'text-green-400' : ''} ${col.label === 'Profit' && row.profit < 0 ? 'text-red-400' : ''} truncate`}>
+                    <div key={cIdx} className={`${col.width} px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 ${col.label === 'Profit' && row.profit > 0 ? 'text-[color:var(--success-500)]' : ''} ${col.label === 'Profit' && row.profit < 0 ? 'text-[color:var(--danger-500)]' : ''} ${sideIsBuy ? 'text-[color:var(--info-500)]' : ''} ${sideIsSell ? 'text-[color:var(--danger-500)]' : ''} truncate`}>
                        {renderTableValue(val)}
                     </div>
                   );
@@ -1938,7 +1958,7 @@ const AdminDataTable = ({
             ) : (
               <>
                 <div className="w-64 px-3 py-1.5 text-[12px] flex items-center gap-2 border-r border-[color:var(--border-subtle)] shrink-0">
-                  {row.iconType === 'group' ? <YellowFolderIcon /> : <BlueUserIcon />}
+                  {row.iconType !== 'group' && <BlueUserIcon />}
                   <span className="text-[color:var(--text-primary)] truncate font-normal">{row.group}</span>
                 </div>
                 <div className="w-48 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.server}</div>
@@ -2093,7 +2113,7 @@ const AdminDataTable = ({
         <CreateGroupPopup
           initialData={editingGroup}
           onClose={() => setEditingGroup(null)}
-          onCreated={() => { setEditingGroup(null); refetchGroups(); }}
+          onCreated={() => { setEditingGroup(null); refetchGroups(); onGroupsChanged?.(); }}
         />
       )}
     </div>

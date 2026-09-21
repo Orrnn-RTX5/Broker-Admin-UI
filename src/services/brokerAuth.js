@@ -102,7 +102,25 @@ export const RUNTIME_DEFAULT_MT5_SERVER =
 // Mock broker list — mirrors what the real /api/v2/broker/servers returns.
 // Each entry must have broker_id, name, status, backend_url, and opaque server.
 // ---------------------------------------------------------------------------
+export const NEXA_BROKER_DEFAULT_ENTRY = {
+  broker_id: 'Nexa',
+  name: 'Nexa',
+  broker_name: 'Nexa',
+  status: 'active',
+  server: 'nexa.orrnn.com:443',
+  backend_url: 'https://nexa.orrnn.com',
+  ext_api_url: 'https://nexa.orrnn.com',
+  server_url: 'https://nexa.orrnn.com',
+  server_ip: '100.119.182.26',
+  server_port: 443,
+  ws_url: 'wss://nexa.orrnn.com/ws/feed',
+  feed_ws_url: 'wss://nexa.orrnn.com/ws/feed',
+  feed_status_url: 'https://nexa.orrnn.com/ws/feed/status',
+  direct_manager_paths: false,
+};
+
 const MOCK_BROKER_LIST = [
+  NEXA_BROKER_DEFAULT_ENTRY,
   {
     broker_id: 'TEST',
     name: 'FXTrust / Test Broker',
@@ -332,7 +350,10 @@ const resolveBrokerLoginServer = (brokerInfo = {}, server = '') =>
   getBrokerLoginServer(server ? { ...brokerInfo, server } : brokerInfo);
 
 const normalizeBrokerInfo = (info) => {
-  const safeInfo = stripLicenseSecrets(info || {});
+  const record = stripLicenseSecrets(info || {});
+  const safeInfo = String(getBrokerRecordId(record)).trim().toLowerCase() === 'nexa'
+    ? { ...NEXA_BROKER_DEFAULT_ENTRY, ...record }
+    : record;
   const brokerId = getBrokerRecordId(safeInfo);
   const server = getBrokerLoginServer({ ...safeInfo, broker_id: brokerId });
   const backend_url = buildBackendUrl(safeInfo);
@@ -441,6 +462,11 @@ export const withAdminPort = (backendUrl = '') => {
 // Calls:  GET {DISCOVERY_BASE_URL}/api/v2/broker/servers
 // ---------------------------------------------------------------------------
 export const fetchBrokerList = async () => {
+  // A Nexa-specific installation already knows its backend and does not need
+  // platform discovery before the administrator can sign in.
+  if (RUNTIME_BROKER_ID === 'nexa') {
+    return [normalizeBrokerInfo(NEXA_BROKER_DEFAULT_ENTRY)];
+  }
   if (USE_MOCK_DISCOVERY) {
     // Local fallback only; set VITE_USE_MOCK_DISCOVERY=true to use it.
     const list = MOCK_BROKER_LIST.filter((b) => b.status === 'active').map(normalizeBrokerInfo);
@@ -462,20 +488,20 @@ export const fetchBrokerList = async () => {
       }
     );
   } catch (err) {
-    console.error(`%c[Auth Connection Failed] GET ${redactUrlForLog(url)}`, 'color: #f44336; font-weight: bold;', redactForLog(err));
+    console.error(`%c[Auth Connection Failed] GET ${redactUrlForLog(url)}`, 'color: #e53935; font-weight: bold;', redactForLog(err));
     throw new Error('Cannot reach platform. Try again.');
   }
 
   const data = await readJson(response);
   if (!response.ok) {
-    console.error(`%c[Auth Response Error] GET ${redactUrlForLog(url)}`, 'color: #f44336; font-weight: bold;', {
+    console.error(`%c[Auth Response Error] GET ${redactUrlForLog(url)}`, 'color: #e53935; font-weight: bold;', {
       status: response.status,
       data: redactForLog(data)
     });
     throw new Error(getResponseMessage(data) || 'Failed to load broker list.');
   }
 
-  console.log(`%c[Auth Response Success] GET ${redactUrlForLog(url)}`, 'color: #4caf50; font-weight: bold;', {
+  console.log(`%c[Auth Response Success] GET ${redactUrlForLog(url)}`, 'color: #2ebd59; font-weight: bold;', {
     status: response.status,
     data: redactForLog(data)
   });
@@ -487,6 +513,11 @@ export const fetchBrokerList = async () => {
     .map(normalizeBrokerInfo)
     .filter((broker) => broker.broker_id && broker.server);
 
+  // Keep the configured Nexa backend selectable until platform discovery lists it.
+  // An explicit platform record (including a disabled one) remains authoritative.
+  if (!list.some((broker) => String(getBrokerRecordId(broker)).trim().toLowerCase() === 'nexa')) {
+    normalized.push(normalizeBrokerInfo(NEXA_BROKER_DEFAULT_ENTRY));
+  }
   return normalized;
 };
 
@@ -520,20 +551,20 @@ const postJson = async (url, body) => {
       body: JSON.stringify(body),
     });
   } catch (err) {
-    console.error(`%c[Auth Connection Failed] POST ${redactUrlForLog(url)}`, 'color: #f44336; font-weight: bold;', redactForLog(err));
+    console.error(`%c[Auth Connection Failed] POST ${redactUrlForLog(url)}`, 'color: #e53935; font-weight: bold;', redactForLog(err));
     throw new Error('Connection failed');
   }
 
   const data = await readJson(response);
   if (!response.ok) {
-    console.error(`%c[Auth Response Error] POST ${redactUrlForLog(url)}`, 'color: #f44336; font-weight: bold;', {
+    console.error(`%c[Auth Response Error] POST ${redactUrlForLog(url)}`, 'color: #e53935; font-weight: bold;', {
       status: response.status,
       data: redactForLog(data)
     });
     throw new Error(getResponseMessage(data) || `HTTP ${response.status}`);
   }
 
-  console.log(`%c[Auth Response Success] POST ${redactUrlForLog(url)}`, 'color: #4caf50; font-weight: bold;', {
+  console.log(`%c[Auth Response Success] POST ${redactUrlForLog(url)}`, 'color: #2ebd59; font-weight: bold;', {
     status: response.status,
     data: redactForLog(data)
   });

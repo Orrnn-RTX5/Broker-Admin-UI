@@ -85,9 +85,13 @@ const Notice = ({ tone = 'info', children }) => {
     <div
       className="flex items-start gap-2 rounded-lg px-3 py-2 text-xs"
       style={{
-        background: isError ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
-        color: isError ? '#f87171' : '#4ade80',
-        border: `1px solid ${isError ? 'rgba(239,68,68,0.25)' : 'rgba(34,197,94,0.25)'}`,
+        background: isError
+          ? 'color-mix(in srgb, var(--danger-500) 10%, transparent)'
+          : 'color-mix(in srgb, var(--success-500) 10%, transparent)',
+        color: isError ? 'var(--danger-500)' : 'var(--success-500)',
+        border: `1px solid ${isError
+          ? 'color-mix(in srgb, var(--danger-500) 25%, transparent)'
+          : 'color-mix(in srgb, var(--success-500) 25%, transparent)'}`,
       }}
     >
       {isError ? <AlertCircle size={13} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={13} className="mt-0.5 shrink-0" />}

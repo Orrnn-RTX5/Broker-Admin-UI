@@ -348,7 +348,7 @@ const LogManagementTab = () => {
   };
 
   const levelColor = (l) => {
-    const map = { trace: '#9cdcfe', debug: '#4ec9b0', info: '#22c55e', warn: '#d97706', error: '#f48771', fatal: '#ef4444' };
+    const map = { trace: '#9cdcfe', debug: 'var(--success-500)', info: 'var(--success-500)', warn: '#d97706', error: 'var(--danger-500)', fatal: 'var(--danger-500)' };
     return map[l] || '#ccc';
   };
 
@@ -714,7 +714,7 @@ const PluginManagementTab = () => {
   };
 
   const typeBadge = (t) => {
-    const map = { notification: '#9cdcfe', analytics: '#4ec9b0', integration: '#d97706', security: '#22c55e', reporting: '#888', other: '#555' };
+    const map = { notification: '#9cdcfe', analytics: 'var(--success-500)', integration: '#d97706', security: 'var(--success-500)', reporting: '#888', other: '#555' };
     return <span className="text-[10px] font-mono" style={{ color: map[t] || '#ccc' }}>{t}</span>;
   };
 

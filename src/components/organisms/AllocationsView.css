@@ -1,3 +1,11 @@
+/* Keep this page and its portaled controls uniform despite the shared
+   heading, table-header, and utility typography overrides. */
+:is(#root, body) .allocation-typography,
+:is(#root, body) .allocation-typography :where(*) {
+  font-size: var(--ui-font-base) !important;
+  font-weight: var(--ui-weight-regular) !important;
+}
+
 .allocations-view {
   --allocation-accent: #0891b2;
   display: flex;
@@ -10,20 +18,15 @@
   overflow: auto;
   background: var(--bg-app);
   color: var(--text-primary);
-  font-size: 12px;
   container-type: inline-size;
 }
 [data-theme="dark"] .allocations-view { --allocation-accent: #00cce7; }
 .allocation-panel { border: 1px solid var(--border-default); border-radius: 5px; background: var(--bg-surface-1); }
 .allocation-page-heading, .allocation-groups-heading, .allocation-section-heading, .allocation-pagination { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .allocation-page-heading { padding: 10px 14px; flex-shrink: 0; }
-.allocation-heading { display: flex; align-items: center; gap: 14px; }
-.allocations-view h1, .allocations-view h2 { margin: 0; font-weight: 600; }
-.allocations-view h1 { font-size: 16px; }
-.allocations-view h2 { font-size: 14px; }
-.allocations-view p { margin: 3px 0 0; color: var(--text-muted); font-size: 12px; }
-.allocation-emblem { display: grid; place-items: center; width: 48px; height: 46px; border: 1px solid var(--allocation-accent); border-radius: 7px; color: var(--allocation-accent); }
-.allocation-cyan, .allocation-url-row label svg, .allocation-section-heading h2 svg { color: var(--allocation-accent); }
+.allocation-heading { min-width: 0; }
+.allocations-view h1, .allocations-view h2 { margin: 0; }
+.allocations-view p { margin: 3px 0 0; color: var(--text-muted); }
 .allocation-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .allocations-view button, .allocation-dialog button, .allocations-view select, .allocation-dialog select {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -33,18 +36,16 @@
 .allocations-view button:hover, .allocation-dialog button:hover { background: var(--bg-surface-3); border-color: var(--allocation-accent, var(--accent-500)); }
 .allocations-view button:disabled { opacity: .4; cursor: default; }
 .allocations-view :is(button, a, input, select):focus-visible, .allocation-dialog :is(button, input, select):focus-visible { outline: 2px solid var(--accent-500); outline-offset: 2px; }
-.allocations-view .allocation-primary, .allocation-dialog .allocation-primary { background: var(--accent-600); color: var(--accent-contrast); border-color: var(--accent-500); font-weight: 600; }
+.allocations-view .allocation-primary, .allocation-dialog .allocation-primary { background: var(--accent-600); color: var(--accent-contrast); border-color: var(--accent-500); }
 .allocations-view .allocation-primary:hover, .allocation-dialog .allocation-primary:hover { background: var(--accent-700); }
-.allocation-status { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--border-default); border-radius: 4px; padding: 9px 11px; font-size: 11px; color: var(--text-muted); }
-.allocation-status svg, .allocation-group-name svg { color: var(--success-500); flex-shrink: 0; }
+.allocation-status { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--border-default); border-radius: 4px; padding: 9px 11px; color: var(--text-muted); }
+.allocation-status svg { color: var(--success-500); flex-shrink: 0; }
 .allocation-urls { padding: 12px 14px 16px; flex-shrink: 0; }
 .allocation-section-heading { border: 1px solid var(--border-subtle); border-bottom: 0; padding: 9px 12px; }
-.allocation-section-heading h2 { display: flex; align-items: center; gap: 10px; font-size: 13px; }
-.allocation-section-heading p { font-size: 11px; margin: 0; }
+.allocation-section-heading p { margin: 0; }
 .allocation-url-list { border: 1px solid var(--border-default); border-radius: 0 0 4px 4px; overflow: hidden; }
 .allocation-url-row { display: grid; grid-template-columns: 240px minmax(140px, 1fr) 32px 32px; align-items: center; gap: 10px; padding: 5px 10px; border-bottom: 1px solid var(--border-subtle); }
 .allocation-url-row:last-child { border-bottom: 0; }
-.allocation-url-row label { display: flex; align-items: center; gap: 12px; }
 .allocation-url-row input, .allocation-dialog input { width: 100%; min-width: 0; height: 31px; padding: 5px 10px; background: var(--bg-app); border: 1px solid var(--border-default); border-radius: 3px; color: var(--text-primary); font: inherit; }
 .allocation-url-row a { display: grid; place-items: center; height: 30px; color: var(--text-secondary); border-radius: 3px; }
 .allocation-url-row a:hover { color: var(--allocation-accent); background: var(--bg-surface-3); }
@@ -57,30 +58,31 @@
 .allocation-search input::placeholder { color: var(--text-muted); }
 .allocation-table-scroll { flex: 1; overflow: auto; border: 1px solid var(--border-default); border-radius: 3px; }
 .allocation-table { width: 100%; border-collapse: separate; border-spacing: 0; white-space: nowrap; text-align: left; }
-.allocation-table th { position: sticky; top: 0; z-index: 1; height: 38px; background: var(--bg-surface-2); font-weight: 500; }
+.allocation-table th { position: sticky; top: 0; z-index: 1; height: 38px; background: var(--bg-surface-2); }
+#root .allocation-table th { color: var(--text-secondary); }
 .allocation-table :is(th, td) { padding: 0 12px; border-right: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); }
 .allocation-table :is(th, td):last-child { border-right: 0; }
 .allocation-table td { height: 33px; color: var(--text-secondary); }
 .allocation-table tbody tr:not(.allocation-filler):hover { background: var(--bg-surface-3); }
 .allocation-table .is-selected { background: color-mix(in srgb, var(--accent-500) 22%, var(--bg-surface-1)); }
 .allocation-table .is-selected td:first-child { box-shadow: inset 3px 0 var(--allocation-accent); }
-.allocation-group-name { display: flex; align-items: center; gap: 10px; color: var(--text-primary); }
+.allocation-group-name { color: var(--text-primary); }
 .allocation-row-actions { display: flex; gap: 5px; }
 .allocations-view .allocation-sort { border: 0; background: transparent; padding: 0; }
 .allocation-table .allocation-empty { text-align: center; padding: 30px; }
 .allocation-filler { pointer-events: none; }
-.allocation-pagination { padding: 10px 0; color: var(--text-muted); font-size: 12px; }
+.allocation-pagination { padding: 10px 0; color: var(--text-muted); }
 .allocation-pagination > span, .allocation-pagination label { display: inline-flex; align-items: center; gap: 8px; }
 .allocation-pagination .allocation-tools { gap: 18px; }
 .allocation-pagination select { min-height: 28px; padding: 4px 8px; }
-.allocation-menu { min-width: 180px; padding: 5px; background: var(--bg-surface-1); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: 5px; box-shadow: var(--shadow-lg); z-index: 160; font-size: 12px; }
+.allocation-menu { min-width: 180px; padding: 5px; background: var(--bg-surface-1); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: 5px; box-shadow: var(--shadow-lg); z-index: 160; }
 .allocation-menu [role^="menuitem"] { padding: 9px 12px; outline: none; border-radius: 3px; cursor: pointer; }
 .allocation-menu [data-highlighted] { background: var(--bg-surface-3); }
 .allocation-notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--text-secondary); }
 .allocation-dialog-overlay { position: fixed; inset: 0; background: var(--bg-overlay); z-index: 140; }
-.allocation-dialog { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(640px, calc(100vw - 32px)); max-height: 90vh; overflow: auto; padding: 22px; background: var(--bg-surface-1); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: 8px; box-shadow: var(--shadow-lg); z-index: 150; font-size: 12px; }
+.allocation-dialog { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(640px, calc(100vw - 32px)); max-height: 90vh; overflow: auto; padding: 22px; background: var(--bg-surface-1); color: var(--text-primary); border: 1px solid var(--border-default); border-radius: 8px; box-shadow: var(--shadow-lg); z-index: 150; }
 .allocation-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.allocation-dialog-heading h2 { margin: 0; font-size: 16px; }
+.allocation-dialog-heading h2 { margin: 0; }
 .allocation-dialog > p { color: var(--text-muted); margin: 10px 0 20px; }
 .allocation-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .allocation-form-urls { display: grid; gap: 16px; }

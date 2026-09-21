@@ -255,7 +255,7 @@ const NetworkGraphPanel = ({ title, type, servers }) => {
                      <path d="M 0,100 L 100,100" fill="none" stroke="var(--bg-surface-1)" strokeWidth="1" vectorEffect="non-scaling-stroke"/>
                      
                      {/* Sub-Metric Graphs */}
-                     <path d={generatePath(type === 'CPU' ? 500 : (type === 'Connections' ? 400 : 100), 100, type === 'CPU' ? 'green' : (type === 'Connections' ? 'connection-green' : 'memory-green'), srv.name)} fill="none" stroke="#4ade80" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                     <path d={generatePath(type === 'CPU' ? 500 : (type === 'Connections' ? 400 : 100), 100, type === 'CPU' ? 'green' : (type === 'Connections' ? 'connection-green' : 'memory-green'), srv.name)} fill="none" stroke="var(--success-500)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
                      {type !== 'Connections' && <path d={generatePath(type === 'CPU' ? 500 : 100, 100, type === 'CPU' ? 'orange' : 'memory-orange', srv.name)} fill="none" stroke="#f59e0b" strokeWidth="0.8" vectorEffect="non-scaling-stroke" />}
                      {/* Primary Main Metric (Blue) */}
                      <path d={generatePath(type === 'CPU' ? 500 : (type === 'Connections' ? 400 : 100), 100, type === 'CPU' ? 'blue' : (type === 'Connections' ? 'connection-blue' : 'memory-blue'), srv.name)} fill="none" stroke="#3b82f6" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />

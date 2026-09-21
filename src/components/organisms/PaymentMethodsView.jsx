@@ -6,7 +6,7 @@ const fmt = (v) => (v == null ? '—' : v);
 const fmtTs = (v) => { if (!v) return '—'; try { return new Date(v * 1000).toLocaleDateString(); } catch { return v; } };
 
 const STATUS_COLORS = { true: 'text-[#4ec9b0]', false: 'text-[#f48771]' };
-const TYPE_COLORS = { wire: '#9cdcfe', card: '#4ec9b0', crypto: '#f4c96e', ewallet: '#ce9178' };
+const TYPE_COLORS = { wire: '#9cdcfe', card: 'var(--success-500)', crypto: '#f4c96e', ewallet: '#ce9178' };
 
 // ── Add / Edit Popup ───────────────────────────────────────────────────────
 const MethodPopup = ({ initial, onClose, onSaved }) => {
