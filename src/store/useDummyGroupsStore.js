@@ -20,7 +20,7 @@ const storage = createJSONStorage(() => ({
 }));
 
 export const useDummyGroupsStore = create(persist((set, get) => ({
-  mode: 'dummy',
+  mode: 'server',
   groups: createDummyGroupsSeed(),
   revision: 0,
   setMode: (mode) => {
@@ -62,10 +62,14 @@ export const useDummyGroupsStore = create(persist((set, get) => ({
   version: DUMMY_GROUPS_VERSION,
   storage,
   partialize: state => ({ mode: state.mode, groups: state.groups }),
-  migrate: () => ({ mode: 'dummy', groups: createDummyGroupsSeed() }),
+  // Groups opens on live server data; only an explicit Dummy choice is remembered.
+  migrate: (persisted) => ({
+    mode: 'server',
+    groups: persisted?.groups?.length ? restoreDummyGroups(persisted.groups) : createDummyGroupsSeed(),
+  }),
   merge: (stored, current) => ({
     ...current,
-    mode: stored?.mode === 'server' ? 'server' : 'dummy',
+    mode: stored?.mode === 'dummy' ? 'dummy' : 'server',
     groups: stored?.groups === undefined ? current.groups : restoreDummyGroups(stored.groups),
   }),
 }));

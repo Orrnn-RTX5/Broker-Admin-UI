@@ -5,7 +5,6 @@ import SidebarNavTree from './components/organisms/SidebarNavTree';
 import MarketWatchDock from './components/organisms/MarketWatchDock';
 import AdminDataTable from './components/organisms/AdminDataTable';
 import GroupsExplorer from './components/organisms/GroupsExplorer';
-import { useDummyGroupsStore } from './store/useDummyGroupsStore';
 import GroupPropertiesPopup from './components/RIGHTCLICKJPOPUPS/GroupPropertiesPopup';
 import ManagerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ManagerPropertiesPopup';
 import ServerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ServerPropertiesPopup';
@@ -38,7 +37,7 @@ import {
 } from './config/desktopRelease';
 import { getViewCapabilityToast, shouldBlockViewNavigation } from './config/viewCapabilities';
 import { resolveGroupExplorerNode, sameGroupExplorerLocation, getHistoryEntryView } from './utils/groupExplorerNavigation';
-import { Download, Network, RefreshCcw, ShieldAlert } from 'lucide-react';
+import { Download, FolderTree, Network, RefreshCcw, ShieldAlert, Users } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { TooltipProvider } from './components/ui/Tooltip';
 import { ToastProvider, ToastViewport } from './components/ui/Toast';
@@ -102,7 +101,6 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
   const [selectedGroup, setSelectedGroup] = React.useState(null);
   const dummyGroupsRef = React.useRef(null);
-  const groupsDataMode = useDummyGroupsStore(state => state.mode);
   const [isPopupOpen, setIsPopupOpen] = React.useState(false);
   const [selectedEditTarget, setSelectedEditTarget] = React.useState(null);
   const [selectedSidebarNodeId, setSelectedSidebarNodeId] = React.useState(null);
@@ -565,10 +563,6 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
   const handleAddClick = () => {
     if (activeNode === 'Groups') {
-      if (groupsDataMode === 'dummy') {
-        dummyGroupsRef.current?.addGroup();
-        return;
-      }
       setIsCreatingGroup(true);
       return;
     }
@@ -742,14 +736,33 @@ const AuthenticatedAppInner = ({ navigate }) => {
   }, [notify]);
 
   const canDeleteSelectedTarget = Boolean(selectedEditTarget?.type === 'group' && canEditGroups);
-  const handleToolbarDelete = React.useCallback(async () => {
-    if (!selectedEditTarget) return;
-    if (selectedEditTarget.type === 'group' && selectedEditTarget.row?.isDummy) {
-      dummyGroupsRef.current?.deleteGroup(selectedEditTarget.row);
+  const handleToolbarDelete = React.useCallback(async (explicitTarget) => {
+    const target = explicitTarget?.type === 'group' || explicitTarget?.type === 'group-branch' ? explicitTarget : selectedEditTarget;
+    if (!target) return;
+    if (target.type === 'group-branch') {
+      // Deepest names first, so a parent group never outlives its subgroups.
+      const names = [...target.names].sort((left, right) => right.length - left.length);
+      if (!names.length) return;
+      if (!window.confirm(`Delete "${target.path}" and the ${names.length} group(s) inside it?`)) return;
+      setIsDeletingTarget(true);
+      const failed = [];
+      for (const name of names) {
+        try { await ManagerService.deleteGroup(name); } catch { failed.push(name); }
+      }
+      setIsDeletingTarget(false);
+      setSelectedEditTarget(null);
+      setRefreshKey((p) => p + 1);
+      notify(failed.length
+        ? { title: 'Some groups were not deleted', description: failed.join(', '), tone: 'danger' }
+        : { title: 'Groups deleted', description: `Removed ${names.length} group(s) under "${target.path}"`, tone: 'success' });
       return;
     }
-    if (selectedEditTarget.type === 'group') {
-      const groupName = selectedEditTarget.row?.name || selectedEditTarget.row?.group || selectedEditTarget.id;
+    if (target.type === 'group' && target.row?.isDummy) {
+      dummyGroupsRef.current?.deleteGroup(target.row);
+      return;
+    }
+    if (target.type === 'group') {
+      const groupName = target.row?.name || target.row?.group || target.id;
       if (!groupName) return;
       if (!window.confirm(`Are you sure you want to delete group "${groupName}"?`)) return;
       setIsDeletingTarget(true);
@@ -764,7 +777,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
         setIsDeletingTarget(false);
       }
     } else {
-      notify({ title: 'Delete unavailable', description: `Deleting ${selectedEditTarget.type} is not supported from the toolbar.`, tone: 'warning' });
+      notify({ title: 'Delete unavailable', description: `Deleting ${target.type} is not supported from the toolbar.`, tone: 'warning' });
     }
   }, [selectedEditTarget, canEditGroups, notify]);
 
@@ -958,16 +971,24 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
         <div className={`flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden border-l border-[color:var(--border-default)] bg-[color:var(--bg-app)]${activeNode === 'Allocations' ? ' allocation-typography' : ''}`}>
           {!(canViewActive && ['Integrations', 'Market Overview', 'Symbols Browser', 'Symbol Management'].includes(activeNode)) && (
-          <div className="h-9 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] flex items-center px-4 gap-4 text-[11px] text-[color:var(--text-muted)] shadow-[var(--shadow-sm)]">
-            <div className="flex items-center gap-1.5 text-[color:var(--text-primary)] font-medium">
-              {activeNode !== 'Allocations' && <Network size={12} className="text-[color:var(--text-muted)]" />}
+          <div className="h-9 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] flex items-center px-4 gap-3 text-xs text-[color:var(--text-muted)] shadow-[var(--shadow-sm)] select-none">
+            <div className="flex items-center gap-2 text-[color:var(--text-primary)] font-semibold text-xs tracking-wide">
+              {activeNode === 'Groups' ? (
+                <FolderTree size={13} className="text-[color:var(--accent-500)]" />
+              ) : (activeNode === 'Trading Accounts' || activeNode === 'Clients') ? (
+                <Users size={13} className="text-[color:var(--accent-500)]" />
+              ) : activeNode !== 'Allocations' ? (
+                <Network size={13} className="text-[color:var(--accent-500)]" />
+              ) : null}
               <span>{activeNode}</span>
             </div>
             {canViewActive && rowCount.total > 0 && (
-              <span className="font-mono tracking-tight">
-                {searchQuery
-                  ? `Showing ${rowCount.filtered} of ${rowCount.total}`
-                  : `${rowCount.total} rows`}
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-[color:var(--bg-surface-3)] text-[color:var(--text-secondary)] border border-[color:var(--border-subtle)] shadow-xs">
+                {searchQuery ? (
+                  <>Showing <strong className="text-[color:var(--accent-500)]">{rowCount.filtered}</strong> of {rowCount.total}</>
+                ) : (
+                  <>{rowCount.total} {rowCount.total === 1 ? (activeNode === 'Groups' ? 'group folder' : 'row') : (activeNode === 'Groups' ? 'groups' : 'rows')}</>
+                )}
               </span>
             )}
           </div>
@@ -984,6 +1005,9 @@ const AuthenticatedAppInner = ({ navigate }) => {
               onSelectionChange={handleEditableTargetSelect}
               selectedNodeId={selectedSidebarNodeId}
               onGroupEdit={(node) => openEditTarget({ type: 'group', row: node.group, viewType: 'Groups', id: node.groupName })}
+              onGroupCreate={(draft) => setIsCreatingGroup(draft ? { draft } : true)}
+              onGroupDelete={handleToolbarDelete}
+              deleting={isDeletingTarget}
               refreshTrigger={refreshKey}
               searchQuery={searchQuery}
               sortDirection={tableSortDirection}
@@ -1039,6 +1063,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
         )}
         {isCreatingGroup && (
           <CreateGroupPopup
+            draftData={isCreatingGroup?.draft}
             onClose={() => setIsCreatingGroup(false)}
             onCreated={() => setRefreshKey((p) => p + 1)}
           />
@@ -1062,12 +1087,12 @@ const AuthenticatedAppInner = ({ navigate }) => {
       )}
 
 
-      <footer className="h-8 bg-[color:var(--bg-surface-1)] border-t border-[color:var(--border-default)] flex items-center gap-2 px-3 justify-between select-none text-[11px] text-[color:var(--text-secondary)] shadow-[var(--shadow-sm)]">
+      <footer className="h-6 bg-[color:var(--bg-chrome)] border-t border-[color:var(--border-subtle)] flex items-center gap-2 px-3 justify-between select-none text-[11px] text-[color:var(--text-secondary)]">
         <div className="flex min-w-0 items-center gap-2" title={connText}>
           <StatusDot tone={connTone} />
-          <span className="truncate font-medium">{connText}</span>
+          <span className="truncate font-normal text-[11px]">{connText}</span>
         </div>
-        <div className="flex shrink-0 items-center gap-3 text-[color:var(--text-muted)] font-mono tracking-tight">
+        <div className="flex shrink-0 items-center gap-3 text-[color:var(--text-muted)] font-mono text-[11px] tracking-tight">
           {canDownloadDesktopApp && (
             <a
               href={desktopDownloadHref}
@@ -1075,14 +1100,14 @@ const AuthenticatedAppInner = ({ navigate }) => {
               rel="noopener noreferrer"
               download={desktopInstaller?.fileName || undefined}
               onClick={handleDesktopDownloadClick}
-              className="h-6 inline-flex items-center gap-1.5 rounded-[2px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-2)] px-2 font-sans text-[11px] font-medium text-[color:var(--text-secondary)] hover:border-[color:var(--accent-500)] hover:text-[color:var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--accent-500)]"
+              className="h-5 inline-flex items-center gap-1 rounded-[2px] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-2)] px-1.5 font-sans text-[11px] font-normal text-[color:var(--text-secondary)] hover:border-[color:var(--accent-500)] hover:text-[color:var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--accent-500)]"
               title={desktopInstaller ? `Download RTX5 Broker Admin v${desktopInstaller.version}` : 'Open latest desktop app download'}
               aria-label={desktopInstaller ? `Download desktop app version ${desktopInstaller.version}` : 'Download desktop app'}
             >
-              <Download size={12} aria-hidden="true" />
+              <Download size={11} aria-hidden="true" />
               <span>{desktopDownloadLabel}</span>
               {desktopInstaller?.version && (
-                <span className="hidden text-[10px] text-[color:var(--text-muted)] md:inline">
+                <span className="hidden text-[11px] text-[color:var(--text-muted)] md:inline">
                   v{desktopInstaller.version}
                 </span>
               )}
@@ -1092,17 +1117,17 @@ const AuthenticatedAppInner = ({ navigate }) => {
             <button
               type="button"
               onClick={handleCheckForUpdates}
-              className="h-6 inline-flex items-center gap-1.5 rounded-[2px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-2)] px-2 font-sans text-[11px] font-medium text-[color:var(--text-secondary)] hover:border-[color:var(--accent-500)] hover:text-[color:var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--accent-500)]"
+              className="h-5 inline-flex items-center gap-1 rounded-[2px] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-2)] px-1.5 font-sans text-[11px] font-normal text-[color:var(--text-secondary)] hover:border-[color:var(--accent-500)] hover:text-[color:var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--accent-500)]"
               title="Check for desktop app updates"
               aria-label="Check for desktop app updates"
             >
-              <RefreshCcw size={12} aria-hidden="true" />
+              <RefreshCcw size={11} aria-hidden="true" />
               <span>Check updates</span>
             </button>
           )}
-          <span className={kb.caps ? 'text-[color:var(--text-primary)]' : ''}>CAP</span>
-          <span className={kb.num ? 'text-[color:var(--text-primary)]' : ''}>NUM</span>
-          <span className={kb.scroll ? 'text-[color:var(--text-primary)]' : ''}>SCRL</span>
+          <span className={kb.caps ? 'text-[color:var(--text-primary)] font-medium' : 'text-[color:var(--text-muted)]'}>CAP</span>
+          <span className={kb.num ? 'text-[color:var(--text-primary)] font-medium' : 'text-[color:var(--text-muted)]'}>NUM</span>
+          <span className={kb.scroll ? 'text-[color:var(--text-primary)] font-medium' : 'text-[color:var(--text-muted)]'}>SCRL</span>
           <StatusClock />
         </div>
       </footer>

@@ -168,15 +168,6 @@ const MenuBar = ({
       </DropdownMenu>
 
       <div className="admin-menu-actions">
-        <button
-          type="button"
-          onClick={() => onMenuSelect?.('SuperAdmin')}
-          className="admin-menu-super-admin px-2 py-1 rounded border text-xs font-semibold flex items-center gap-1.5 transition-colors mr-1"
-          title="Open RTX5 Super Admin Control Plane"
-        >
-          <ShieldCheck size={14} />
-          <span className="hidden md:inline">Super Admin</span>
-        </button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button type="button" className="admin-menu-icon" aria-label="Notifications" title="Notifications"><Bell size={14} /></button>

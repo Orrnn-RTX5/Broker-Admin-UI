@@ -140,8 +140,8 @@ const orderFilterSelectOptionStyle = {
   backgroundColor: 'var(--bg-surface-2)',
   color: 'var(--text-primary)',
 };
-const paginationButtonClassName = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[3px] border border-[color:var(--border-strong)] bg-[color:var(--bg-surface-1)] text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--bg-surface-3)] hover:text-[color:var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent-500)] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-[color:var(--bg-surface-1)]';
-const paginationFieldClassName = 'h-8 rounded-[3px] border border-[color:var(--border-strong)] bg-[color:var(--bg-surface-1)] text-[11px] text-[color:var(--text-primary)] outline-none focus-visible:border-[color:var(--accent-500)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
+const paginationButtonClassName = 'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[2px] border border-[color:var(--border-strong)] bg-[color:var(--bg-surface-1)] text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--bg-surface-3)] hover:text-[color:var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent-500)] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-[color:var(--bg-surface-1)]';
+const paginationFieldClassName = 'h-7 rounded-[2px] border border-[color:var(--border-strong)] bg-[color:var(--bg-surface-1)] text-[11px] text-[color:var(--text-primary)] outline-none focus-visible:border-[color:var(--accent-500)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 
 const SUPPORT_CENTER_VIEWS = new Set([
   'Support Center', 'News', 'Articles', 'Orrnn Leads', 'Automation',
@@ -1624,9 +1624,9 @@ const AdminDataTable = ({
   if (viewType === 'Time') {
     return (
       <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative" onContextMenu={(e) => e.preventDefault()}>
-        <div className="flex border-b border-[color:var(--border-strong)] bg-[color:var(--bg-surface-2)] sticky top-0 z-10 shadow-sm">
-          <div className="w-[320px] px-3 py-2 text-[11px] font-semibold text-[color:var(--text-primary)] border-r border-[color:var(--border-subtle)] hover:bg-[color:var(--bg-surface-3)] cursor-default shrink-0">Property</div>
-          <div className="flex-1 px-3 py-2 text-[11px] font-semibold text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)] cursor-default">Value</div>
+        <div className="flex border-b border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-2)] sticky top-0 z-10 shadow-sm h-[30px] items-center">
+          <div className="w-[320px] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] hover:bg-[color:var(--bg-surface-3)] cursor-default shrink-0">Property</div>
+          <div className="flex-1 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-surface-3)] cursor-default">Value</div>
         </div>
         <div className="flex-1 overflow-auto no-scrollbar bg-[color:var(--bg-app)]">
           <TimeGroupHeader title="Common settings" />
@@ -1861,11 +1861,11 @@ const AdminDataTable = ({
       )}
 
       {/* Table Header */}
-      <div data-export-header="true" className="flex border-b border-[color:var(--border-strong)] bg-[color:var(--bg-surface-2)] sticky top-0 z-10 shadow-sm">
+      <div data-export-header="true" className="flex border-b border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-2)] sticky top-0 z-10 shadow-sm h-[30px] items-center">
         {columns.map((col, idx) => (
           <div
             key={idx}
-            className={`admin-column-header ${col.width} px-3 py-2 text-[10px] font-semibold text-[color:var(--text-tertiary)] border-r border-[color:var(--border-subtle)] hover:bg-[color:var(--bg-surface-3)] cursor-default flex items-center shrink-0`}
+            className={`admin-column-header ${col.width} px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] hover:bg-[color:var(--bg-surface-3)] cursor-default flex items-center shrink-0`}
           >
             {col.label}
           </div>
@@ -1883,7 +1883,7 @@ const AdminDataTable = ({
             onClick={() => handleRowClick(row)}
             onDoubleClick={() => onRowDoubleClick && onRowDoubleClick(row)}
             onContextMenu={(e) => { e.stopPropagation(); handleContextMenu(e, row); }}
-            className={`flex min-h-[var(--row-h)] cursor-pointer group border-b border-[color:var(--border-subtle)] transition-colors ${isSelectedEditableRow(row) ? 'bg-[color:var(--accent-500)]/18 ring-1 ring-inset ring-[color:var(--accent-500)]/50' : (idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]')} hover:bg-[color:var(--bg-surface-3)]`}
+            className={`flex min-h-[var(--row-h)] cursor-pointer group border-b border-[color:var(--border-subtle)] transition-colors ${isSelectedEditableRow(row) ? 'bg-[#04395e] text-[color:var(--text-primary)] border-l-2 border-l-[#0078d4]' : (idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]')} hover:bg-[color:var(--bg-surface-3)]`}
           >
             {isClientsView ? (
               <>
@@ -2030,11 +2030,11 @@ const AdminDataTable = ({
         {isPagedView && (
           <div className="ml-auto flex min-w-0 max-w-full items-center justify-end gap-1.5 overflow-x-auto no-scrollbar whitespace-nowrap text-[11px] text-[color:var(--text-muted)]">
             <div
-              className="flex h-8 min-w-[132px] shrink-0 items-center gap-1.5 rounded-[3px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] px-2"
+              className="flex h-7 min-w-[132px] shrink-0 items-center gap-1.5 rounded-[2px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] px-2"
               aria-live="polite"
               aria-label={paginationRangeAriaLabel}
             >
-              <span className="text-[9px] font-semibold uppercase text-[color:var(--text-muted)]">{data.length ? 'Rows' : 'Status'}</span>
+              <span className="text-[11px] font-semibold uppercase text-[color:var(--text-muted)]">{data.length ? 'Rows' : 'Status'}</span>
               <span className="font-mono tabular-nums tracking-tight text-[color:var(--text-secondary)]">{paginationRangeLabel}</span>
             </div>
             <PaginationIconButton
@@ -2051,8 +2051,8 @@ const AdminDataTable = ({
             >
               <ChevronLeft size={14} strokeWidth={1.8} aria-hidden="true" />
             </PaginationIconButton>
-            <label className="flex h-8 shrink-0 items-center gap-1.5 rounded-[3px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] px-1.5 text-[color:var(--text-muted)]">
-              <span className="text-[10px]">Page</span>
+            <label className="flex h-7 shrink-0 items-center gap-1.5 rounded-[2px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] px-1.5 text-[color:var(--text-muted)]">
+              <span className="text-[11px]">Page</span>
               <input
                 aria-label="Page number"
                 type="text"

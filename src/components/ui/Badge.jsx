@@ -12,7 +12,7 @@ const tones = {
 export const Badge = ({ tone = 'neutral', className, children, ...rest }) => (
   <span
     className={cn(
-      'inline-flex items-center gap-1 px-1.5 h-5 text-[10px] font-mono uppercase tracking-wider',
+      'inline-flex items-center gap-1 px-1.5 h-5 text-[11px] font-mono tracking-tight',
       'border rounded-[var(--radius-sm)]',
       tones[tone],
       className

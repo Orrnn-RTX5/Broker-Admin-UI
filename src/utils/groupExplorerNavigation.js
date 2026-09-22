@@ -31,6 +31,12 @@ export const resolveGroupExplorerNode = (node) => {
     }
   }
 
+  if (node.type === 'server-folder' && typeof node.path === 'string') {
+    const path = node.path.trim();
+    if (!path) return null;
+    return { type: 'server-folder', id: `server-folder:${path}`, label: path.split('\\').at(-1), path };
+  }
+
   if (node.type === 'groups-root' || node.type === 'root') return rootLocation();
   if (node.type === 'admin' || node.type === 'groups-admin') return adminLocation();
   if (node.type !== 'group' && node.type !== 'group-account') return null;

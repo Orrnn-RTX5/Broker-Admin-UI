@@ -283,9 +283,9 @@ export const shouldUseFeedDevProxy = () => {
   const isDev = viteEnv.DEV === true || viteEnv.MODE === 'development';
   if (!isDev || typeof window === 'undefined') return false;
   const explicit = String(
-    getRuntimeValue('FEED_USE_DEV_PROXY', 'VITE_FEED_USE_DEV_PROXY') ?? viteEnv.VITE_FEED_USE_DEV_PROXY ?? 'true'
+    getRuntimeValue('FEED_USE_DEV_PROXY', 'VITE_FEED_USE_DEV_PROXY') ?? viteEnv.VITE_FEED_USE_DEV_PROXY ?? 'false'
   ).toLowerCase();
-  return explicit !== 'false' && isLocalWebHostname(window.location?.hostname);
+  return explicit === 'true' && isLocalWebHostname(window.location?.hostname);
 };
 
 export const toLocalDevFeedProxyUrl = (
@@ -309,7 +309,11 @@ export const toLocalDevFeedProxyUrl = (
 
 export const buildFeedWsUrl = () => {
   updateDynamicEndpoints();
-  const explicitWsUrl = getRuntimeValue('FEED_WS_URL', 'VITE_FEED_WS_URL') || viteEnv.VITE_FEED_WS_URL;
+  const brokerInfo = readBrokerInfo();
+  const explicitWsUrl = getRuntimeValue('FEED_WS_URL', 'VITE_FEED_WS_URL') ||
+    brokerInfo?.env?.FEED_WS_URL ||
+    brokerInfo?.env?.VITE_FEED_WS_URL ||
+    viteEnv.VITE_FEED_WS_URL;
   const base = explicitWsUrl || getBaseWsHost();
   const rawUrl = !base ? '/ws/feed' : (base.endsWith('/ws/feed') ? base : `${base}/ws/feed`);
   const authenticatedUrl = appendWsAuthParams(rawUrl, readWsAuthContext());

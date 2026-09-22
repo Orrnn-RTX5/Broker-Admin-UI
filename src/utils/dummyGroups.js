@@ -1,5 +1,5 @@
 /** Local examples for learning the Groups screens. Never send these to an API. */
-export const DUMMY_GROUPS_VERSION = 1;
+export const DUMMY_GROUPS_VERSION = 2;
 export const DUMMY_GROUPS_STORAGE_KEY = 'rtx5-admin-dummy-groups-v1';
 export const DUMMY_GROUPS_ROOT = 'Admin';
 
@@ -19,10 +19,7 @@ export const normalizeDummyPath = (value) => {
   if (parts.some(part => /[<>:"|?*]/.test(part) || [...part].some(character => character.charCodeAt(0) < 32))) {
     throw new Error('Group and folder names cannot contain < > : " | ? * or control characters.');
   }
-  if (!equalPath(parts[0], DUMMY_GROUPS_ROOT)) {
-    throw new Error('Dummy groups must be inside the Admin folder.');
-  }
-  parts[0] = DUMMY_GROUPS_ROOT;
+  if (equalPath(parts[0], DUMMY_GROUPS_ROOT)) parts[0] = DUMMY_GROUPS_ROOT;
   const normalized = parts.join('\\');
   if (normalized.length > 128) throw new Error('The complete group path must be 128 characters or fewer.');
   return normalized;
@@ -115,7 +112,6 @@ const mergeObjects = (base, patch) => {
 /** Create a detached, fully populated record; raw values remain separate from UI '(Dummy)' labels. */
 export const makeDummyGroup = (draft = {}) => {
   const path = normalizeDummyPath(draft.path || draft.name);
-  if (!getDummyParentPath(path)) throw new Error('Enter a group name inside the Admin folder.');
   const record = mergeObjects(createDummyGroupDefaults(), draft);
   const common = record.settings.common;
   const margin = record.settings.margin;
@@ -138,13 +134,9 @@ export const makeDummyGroup = (draft = {}) => {
 /** Validate one prospective group against the collection; returns its normalized path or throws. */
 export const validateDummyGroup = (draft, groups = [], excludeId) => {
   const path = normalizeDummyPath(draft.path || draft.name);
-  if (!getDummyParentPath(path)) throw new Error('Enter a group name inside the Admin folder.');
   for (const group of groups) {
     if (group.id === excludeId) continue;
     if (equalPath(group.path, path)) throw new Error(`A group named "${path}" already exists.`);
-    if (belowPath(group.path, path) || belowPath(path, group.path)) {
-      throw new Error('A trading group cannot also be a folder. Choose a different group path.');
-    }
   }
   const currency = draft.settings?.common?.currency ?? draft.currency;
   if (currency !== undefined && !/^[A-Z]{3,8}$/.test(String(currency))) {
@@ -186,7 +178,51 @@ export const createDummyGroupsSeed = () => {
 
 export const getDummyGroupCount = (groups, path = '') => groups.filter(group => !path || equalPath(group.path, path) || belowPath(group.path, path)).length;
 
-/** Only folder nodes become branches. Final group nodes open their properties. */
+const EXAMPLE_CLIENTS = ['Ava Patel', 'Liam Chen', 'Noah Fischer', 'Mia Rossi', 'Ethan Okafor', 'Zoe Martin', 'Lucas Silva', 'Emma Novak', 'Aiden Kim', 'Sofia Alvarez', 'Leo Dubois', 'Isla Haddad'];
+const hashText = (text) => {
+  let hash = 7;
+  for (const character of String(text)) hash = (hash * 31 + character.charCodeAt(0)) >>> 0;
+  return hash;
+};
+
+/** Example accounts for one group, derived from its statistics; the same group always yields the same list. */
+export const getDummyGroupAccounts = (group) => {
+  const statistics = group?.settings?.statistics || {};
+  const count = Math.min(Math.max(Math.trunc(Number(statistics.accountCount) || 0), 0), 200);
+  const seed = hashText(group?.path);
+  const base = 200000 + (seed % 700) * 100;
+  const totalBalance = Number(statistics.totalBalance) || 0;
+  const equityRatio = totalBalance > 0 ? (Number(statistics.totalEquity) || totalBalance) / totalBalance : 1;
+  return Array.from({ length: count }, (_, index) => {
+    const balance = count ? Math.round((totalBalance / count) * (0.6 + ((seed + index * 7919) % 80) / 100)) : 0;
+    return {
+      id: `dummy-account-${group.id}-${index + 1}`,
+      login: String(base + index + 1),
+      name: EXAMPLE_CLIENTS[(seed + index) % EXAMPLE_CLIENTS.length],
+      group: group.path,
+      balance,
+      equity: Math.round(balance * equityRatio),
+      currency: group.currency,
+      status: index % 9 === 8 ? 'inactive' : 'active',
+      isDummy: true,
+    };
+  });
+};
+
+/** Every group and folder path that can hold a subgroup, parents before children. */
+export const listDummyContainerPaths = (groups) => {
+  const paths = new Map();
+  for (const group of groups) {
+    const parts = group.path.split('\\');
+    for (let depth = 1; depth <= parts.length; depth += 1) {
+      const candidate = parts.slice(0, depth).join('\\');
+      if (!paths.has(candidate.toLowerCase())) paths.set(candidate.toLowerCase(), candidate);
+    }
+  }
+  return [...paths.values()].sort((left, right) => left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' }));
+};
+
+/** A group record owns its row; groups below it are its subgroups. Pure folders have no record. */
 export const getDummyFolderChildren = (groups, path = '') => {
   const normalized = path ? normalizeDummyPath(path) : '';
   const depth = normalized ? normalized.split('\\').length : 0;
@@ -196,18 +232,11 @@ export const getDummyFolderChildren = (groups, path = '') => {
     const parts = group.path.split('\\');
     if (parts.length <= depth) continue;
     const childPath = parts.slice(0, depth + 1).join('\\');
-    if (parts.length === depth + 1) {
-      nodes.set(childPath.toLowerCase(), {
-        id: group.id, type: 'group', label: parts[depth], path: group.path,
-        groupName: group.path, group, count: 0, isDummy: true,
-      });
-    } else {
-      const key = childPath.toLowerCase();
-      if (!nodes.has(key)) nodes.set(key, {
-        id: `dummy-folder:${childPath}`, type: 'folder', label: parts[depth], path: childPath,
-        count: getDummyGroupCount(groups, childPath), isDummy: true,
-      });
-    }
+    const key = childPath.toLowerCase();
+    const node = nodes.get(key) || { id: `dummy-folder:${childPath}`, type: 'folder', label: parts[depth], path: childPath, count: 0, isDummy: true };
+    if (parts.length === depth + 1) Object.assign(node, { id: group.id, type: 'group', path: group.path, groupName: group.path, group });
+    else node.count += 1;
+    nodes.set(key, node);
   }
   // Admin remains navigable after deleting the last example group.
   if (!normalized && !nodes.size) nodes.set('admin', { id: 'dummy-folder:Admin', type: 'folder', label: 'Admin', path: 'Admin', count: 0, isDummy: true });
@@ -232,7 +261,15 @@ export const updateDummyGroup = (groups, id, patch) => {
   if (patch.description !== undefined && patch.settings?.company?.description === undefined) merged.settings.company.description = patch.description;
   const path = validateDummyGroup(merged, groups, id);
   const group = makeDummyGroup({ ...merged, id, path });
-  return { groups: groups.map(item => item.id === id ? group : item), group };
+  const subgroups = equalPath(existing.path, path) ? [] : groups.filter(item => belowPath(item.path, existing.path));
+  if (subgroups.length && belowPath(path, existing.path)) throw new Error('A group cannot be moved inside itself.');
+  if (subgroups.length && groups.some(item => item.id !== id && !subgroups.includes(item) && belowPath(item.path, path))) {
+    throw new Error('A group or folder already uses the destination path.');
+  }
+  const moved = groups.map(item => (item.id === id ? group : subgroups.includes(item)
+    ? makeDummyGroup({ ...item, path: `${path}${item.path.slice(existing.path.length)}` })
+    : item));
+  return { groups: moved, group };
 };
 
 export const duplicateDummyGroup = (groups, id, requestedPath) => {
@@ -259,7 +296,7 @@ export const renameDummyFolder = (groups, folderPath, requestedPath) => {
   if (equalPath(from, DUMMY_GROUPS_ROOT)) throw new Error('The Admin root folder cannot be renamed.');
   if (from === to) return groups;
   if (belowPath(to, from)) throw new Error('A folder cannot be moved inside itself.');
-  const moving = groups.filter(group => belowPath(group.path, from));
+  const moving = groups.filter(group => equalPath(group.path, from) || belowPath(group.path, from));
   if (!moving.length) throw new Error('This dummy folder no longer exists.');
   if (groups.some(group => !moving.includes(group) && (equalPath(group.path, to) || belowPath(group.path, to)))) {
     throw new Error('A group or folder already uses the destination path.');
@@ -274,8 +311,9 @@ export const renameDummyFolder = (groups, folderPath, requestedPath) => {
 export const deleteDummyFolder = (groups, folderPath) => {
   const path = normalizeDummyPath(folderPath);
   if (equalPath(path, DUMMY_GROUPS_ROOT)) throw new Error('The Admin root folder cannot be deleted.');
-  if (!groups.some(group => belowPath(group.path, path))) throw new Error('This dummy folder no longer exists.');
-  return groups.filter(group => !belowPath(group.path, path));
+  const inside = group => equalPath(group.path, path) || belowPath(group.path, path);
+  if (!groups.some(inside)) throw new Error('This dummy folder no longer exists.');
+  return groups.filter(group => !inside(group));
 };
 
 /** Reject corrupt or obsolete browser data instead of letting it break navigation. */

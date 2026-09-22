@@ -1,353 +1,383 @@
-/* Authentic MetaTrader 5 Administrator Toolbar */
+/* RTX5 Admin — desktop-style action toolbar */
 .admin-action-toolbar.mt5-action-toolbar {
-  min-height: 34px;
-  height: 34px;
+  --tb-height: 34px;
+  --tb-btn: 24px;
+  --tb-radius: 3px;
+  --tb-hover: rgba(255, 255, 255, 0.06);
+  --tb-pressed: rgba(255, 255, 255, 0.12);
+  --tb-accent-tint: var(--accent-100, rgba(0, 120, 212, 0.18));
+  --tb-accent-ring: color-mix(in srgb, var(--accent-500, #0078d4) 45%, transparent);
+
+  height: var(--tb-height);
+  min-height: var(--tb-height);
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  padding: 0 6px;
+  padding: 0 8px;
   background: var(--bg-toolbar, #252526);
-  border-bottom: 1px solid var(--border-default, #3c3c3c);
+  border-bottom: 1px solid var(--border-default, #333333);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  font-family: var(--font-sans);
+  font-size: var(--ui-font-base, 12px);
   user-select: none;
 }
 
-.mt5-toolbar-scroll-container {
+/* Left region scrolls when the window is narrow; right region stays pinned. */
+.mt5-toolbar-main {
   display: flex;
   align-items: center;
   gap: 2px;
-  width: 100%;
+  flex: 1 1 auto;
   min-width: 0;
+  height: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
 }
 
-.mt5-toolbar-scroll-container::-webkit-scrollbar {
+.mt5-toolbar-main::-webkit-scrollbar {
   display: none;
+}
+
+.mt5-toolbar-side {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
 }
 
 .mt5-tool-group {
   display: inline-flex;
   align-items: center;
-  gap: 1px;
+  gap: 2px;
   flex-shrink: 0;
 }
 
 .mt5-toolbar-divider {
   width: 1px;
-  height: 18px;
+  height: 16px;
   margin: 0 4px;
-  background: var(--border-default, #353942);
+  background: var(--border-default, #333333);
   flex-shrink: 0;
-  opacity: 0.75;
 }
 
+/* ---------- Icon buttons ---------- */
 .mt5-tool-wrap {
   display: inline-flex;
   flex-shrink: 0;
 }
 
-/* Authentic MT5 Toolbar Icon Button */
 .mt5-tool {
-  height: 24px;
-  width: 24px;
-  padding: 0;
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: var(--tb-btn);
+  height: var(--tb-btn);
+  padding: 0;
   flex-shrink: 0;
-  border: 1px solid transparent;
-  border-radius: 2px;
+  border: 0;
+  border-radius: var(--tb-radius);
   background: transparent;
-  color: var(--text-secondary, #94a3b8);
+  color: var(--text-secondary, #cccccc);
   cursor: pointer;
-  transition: background 0.1s ease, color 0.1s ease, border-color 0.1s ease;
+  transition: background-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
 }
 
 .mt5-tool:hover:not(:disabled),
 .mt5-tool[data-state="open"] {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--tb-hover);
   color: var(--text-primary, #e8e8e8);
-  border-color: rgba(255, 255, 255, 0.16);
 }
 
 .mt5-tool:active:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
-  transform: translateY(1px);
+  background: var(--tb-pressed);
 }
 
 .mt5-tool:disabled {
-  opacity: 0.35;
+  color: var(--text-tertiary, #6f6f6f);
   cursor: not-allowed;
 }
 
-/* Active selected state — terminal blue accent */
 .mt5-tool.is-active {
-  border: 1px solid var(--accent-500, #2196f3) !important;
-  background: var(--accent-50, rgba(33, 150, 243, 0.08)) !important;
-  color: var(--accent-600, #42a5f5) !important;
+  background: var(--tb-accent-tint);
+  color: var(--accent-600, #42a5f5);
+  box-shadow: inset 0 0 0 1px var(--tb-accent-ring);
 }
 
-/* New Record button — semantic success */
-.mt5-tool--add {
-  color: var(--success-500, #2ebd59) !important;
+.mt5-tool.is-active:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent-500, #2196f3) 22%, transparent);
+}
+
+.mt5-tool--add:not(:disabled) {
+  color: var(--success-500, #2ebd59);
 }
 
 .mt5-tool--add:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--success-500, #2ebd59) 15%, transparent) !important;
-  border-color: var(--success-500, #2ebd59) !important;
+  background: color-mix(in srgb, var(--success-500, #2ebd59) 14%, transparent);
+  color: var(--success-500, #2ebd59);
 }
 
-/* Danger button — semantic danger */
 .mt5-tool--danger:hover:not(:disabled) {
-  color: var(--danger-500, #e53935) !important;
-  background: color-mix(in srgb, var(--danger-500, #e53935) 15%, transparent) !important;
-  border-color: var(--danger-500, #e53935) !important;
-}
-
-/* Connect Button — shared blue action treatment */
-.mt5-btn-connect {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  height: 22px;
-  padding: 0 7px;
-  border-radius: 2px;
-  border: 1px solid var(--accent-500, #2196f3);
-  background: var(--accent-50, rgba(33, 150, 243, 0.08));
-  color: var(--accent-600, #42a5f5);
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.mt5-btn-connect:hover,
-.mt5-btn-connect[data-state="open"] {
-  background: var(--accent-100, rgba(33, 150, 243, 0.14));
-  border-color: var(--accent-600, #42a5f5);
-}
-
-.mt5-btn-connect.is-error .mt5-connect-arrow {
+  background: color-mix(in srgb, var(--danger-500, #e53935) 14%, transparent);
   color: var(--danger-500, #e53935);
 }
 
-.mt5-connect-arrow {
-  font-size: 12px;
+.mt5-tool-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 7px;
+  height: 7px;
+  padding: 0 2px;
+  border-radius: 999px;
+  background: var(--danger-500, #e53935);
+  color: #fff;
+  font-size: 8px;
   font-weight: 700;
-  line-height: 1;
+  line-height: 7px;
 }
 
-.mt5-connect-text {
-  font-size: 11px;
+.mt5-sort-badge {
+  position: absolute;
+  right: 3px;
+  bottom: 2px;
+  font-size: 7px;
+  font-weight: 800;
   line-height: 1;
+  color: var(--accent-600, #42a5f5);
 }
 
-/* Automation Button — same blue palette as Filter */
-.mt5-btn-automation {
+/* ---------- Text chips (Connect / Automation / Filter) ---------- */
+.mt5-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  height: 22px;
-  padding: 0 7px;
-  border-radius: 2px;
-  border: 1px solid var(--accent-500, #2196f3);
-  background: var(--accent-50, rgba(33, 150, 243, 0.08));
-  color: var(--accent-600, #42a5f5);
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-  position: relative;
-}
-
-.mt5-btn-automation:hover {
-  background: var(--accent-100, rgba(33, 150, 243, 0.14));
-  border-color: var(--accent-600, #42a5f5);
-}
-
-.mt5-automation-gear {
+  gap: 5px;
+  height: var(--tb-btn);
+  padding: 0 9px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-default, #333333);
+  border-radius: var(--radius-sm, 3px);
+  background: var(--bg-surface-2, #252526);
+  color: var(--text-secondary, #cccccc);
+  font: inherit;
+  font-size: var(--ui-font-base, 12px);
+  font-weight: 500;
   line-height: 1;
-  transition: transform 0.3s ease;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
 }
 
-.mt5-automation-gear.is-spinning {
-  animation: mt5Spin 6s linear infinite;
+.mt5-chip:hover,
+.mt5-chip[data-state="open"] {
+  background: var(--bg-surface-3, #2a2d2e);
+  border-color: var(--border-strong, #454545);
+  color: #ffffff;
 }
 
-@keyframes mt5Spin {
-  100% {
-    transform: rotate(360deg);
-  }
+.mt5-chip:active {
+  background: var(--bg-surface-1, #1e1e1e);
 }
 
-.mt5-live-pulse-dot {
+.mt5-chip-icon {
+  flex-shrink: 0;
+}
+
+.mt5-chip-caret {
+  flex-shrink: 0;
+  margin-left: -2px;
+  color: var(--text-muted, #6e6e6e);
+  transition: color 0.12s ease;
+}
+
+.mt5-chip:hover .mt5-chip-caret,
+.mt5-chip[data-state="open"] .mt5-chip-caret {
+  color: #ffffff;
+}
+
+.mt5-chip.is-connected .mt5-chip-icon {
+  color: var(--success-500, #4ec9b0);
+}
+
+.mt5-chip.is-error {
+  color: var(--danger-500, #f14c4c);
+  border-color: color-mix(in srgb, var(--danger-500, #f14c4c) 50%, transparent);
+  background: color-mix(in srgb, var(--danger-500, #f14c4c) 12%, var(--bg-surface-2));
+}
+
+.mt5-chip.is-error:hover {
+  background: color-mix(in srgb, var(--danger-500, #f14c4c) 20%, var(--bg-surface-3));
+  color: #ff5252;
+}
+
+.mt5-chip.is-active {
+  color: #ffffff;
+  border-color: var(--accent-500, #0078d4);
+  background: var(--accent-soft, rgba(0, 120, 212, 0.22));
+}
+
+.mt5-chip.is-active:hover,
+.mt5-chip.is-active[data-state="open"] {
+  background: color-mix(in srgb, var(--accent-500, #0078d4) 30%, transparent);
+  border-color: var(--accent-600, #3794ff);
+  color: #ffffff;
+}
+
+.mt5-filter-indicator {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--accent-600, #42a5f5);
-  animation: mt5Pulse 1.5s ease-in-out infinite;
+  background: var(--accent-500, #0078d4);
+  box-shadow: 0 0 6px var(--accent-500, #0078d4);
+  margin-left: -1px;
+}
+
+.mt5-chip-icon--spin {
+  animation: mt5Spin 6s linear infinite;
+}
+
+.mt5-live-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent-600, #3794ff);
+  animation: mt5Pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes mt5Spin {
+  100% { transform: rotate(360deg); }
 }
 
 @keyframes mt5Pulse {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.4;
-    transform: scale(0.85);
-  }
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
 }
 
-/* MT5 More Handle (⋮) */
-.mt5-more-handle {
-  color: var(--text-muted, #64748b);
-  font-size: 13px;
-  padding: 0 2px;
-  user-select: none;
-  font-weight: bold;
-  cursor: default;
-}
-
-/* MT5 Filter Button (≡ Filter) */
-.mt5-btn-filter {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 22px;
-  padding: 0 6px;
-  border-radius: 2px;
-  border: 1px solid var(--border-default, #353942);
-  background: var(--bg-surface-2, #23272e);
-  color: var(--text-secondary, #94a3b8);
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.1s ease;
-  white-space: nowrap;
-}
-
-.mt5-btn-filter:hover,
-.mt5-btn-filter[data-state="open"] {
-  border-color: var(--border-strong, #4a515e);
-  background: var(--bg-surface-3, #2b3039);
-  color: var(--text-primary, #f1f5f9);
-}
-
-.mt5-btn-filter.is-active {
-  border-color: var(--accent-500, #2196f3);
-  color: var(--accent-600, #42a5f5);
-  background: var(--accent-50, rgba(33, 150, 243, 0.08));
-}
-
-/* MT5 Sliders Button */
-.mt5-btn-sliders {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 22px;
-  width: 24px;
-  border-radius: 2px;
-  border: 1px solid var(--border-default, #353942);
-  background: var(--bg-surface-2, #23272e);
-  color: var(--text-secondary, #94a3b8);
-  cursor: pointer;
-  position: relative;
-  transition: all 0.1s ease;
-}
-
-.mt5-btn-sliders:hover {
-  border-color: var(--border-strong, #4a515e);
-  color: var(--text-primary, #f1f5f9);
-  background: var(--bg-surface-3, #2b3039);
-}
-
-.mt5-btn-sliders.is-active {
-  border-color: var(--accent-500, #2196f3);
-  color: var(--accent-600, #42a5f5);
-  background: var(--accent-50, rgba(33, 150, 243, 0.08));
-}
-
-.mt5-sliders-badge {
-  position: absolute;
-  right: 1px;
-  bottom: -1px;
-  font-size: 7px;
-  line-height: 1;
-  font-weight: 800;
-  color: var(--accent-600, #42a5f5);
-}
-
-/* Recessed Search Box */
+/* ---------- Search ---------- */
 .mt5-toolbar-search {
   display: flex;
   align-items: center;
-  height: 22px;
-  width: 145px;
-  min-width: 100px;
-  padding: 0 6px;
-  border-radius: 2px;
-  border: 1px solid var(--border-default, #3c3c3c);
-  background: var(--bg-app, #141414);
-  color: var(--text-primary, #e8e8e8);
-  transition: border-color 0.15s ease, width 0.2s ease, box-shadow 0.15s ease;
+  gap: 6px;
+  height: var(--tb-btn);
+  width: 190px;
+  padding: 0 8px;
+  border: 1px solid var(--border-default, #333333);
+  border-radius: var(--radius-sm, 3px);
+  background: var(--bg-app, #181818);
+  color: var(--text-primary, #cccccc);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mt5-toolbar-search:hover {
+  border-color: var(--border-strong, #454545);
 }
 
 .mt5-toolbar-search:focus-within {
-  width: 175px;
-  border-color: var(--accent-500, #2196f3);
-  box-shadow: 0 0 0 1px var(--accent-500, #2196f3);
+  width: 230px;
+  background: #1f1f1f;
+  border-color: var(--accent-500, #0078d4);
+  box-shadow: 0 0 0 1px var(--accent-500, #0078d4), inset 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .mt5-toolbar-search input {
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   border: 0;
   outline: none;
   background: transparent;
   color: inherit;
-  font-size: 11px;
+  font: inherit;
+  font-size: var(--ui-font-base, 12px);
   line-height: 1;
   padding: 0;
 }
 
-.mt5-toolbar-search input::-webkit-search-cancel-button {
+.mt5-toolbar-search input::placeholder {
+  color: var(--text-muted, #71717a);
+  font-size: 11.5px;
+}
+
+.mt5-toolbar-search input::-webkit-search-cancel-button,
+.mt5-toolbar-search input::-webkit-search-decoration {
+  -webkit-appearance: none;
   display: none;
 }
 
 .mt5-search-icon {
   flex-shrink: 0;
-  opacity: 0.55;
-  color: var(--text-muted, #94a3b8);
-  margin-left: 3px;
+  color: var(--text-muted, #999999);
+  transition: color 0.15s ease, transform 0.15s ease;
 }
 
 .mt5-toolbar-search:focus-within .mt5-search-icon {
-  opacity: 1;
   color: var(--accent-500, #2196f3);
+  transform: scale(1.05);
+}
+
+.mt5-search-kbd {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted, #a1a1aa);
+  font-family: var(--font-mono, monospace);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  user-select: none;
+}
+
+.mt5-toolbar-search:focus-within .mt5-search-kbd {
+  display: none;
 }
 
 .mt5-search-clear {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 1px;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  padding: 0;
   border: 0;
+  border-radius: 3px;
   background: transparent;
-  color: var(--text-muted, #94a3b8);
+  color: var(--text-muted, #999999);
   cursor: pointer;
-  margin-left: 2px;
+  transition: background-color 0.12s ease, color 0.12s ease;
 }
 
 .mt5-search-clear:hover {
-  color: var(--text-primary, #f1f5f9);
+  background: var(--tb-hover);
+  color: #ffffff;
 }
 
+/* ---------- Focus & motion ---------- */
 .admin-action-toolbar button:focus-visible {
-  outline: 1px solid var(--accent-500, #2196f3);
-  outline-offset: 1px;
+  outline: 2px solid var(--accent-500, #2196f3);
+  outline-offset: -2px;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .mt5-chip-icon--spin,
+  .mt5-live-dot {
+    animation: none;
+  }
+}
 
+/* ---------- Narrow windows ---------- */
+@media (max-width: 960px) {
+  .mt5-chip { padding: 0 8px; }
+  .mt5-chip-text { display: none; }
+  .mt5-chip-caret { margin-left: 0; }
+  .mt5-toolbar-search { width: 150px; }
+  .mt5-toolbar-search:focus-within { width: 190px; }
+}

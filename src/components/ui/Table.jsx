@@ -10,7 +10,7 @@ export const Table = ({ className, children, ...rest }) => (
 export const THead = ({ className, children, ...rest }) => (
   <thead
     className={cn(
-      'sticky top-0 z-10 bg-[color:var(--bg-surface-2)] text-[10px] uppercase tracking-wider',
+      'sticky top-0 z-10 bg-[color:var(--bg-surface-2)] text-[11px] font-semibold uppercase tracking-wider',
       'text-[color:var(--text-secondary)]',
       className
     )}

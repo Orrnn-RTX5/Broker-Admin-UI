@@ -68,9 +68,20 @@ test('dummy folders preserve full nested paths and canonicalize user-entered sep
 });
 
 test('invalid dummy locations do not enter navigator history', () => {
-  for (const path of ['', 'Outside\\demo', 'Admin\\..\\demo', 'Admin\\\\demo', 'Admin\\bad*name', null, {}]) {
+  for (const path of ['', 'Admin\\..\\demo', 'Admin\\\\demo', 'Admin\\bad*name', null, {}]) {
     assert.equal(resolveGroupExplorerNode({ type: 'dummy-folder', path }), null);
   }
+  assert.equal(resolveGroupExplorerNode({ type: 'dummy-folder', path: 'Outside\\demo' }).path, 'Outside\\demo', 'folders beside Admin are valid');
+});
+
+test('server folders resolve from their group-name prefix and keep identity by path', () => {
+  const folder = resolveGroupExplorerNode({ type: 'server-folder', path: 'real\\pro', label: 'wrong', id: 'wrong' });
+  assert.deepEqual(folder, { type: 'server-folder', id: 'server-folder:real\\pro', label: 'pro', path: 'real\\pro' });
+  assert.deepEqual(resolveGroupExplorerNode(folder), folder);
+  assert.equal(resolveGroupExplorerNode({ type: 'server-folder', path: '  ' }), null);
+  assert.equal(sameGroupExplorerLocation(folder, { ...folder, count: 3 }), true);
+  assert.equal(sameGroupExplorerLocation(folder, { type: 'server-folder', path: 'real' }), false);
+  assert.equal(sameGroupExplorerLocation(folder, { type: 'group', groupName: 'real\\pro' }), false);
 });
 
 test('dummy folder identity distinguishes parents, siblings and server-data locations', () => {

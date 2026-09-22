@@ -111,7 +111,7 @@ const buildInitialGroupForm = (group) => {
 };
 
 const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
-  const [activeTab, setActiveTab] = useState('Common');
+  const [activeTab, setActiveTab] = useState('Margin');
   const [formData, setFormData] = useState(() => buildInitialGroupForm(group));
   const [isSavingGroup, setIsSavingGroup] = useState(false);
   const [saveError, setSaveError] = useState(null);
@@ -210,9 +210,7 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
     }
   }, [activeTab, currentGroupName, hasFetchedSymbols]);
 
-  const tabs = [
-    'Common', 'Statistics', 'Company', 'News & Mail', 'Permissions', 'Margin', 'Symbols', 'Commissions', 'Reports'
-  ];
+  const tabs = ['Margin', 'Symbols', 'Commissions'];
 
   const fetchCommissions = useCallback(async () => {
     try {

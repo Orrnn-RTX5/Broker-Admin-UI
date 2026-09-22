@@ -56,11 +56,14 @@ test('rehydration restores persisted edits, rejects corrupted shapes, and migrat
   browserStorage.set(DUMMY_GROUPS_STORAGE_KEY, snapshot);
   await store.persist.rehydrate();
   assert.equal(store.getState().groups[0].currency, 'EUR');
-  browserStorage.set(DUMMY_GROUPS_STORAGE_KEY, JSON.stringify({ state: { groups: [{ path: 'invalid' }] }, version: DUMMY_GROUPS_VERSION }));
+  browserStorage.set(DUMMY_GROUPS_STORAGE_KEY, JSON.stringify({ state: { groups: [{ path: 'bad*name' }] }, version: DUMMY_GROUPS_VERSION }));
   await store.persist.rehydrate();
   assert.equal(store.getState().groups.length, 9);
-  browserStorage.set(DUMMY_GROUPS_STORAGE_KEY, JSON.stringify({ state: { groups: [] }, version: 0 }));
+  browserStorage.set(DUMMY_GROUPS_STORAGE_KEY, JSON.stringify({ state: { groups: [], mode: 'dummy' }, version: 0 }));
   await store.persist.rehydrate();
   assert.equal(store.getState().groups.length, 9);
-  assert.equal(store.getState().mode, 'dummy');
+  assert.equal(store.getState().mode, 'server', 'older versions open on server data');
+  browserStorage.set(DUMMY_GROUPS_STORAGE_KEY, JSON.stringify({ state: { groups: [], mode: 'dummy' }, version: DUMMY_GROUPS_VERSION }));
+  await store.persist.rehydrate();
+  assert.equal(store.getState().mode, 'dummy', 'an explicit Dummy choice is remembered');
 });

@@ -1,14 +1,13 @@
 import { useCallback, useState } from 'react';
-import { Folder, FileText } from 'lucide-react';
+import { Folder, User } from 'lucide-react';
 import TreeItem from '../molecules/TreeItem';
-import DummyGroupsNavigation from './DummyGroupsNavigation';
-import { useDummyGroupsStore } from '../../store/useDummyGroupsStore';
 import { useDataFetch } from '../../hooks/useCore';
 import { useAuthStore } from '../../store/authStore';
 import { ManagerService } from '../../services/manager.service';
 import { AccountsService } from '../../services/accounts.service';
 import { canAccessView } from '../../utils/permissions';
 import { loadGroupTreePages, normalizeNavigationGroups, normalizeNavigationAccounts } from '../../utils/groupTreeData';
+import { getServerGroupFolderNodes } from '../../utils/groupsExplorerData';
 
 const loadGroups = async () => normalizeNavigationGroups(await loadGroupTreePages(
   ManagerService.getGroupList,
@@ -75,7 +74,7 @@ const GroupFolder = ({ group, level, canLoadAccounts, refreshTrigger, ...treePro
                 {...treeProps}
                 key={account.id}
                 level={childLevel}
-                item={{ ...account, type: 'group-account', icon: FileText }}
+                item={{ ...account, type: 'group-account', icon: User }}
               />
             ))}
           </>
@@ -88,6 +87,43 @@ const GroupFolder = ({ group, level, canLoadAccounts, refreshTrigger, ...treePro
     />
   );
 };
+
+const groupLeafLabel = (groupName) => groupName.split('\\').at(-1);
+
+// A group that owns subgroups is shown as the folder of its own name.
+const asFolder = (node) => (node.type === 'server-folder'
+  ? node
+  : { ...node, id: `server-folder:${node.groupName}`, type: 'server-folder', path: node.groupName, label: groupLeafLabel(node.groupName) });
+
+const ServerFolderChildren = ({ groups, path, level, ...folderProps }) => (
+  getServerGroupFolderNodes(groups, path).map(node => (node.type === 'server-folder' || node.count > 0
+    ? <ServerFolder key={node.id} node={asFolder(node)} groups={groups} level={level} {...folderProps} />
+    : <GroupFolder key={node.id} group={{ ...node, label: groupLeafLabel(node.groupName) }} level={level} {...folderProps} />
+  ))
+);
+
+const ServerFolder = ({ node, groups, level, canLoadAccounts, refreshTrigger, ...treeProps }) => (
+  <TreeItem
+    {...treeProps}
+    level={level}
+    item={{
+      ...node,
+      icon: Folder,
+      countInParentheses: true,
+      initiallyExpanded: false,
+      renderChildren: ({ level: childLevel }) => (
+        <ServerFolderChildren
+          {...treeProps}
+          groups={groups}
+          path={node.path}
+          level={childLevel}
+          canLoadAccounts={canLoadAccounts}
+          refreshTrigger={refreshTrigger}
+        />
+      ),
+    }}
+  />
+);
 
 const ServerGroupsNavigation = ({ item, level = 0, refreshTrigger, ...treeProps }) => {
   const [expanded, setExpanded] = useGroupExpansion(treeProps.groupExplorerReveal?.revision ?? null);
@@ -113,50 +149,31 @@ const ServerGroupsNavigation = ({ item, level = 0, refreshTrigger, ...treeProps 
         countInParentheses: true,
         children: undefined,
         initiallyExpanded: false,
-        renderChildren: ({ level: adminLevel }) => (
-          <TreeItem
-            {...treeProps}
-            level={adminLevel}
-            item={{
-              id: 'groups:admin',
-              type: 'groups-admin',
-              label: 'Admin',
-              icon: Folder,
-              initiallyExpanded: false,
-              count: groupCount,
-              countInParentheses: true,
-              renderChildren: ({ level: groupLevel }) => canLoadGroups ? (
-                <>
-                  {(loading || error || !groups?.length) && (
-                    <BranchStatus level={groupLevel} loading={loading} error={error} empty={!groups?.length} noun="groups" onRetry={mutate} />
-                  )}
-                  {!error && groups?.map(group => (
-                    <GroupFolder
-                      {...treeProps}
-                      key={group.id}
-                      group={group}
-                      level={groupLevel}
-                      canLoadAccounts={canLoadAccounts}
-                      refreshTrigger={refreshTrigger}
-                    />
-                  ))}
-                </>
-              ) : (
-                <div style={{ paddingLeft: `${groupLevel * 14 + 26}px` }} className="py-1 text-[11px] text-[color:var(--text-muted)]">
-                  Group access required
-                </div>
-              ),
-            }}
-          />
+        // Main groups hang directly off Groups; there is no intermediate Admin folder.
+        renderChildren: ({ level: groupLevel }) => canLoadGroups ? (
+          <>
+            {(loading || error || !groups?.length) && (
+              <BranchStatus level={groupLevel} loading={loading} error={error} empty={!groups?.length} noun="groups" onRetry={mutate} />
+            )}
+            {!error && groups?.length > 0 && (
+              <ServerFolderChildren
+                {...treeProps}
+                groups={groups}
+                path=""
+                level={groupLevel}
+                canLoadAccounts={canLoadAccounts}
+                refreshTrigger={refreshTrigger}
+              />
+            )}
+          </>
+        ) : (
+          <div style={{ paddingLeft: `${groupLevel * 14 + 26}px` }} className="py-1 text-[11px] text-[color:var(--text-muted)]">
+            Group access required
+          </div>
         ),
       }}
     />
   );
 };
 
-const GroupsNavigation = (props) => {
-  const mode = useDummyGroupsStore(state => state.mode);
-  return mode === 'dummy' ? <DummyGroupsNavigation {...props} /> : <ServerGroupsNavigation {...props} />;
-};
-
-export default GroupsNavigation;
+export default ServerGroupsNavigation;

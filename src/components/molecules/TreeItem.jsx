@@ -10,13 +10,19 @@ const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, selectedLabel, sel
   const isBlockedNavigation = Boolean(item.blockedNavigation || item.lockedDropdown || item.disabled);
   const isActive = !isBlockedNavigation && (selectedId ? selectedId === item.id : selectedLabel === item.label);
   const Icon = item.icon || (hasChildren ? Folder : File);
-  const isGroupFolder = ['groups-root', 'groups-admin', 'group', 'dummy-folder'].includes(item.type);
+  const isGroupFolder = ['groups-root', 'groups-admin', 'group', 'dummy-folder', 'server-folder'].includes(item.type);
   const revealRevision = groupExplorerReveal && (
     item.containsGroups
     || item.type === 'groups-root'
     || (item.type === 'groups-admin' && groupExplorerReveal.type !== 'root')
     || (item.type === 'dummy-folder' && groupExplorerReveal.type === 'dummy-folder' && (
       groupExplorerReveal.path === item.path || groupExplorerReveal.path?.startsWith(`${item.path}\\`)
+    ))
+    || (item.type === 'server-folder' && (
+      (groupExplorerReveal.type === 'server-folder' && (
+        groupExplorerReveal.path === item.path || groupExplorerReveal.path?.startsWith(`${item.path}\\`)
+      ))
+      || (groupExplorerReveal.type === 'group' && groupExplorerReveal.groupName?.startsWith(`${item.path}\\`))
     ))
     || (item.type === 'group' && groupExplorerReveal.type === 'group' && (
       groupExplorerReveal.id === item.id || groupExplorerReveal.groupName === item.groupName
@@ -86,15 +92,15 @@ const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, selectedLabel, sel
         aria-expanded={hasChildren ? Boolean(isOpen) : undefined}
         title={isBlockedNavigation ? `${item.label} — unavailable` : undefined}
         className={cn(
-          'mx-1 flex items-center min-h-[23px] pr-2 select-none text-[12px] rounded-[var(--radius-sm)]',
+          'mx-1 flex items-center min-h-[24px] h-[24px] pr-2 select-none text-[12px] rounded-[var(--radius-sm)]',
           showArrow && 'admin-tree-branch',
           isBlockedNavigation ? 'cursor-not-allowed opacity-50' : 'cursor-default',
           'transition-colors duration-100',
           isActive
-            ? 'bg-[color:var(--accent-soft)] text-[color:var(--text-primary)] font-semibold shadow-[inset_2px_0_0_var(--accent-500)]'
+            ? 'bg-[#04395e] text-white font-medium shadow-[inset_2px_0_0_var(--accent-500)]'
             : isBlockedNavigation
               ? 'text-[color:var(--text-muted)]'
-              : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-surface-3)] hover:text-[color:var(--text-primary)]'
+              : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-surface-3)] hover:text-white'
         )}
         style={{ paddingLeft: `${level * 14 + 6}px` }}
       >
@@ -114,26 +120,26 @@ const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, selectedLabel, sel
             <ChevronRight
               size={11}
               className={cn(
-                'text-[color:var(--text-secondary)] transition-transform duration-150',
+                'text-[color:var(--text-muted)] transition-transform duration-150',
                 !item.lockedDropdown && isOpen && 'rotate-90'
               )}
             />
           )}
         </button>
 
-        <div className={cn('w-4 h-4 flex items-center justify-center shrink-0', isActive ? 'text-[color:var(--accent-600)]' : 'text-[color:var(--text-muted)]')}>
-          <Icon size={12} />
+        <div className={cn('w-4 h-4 flex items-center justify-center shrink-0', isActive ? 'text-white' : 'text-[color:var(--text-muted)]')}>
+          <Icon size={13} />
         </div>
 
         <span className="admin-tree-label ml-1.5 whitespace-nowrap overflow-hidden text-ellipsis leading-tight flex-1">
           {item.label}
           {item.count !== undefined && (
-            <span className="ml-1.5 text-[10px] font-mono text-[color:var(--text-muted)]">
+            <span className="ml-1.5 text-[11px] font-mono text-[color:var(--text-muted)]">
               {item.countInParentheses ? `(${item.count})` : item.count}
             </span>
           )}
         </span>
-        {isBlockedNavigation && <LockKeyhole size={11} className="ml-2 shrink-0 text-[color:var(--text-muted)]" aria-hidden="true" />}
+        {isBlockedNavigation && <LockKeyhole size={11} className="ml-2 shrink-0 text-[color:var(--text-muted)] opacity-60" aria-hidden="true" />}
       </div>
 
       {hasChildren && !item.lockedDropdown && (isOpen || expansion.hasOpened) && (

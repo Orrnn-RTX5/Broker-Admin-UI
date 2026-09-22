@@ -11,7 +11,8 @@ test('sidebar delegates groups to the expandable dynamic hierarchy without a dis
   assert.doesNotMatch(src, /SIDEBAR_GROUP_LIMIT|\.slice\(0,/);
   assert.match(groupsTree, /loadGroupTreePages\(\s*ManagerService\.getGroupList/);
   assert.match(groupsTree, /loadGroups, null, \[refreshTrigger\], expanded && canLoadGroups/);
-  assert.match(groupsTree, /label: 'Admin'/);
+  assert.doesNotMatch(groupsTree, /label: 'Admin'/, 'main groups hang directly off Groups without an Admin folder');
+  assert.match(groupsTree, /<ServerFolderChildren[\s\S]*?path=""/);
   assert.match(terminalData, /label:\s*"Groups"[\s\S]*?children:\s*\[\]/);
 });
 

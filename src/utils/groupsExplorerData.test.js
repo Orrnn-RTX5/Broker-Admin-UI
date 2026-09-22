@@ -6,8 +6,33 @@ import {
   getGroupsExplorerColumns,
   getGroupsExplorerEditTarget,
   getGroupsExplorerRow,
+  getServerGroupCount,
+  getServerGroupFolderNodes,
+  getServerGroupParentPath,
+  listServerGroupContainerPaths,
   loadGroupsExplorerNodes,
 } from './groupsExplorerData.js';
+
+test('server container paths include folders implied by nested names, parents first', () => {
+  const groups = ['real\\pro\\vip', 'demo', 'Real'].map(groupName => ({ groupName }));
+  assert.deepEqual(listServerGroupContainerPaths(groups), ['demo', 'Real', 'real\\pro', 'real\\pro\\vip']);
+});
+
+test('server group names nest into folders on backslashes and a group owns the folder of its own name', () => {
+  const groups = ['demo', 'real\\pro', 'real\\std', 'real', 'test\\a\\b'].map(groupName => ({ id: `group:${groupName}`, groupName, label: groupName, group: {} }));
+  assert.deepEqual(getServerGroupFolderNodes(groups, '').map(node => [node.type, node.label, node.count]), [
+    ['server-folder', 'test', 1], ['group', 'demo', 0], ['group', 'real', 2],
+  ]);
+  const real = getServerGroupFolderNodes(groups, '').find(node => node.label === 'real');
+  assert.equal(real.id, 'group:real', 'the merged row keeps the group identity');
+  assert.deepEqual(real.group, {}, 'the merged row keeps the group record for Settings');
+  assert.deepEqual(getServerGroupFolderNodes(groups, 'real').map(node => [node.type, node.groupName]), [['group', 'real\\pro'], ['group', 'real\\std']]);
+  assert.deepEqual(getServerGroupFolderNodes(groups, 'test').map(node => [node.type, node.path, node.id]), [['server-folder', 'test\\a', 'server-folder:test\\a']]);
+  assert.equal(getServerGroupCount(groups, 'real'), 3);
+  assert.equal(getServerGroupCount(groups), 5);
+  assert.equal(getServerGroupParentPath('test\\a\\b'), 'test\\a');
+  assert.equal(getServerGroupParentPath('demo'), '');
+});
 
 test('Groups root displays the organizational Admin folder without fetching accounts', async () => {
   const nodes = await loadGroupsExplorerNodes({ type: 'root' }, {

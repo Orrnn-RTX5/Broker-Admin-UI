@@ -3,51 +3,54 @@
    Sell/Loss: #e53935 (red) | Profit: #2ebd59 (green) | Text: #e8e8e8 */
 
 :root,
-[data-theme="light"] {
-  /* Surfaces — terminal charcoal palette */
-  --bg-app: #141414;
+[data-theme="light"],
+[data-theme="dark"] {
+  /* Surfaces — VS Code Dark Modern palette */
+  --bg-app: #181818;
   --bg-surface-1: #1e1e1e;
   --bg-surface-2: #252526;
-  --bg-surface-3: #2d2d30;
-  --bg-chrome: #1b1b1b;
+  --bg-surface-3: #2a2d2e;
+  --bg-chrome: #181818;
   --bg-toolbar: #252526;
-  --bg-overlay: rgba(0, 0, 0, 0.65);
+  --bg-overlay: rgba(0, 0, 0, 0.72);
 
-  /* Borders — subtle grays for separation */
-  --border-subtle: #2a2a2a;
-  --border-default: #3c3c3c;
-  --border-strong: #4a4a4a;
+  /* Borders — VS Code clean subtle dividers */
+  --border-subtle: #2b2b2b;
+  --border-default: #333333;
+  --border-strong: #454545;
 
-  /* Text — light scale matching terminal */
-  --text-primary: #e8e8e8;
-  --text-secondary: #cccccc;
-  --text-muted: #999999;
-  --text-tertiary: #6f6f6f;
+  /* Text — VS Code exact foreground scale */
+  --text-primary: #cccccc;
+  --text-secondary: #9d9d9d;
+  --text-muted: #6e6e6e;
+  --text-tertiary: #555555;
+  --text-placeholder: #6e6e6e;
   --text-inverse: #1e1e1e;
 
-  /* Blue accent — buy / active / links (#2196f3) */
-  --accent-50:  rgba(33, 150, 243, 0.08);
-  --accent-100: rgba(33, 150, 243, 0.14);
-  --accent-500: #2196f3;
-  --accent-600: #42a5f5;
-  --accent-700: #1976d2;
+  /* Blue accent — VS Code signature blue (#0078d4 / #3794ff) */
+  --accent-50:  rgba(0, 120, 212, 0.10);
+  --accent-100: rgba(0, 120, 212, 0.18);
+  --accent-500: #0078d4;
+  --accent-600: #3794ff;
+  --accent-700: #0e639c;
   --accent-contrast: #ffffff;
+  --accent-soft: rgba(0, 120, 212, 0.22);
 
-  /* Semantic — green profit, red sell/loss, amber warning */
-  --success-500: #2ebd59;
-  --warning-500: #f59e0b;
-  --danger-500:  #e53935;
-  --info-500:    #2196f3;
+  /* Semantic — VS Code mint profit, red loss, amber warning */
+  --success-500: #4ec9b0;
+  --warning-500: #cca700;
+  --danger-500:  #f14c4c;
+  --info-500:    #3794ff;
 
-  /* Shadows — dark-mode friendly */
-  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.30);
-  --shadow-md: 0 10px 24px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.45);
+  /* Shadows — subtle dark elevation */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
 
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 10px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
 
   --space-1: 4px;
   --space-2: 8px;
@@ -56,15 +59,15 @@
   --space-6: 24px;
   --space-8: 32px;
 
-  --font-auth: 'Manrope', 'Roboto', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, Menlo, monospace;
-  --ui-font-small: 10px;
+  /* Consistent VS Code developer typography */
+  --font-auth: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+  --ui-font-small: 11px;
   --ui-font-base: 12px;
   --ui-weight-regular: 400;
   --ui-weight-medium: 500;
   --ui-weight-semibold: 600;
-  --text-placeholder: #64748b;
 
   color-scheme: dark;
 }
@@ -73,54 +76,13 @@
    Density — compact (default) vs cozy. Applied via data-density on <html>.
    ============================================================ */
 [data-density="cozy"] {
-  --row-py: 7px;
-  --row-h:  34px;
+  --row-py: 6px;
+  --row-h:  30px;
 }
 [data-density="compact"],
 :root {
   --row-py: 4px;
-  --row-h:  28px;
+  --row-h:  26px;
 }
 [data-density="cozy"] table td,
-[data-density="cozy"] table th { padding-top: 6px !important; padding-bottom: 6px !important; }
-
-[data-theme="dark"] {
-  /* Terminal charcoal palette — unified with root. */
-  --bg-app: #141414;
-  --bg-surface-1: #1e1e1e;
-  --bg-surface-2: #252526;
-  --bg-surface-3: #2d2d30;
-  --bg-chrome: #1b1b1b;
-  --bg-toolbar: #252526;
-  --bg-overlay: rgba(0, 0, 0, 0.72);
-
-  --border-subtle: #2a2a2a;
-  --border-default: #3c3c3c;
-  --border-strong: #4a4a4a;
-
-  --text-primary: #e8e8e8;
-  --text-secondary: #cccccc;
-  --text-muted: #999999;
-  --text-tertiary: #6f6f6f;
-  --text-placeholder: #6f6f6f;
-  --text-inverse: #1e1e1e;
-
-  /* Blue accent — buy / active / links (#2196f3) */
-  --accent-50:  rgba(33, 150, 243, 0.08);
-  --accent-100: rgba(33, 150, 243, 0.14);
-  --accent-500: #2196f3;
-  --accent-600: #42a5f5;
-  --accent-700: #1976d2;
-  --accent-contrast: #ffffff;
-
-  --success-500: #2ebd59;
-  --warning-500: #f59e0b;
-  --danger-500:  #e53935;
-  --info-500:    #2196f3;
-
-  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.30);
-  --shadow-md: 0 10px 24px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 12px 30px rgba(0, 0, 0, 0.45);
-
-  color-scheme: dark;
-}
+[data-density="cozy"] table th { padding-top: 5px !important; padding-bottom: 5px !important; }

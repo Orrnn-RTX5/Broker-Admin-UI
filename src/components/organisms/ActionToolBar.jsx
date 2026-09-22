@@ -2,8 +2,8 @@ import React from 'react';
 import {
   RefreshCcw, ExternalLink, Plus, Pencil, X,
   Settings, ZoomIn, ZoomOut, Users, UserCheck, BookOpen, Mail,
-  Bell, Building2, SlidersHorizontal, Power,
-  Maximize2, Printer, Sparkles, Rows3, Search, Filter,
+  Bell, Building2, SlidersHorizontal, Power, ChevronDown,
+  Maximize2, Printer, Sparkles, Rows3, Search, Filter, Plug,
   Folder, ArrowUpDown, BarChart3, Server, Copy, LayoutGrid,
   Newspaper, ClipboardCopy, HelpCircle,
 } from 'lucide-react';
@@ -13,8 +13,11 @@ import {
 } from '../ui/Menu';
 import './ActionToolBar.css';
 
+const ICON = { size: 16, strokeWidth: 1.75 };
+const CHIP_ICON = { size: 14, strokeWidth: 1.75 };
+
 const Tool = ({
-  icon: Icon,
+  icon,
   label,
   onClick,
   disabled = false,
@@ -22,28 +25,31 @@ const Tool = ({
   active = false,
   variant = 'default',
   badge = null,
-}) => (
-  <Tooltip content={disabled ? reason || label : label}>
-    <span className="mt5-tool-wrap">
-      <button
-        type="button"
-        className={`mt5-tool mt5-tool--${variant} ${active ? 'is-active' : ''}`}
-        aria-label={label}
-        title={disabled ? reason || label : label}
-        onClick={onClick}
-        disabled={disabled}
-      >
-        <Icon size={14} strokeWidth={1.8} aria-hidden="true" />
-        {badge && <span className="mt5-tool-badge">{badge}</span>}
-      </button>
-    </span>
-  </Tooltip>
-);
+}) => {
+  const Icon = icon;
+  return (
+    <Tooltip content={disabled ? reason || label : label}>
+      <span className="mt5-tool-wrap">
+        <button
+          type="button"
+          className={`mt5-tool mt5-tool--${variant}${active ? ' is-active' : ''}`}
+          aria-label={label}
+          aria-pressed={active || undefined}
+          onClick={onClick}
+          disabled={disabled}
+        >
+          <Icon {...ICON} aria-hidden="true" />
+          {badge && <span className="mt5-tool-badge">{badge}</span>}
+        </button>
+      </span>
+    </Tooltip>
+  );
+};
 
 const Divider = () => <span className="mt5-toolbar-divider" aria-hidden="true" />;
 
 const ActionToolBar = ({
-  onDisconnect, onAddClick, canAdd = false, onUndo, onRedo, canUndo, canRedo,
+  onDisconnect, onAddClick, canAdd = false,
   onRefresh, onSync, onExport, onExportCsv, onImport, canImport = false,
   onEditClick, canEdit = false, onDeleteClick, canDelete = false, deleting = false,
   onSort, canSort = false, sortDirection = '', autoRefresh = false, onStart, onPause,
@@ -55,9 +61,11 @@ const ActionToolBar = ({
     searchInputRef?.current?.focus();
   };
 
+  const connError = connStatus === 'error';
+
   return (
     <div className="admin-action-toolbar mt5-action-toolbar" role="region" aria-label="Workspace actions">
-      <div className="mt5-toolbar-scroll-container">
+      <div className="mt5-toolbar-main">
         {/* Section 1: Core Navigation & Workspace Modules */}
         <div className="mt5-tool-group" role="group" aria-label="Core Navigation">
           <Tool icon={Folder} label="Navigator / Groups (Ctrl+N)" active={activeNode === 'Groups'} onClick={() => onNodeSelect?.('Groups')} />
@@ -89,8 +97,8 @@ const ActionToolBar = ({
           <DropdownMenu>
             <Tooltip content="Export displayed rows">
               <DropdownMenuTrigger asChild>
-                <button type="button" className="mt5-tool" aria-label="Export visible rows">
-                  <ExternalLink size={14} strokeWidth={1.8} />
+                <button type="button" className="mt5-tool mt5-tool--default" aria-label="Export visible rows">
+                  <ExternalLink {...ICON} aria-hidden="true" />
                 </button>
               </DropdownMenuTrigger>
             </Tooltip>
@@ -146,8 +154,20 @@ const ActionToolBar = ({
 
         {/* Section 5: Zoom & Integrations */}
         <div className="mt5-tool-group" role="group" aria-label="Zoom and Integrations">
-          <Tool icon={ZoomIn} label="Zoom In / Cozy Spacing" onClick={() => onDensityToggle?.()} />
-          <Tool icon={ZoomOut} label="Zoom Out / Compact Spacing" onClick={() => onDensityToggle?.()} />
+          <Tool
+            icon={ZoomIn}
+            label="Zoom In — Cozy Row Spacing"
+            reason="Already at cozy spacing"
+            disabled={density === 'cozy'}
+            onClick={onDensityToggle}
+          />
+          <Tool
+            icon={ZoomOut}
+            label="Zoom Out — Compact Row Spacing"
+            reason="Already at compact spacing"
+            disabled={density === 'compact'}
+            onClick={onDensityToggle}
+          />
           <Tool
             icon={RefreshCcw}
             label="Integrations"
@@ -180,23 +200,24 @@ const ActionToolBar = ({
         {/* Section 8: Window Tile & Grid Layout */}
         <div className="mt5-tool-group" role="group" aria-label="Window Layout">
           <Tool icon={LayoutGrid} label="Tile Windows" onClick={() => onNodeSelect?.('Groups')} />
-          <Tool icon={Rows3} label="Toggle Table Grid Lines" onClick={onDensityToggle} />
+          <Tool icon={Rows3} label="Toggle Row Density" onClick={onDensityToggle} />
         </div>
 
         <Divider />
 
-        {/* Section 9: MT5 Connect & Automation Buttons */}
+        {/* Section 9: Connection & Automation */}
         <div className="mt5-tool-group" role="group" aria-label="Connection and Automation">
           <DropdownMenu>
-            <Tooltip content={connStatus === 'error' ? 'Connection Issue - Click for options' : 'Connected to RTX5 Trade Server (Click to Manage)'}>
+            <Tooltip content={connError ? 'Connection issue — click for options' : 'Connected to RTX5 Trade Server — click to manage'}>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className={`mt5-btn-connect ${connStatus === 'error' ? 'is-error' : 'is-connected'}`}
-                  aria-label="Server Connection Status"
+                  className={`mt5-chip${connError ? ' is-error' : ' is-connected'}`}
+                  aria-label="Server connection status"
                 >
-                  <span className="mt5-connect-arrow">→</span>
-                  <span className="mt5-connect-text">Connect</span>
+                  <Plug {...CHIP_ICON} className="mt5-chip-icon" aria-hidden="true" />
+                  <span className="mt5-chip-text">Connect</span>
+                  <ChevronDown size={12} strokeWidth={2} className="mt5-chip-caret" aria-hidden="true" />
                 </button>
               </DropdownMenuTrigger>
             </Tooltip>
@@ -214,84 +235,99 @@ const ActionToolBar = ({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Tooltip content={autoRefresh ? "Automation: Live 15s streaming active (Click to Pause)" : "Automation: Paused (Click to Start 15s Live Polling)"}>
+          <Tooltip content={autoRefresh ? 'Automation: live 15s polling — click to pause' : 'Automation: paused — click to start 15s live polling'}>
             <button
               type="button"
-              className={`mt5-btn-automation ${autoRefresh ? 'is-active' : ''}`}
+              className={`mt5-chip${autoRefresh ? ' is-active' : ''}`}
               onClick={autoRefresh ? onPause : onStart}
-              aria-label="Toggle Automation"
+              aria-pressed={autoRefresh}
+              aria-label="Toggle automation"
             >
-              <Settings size={13} className={`mt5-automation-gear ${autoRefresh ? 'is-spinning' : ''}`} />
-              <span className="mt5-automation-text">Automation</span>
-              {autoRefresh && <span className="mt5-live-pulse-dot" />}
+              <Settings {...CHIP_ICON} className={`mt5-chip-icon${autoRefresh ? ' mt5-chip-icon--spin' : ''}`} aria-hidden="true" />
+              <span className="mt5-chip-text">Automation</span>
+              {autoRefresh && <span className="mt5-live-dot" aria-hidden="true" />}
             </button>
           </Tooltip>
 
           <Tool icon={ClipboardCopy} label="Duplicate Selected Configuration" onClick={onExport} />
           <Tool icon={HelpCircle} label="Help Topics & User Guide (F1)" onClick={onHelp} />
-          <span className="mt5-more-handle" aria-hidden="true">⋮</span>
         </div>
+      </div>
 
-        {/* Section 10: Filter, Sort & Search Box (Right Side) */}
-        <div className="mt5-tool-group ml-auto" role="group" aria-label="Search and Filters">
-          <DropdownMenu>
-            <Tooltip content="Quick View Filters">
-              <DropdownMenuTrigger asChild>
-                <button type="button" className={`mt5-btn-filter ${searchQuery ? 'is-active' : ''}`} aria-label="Filter rows">
-                  <Filter size={11} />
-                  <span>Filter</span>
-                </button>
-              </DropdownMenuTrigger>
-            </Tooltip>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onSelect={() => onSearchChange?.('')}>Show All Records</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onSearchChange?.('Demo')}>Filter: Demo</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onSearchChange?.('Real')}>Filter: Real</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onSearchChange?.('USD')}>Filter: USD</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={onRefresh}>Re-apply Active Filter</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+      <Divider />
 
-          <Tooltip content={sortDirection ? `Sort: ${sortDirection.toUpperCase()} (Click to toggle)` : "Sort Table Columns (Ascending / Descending)"}>
-            <button
-              type="button"
-              className={`mt5-btn-sliders ${sortDirection ? 'is-active' : ''}`}
-              onClick={onSort}
-              aria-label="Sort Columns"
-            >
-              <SlidersHorizontal size={12} />
-              {sortDirection && <span className="mt5-sliders-badge">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
-            </button>
-          </Tooltip>
-
-          <div className="mt5-toolbar-search">
-            <input
-              ref={searchInputRef}
-              type="search"
-              aria-label="Search current view"
-              placeholder=""
-              value={searchQuery}
-              onChange={(e) => onSearchChange?.(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  e.stopPropagation();
-                  clearSearch();
-                }
-              }}
-            />
-            <Search size={12} className="mt5-search-icon" aria-hidden="true" />
-            {searchQuery && (
+      {/* Pinned right: Filter, Sort & Search */}
+      <div className="mt5-toolbar-side" role="group" aria-label="Search and Filters">
+        <DropdownMenu>
+          <Tooltip content="Quick view filters">
+            <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="mt5-search-clear"
-                aria-label="Clear search"
-                onClick={clearSearch}
+                className={`mt5-chip mt5-chip--filter${searchQuery ? ' is-active' : ''}`}
+                aria-label="Filter rows"
               >
-                <X size={11} />
+                <Filter {...CHIP_ICON} className="mt5-chip-icon" aria-hidden="true" />
+                <span className="mt5-chip-text">Filter</span>
+                {searchQuery && <span className="mt5-filter-indicator" aria-hidden="true" />}
+                <ChevronDown size={12} strokeWidth={2} className="mt5-chip-caret" aria-hidden="true" />
               </button>
-            )}
-          </div>
+            </DropdownMenuTrigger>
+          </Tooltip>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onSelect={() => onSearchChange?.('')}>Show All Records</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onSearchChange?.('Demo')}>Filter: Demo</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onSearchChange?.('Real')}>Filter: Real</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onSearchChange?.('USD')}>Filter: USD</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={onRefresh}>Re-apply Active Filter</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <Tooltip content={sortDirection ? `Sort: ${sortDirection.toUpperCase()} — click to toggle` : 'Sort table columns (ascending / descending)'}>
+          <span className="mt5-tool-wrap">
+            <button
+              type="button"
+              className={`mt5-tool mt5-tool--default${sortDirection ? ' is-active' : ''}`}
+              onClick={onSort}
+              disabled={!canSort && !sortDirection}
+              aria-label="Sort columns"
+            >
+              <SlidersHorizontal {...ICON} aria-hidden="true" />
+              {sortDirection && <span className="mt5-sort-badge" aria-hidden="true">{sortDirection === 'asc' ? '▲' : '▼'}</span>}
+            </button>
+          </span>
+        </Tooltip>
+
+        <div className="mt5-toolbar-search" role="search">
+          <Search size={14} strokeWidth={1.75} className="mt5-search-icon" aria-hidden="true" />
+          <input
+            ref={searchInputRef}
+            type="search"
+            aria-label="Search current view"
+            placeholder="Search…"
+            value={searchQuery}
+            onChange={(e) => onSearchChange?.(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.stopPropagation();
+                clearSearch();
+              }
+            }}
+            spellCheck={false}
+            autoComplete="off"
+          />
+          {searchQuery ? (
+            <button
+              type="button"
+              className="mt5-search-clear"
+              aria-label="Clear search"
+              onClick={clearSearch}
+            >
+              <X size={12} strokeWidth={2} aria-hidden="true" />
+            </button>
+          ) : (
+            <kbd className="mt5-search-kbd" aria-hidden="true">Ctrl+F</kbd>
+          )}
         </div>
       </div>
     </div>

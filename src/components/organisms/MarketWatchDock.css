@@ -1,25 +1,25 @@
 /* ============================================================
-   Market Watch Dock — Scoped Color Palette (terminal-matched)
-   Primary BG: #1e1e1e | Alternate BG: #252526
-   Text: #e8e8e8 | Up/Profit: green | Down/Loss: red | Accent: #2196f3
+   Market Watch Dock — Scoped Color Palette (VS Code Dark Modern)
+   Primary BG: #181818 | Alternate BG: #252526
+   Text: #cccccc | Up/Profit: #4ec9b0 | Down/Loss: #f14c4c | Accent: #0078d4
    ============================================================ */
 .admin-market-dock {
-  /* --- Scoped color tokens (override theme vars inside this dock) --- */
-  --mw-bg-1: #1e1e1e;
+  /* --- Scoped color tokens (matching VS Code dark theme) --- */
+  --mw-bg-1: #181818;
   --mw-bg-2: #252526;
-  --mw-bg-3: #2d2d30;
-  --mw-border: #3c3c3c;
-  --mw-border-subtle: #2a2a2a;
-  --mw-text: #e8e8e8;
-  --mw-text-secondary: #cccccc;
-  --mw-text-muted: #999999;
-  --mw-accent: #2196f3;
-  --mw-accent-hover: #42a5f5;
-  --mw-accent-soft: rgba(33, 150, 243, 0.15);
-  --mw-accent-soft-border: rgba(33, 150, 243, 0.35);
+  --mw-bg-3: #2a2d2e;
+  --mw-border: #333333;
+  --mw-border-subtle: #2b2b2b;
+  --mw-text: #cccccc;
+  --mw-text-secondary: #9d9d9d;
+  --mw-text-muted: #6e6e6e;
+  --mw-accent: #0078d4;
+  --mw-accent-hover: #3794ff;
+  --mw-accent-soft: rgba(0, 120, 212, 0.22);
+  --mw-accent-soft-border: rgba(0, 120, 212, 0.4);
   --mw-success: var(--success-500);
   --mw-danger: var(--danger-500);
-  --mw-warning: #f59e0b;
+  --mw-warning: var(--warning-500);
 
   display: flex;
   flex-direction: column;
@@ -31,6 +31,7 @@
   background: var(--mw-bg-1);
   color: var(--mw-text);
   position: relative;
+  font-family: var(--font-sans);
 }
 
 .admin-market-watch {
@@ -45,7 +46,7 @@
 /* Horizontal Resizer / Dragger Bar between Market Watch and Navigator */
 .admin-dock-resizer {
   position: relative;
-  height: 8px;
+  height: 6px;
   width: 100%;
   flex-shrink: 0;
   display: flex;
@@ -79,7 +80,7 @@
 .admin-dock-resizer:hover .admin-dock-resizer-line,
 .admin-dock-resizer.is-dragging .admin-dock-resizer-line {
   background: var(--mw-accent);
-  box-shadow: 0 0 6px rgba(85, 74, 232, 0.6);
+  box-shadow: 0 0 6px rgba(0, 120, 212, 0.6);
 }
 
 .admin-dock-resizer-handle {
@@ -88,8 +89,8 @@
   display: flex;
   align-items: center;
   gap: 3px;
-  padding: 1px 8px;
-  border-radius: 4px;
+  padding: 1px 6px;
+  border-radius: 3px;
   background: var(--mw-bg-1);
   border: 1px solid var(--mw-border);
   transition: border-color 0.15s ease, background 0.15s ease;
@@ -143,7 +144,7 @@
 
 .admin-navigator-content > div::-webkit-scrollbar-thumb {
   background: var(--mw-border);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .admin-dock-heading {
@@ -151,20 +152,23 @@
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  height: 34px;
+  height: 30px;
   padding: 0 10px;
   background: var(--mw-bg-2);
   border-bottom: 1px solid var(--mw-border);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--mw-text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--mw-text-secondary);
+  user-select: none;
 }
 
 .admin-dock-heading span,
 .admin-dock-heading > div {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .admin-dock-heading span svg {
@@ -184,8 +188,9 @@
   background: transparent;
   color: var(--mw-text-muted);
   cursor: pointer;
-  padding: 4px;
+  padding: 3px;
   border-radius: 3px;
+  transition: all 0.12s ease;
 }
 
 .admin-dock-heading button:hover {
@@ -197,13 +202,15 @@
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   margin: 6px 8px;
   border: 1px solid var(--mw-border);
-  border-radius: 4px;
-  padding: 5px 8px;
+  border-radius: var(--radius-sm, 3px);
+  padding: 4px 8px;
   color: var(--mw-text-muted);
-  background: var(--mw-bg-1);
+  background: var(--bg-surface-1, #1e1e1e);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.15s ease;
 }
 
 .admin-market-search input {
@@ -212,20 +219,26 @@
   background: transparent;
   border: 0;
   color: var(--mw-text);
-  font-size: 11px;
+  font-size: 12px;
+  font-family: inherit;
   outline: none;
+}
+
+.admin-market-search input::placeholder {
+  color: var(--mw-text-muted);
+  font-size: 11.5px;
 }
 
 .admin-market-search:focus-within {
   border-color: var(--mw-accent);
-  box-shadow: 0 0 0 1px var(--mw-accent);
+  box-shadow: 0 0 0 1px var(--mw-accent), inset 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .admin-market-status {
   flex-shrink: 0;
-  padding: 4px 10px;
+  padding: 3px 10px;
   overflow-wrap: anywhere;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--mw-warning);
   border-bottom: 1px solid var(--mw-border);
   background: var(--mw-bg-1);
@@ -256,7 +269,7 @@
 
 .admin-market-content::-webkit-scrollbar-thumb {
   background: var(--mw-border);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 /* ---- Table ---- */
@@ -265,7 +278,7 @@
   table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 10px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -287,14 +300,17 @@
   top: 0;
   z-index: 1;
   background: var(--mw-bg-2);
-  color: var(--mw-text-muted);
-  font-size: 10px;
-  font-weight: 500;
+  color: var(--mw-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  user-select: none;
 }
 
 .admin-market-table th,
 .admin-market-table td {
-  height: 27px;
+  height: 24px;
   padding: 0 6px;
   border-right: 1px solid var(--mw-border-subtle);
   border-bottom: 1px solid var(--mw-border-subtle);
@@ -304,17 +320,20 @@
   text-align: right;
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 400;
 }
 
 .admin-market-table td:not(:first-child) {
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 400;
 }
 
 .admin-market-table td:first-child {
   text-align: left;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
 }
 
 /* ---- Row States ---- */
@@ -328,7 +347,8 @@
 }
 
 .market-table-row.is-selected {
-  background: color-mix(in srgb, var(--mw-accent) 18%, var(--mw-bg-2)) !important;
+  background: #04395e !important;
+  color: #ffffff;
 }
 
 .market-symbol-btn {
@@ -336,13 +356,14 @@
   align-items: center;
   gap: 4px;
   width: 100%;
-  height: 26px;
+  height: 24px;
   background: transparent;
   border: 0;
   padding: 0;
   color: var(--mw-text);
   cursor: pointer;
-  font-size: 10px;
+  font-size: 12px;
+  font-weight: 500;
   text-align: left;
 }
 
@@ -376,7 +397,7 @@
   margin: 0;
   white-space: normal;
   overflow-wrap: anywhere;
-  font: 11px/1.6 var(--font-sans);
+  font: 12px/1.6 var(--font-sans);
   color: var(--mw-text-muted);
   text-align: center;
   padding: 20px 14px;
@@ -390,36 +411,43 @@
   flex-wrap: wrap;
   gap: 4px 8px;
   justify-content: space-between;
-  padding: 4px 8px;
+  padding: 3px 8px;
   color: var(--mw-text-muted);
   border-top: 1px solid var(--mw-border-subtle);
-  font-size: 10px;
+  font-size: 11px;
   background: var(--mw-bg-1);
 }
 
 .admin-market-tabs {
   display: flex;
-  flex-shrink: 0;
-  height: 30px;
-  border-top: 1px solid var(--mw-border);
-  background: var(--mw-bg-2);
-  padding-left: 6px;
-  gap: 3px;
+  align-items: center;
+  gap: 2px;
 }
 
 .admin-market-tabs button {
-  background: transparent;
-  color: var(--mw-text-muted);
-  border: 0;
-  border-bottom: 2px solid transparent;
-  padding: 0 10px;
+  height: 22px;
+  padding: 0 8px;
   font-size: 11px;
+  font-weight: 500;
+  color: var(--mw-text-muted);
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
   cursor: pointer;
-  transition: color 0.12s ease, border-color 0.12s ease;
+  transition: all 0.12s ease;
 }
 
 .admin-market-tabs button:hover {
+  background: var(--mw-bg-3);
   color: var(--mw-text);
+}
+
+.admin-market-tabs button.is-active {
+  background: var(--mw-bg-2);
+  color: var(--accent-600);
+  font-weight: 600;
+  border-color: var(--mw-border);
+  box-shadow: inset 0 -2px 0 0 var(--accent-500);
 }
 
 .admin-market-tabs button[aria-pressed="true"] {

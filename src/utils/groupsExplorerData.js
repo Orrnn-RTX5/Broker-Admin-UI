@@ -99,3 +99,49 @@ export const getGroupsExplorerEditTarget = (node) => {
   }
   return null;
 };
+
+const GROUP_PATH_SEPARATOR = '\\';
+const equalPath = (left, right) => left.toLowerCase() === right.toLowerCase();
+const belowPath = (candidate, parent) => candidate.toLowerCase().startsWith(`${parent.toLowerCase()}${GROUP_PATH_SEPARATOR}`);
+
+export const getServerGroupCount = (groups, path = '') => groups.filter(group => !path || equalPath(group.groupName, path) || belowPath(group.groupName, path)).length;
+
+export const getServerGroupParentPath = (path = '') => {
+  const position = String(path).lastIndexOf(GROUP_PATH_SEPARATOR);
+  return position < 0 ? '' : String(path).slice(0, position);
+};
+
+// Server names nest on backslashes. A group whose name also prefixes other
+// names owns that folder: one row, with the nested groups as its subgroups.
+export const getServerGroupFolderNodes = (groups, path = '') => {
+  const depth = path ? path.split(GROUP_PATH_SEPARATOR).length : 0;
+  const nodes = new Map();
+  for (const group of groups) {
+    const name = group.groupName;
+    if (path && !belowPath(name, path)) continue;
+    const parts = name.split(GROUP_PATH_SEPARATOR);
+    if (parts.length <= depth) continue;
+    const childPath = parts.slice(0, depth + 1).join(GROUP_PATH_SEPARATOR);
+    const key = childPath.toLowerCase();
+    const node = nodes.get(key) || { id: `server-folder:${childPath}`, type: 'server-folder', label: parts[depth], path: childPath, count: 0 };
+    if (parts.length === depth + 1) Object.assign(node, group, { type: 'group', label: group.label, count: node.count });
+    else node.count += 1;
+    nodes.set(key, node);
+  }
+  return [...nodes.values()].sort((left, right) => (left.type === right.type ? 0 : left.type === 'server-folder' ? -1 : 1)
+    || left.label.localeCompare(right.label, undefined, { numeric: true, sensitivity: 'base' }));
+};
+
+/** Every server group and folder path that can hold a subgroup, parents before children. */
+export const listServerGroupContainerPaths = (groups) => {
+  const paths = new Map();
+  for (const group of groups) {
+    const parts = group.groupName.split(GROUP_PATH_SEPARATOR);
+    for (let depth = 1; depth <= parts.length; depth += 1) {
+      const candidate = parts.slice(0, depth).join(GROUP_PATH_SEPARATOR);
+      // A real group's spelling wins over a folder merely implied by a nested name.
+      if (depth === parts.length || !paths.has(candidate.toLowerCase())) paths.set(candidate.toLowerCase(), candidate);
+    }
+  }
+  return [...paths.values()].sort((left, right) => left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' }));
+};
