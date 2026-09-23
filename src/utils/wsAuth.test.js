@@ -13,13 +13,18 @@ const installStorage = (name, values = {}) => {
   };
 };
 
-test('appendWsAuthParams includes feed token and broker id without disturbing existing query', () => {
+test('appendWsAuthParams adds broker id only for the feed, without disturbing existing query', () => {
   const url = appendWsAuthParams('wss://broker.example/ws/feed?symbols=EURUSD', {
-    token: 'secret-token',
     brokerId: 'gta_broker',
   });
 
-  assert.equal(url, 'wss://broker.example/ws/feed?symbols=EURUSD&token=secret-token&broker_id=gta_broker');
+  assert.equal(url, 'wss://broker.example/ws/feed?symbols=EURUSD&broker_id=gta_broker');
+});
+
+test('appendWsAuthParams emits no token param when no token is supplied', () => {
+  const url = appendWsAuthParams('wss://broker.example/ws/feed', { brokerId: 'gta_broker' });
+
+  assert.ok(!url.includes('token='), `feed url must not carry a token: ${url}`);
 });
 
 test('appendWsAuthParams supports metrics id token and login query', () => {
@@ -33,7 +38,7 @@ test('appendWsAuthParams supports metrics id token and login query', () => {
   assert.equal(url, 'wss://broker.example/manager/OnAccountMetrics?id=session-token&login=1001');
 });
 
-test('readWsAuthContext prefers broker scoped token and broker id', () => {
+test('readWsAuthContext returns the session token and broker id, ignoring any feed token', () => {
   installStorage('sessionStorage', {
     broker_info: JSON.stringify({ broker_id: 'gta_broker', feed_token: 'feed-token' }),
     auth: JSON.stringify({ access_token: 'session-token' }),
@@ -41,7 +46,7 @@ test('readWsAuthContext prefers broker scoped token and broker id', () => {
   installStorage('localStorage', { authToken: 'local-token' });
 
   assert.deepEqual(readWsAuthContext(), {
-    token: 'feed-token',
+    token: 'session-token',
     brokerId: 'gta_broker',
   });
 });
@@ -56,8 +61,20 @@ test('readWsAuthContext recovers broker info from local storage', () => {
   });
 
   assert.deepEqual(readWsAuthContext(), {
-    token: 'feed-token',
+    token: 'session-token',
     brokerId: 'myprop',
+  });
+});
+
+test('readWsAuthContext yields no token when only a feed token is present', () => {
+  installStorage('sessionStorage', {
+    broker_info: JSON.stringify({ broker_id: 'nexa', feed_broker_token: 'deadbeef' }),
+  });
+  installStorage('localStorage', { feedBrokerToken: 'deadbeef' });
+
+  assert.deepEqual(readWsAuthContext(), {
+    token: null,
+    brokerId: 'nexa',
   });
 });
 

@@ -316,8 +316,11 @@ export const buildFeedWsUrl = () => {
     viteEnv.VITE_FEED_WS_URL;
   const base = explicitWsUrl || getBaseWsHost();
   const rawUrl = !base ? '/ws/feed' : (base.endsWith('/ws/feed') ? base : `${base}/ws/feed`);
-  const authenticatedUrl = appendWsAuthParams(rawUrl, readWsAuthContext());
-  const proxiedUrl = toLocalDevFeedProxyUrl(authenticatedUrl);
+  // /ws/feed is unauthenticated. broker_id is kept only as a plain log/ack label;
+  // no token is sent.
+  const { brokerId } = readWsAuthContext();
+  const feedUrlWithBrokerId = appendWsAuthParams(rawUrl, { brokerId });
+  const proxiedUrl = toLocalDevFeedProxyUrl(feedUrlWithBrokerId);
   try {
     const url = new URL(proxiedUrl, typeof window !== 'undefined' ? window.location.href : 'http://localhost');
     if (url.protocol === 'https:') url.protocol = 'wss:';
