@@ -13,7 +13,7 @@ const forbiddenDeploymentTerms = [
   'repository_dispatch',
 ];
 
-test('admin source image workflow is build and publish only', async () => {
+test('admin workflow publishes an immutable image before deploying it', async () => {
   const workflow = await readFile(workflowUrl, 'utf8');
 
   for (const term of forbiddenDeploymentTerms) {
@@ -25,4 +25,9 @@ test('admin source image workflow is build and publish only', async () => {
   assert.match(workflow, /steps\.build\.outputs\.digest/);
   assert.match(workflow, /source_sha/);
   assert.match(workflow, /image_ref/);
+  // The deploy runs after the release record and pins the image by commit SHA.
+  assert.match(workflow, /Record immutable image release[\s\S]*Deploy to server/);
+  assert.match(workflow, /NEW_IMAGE="\$\{\{ env\.IMAGE_NAME \}\}:\$\{\{ github\.sha \}\}"/);
+  // Runtime config must survive container replacement.
+  assert.match(workflow, /docker run[\s\S]*--env-file "\$ENV_FILE"[\s\S]*"\$NEW_IMAGE"/);
 });

@@ -36,6 +36,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Create .env
+        env:
+          ADMIN_UI_ENV: ${{ secrets.ADMIN_UI_ENV }}
+        run: printf '%s\n' "$ADMIN_UI_ENV" > .env
+
       - name: Run tests
         run: npm test
 
@@ -97,3 +102,97 @@ jobs:
             echo "$release_record"
             echo "\`\`\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+
+            CONTAINER_NAME="broker-admin-ui"
+            NEW_IMAGE="${{ env.IMAGE_NAME }}:${{ github.sha }}"
+            PREVIOUS_IMAGE=""
+            # Runtime config (API_HOST, WS_HOST, BROKER_ID, ...) carried across deploys.
+            ENV_FILE="$HOME/broker-admin-ui.env"
+            touch "$ENV_FILE"
+
+            rollback() {
+              echo "Deployment failed. Starting rollback..."
+
+              if [ -n "$PREVIOUS_IMAGE" ]; then
+                echo "Rolling back to: $PREVIOUS_IMAGE"
+
+                docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
+
+                docker run -d \
+                  --name "$CONTAINER_NAME" \
+                  --restart unless-stopped \
+                  --env-file "$ENV_FILE" \
+                  -p 8080:80 \
+                  "$PREVIOUS_IMAGE"
+
+                echo "Rollback completed successfully."
+              else
+                echo "No previous image found. Nothing to roll back to."
+              fi
+            }
+
+            # Capture the currently deployed image before changing anything.
+            if docker inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
+              PREVIOUS_IMAGE=$(docker inspect \
+                --format '{{.Config.Image}}' \
+                "$CONTAINER_NAME")
+
+              echo "Current image: $PREVIOUS_IMAGE"
+
+              # Keep the running container's runtime config, minus image-provided vars.
+              docker inspect \
+                --format '{{range .Config.Env}}{{println .}}{{end}}' \
+                "$CONTAINER_NAME" \
+                | grep -vE '^(PATH|NODE_VERSION|YARN_VERSION)=' \
+                | grep -v '^$' > "$ENV_FILE" || true
+            else
+              echo "No existing deployment found."
+            fi
+
+            # Roll back if anything after this point fails.
+            trap rollback ERR
+
+            echo "Logging in to GHCR..."
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io \
+              -u "${{ secrets.GHCR_USERNAME }}" \
+              --password-stdin
+
+            echo "Pulling new image: $NEW_IMAGE"
+            docker pull "$NEW_IMAGE"
+
+            echo "Stopping current container..."
+            docker stop "$CONTAINER_NAME" 2>/dev/null || true
+            docker rm "$CONTAINER_NAME" 2>/dev/null || true
+
+            echo "Starting new container..."
+            docker run -d \
+              --name "$CONTAINER_NAME" \
+              --restart unless-stopped \
+              --env-file "$ENV_FILE" \
+              -p 8080:80 \
+              "$NEW_IMAGE"
+
+            # Verify that the new container is actually running.
+            echo "Verifying deployment..."
+            sleep 5
+
+            if [ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER_NAME")" != "true" ]; then
+              echo "New container is not running."
+              exit 1
+            fi
+
+            # Deployment succeeded, so disable automatic rollback.
+            trap - ERR
+
+            echo "Deployment successful: $NEW_IMAGE"
+
+            docker image prune -af
