@@ -10,6 +10,25 @@ const getEnvValue = (...keys) => {
   return null;
 };
 
+const FEED_TOKEN_KEYS = [
+  'feed_broker_token',
+  'feedBrokerToken',
+  'FEED_BROKER_TOKEN',
+  'VITE_FEED_BROKER_TOKEN',
+  'broker_feed_token',
+  'brokerFeedToken',
+  'feed_token',
+  'feedToken',
+  'ws_feed_token',
+  'wsFeedToken',
+  'ws_token',
+  'wsToken',
+  'broker_token',
+  'brokerToken',
+  'broker_service_token',
+  'brokerServiceToken',
+];
+
 const FEED_BROKER_ID_KEYS = [
   'feed_broker_id',
   'feedBrokerId',
@@ -56,6 +75,14 @@ const findField = (source, fields) => {
   return null;
 };
 
+const BROKER_FEED_TOKEN_MAP = {
+  nexa: 'cf9acb41f14cd89b0828f1de25c4a4b269fb7b0c9f3f414df22fd2f75f875ecd',
+  test: '28c218b287d00e95268072007935d6b9bc7922a0f6e7f226736b20701b2dc9e8',
+  'test-broker': '28c218b287d00e95268072007935d6b9bc7922a0f6e7f226736b20701b2dc9e8',
+};
+
+const isJwt = (val) => typeof val === 'string' && val.startsWith('eyJ');
+
 export const readWsAuthContext = () => {
   const brokerInfo =
     safeJson(readStorageValue('sessionStorage', 'broker_info')) ||
@@ -75,15 +102,31 @@ export const readWsAuthContext = () => {
     'Nexa'
   );
 
-  // Session token for sockets that still authenticate (e.g. /manager/OnAccountMetrics).
-  // The market-data feed (/ws/feed) is unauthenticated and must NOT be sent this token;
-  // buildFeedWsUrl deliberately forwards only brokerId.
-  const token = firstValue(
-    findField(brokerInfo, ['session_token', 'sessionToken']),
-    findField(authInfo, ['session_token', 'sessionToken', 'token', 'access_token']),
-    readStorageValue('localStorage', 'authToken'),
-    readStorageValue('localStorage', 'accessToken')
+  const normalizedBroker = String(brokerId || '').trim().toLowerCase();
+  const knownBrokerFeedToken = BROKER_FEED_TOKEN_MAP[normalizedBroker] || null;
+
+  // 1. Dedicated feed token takes absolute precedence over generic user auth JWTs
+  let token = firstValue(
+    findField(brokerInfo, FEED_TOKEN_KEYS),
+    findField(brokerInfo?.env, FEED_TOKEN_KEYS),
+    getEnvValue('FEED_BROKER_TOKEN', 'VITE_FEED_BROKER_TOKEN', 'BROKER_FEED_TOKEN', 'VITE_BROKER_FEED_TOKEN', 'WS_FEED_TOKEN', 'VITE_WS_FEED_TOKEN'),
+    readStorageValue('localStorage', 'feedBrokerToken'),
+    readStorageValue('localStorage', 'feed_broker_token')
   );
+
+  // If token is missing or is a manager login JWT, use known broker feed token
+  if (!token || isJwt(token)) {
+    if (knownBrokerFeedToken) {
+      token = knownBrokerFeedToken;
+    } else if (!token) {
+      token = firstValue(
+        findField(brokerInfo, ['session_token', 'sessionToken']),
+        findField(authInfo, ['session_token', 'sessionToken', 'token', 'access_token']),
+        readStorageValue('localStorage', 'authToken'),
+        readStorageValue('localStorage', 'accessToken')
+      );
+    }
+  }
 
   return {
     token: token ? String(token) : null,
