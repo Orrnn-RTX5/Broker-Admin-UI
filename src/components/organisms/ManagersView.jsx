@@ -630,7 +630,18 @@ const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = ''
   };
 
   const handleDisableManager = async (login) => {
-    if (!window.confirm(`Disable manager ${login}? This is a soft delete.`)) return;
+    if (!window.confirm(`Disable manager ${login}? They cannot log in until re-enabled.`)) return;
+    try {
+      await ManagerService.setManagerEnabled(login, false);
+      fetchManagers();
+    } catch (err) {
+      alert(err.response?.data?.error || err.message);
+    }
+    setContextMenu({ visible: false });
+  };
+
+  const handleDeleteManager = async (login, name) => {
+    if (!window.confirm(`Permanently delete manager ${login}${name ? ` (${name})` : ''} from the database? This cannot be undone.`)) return;
     try {
       await ManagerService.deleteManager(login);
       fetchManagers();
@@ -737,7 +748,9 @@ const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = ''
                         className="p-1 text-[#777] hover:text-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)]/10 rounded-[2px] transition-colors"><KeyRound size={12}/></button>
                       <button onClick={() => (row.enabled ? handleDisableManager(row.login) : handleEnableManager(row.login))}
                         title={row.enabled ? 'Disable Manager' : 'Enable Manager'}
-                        className={`p-1 rounded-[2px] transition-colors ${row.enabled ? 'text-[#777] hover:text-red-400 hover:bg-red-500/10' : 'text-[#777] hover:text-green-400 hover:bg-green-500/10'}`}><Power size={12}/></button>
+                        className={`p-1 rounded-[2px] transition-colors ${row.enabled ? 'text-[#777] hover:text-orange-400 hover:bg-orange-500/10' : 'text-[#777] hover:text-green-400 hover:bg-green-500/10'}`}><Power size={12}/></button>
+                      <button onClick={() => handleDeleteManager(row.login, row.name)} title="Delete Manager permanently"
+                        className="p-1 text-[#777] hover:text-red-400 hover:bg-red-500/10 rounded-[2px] transition-colors"><Trash2 size={12}/></button>
                     </>
                   ) : (
                     <span className="text-[10px] text-[#555] px-1" title="Protected administrator or your own account">protected</span>
@@ -866,9 +879,9 @@ const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = ''
                 <>
                   <div className="h-[1px] bg-[color:var(--border-default)] my-1 mx-2"></div>
                   {contextMenu.record.enabled ? (
-                    <div className="px-5 py-1.5 hover:bg-red-700 hover:text-white cursor-pointer select-none text-red-400"
+                    <div className="px-5 py-1.5 hover:bg-orange-700 hover:text-white cursor-pointer select-none text-orange-400"
                       onClick={() => handleDisableManager(contextMenu.record.login)}>
-                      <span className="flex items-center gap-2"><Trash2 size={12}/>Disable Manager</span>
+                      <span className="flex items-center gap-2"><Power size={12}/>Disable Manager</span>
                     </div>
                   ) : (
                     <div className="px-5 py-1.5 hover:bg-green-700 hover:text-white cursor-pointer select-none text-green-400"
@@ -876,6 +889,10 @@ const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = ''
                       <span className="flex items-center gap-2"><Power size={12}/>Enable Manager</span>
                     </div>
                   )}
+                  <div className="px-5 py-1.5 hover:bg-red-700 hover:text-white cursor-pointer select-none text-red-400"
+                    onClick={() => handleDeleteManager(contextMenu.record.login, contextMenu.record.name)}>
+                    <span className="flex items-center gap-2"><Trash2 size={12}/>Delete Manager</span>
+                  </div>
                 </>
               )}
             </>
