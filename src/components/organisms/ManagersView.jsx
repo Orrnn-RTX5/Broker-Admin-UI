@@ -72,12 +72,12 @@ const CreateRoleModal = ({ onClose, onCreated }) => {
     e.preventDefault();
     setSubmitting(true); setError(null);
     try {
-      await ManagerService.createRole({
+      const created = await ManagerService.createRole({
         role_name: form.role_name,
         description: form.description,
         permissions: form.permissions,
       });
-      onCreated(); onClose();
+      onCreated(created); onClose();
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     } finally { setSubmitting(false); }
@@ -127,12 +127,24 @@ const CreateRoleModal = ({ onClose, onCreated }) => {
 };
 
 // ─── Create Manager Modal ────────────────────────────────────────────────────
-const CreateManagerModal = ({ roles, onClose, onCreated }) => {
+const NEW_ROLE_OPTION = '__new_role__';
+
+const CreateManagerModal = ({ roles, onClose, onCreated, onCreateRole }) => {
   const [form, setForm] = useState({ login: '', name: '', password: '', is_admin: false, role_id: '', allowed_groups: '', ip_whitelist: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const currentUser = useAuthStore((state) => state.user);
   const canCreateAdmin = canGrantAdminRole(currentUser);
+
+  // Opens Create Role on top of this form; the new role is selected on return.
+  // With no roles yet, clicking the role picker goes straight there.
+  const openCreateRole = () =>
+    onCreateRole((roleId) => setForm(p => ({ ...p, role_id: String(roleId) })));
+
+  const handleRoleChange = (e) => {
+    if (e.target.value === NEW_ROLE_OPTION) { openCreateRole(); return; }
+    setForm(p => ({ ...p, role_id: e.target.value }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -159,10 +171,18 @@ const CreateManagerModal = ({ roles, onClose, onCreated }) => {
             <div className="flex flex-col gap-1"><label className="text-[#ccc]">Login (RTX5) *</label>
               <input required type="number" value={form.login} onChange={e=>setForm(p=>({...p,login:e.target.value}))} className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
             <div className="flex flex-col gap-1"><label className="text-[#ccc]">Role</label>
-              <select value={form.role_id} onChange={e=>setForm(p=>({...p,role_id:e.target.value}))} className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none">
+              <select value={form.role_id} onChange={handleRoleChange}
+                onMouseDown={roles.length === 0 ? (e) => { e.preventDefault(); openCreateRole(); } : undefined}
+                className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none">
                 <option value="">No Role</option>
                 {roles.map(r=><option key={r.id} value={r.id}>{r.role_name}</option>)}
-              </select></div>
+                <option value={NEW_ROLE_OPTION}>+ Create new role…</option>
+              </select>
+              {roles.length === 0 && (
+                <button type="button" onClick={openCreateRole} className="self-start text-[11px] text-[color:var(--accent-500)] hover:underline">
+                  No roles yet — create one
+                </button>
+              )}</div>
           </div>
           <div className="flex flex-col gap-1"><label className="text-[#ccc]">Name *</label>
             <input required value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
@@ -457,6 +477,8 @@ const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = ''
   const [loadErrors, setLoadErrors] = useState({ managers: null, roles: null, online: null });
 
   const [isCreateRoleOpen, setIsCreateRoleOpen] = useState(false);
+  // Set while Create Role was opened from Create Manager: selects the new role there.
+  const [selectCreatedRole, setSelectCreatedRole] = useState(null);
   const [isCreateManagerOpen, setIsCreateManagerOpen] = useState(false);
   const [editingRole, setEditingRole] = useState(null);
   const [editingManager, setEditingManager] = useState(null);
@@ -803,8 +825,11 @@ const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = ''
         </div>
       )}
 
-      {isCreateRoleOpen    && <CreateRoleModal    onClose={() => setIsCreateRoleOpen(false)}    onCreated={fetchRoles}    />}
-      {isCreateManagerOpen && <CreateManagerModal roles={roles} onClose={() => setIsCreateManagerOpen(false)} onCreated={fetchManagers} />}
+      {isCreateManagerOpen && <CreateManagerModal roles={roles} onClose={() => setIsCreateManagerOpen(false)} onCreated={fetchManagers}
+        onCreateRole={(select) => { setSelectCreatedRole(() => select); setIsCreateRoleOpen(true); }} />}
+      {isCreateRoleOpen    && <CreateRoleModal
+        onClose={() => { setIsCreateRoleOpen(false); setSelectCreatedRole(null); }}
+        onCreated={(created) => { fetchRoles(); if (selectCreatedRole && created?.id) selectCreatedRole(created.id); }} />}
       {editingRole         && <EditRoleModal      role={editingRole} onClose={() => setEditingRole(null)} onSaved={fetchRoles} />}
       {activityTarget      && <ActivityLogModal   manager={activityTarget} onClose={() => setActivityTarget(null)} />}
       {editingManager      && <EditManagerModal   manager={editingManager} roles={roles} onClose={() => setEditingManager(null)} onSaved={fetchManagers} />}
