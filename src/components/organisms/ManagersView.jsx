@@ -558,7 +558,7 @@ const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = ''
   };
 
   const handleDeleteRole = async (roleId, roleName) => {
-    if (!window.confirm(`Delete role "${roleName}"? This fails if managers are assigned to it.`)) return;
+    if (!window.confirm(`Permanently delete role "${roleName}" and its permissions? This fails if managers are assigned to it.`)) return;
     try {
       await ManagerService.deleteRole(roleId);
       fetchRoles();
@@ -667,7 +667,7 @@ const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = ''
             <div className="w-[200px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Description</div>
             <div className="w-[260px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Permissions</div>
             <div className="w-[150px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Created</div>
-            <div className="w-[60px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)]">Actions</div>
+            <div className="w-[80px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)]">Actions</div>
           </div>
           <div className="flex-1 overflow-auto bg-[color:var(--bg-app)]">
             {loading && <div className="p-4 text-[#888] italic text-[12px]">Loading...</div>}
@@ -681,10 +681,14 @@ const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = ''
                 <div className="w-[200px] px-3 py-1 text-[12px] text-[#aaa] border-r border-black/10 truncate">{row.description || '—'}</div>
                 <div className="w-[260px] px-3 py-1 border-r border-black/10"><PermBadges permissions={row.permissions}/></div>
                 <div className="w-[150px] px-3 py-1 text-[11px] text-[#aaa] border-r border-black/10">{fmtTime(row.created_at)}</div>
-                <div className="w-[60px] px-3 py-1 flex items-center">
+                <div className="w-[80px] px-3 py-1 flex items-center gap-1">
                   <button onClick={() => setEditingRole(row)} title="Edit Role"
                     className="p-1 text-[#555] hover:text-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)]/10 rounded-[2px] transition-colors">
                     <Edit2 size={12}/>
+                  </button>
+                  <button onClick={() => handleDeleteRole(row.id, row.role_name)} title="Delete Role"
+                    className="p-1 text-[#555] hover:text-red-400 hover:bg-red-500/10 rounded-[2px] transition-colors">
+                    <Trash2 size={12}/>
                   </button>
                 </div>
               </div>
