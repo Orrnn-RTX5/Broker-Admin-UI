@@ -1,9 +1,9 @@
 import { sortToolbarRows } from '../../utils/toolbarActions';
 import React, { useState, useEffect, useCallback } from 'react';
 import { ManagerService } from '../../services/manager.service';
-import { UserPlus, ShieldPlus, RefreshCw, Wifi, Activity, Trash2, Edit2, X, AlertCircle, Check } from 'lucide-react';
+import { UserPlus, ShieldPlus, RefreshCw, Wifi, Activity, Trash2, Edit2, X, AlertCircle, Check, KeyRound, Power } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
-import { buildManagerCreatePayload, canGrantAdminRole } from '../../utils/adminValidation';
+import { buildManagerCreatePayload, buildManagerUpdateParams, canGrantAdminRole, validateManagerPassword } from '../../utils/adminValidation';
 import { ROLE_PERMISSION_OPTIONS } from '../../utils/permissions';
 import { buildActionableErrorState } from '../../utils/errorState';
 import ActionableErrorState from '../atoms/ActionableErrorState';
@@ -188,6 +188,141 @@ const CreateManagerModal = ({ roles, onClose, onCreated }) => {
   );
 };
 
+// ─── Edit Manager Modal ──────────────────────────────────────────────────────
+const joinList = (list) => (Array.isArray(list) ? list.filter(Boolean).join(', ') : '');
+
+const EditManagerModal = ({ manager, roles, onClose, onSaved }) => {
+  const [original, setOriginal] = useState(manager);
+  const [form, setForm] = useState({
+    name: manager.name || '',
+    role_id: manager.role_id != null ? String(manager.role_id) : '',
+    enabled: manager.enabled !== false,
+    allowed_groups: joinList(manager.allowed_groups),
+    ip_whitelist: joinList(manager.ip_whitelist),
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
+  // The list row may be stale or partial; load the full record once.
+  useEffect(() => {
+    let active = true;
+    ManagerService.getManagerDetail(manager.login).then((detail) => {
+      if (!active || !detail) return;
+      setOriginal(detail);
+      setForm({
+        name: detail.name || '',
+        role_id: detail.role_id != null ? String(detail.role_id) : '',
+        enabled: detail.enabled !== false,
+        allowed_groups: joinList(detail.allowed_groups),
+        ip_whitelist: joinList(detail.ip_whitelist),
+      });
+    }).catch(() => { /* keep the list row values */ });
+    return () => { active = false; };
+  }, [manager.login]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true); setError(null);
+    try {
+      await ManagerService.updateManager(manager.login, buildManagerUpdateParams(form, original));
+      onSaved(); onClose();
+    } catch (err) {
+      setError(err.response?.data?.error || err.response?.data?.message || err.message);
+    } finally { setSubmitting(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
+      <div className="w-[440px] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-md shadow-2xl text-[12px]">
+        <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)]">
+          <div className="flex items-center gap-2 text-white text-[13px] font-medium"><Edit2 size={15} className="text-blue-400"/>Edit Manager {manager.login}</div>
+          <button onClick={onClose} className="text-[#999] hover:text-white p-1"><X size={14}/></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3 bg-[color:var(--bg-app)]">
+          {error && <div className="flex items-center gap-2 text-red-400 bg-red-500/10 border border-red-500/30 p-2 rounded"><AlertCircle size={13}/>{error}</div>}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1"><label className="text-[#ccc]">Login (RTX5)</label>
+              <input value={manager.login} disabled className="bg-[color:var(--bg-surface-2)] border border-[#555] text-[#888] px-2 py-1.5 rounded-sm outline-none"/></div>
+            <div className="flex flex-col gap-1"><label className="text-[#ccc]">Role</label>
+              <select value={form.role_id} onChange={e=>setForm(p=>({...p,role_id:e.target.value}))} className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none">
+                <option value="">No Role</option>
+                {roles.map(r=><option key={r.id} value={String(r.id)}>{r.role_name}</option>)}
+              </select></div>
+          </div>
+          <div className="flex flex-col gap-1"><label className="text-[#ccc]">Name *</label>
+            <input required value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
+          <div className="flex flex-col gap-1"><label className="text-[#ccc]">Allowed Groups (comma-sep, empty = none)</label>
+            <input value={form.allowed_groups} onChange={e=>setForm(p=>({...p,allowed_groups:e.target.value}))} placeholder="retail, vip" className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
+          <div className="flex flex-col gap-1"><label className="text-[#ccc]">IP Whitelist (comma-sep, empty = none)</label>
+            <input value={form.ip_whitelist} onChange={e=>setForm(p=>({...p,ip_whitelist:e.target.value}))} placeholder="192.168.1.10" className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
+          <div className="flex items-center gap-2 mt-1">
+            <input type="checkbox" id="manager_enabled" checked={form.enabled} onChange={e=>setForm(p=>({...p,enabled:e.target.checked}))} className="accent-[color:var(--accent-500)]"/>
+            <label htmlFor="manager_enabled" className="text-[#ccc] cursor-pointer">Active (unchecked = disabled, cannot log in)</label>
+          </div>
+          <div className="flex justify-end gap-2 pt-3 border-t border-[color:var(--border-default)]">
+            <button type="button" onClick={onClose} className="px-4 py-1.5 bg-[#444] hover:bg-[#555] text-white rounded-[2px]">Cancel</button>
+            <button type="submit" disabled={submitting} className="px-4 py-1.5 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white rounded-[2px] disabled:opacity-50 min-w-[60px] flex justify-center">
+              {submitting ? '...' : 'Save'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// ─── Reset Password Modal ────────────────────────────────────────────────────
+const ResetPasswordModal = ({ manager, onClose }) => {
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+  const [done, setDone] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true); setError(null);
+    try {
+      await ManagerService.resetManagerPassword(manager.login, validateManagerPassword(password, confirm));
+      setPassword(''); setConfirm(''); setDone(true);
+    } catch (err) {
+      setError(err.response?.data?.error || err.response?.data?.message || err.message);
+    } finally { setSubmitting(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
+      <div className="w-[400px] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-md shadow-2xl text-[12px]">
+        <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)]">
+          <div className="flex items-center gap-2 text-white text-[13px] font-medium"><KeyRound size={15} className="text-blue-400"/>Reset Password — {manager.name} ({manager.login})</div>
+          <button onClick={onClose} className="text-[#999] hover:text-white p-1"><X size={14}/></button>
+        </div>
+        {done ? (
+          <div className="p-4 flex flex-col gap-3 bg-[color:var(--bg-app)]">
+            <div className="flex items-center gap-2 text-green-400 bg-green-500/10 border border-green-500/30 p-2 rounded"><Check size={13}/>Password changed. The manager has been signed out everywhere and must log in with the new password.</div>
+            <div className="flex justify-end"><button onClick={onClose} className="px-4 py-1.5 bg-[color:var(--accent-500)] text-white rounded-[2px]">Close</button></div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3 bg-[color:var(--bg-app)]">
+            {error && <div className="flex items-center gap-2 text-red-400 bg-red-500/10 border border-red-500/30 p-2 rounded"><AlertCircle size={13}/>{error}</div>}
+            <div className="flex flex-col gap-1"><label className="text-[#ccc]">New Password * (12–72 characters)</label>
+              <input required type="password" autoComplete="new-password" value={password} onChange={e=>setPassword(e.target.value)} className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
+            <div className="flex flex-col gap-1"><label className="text-[#ccc]">Confirm Password *</label>
+              <input required type="password" autoComplete="new-password" value={confirm} onChange={e=>setConfirm(e.target.value)} className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
+            <div className="text-[11px] text-[#888]">Saving signs this manager out of every open session.</div>
+            <div className="flex justify-end gap-2 pt-3 border-t border-[color:var(--border-default)]">
+              <button type="button" onClick={onClose} className="px-4 py-1.5 bg-[#444] hover:bg-[#555] text-white rounded-[2px]">Cancel</button>
+              <button type="submit" disabled={submitting} className="px-4 py-1.5 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white rounded-[2px] disabled:opacity-50 min-w-[60px] flex justify-center">
+                {submitting ? '...' : 'Reset'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ─── Edit Role Modal ─────────────────────────────────────────────────────────
 const EditRoleModal = ({ role, onClose, onSaved }) => {
   const [form, setForm] = useState({
@@ -324,8 +459,15 @@ const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = ''
   const [isCreateRoleOpen, setIsCreateRoleOpen] = useState(false);
   const [isCreateManagerOpen, setIsCreateManagerOpen] = useState(false);
   const [editingRole, setEditingRole] = useState(null);
+  const [editingManager, setEditingManager] = useState(null);
+  const [passwordTarget, setPasswordTarget] = useState(null);
   const [activityTarget, setActivityTarget] = useState(null);
   const [contextMenu, setContextMenu] = useState({ visible: false });
+  const currentUser = useAuthStore((state) => state.user);
+
+  // The backend refuses changes to protected admin identities and to the
+  // signed-in account itself, so those rows get no edit actions.
+  const canAdminister = (row) => !row.is_admin && Number(row.login) !== Number(currentUser?.login);
 
   const fetchManagers = useCallback(async () => {
     setLoadErrors(prev => ({ ...prev, managers: null }));
@@ -405,6 +547,16 @@ const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = ''
     setContextMenu({ visible: false });
   };
 
+  const handleEnableManager = async (login) => {
+    try {
+      await ManagerService.setManagerEnabled(login, true);
+      fetchManagers();
+    } catch (err) {
+      alert(err.response?.data?.error || err.message);
+    }
+    setContextMenu({ visible: false });
+  };
+
   const handleDeleteRole = async (roleId, roleName) => {
     if (!window.confirm(`Delete role "${roleName}"? This fails if managers are assigned to it.`)) return;
     try {
@@ -462,6 +614,7 @@ const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = ''
             <div className="w-[80px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Status</div>
             <div className="w-[130px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Last Login</div>
             <div className="w-[120px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Last IP</div>
+            <div className="w-[110px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Actions</div>
             <div className="flex-1"></div>
           </div>
           <div className="flex-1 overflow-auto bg-[color:var(--bg-app)]">
@@ -482,6 +635,21 @@ const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = ''
                 </div>
                 <div className="w-[130px] px-3 py-1 text-[11px] text-[#aaa] border-r border-black/10 truncate">{fmtTime(row.last_login)}</div>
                 <div className="w-[120px] px-3 py-1 text-[12px] text-[#aaa] border-r border-black/10 truncate">{row.last_ip || '—'}</div>
+                <div className="w-[110px] px-2 py-0.5 flex items-center gap-0.5 border-r border-black/10">
+                  {canAdminister(row) ? (
+                    <>
+                      <button onClick={() => setEditingManager(row)} title="Edit Manager"
+                        className="p-1 text-[#777] hover:text-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)]/10 rounded-[2px] transition-colors"><Edit2 size={12}/></button>
+                      <button onClick={() => setPasswordTarget(row)} title="Reset Password"
+                        className="p-1 text-[#777] hover:text-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)]/10 rounded-[2px] transition-colors"><KeyRound size={12}/></button>
+                      <button onClick={() => (row.enabled ? handleDisableManager(row.login) : handleEnableManager(row.login))}
+                        title={row.enabled ? 'Disable Manager' : 'Enable Manager'}
+                        className={`p-1 rounded-[2px] transition-colors ${row.enabled ? 'text-[#777] hover:text-red-400 hover:bg-red-500/10' : 'text-[#777] hover:text-green-400 hover:bg-green-500/10'}`}><Power size={12}/></button>
+                    </>
+                  ) : (
+                    <span className="text-[10px] text-[#555] px-1" title="Protected administrator or your own account">protected</span>
+                  )}
+                </div>
                 <div className="flex-1"></div>
               </div>
             ))}
@@ -581,15 +749,38 @@ const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = ''
           style={{ top: contextMenu.y, left: contextMenu.x }}>
           {contextMenu.type === 'manager' && (
             <>
+              {canAdminister(contextMenu.record) && (
+                <>
+                  <div className="px-5 py-1.5 hover:bg-[color:var(--accent-500)] hover:text-white cursor-pointer select-none"
+                    onClick={() => { setEditingManager(contextMenu.record); setContextMenu({ visible: false }); }}>
+                    <span className="flex items-center gap-2"><Edit2 size={12}/>Edit Manager</span>
+                  </div>
+                  <div className="px-5 py-1.5 hover:bg-[color:var(--accent-500)] hover:text-white cursor-pointer select-none"
+                    onClick={() => { setPasswordTarget(contextMenu.record); setContextMenu({ visible: false }); }}>
+                    <span className="flex items-center gap-2"><KeyRound size={12}/>Reset Password</span>
+                  </div>
+                </>
+              )}
               <div className="px-5 py-1.5 hover:bg-[color:var(--accent-500)] hover:text-white cursor-pointer select-none"
                 onClick={() => { setActivityTarget(contextMenu.record); setContextMenu({ visible: false }); }}>
                 <span className="flex items-center gap-2"><Activity size={12}/>View Activity Log</span>
               </div>
-              <div className="h-[1px] bg-[color:var(--border-default)] my-1 mx-2"></div>
-              <div className="px-5 py-1.5 hover:bg-red-700 hover:text-white cursor-pointer select-none text-red-400"
-                onClick={() => handleDisableManager(contextMenu.record.login)}>
-                <span className="flex items-center gap-2"><Trash2 size={12}/>Disable Manager</span>
-              </div>
+              {canAdminister(contextMenu.record) && (
+                <>
+                  <div className="h-[1px] bg-[color:var(--border-default)] my-1 mx-2"></div>
+                  {contextMenu.record.enabled ? (
+                    <div className="px-5 py-1.5 hover:bg-red-700 hover:text-white cursor-pointer select-none text-red-400"
+                      onClick={() => handleDisableManager(contextMenu.record.login)}>
+                      <span className="flex items-center gap-2"><Trash2 size={12}/>Disable Manager</span>
+                    </div>
+                  ) : (
+                    <div className="px-5 py-1.5 hover:bg-green-700 hover:text-white cursor-pointer select-none text-green-400"
+                      onClick={() => handleEnableManager(contextMenu.record.login)}>
+                      <span className="flex items-center gap-2"><Power size={12}/>Enable Manager</span>
+                    </div>
+                  )}
+                </>
+              )}
             </>
           )}
           {contextMenu.type === 'role' && (
@@ -612,6 +803,8 @@ const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = ''
       {isCreateManagerOpen && <CreateManagerModal roles={roles} onClose={() => setIsCreateManagerOpen(false)} onCreated={fetchManagers} />}
       {editingRole         && <EditRoleModal      role={editingRole} onClose={() => setEditingRole(null)} onSaved={fetchRoles} />}
       {activityTarget      && <ActivityLogModal   manager={activityTarget} onClose={() => setActivityTarget(null)} />}
+      {editingManager      && <EditManagerModal   manager={editingManager} roles={roles} onClose={() => setEditingManager(null)} onSaved={fetchManagers} />}
+      {passwordTarget      && <ResetPasswordModal manager={passwordTarget} onClose={() => setPasswordTarget(null)} />}
     </div>
   );
 };

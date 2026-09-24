@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { validateLpRouteForm, parseMoneyAmount, parsePositiveInteger } from './adminValidation.js';
+import { validateLpRouteForm, parseMoneyAmount, parsePositiveInteger, buildManagerUpdateParams, validateManagerPassword } from './adminValidation.js';
 
 const validLpForm = () => ({
   // non-numeric passthrough fields
@@ -115,4 +115,31 @@ test('parsePositiveInteger: validates account login values for money-create form
   assert.throws(() => parsePositiveInteger('-1', 'Login'), /positive whole number/);
   assert.throws(() => parsePositiveInteger('123.5', 'Login'), /positive whole number/);
   assert.throws(() => parsePositiveInteger('abc', 'Login'), /valid number/);
+});
+
+test('Edit Manager sends changed role, trimmed lists and clears emptied lists', () => {
+  const original = { role_id: 3 };
+  assert.deepEqual(
+    buildManagerUpdateParams({ name: ' Arijit ', role_id: '5', enabled: true, allowed_groups: 'retail, vip', ip_whitelist: '10.0.0.1' }, original),
+    { name: 'Arijit', enabled: true, allowed_groups: ['retail', 'vip'], ip_whitelist: ['10.0.0.1'], role_id: '5' },
+  );
+  // Unchanged role is not re-sent; emptied lists are sent as [''] so they clear.
+  assert.deepEqual(
+    buildManagerUpdateParams({ name: 'Arijit', role_id: '3', enabled: false, allowed_groups: '', ip_whitelist: '  ' }, original),
+    { name: 'Arijit', enabled: false, allowed_groups: [''], ip_whitelist: [''] },
+  );
+  // Choosing "No role" removes the role.
+  assert.equal(buildManagerUpdateParams({ name: 'A', role_id: '', enabled: true }, original).role_id, 'none');
+});
+
+test('Edit Manager rejects a blank name and invalid IPs', () => {
+  assert.throws(() => buildManagerUpdateParams({ name: '  ' }), /Name is required/);
+  assert.throws(() => buildManagerUpdateParams({ name: 'A', ip_whitelist: 'not-an-ip' }), /IP whitelist entry/);
+});
+
+test('Reset Password enforces the backend length bounds and confirmation', () => {
+  assert.equal(validateManagerPassword('a-valid-password', 'a-valid-password'), 'a-valid-password');
+  assert.throws(() => validateManagerPassword('short', 'short'), /12 to 72/);
+  assert.throws(() => validateManagerPassword('x'.repeat(73), 'x'.repeat(73)), /12 to 72/);
+  assert.throws(() => validateManagerPassword('a-valid-password', 'a-different-pass'), /do not match/);
 });

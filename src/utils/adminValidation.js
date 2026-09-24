@@ -115,6 +115,43 @@ export const validateManagerLists = ({ allowedGroups = '', ipWhitelist = '' }) =
   return { allowed_groups, ip_whitelist };
 };
 
+// ManagerUpdate query parameters from the Edit Manager form. Lists are always
+// sent so clearing a field clears it; an empty list goes as [''] because axios
+// drops empty arrays. role_id is sent only when it changed ('none' removes it).
+export const buildManagerUpdateParams = (form, original = {}) => {
+  const name = String(form.name || '').trim();
+  if (!name) throw new Error('Name is required.');
+
+  const { allowed_groups, ip_whitelist } = validateManagerLists({
+    allowedGroups: form.allowed_groups,
+    ipWhitelist: form.ip_whitelist,
+  });
+
+  const params = {
+    name,
+    enabled: Boolean(form.enabled),
+    allowed_groups: allowed_groups.length ? allowed_groups : [''],
+    ip_whitelist: ip_whitelist.length ? ip_whitelist : [''],
+  };
+
+  const roleId = String(form.role_id ?? '');
+  const originalRoleId = String(original.role_id ?? '');
+  if (roleId !== originalRoleId) params.role_id = roleId || 'none';
+
+  return params;
+};
+
+// Same bounds the backend enforces (bcrypt ignores bytes past 72).
+export const validateManagerPassword = (password = '', confirm = '') => {
+  if (password.length < 12 || password.length > 72) {
+    throw new Error('Password must be 12 to 72 characters.');
+  }
+  if (password !== confirm) {
+    throw new Error('Passwords do not match.');
+  }
+  return password;
+};
+
 export const buildManagerCreatePayload = (form, options = {}) => {
   const {
     requireRole = false,

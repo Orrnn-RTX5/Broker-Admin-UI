@@ -401,6 +401,31 @@ export const ManagerService = {
     return res.data;
   },
 
+  // params come from buildManagerUpdateParams; list values are sent as
+  // allowed_groups[]=... / ip_whitelist[]=..., an empty list as a single ''.
+  updateManager: async (login, params) => {
+    const res = await api.get('/manager/ManagerUpdate', {
+      params: { ...params, manager_login: login }
+    });
+    return res.data;
+  },
+
+  setManagerEnabled: async (login, enabled) => {
+    const res = await api.get('/manager/ManagerUpdate', {
+      params: { manager_login: login, enabled: Boolean(enabled) }
+    });
+    return res.data;
+  },
+
+  // The password travels in the JSON body, never in the URL.
+  resetManagerPassword: async (login, password) => {
+    const res = await api.post('/manager/ManagerPasswordReset', {
+      manager_login: Number(login),
+      password,
+    });
+    return res.data;
+  },
+
   getManagerActivityLog: async (login, from, to) => {
     const params = { manager_login: login };
     if (from) params.from = from;
