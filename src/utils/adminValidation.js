@@ -1,4 +1,5 @@
-const GROUP_ITEM_RE = /^[A-Za-z0-9_*./:-]+$/;
+// Group names come from the broker's group list (MT5 style, e.g. "real\vip").
+const GROUP_ITEM_RE = /^[A-Za-z0-9_*./:\\ -]+$/;
 
 export const canGrantAdminRole = (user) =>
   !!(user?.is_admin || user?.role === 'admin');

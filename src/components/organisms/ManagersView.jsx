@@ -3,7 +3,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ManagerService } from '../../services/manager.service';
 import { UserPlus, ShieldPlus, RefreshCw, Wifi, Activity, Trash2, Edit2, X, AlertCircle, Check, KeyRound, Power } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
-import { buildManagerCreatePayload, buildManagerUpdateParams, canGrantAdminRole, validateManagerPassword } from '../../utils/adminValidation';
+import { buildManagerCreatePayload, buildManagerUpdateParams, canGrantAdminRole, parseCsvList, validateManagerPassword } from '../../utils/adminValidation';
+import { loadGroupTreePages, normalizeNavigationGroups } from '../../utils/groupTreeData';
 import { ROLE_PERMISSION_OPTIONS } from '../../utils/permissions';
 import { buildActionableErrorState } from '../../utils/errorState';
 import ActionableErrorState from '../atoms/ActionableErrorState';
@@ -127,6 +128,76 @@ const CreateRoleModal = ({ onClose, onCreated }) => {
 };
 
 // ─── Create Manager Modal ────────────────────────────────────────────────────
+const loadGroupNames = async () => normalizeNavigationGroups(await loadGroupTreePages(
+  ManagerService.getGroupList,
+  { arrayKeys: ['answer', 'groups', 'data', 'items', 'rows'] },
+)).map(g => g.groupName);
+
+// Allowed Groups picker: the broker's groups as a checklist. value/onChange
+// keep the form's comma-separated string; saved entries that are not in the
+// list (e.g. wildcards) stay selected and removable.
+const GroupPicker = ({ value, onChange }) => {
+  const [groups, setGroups] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [search, setSearch] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true); setError(null);
+    try { setGroups(await loadGroupNames()); }
+    catch (err) { setError(err.response?.data?.error || err.message); }
+    finally { setLoading(false); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const selected = parseCsvList(value);
+  const isSelected = (name) => selected.includes(name);
+  const toggle = (name) => onChange((isSelected(name) ? selected.filter(g => g !== name) : [...selected, name]).join(', '));
+  const extra = selected.filter(g => !groups.includes(g));
+  const term = search.trim().toLowerCase();
+  const visible = term ? groups.filter(g => g.toLowerCase().includes(term)) : groups;
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {selected.map(g => (
+            <span key={g} className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] text-[#9cdcfe] bg-[color:var(--accent-500)]/15 border border-[color:var(--accent-500)]/30 rounded-[2px]">
+              {g}
+              <button type="button" onClick={() => toggle(g)} title={`Remove ${g}`} className="text-[#999] hover:text-white"><X size={10}/></button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="bg-[color:var(--bg-surface-2)] border border-[#555] rounded-sm">
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search groups…"
+          className="w-full bg-transparent border-b border-[#444] text-white px-2 py-1 outline-none text-[11px]" />
+        <div className="max-h-[110px] overflow-auto py-1">
+          {loading && <div className="px-2 py-1 text-[11px] text-[#888] italic">Loading groups…</div>}
+          {!loading && error && (
+            <div className="px-2 py-1 text-[11px] text-red-400">
+              Unable to load groups. <button type="button" onClick={load} className="underline">Retry</button>
+            </div>
+          )}
+          {!loading && !error && visible.length === 0 && (
+            <div className="px-2 py-1 text-[11px] text-[#888] italic">{groups.length ? 'No matching groups' : 'No groups found'}</div>
+          )}
+          {!loading && !error && visible.map(g => (
+            <label key={g} className="flex items-center gap-2 px-2 py-0.5 cursor-pointer select-none hover:bg-white/5">
+              <input type="checkbox" checked={isSelected(g)} onChange={() => toggle(g)}
+                className="accent-[color:var(--accent-500)] w-3 h-3 cursor-pointer" />
+              <span className="text-[11px] text-[#ccc]">{g}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+      {!loading && extra.length > 0 && (
+        <div className="text-[10px] text-[#888]">Not in the group list: {extra.join(', ')}</div>
+      )}
+    </div>
+  );
+};
+
 const NEW_ROLE_OPTION = '__new_role__';
 
 const CreateManagerModal = ({ roles, onClose, onCreated, onCreateRole }) => {
@@ -188,8 +259,8 @@ const CreateManagerModal = ({ roles, onClose, onCreated, onCreateRole }) => {
             <input required value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
           <div className="flex flex-col gap-1"><label className="text-[#ccc]">Password *</label>
             <input required type="password" value={form.password} onChange={e=>setForm(p=>({...p,password:e.target.value}))} className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
-          <div className="flex flex-col gap-1"><label className="text-[#ccc]">Allowed Groups (comma-sep)</label>
-            <input value={form.allowed_groups} onChange={e=>setForm(p=>({...p,allowed_groups:e.target.value}))} placeholder="retail, vip" className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
+          <div className="flex flex-col gap-1"><label className="text-[#ccc]">Allowed Groups</label>
+            <GroupPicker value={form.allowed_groups} onChange={v=>setForm(p=>({...p,allowed_groups:v}))}/></div>
           <div className="flex flex-col gap-1"><label className="text-[#ccc]">IP Whitelist (comma-sep)</label>
             <input value={form.ip_whitelist} onChange={e=>setForm(p=>({...p,ip_whitelist:e.target.value}))} placeholder="192.168.1.10" className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
           <div className="flex items-center gap-2 mt-1">
@@ -271,8 +342,8 @@ const EditManagerModal = ({ manager, roles, onClose, onSaved }) => {
           </div>
           <div className="flex flex-col gap-1"><label className="text-[#ccc]">Name *</label>
             <input required value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
-          <div className="flex flex-col gap-1"><label className="text-[#ccc]">Allowed Groups (comma-sep, empty = none)</label>
-            <input value={form.allowed_groups} onChange={e=>setForm(p=>({...p,allowed_groups:e.target.value}))} placeholder="retail, vip" className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
+          <div className="flex flex-col gap-1"><label className="text-[#ccc]">Allowed Groups (none selected = none)</label>
+            <GroupPicker value={form.allowed_groups} onChange={v=>setForm(p=>({...p,allowed_groups:v}))}/></div>
           <div className="flex flex-col gap-1"><label className="text-[#ccc]">IP Whitelist (comma-sep, empty = none)</label>
             <input value={form.ip_whitelist} onChange={e=>setForm(p=>({...p,ip_whitelist:e.target.value}))} placeholder="192.168.1.10" className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
           <div className="flex items-center gap-2 mt-1">

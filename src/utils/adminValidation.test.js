@@ -143,3 +143,9 @@ test('Reset Password enforces the backend length bounds and confirmation', () =>
   assert.throws(() => validateManagerPassword('x'.repeat(73), 'x'.repeat(73)), /12 to 72/);
   assert.throws(() => validateManagerPassword('a-valid-password', 'a-different-pass'), /do not match/);
 });
+
+test('Allowed groups accept MT5-style names picked from the group list', () => {
+  const params = buildManagerUpdateParams({ name: 'A', allowed_groups: String.raw`real\vip, demo\Standard USD`, ip_whitelist: '' });
+  assert.deepEqual(params['allowed_groups[]'], [String.raw`real\vip`, String.raw`demo\Standard USD`]);
+  assert.throws(() => buildManagerUpdateParams({ name: 'A', allowed_groups: 'bad;group' }), /unsupported characters/);
+});
