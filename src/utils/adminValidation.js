@@ -115,9 +115,10 @@ export const validateManagerLists = ({ allowedGroups = '', ipWhitelist = '' }) =
   return { allowed_groups, ip_whitelist };
 };
 
-// ManagerUpdate query parameters from the Edit Manager form. Lists are always
-// sent so clearing a field clears it; an empty list goes as [''] because axios
-// drops empty arrays. role_id is sent only when it changed ('none' removes it).
+// ManagerUpdate POST body from the Edit Manager form, keyed as the backend's
+// JSON contract names them. Lists are always sent so clearing a field clears
+// it; an empty list goes as [''] (a present-but-blank list). role_id is sent
+// only when it changed, as an integer (0 removes the role).
 export const buildManagerUpdateParams = (form, original = {}) => {
   const name = String(form.name || '').trim();
   if (!name) throw new Error('Name is required.');
@@ -130,13 +131,13 @@ export const buildManagerUpdateParams = (form, original = {}) => {
   const params = {
     name,
     enabled: Boolean(form.enabled),
-    allowed_groups: allowed_groups.length ? allowed_groups : [''],
-    ip_whitelist: ip_whitelist.length ? ip_whitelist : [''],
+    'allowed_groups[]': allowed_groups.length ? allowed_groups : [''],
+    'ip_whitelist[]': ip_whitelist.length ? ip_whitelist : [''],
   };
 
   const roleId = String(form.role_id ?? '');
   const originalRoleId = String(original.role_id ?? '');
-  if (roleId !== originalRoleId) params.role_id = roleId || 'none';
+  if (roleId !== originalRoleId) params.role_id = roleId ? parsePositiveInteger(roleId, 'Role') : 0;
 
   return params;
 };

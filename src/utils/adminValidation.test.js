@@ -121,15 +121,15 @@ test('Edit Manager sends changed role, trimmed lists and clears emptied lists', 
   const original = { role_id: 3 };
   assert.deepEqual(
     buildManagerUpdateParams({ name: ' Arijit ', role_id: '5', enabled: true, allowed_groups: 'retail, vip', ip_whitelist: '10.0.0.1' }, original),
-    { name: 'Arijit', enabled: true, allowed_groups: ['retail', 'vip'], ip_whitelist: ['10.0.0.1'], role_id: '5' },
+    { name: 'Arijit', enabled: true, 'allowed_groups[]': ['retail', 'vip'], 'ip_whitelist[]': ['10.0.0.1'], role_id: 5 },
   );
   // Unchanged role is not re-sent; emptied lists are sent as [''] so they clear.
   assert.deepEqual(
     buildManagerUpdateParams({ name: 'Arijit', role_id: '3', enabled: false, allowed_groups: '', ip_whitelist: '  ' }, original),
-    { name: 'Arijit', enabled: false, allowed_groups: [''], ip_whitelist: [''] },
+    { name: 'Arijit', enabled: false, 'allowed_groups[]': [''], 'ip_whitelist[]': [''] },
   );
-  // Choosing "No role" removes the role.
-  assert.equal(buildManagerUpdateParams({ name: 'A', role_id: '', enabled: true }, original).role_id, 'none');
+  // Choosing "No role" removes the role (0 in the integer-typed JSON contract).
+  assert.equal(buildManagerUpdateParams({ name: 'A', role_id: '', enabled: true }, original).role_id, 0);
 });
 
 test('Edit Manager rejects a blank name and invalid IPs', () => {

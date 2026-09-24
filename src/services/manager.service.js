@@ -132,8 +132,9 @@ export const ManagerService = {
   },
 
   updateManagerRole: async (managerLogin, roleId) => {
-    const res = await api.get('/manager/ManagerUpdate', {
-      params: { manager_login: managerLogin, role_id: roleId }
+    const res = await api.post('/manager/ManagerUpdate', {
+      manager_login: Number(managerLogin),
+      role_id: Number(roleId) || 0,
     });
     return res.data;
   },
@@ -368,9 +369,7 @@ export const ManagerService = {
   },
 
   deleteRole: async (roleId) => {
-    const res = await api.get('/manager/ManagerRoleDelete', {
-      params: { role_id: roleId }
-    });
+    const res = await api.post('/manager/ManagerRoleDelete', { role_id: Number(roleId) });
     return res.data;
   },
 
@@ -387,32 +386,23 @@ export const ManagerService = {
     return res.data;
   },
 
-  updateManager: async (login, params) => {
-    const res = await api.get('/manager/ManagerUpdate', {
-      params: { manager_login: login, ...params }
-    });
-    return res.data;
-  },
-
+  // Manager/role mutations use the POST+JSON successor of the retired
+  // mutating GETs (the backend answers those GETs with 410 Gone).
   deleteManager: async (login) => {
-    const res = await api.get('/manager/ManagerDelete', {
-      params: { manager_login: login }
-    });
+    const res = await api.post('/manager/ManagerDelete', { manager_login: Number(login) });
     return res.data;
   },
 
-  // params come from buildManagerUpdateParams; list values are sent as
-  // allowed_groups[]=... / ip_whitelist[]=..., an empty list as a single ''.
-  updateManager: async (login, params) => {
-    const res = await api.get('/manager/ManagerUpdate', {
-      params: { ...params, manager_login: login }
-    });
+  // body comes from buildManagerUpdateParams.
+  updateManager: async (login, body) => {
+    const res = await api.post('/manager/ManagerUpdate', { ...body, manager_login: Number(login) });
     return res.data;
   },
 
   setManagerEnabled: async (login, enabled) => {
-    const res = await api.get('/manager/ManagerUpdate', {
-      params: { manager_login: login, enabled: Boolean(enabled) }
+    const res = await api.post('/manager/ManagerUpdate', {
+      manager_login: Number(login),
+      enabled: Boolean(enabled),
     });
     return res.data;
   },
