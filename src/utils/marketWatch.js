@@ -158,3 +158,28 @@ export const getSymbolFriendlyDescription = (symbol) => {
 
   return `${symbol} · Financial Contract`;
 };
+
+const statusSymbolNames = (payload = {}) => {
+  const source = Array.isArray(payload.available_symbols)
+    ? payload.available_symbols
+    : Array.isArray(payload.symbols)
+      ? payload.symbols
+      : [];
+  return new Set(
+    source
+      .map((item) => String((typeof item === 'string' ? item : item?.symbol) || '').trim().toUpperCase())
+      .filter(Boolean)
+  );
+};
+
+// The symbols the bridge is actually receiving prices for (SuperAdmin decides
+// which ones the relay streams). Right after a bridge restart no symbol has data
+// yet, so fall back to the configured stream list until the first ticks arrive.
+export const extractStreamedSymbols = (payload = {}) => {
+  const entries = Array.isArray(payload?.symbols) ? payload.symbols : [];
+  const streamed = entries
+    .filter((item) => item && typeof item === 'object' && item.has_data === true)
+    .map((item) => String(item.symbol || '').trim().toUpperCase())
+    .filter(Boolean);
+  return streamed.length > 0 ? new Set(streamed) : statusSymbolNames(payload || {});
+};

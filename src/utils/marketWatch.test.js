@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   MARKET_WATCH_VIEW_CACHE_KEY,
   extractMarketTicks,
+  extractStreamedSymbols,
   formatMarketPrice,
   getSymbolFriendlyDescription,
   isMarketQuoteFresh,
@@ -96,4 +97,28 @@ test('market watch view cache is isolated by broker', () => {
 
   assert.equal(readMarketWatchViewCache(storage, 'broker-a').selected, 'EURUSD');
   assert.equal(readMarketWatchViewCache(storage, 'broker-b').selected, 'XAUUSD');
+});
+
+test('Market Watch lists exactly the symbols the feed is streaming', () => {
+  const status = {
+    available_symbols: ['GBPUSD', 'XAUUSD', 'BTCUSD', 'EURUSD'],
+    symbols: [
+      { symbol: 'BTCUSD', has_data: true, fresh: true },
+      { symbol: 'EURUSD', has_data: false, silent: true },
+      { symbol: 'gbpusd', has_data: true, fresh: true },
+      { symbol: 'XAUUSD', has_data: true, stale: true },
+    ],
+  };
+  // EURUSD is configured but SuperAdmin does not stream it, so it is not listed.
+  assert.deepEqual([...extractStreamedSymbols(status)].sort(), ['BTCUSD', 'GBPUSD', 'XAUUSD']);
+});
+
+test('Market Watch falls back to the configured stream list before the first tick', () => {
+  const status = {
+    available_symbols: ['XAUUSD', 'BTCUSD'],
+    symbols: [{ symbol: 'XAUUSD', has_data: false }, { symbol: 'BTCUSD', has_data: false }],
+  };
+  assert.deepEqual([...extractStreamedSymbols(status)].sort(), ['BTCUSD', 'XAUUSD']);
+  assert.equal(extractStreamedSymbols({}).size, 0);
+  assert.equal(extractStreamedSymbols(null).size, 0);
 });

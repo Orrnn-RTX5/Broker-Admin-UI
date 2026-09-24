@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { buildFeedWsUrl, buildFeedStatusUrl } from '../config/endpoints';
-import { extractMarketTicks, validMarketPrice } from '../utils/marketWatch';
+import { extractMarketTicks, extractStreamedSymbols, validMarketPrice } from '../utils/marketWatch';
 import { createBrowserDeferredPersistStorage } from './deferredPersistStorage';
 
-const STATUS_SYNC_TTL_MS = 30000;
+const STATUS_SYNC_TTL_MS = 10000;
+// Re-read the streamed symbol inventory so SuperAdmin changes appear without a reload.
+const STATUS_POLL_MS = 15000;
 const FEED_RECONNECT_DELAY_MS = 500;
 const symbolPersistStorage = createBrowserDeferredPersistStorage();
 
@@ -65,21 +67,7 @@ const getCategory = (symbol) => {
   return CATEGORIES.OTHERS;
 };
 
-const extractStatusSymbols = (payload = {}) => {
-  const source = Array.isArray(payload.available_symbols)
-    ? payload.available_symbols
-    : Array.isArray(payload.symbols)
-      ? payload.symbols
-      : [];
-  return new Set(
-    source
-      .map((item) => {
-        const raw = typeof item === 'string' ? item : item?.symbol;
-        return String(raw || '').trim().toUpperCase();
-      })
-      .filter(Boolean)
-  );
-};
+const sameNames = (names, set) => Array.isArray(names) && names.length === set.size && names.every((name) => set.has(name));
 
 const useSymbolStore = create(
   persist(
@@ -94,8 +82,12 @@ const useSymbolStore = create(
       brokerScope: getCurrentBrokerScope(),
       statusSyncPromise: null,
       lastStatusSyncAt: 0,
+      statusPollTimer: null,
+      feedSymbolNames: null, // streamed symbols from the feed status; null until known
 
       upsertSymbols: (dataArray) => {
+        const known = get().feedSymbolNames ? new Set(get().feedSymbolNames) : null;
+        let unknownSymbol = false;
         set((state) => {
           const nextSymbols = { ...state.symbols };
           const now = Date.now();
@@ -105,6 +97,12 @@ const useSymbolStore = create(
             const { symbol, bid, ask } = data;
             if (!symbol || (!validMarketPrice(bid) && !validMarketPrice(ask))) return;
             const sym = String(symbol).trim().toUpperCase();
+            // Only symbols in the streamed inventory are listed; a new one is
+            // picked up by the status sync below.
+            if (known && !known.has(sym)) {
+              unknownSymbol = true;
+              return;
+            }
             if (!nextSymbols[sym]) metadataUpdated = true;
 
             const category = getCategory(sym);
@@ -146,6 +144,7 @@ const useSymbolStore = create(
 
           return nextState;
         });
+        if (unknownSymbol) get().syncAvailableSymbols();
       },
 
       initWebSocket: () => {
@@ -158,6 +157,7 @@ const useSymbolStore = create(
             brokerScope: nextBrokerScope,
             symbols: {},
             symbolMetadata: [],
+            feedSymbolNames: null,
             feedError: '',
             isConnected: false,
           });
@@ -178,6 +178,9 @@ const useSymbolStore = create(
 
         // Eagerly prefetch symbols from status endpoint while socket establishes
         get().syncAvailableSymbols();
+        if (!get().statusPollTimer) {
+          set({ statusPollTimer: setInterval(() => get().syncAvailableSymbols({ force: true }), STATUS_POLL_MS) });
+        }
 
         const connect = () => {
           if (!get().shouldReconnect) return;
@@ -259,10 +262,10 @@ const useSymbolStore = create(
         connect();
       },
 
-      syncAvailableSymbols: () => {
+      syncAvailableSymbols: ({ force = false } = {}) => {
         const current = get();
         if (current.statusSyncPromise) return current.statusSyncPromise;
-        if (Date.now() - current.lastStatusSyncAt < STATUS_SYNC_TTL_MS) return Promise.resolve();
+        if (!force && Date.now() - current.lastStatusSyncAt < STATUS_SYNC_TTL_MS) return Promise.resolve();
 
         const syncPromise = (async () => {
           let statusUrl;
@@ -277,50 +280,41 @@ const useSymbolStore = create(
             const res = await fetch(statusUrl, { credentials: 'include' });
             if (!res.ok) return;
             const payload = await res.json();
-            const allowed = extractStatusSymbols(payload);
-            if (allowed.size === 0) return;
+            const streamed = extractStreamedSymbols(payload);
+            if (streamed.size === 0) return;
+
+            const statusRows = new Map(
+              (Array.isArray(payload.symbols) ? payload.symbols : [])
+                .filter((item) => item && typeof item === 'object')
+                .map((item) => [String(item.symbol || '').trim().toUpperCase(), item])
+            );
 
             set((state) => {
-              const nextSymbols = { ...(state.symbols || {}) };
-              let updated = false;
+              // The list is exactly the streamed symbols: symbols SuperAdmin
+              // stopped streaming are removed, new ones are added.
+              const unchanged = sameNames(state.feedSymbolNames, streamed)
+                && Object.keys(state.symbols || {}).every((sym) => streamed.has(sym))
+                && sameNames((state.symbolMetadata || []).map((entry) => entry.symbol), streamed);
+              if (unchanged) return {};
 
-              // Pre-seed any symbols returned in the status response
-              if (Array.isArray(payload.symbols)) {
-                payload.symbols.forEach((item) => {
-                  const sym = String(typeof item === 'string' ? item : item?.symbol || '').trim().toUpperCase();
-                  if (!sym) return;
-                  if (!nextSymbols[sym]) {
-                    updated = true;
-                    nextSymbols[sym] = {
-                      symbol: sym,
-                      bid: validMarketPrice(item.bid) ? Number(item.bid).toFixed(5) : null,
-                      ask: validMarketPrice(item.ask) ? Number(item.ask).toFixed(5) : null,
-                      dir: 'up',
-                      live: Boolean(item.fresh && (item.bid || item.ask)),
-                      lastUpdate: item.last_tick_ms || Date.now(),
-                      category: getCategory(sym),
-                    };
-                  }
-                });
-              }
-
-              // Ensure all allowed symbols exist in store
-              allowed.forEach((sym) => {
-                if (!nextSymbols[sym]) {
-                  updated = true;
-                  nextSymbols[sym] = {
-                    symbol: sym,
-                    bid: null,
-                    ask: null,
-                    dir: 'up',
-                    live: false,
-                    lastUpdate: null,
-                    category: getCategory(sym),
-                  };
+              const nextSymbols = {};
+              streamed.forEach((sym) => {
+                const existing = state.symbols?.[sym];
+                if (existing) {
+                  nextSymbols[sym] = existing;
+                  return;
                 }
+                const item = statusRows.get(sym) || {};
+                nextSymbols[sym] = {
+                  symbol: sym,
+                  bid: validMarketPrice(item.bid) ? Number(item.bid).toFixed(5) : null,
+                  ask: validMarketPrice(item.ask) ? Number(item.ask).toFixed(5) : null,
+                  dir: 'up',
+                  live: Boolean(item.fresh && (item.bid || item.ask)),
+                  lastUpdate: item.last_tick_ms || null,
+                  category: getCategory(sym),
+                };
               });
-
-              if (!updated && state.symbolMetadata?.length > 0) return {};
 
               const nextMetadata = Object.values(nextSymbols)
                 .map((s) => ({ symbol: s.symbol, category: s.category || getCategory(s.symbol) }))
@@ -330,6 +324,7 @@ const useSymbolStore = create(
               return {
                 symbols: nextSymbols,
                 symbolMetadata: nextMetadata,
+                feedSymbolNames: [...streamed],
               };
             });
           } catch {
@@ -344,12 +339,14 @@ const useSymbolStore = create(
       },
 
       disconnectWebSocket: () => {
-        const { ws, reconnectTimer } = get();
+        const { ws, reconnectTimer, statusPollTimer } = get();
         if (reconnectTimer) clearTimeout(reconnectTimer);
+        if (statusPollTimer) clearInterval(statusPollTimer);
 
         set({
           shouldReconnect: false,
           reconnectTimer: null,
+          statusPollTimer: null,
           isConnected: false,
           ws: null,
         });

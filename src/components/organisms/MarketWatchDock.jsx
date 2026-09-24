@@ -63,6 +63,7 @@ const MarketSymbolRow = memo(function MarketSymbolRow({
 
 export default function MarketWatchDock({ children }) {
   const symbolMetadata = useSymbolStore(state => state.symbolMetadata);
+  const feedSymbolNames = useSymbolStore(state => state.feedSymbolNames);
   const connected = useSymbolStore(state => state.isConnected);
   const feedError = useSymbolStore(state => state.feedError);
   const [collapsed, setCollapsed] = useState(() => {
@@ -192,9 +193,11 @@ export default function MarketWatchDock({ children }) {
     () => symbolMetadata.map((entry) => entry.symbol).filter(Boolean),
     [symbolMetadata]
   );
-  const rows = useMemo(() => [...new Set([...names, ...metadataNames])]
+  // Once the feed reports what it streams, list exactly those symbols; the
+  // instrument catalogue is only a fallback while the feed status is unknown.
+  const rows = useMemo(() => [...new Set(feedSymbolNames ? metadataNames : [...names, ...metadataNames])]
     .filter(name => name.toLowerCase().includes(search.trim().toLowerCase()))
-    .sort((a, b) => a.localeCompare(b)), [metadataNames, names, search]);
+    .sort((a, b) => a.localeCompare(b)), [feedSymbolNames, metadataNames, names, search]);
 
   // Keep the quote list inexpensive even when the feed contains thousands of symbols.
   const first = Math.min(Math.max(0, Math.floor(scrollTop / 27) - 8), Math.max(0, rows.length - 60));
