@@ -52,10 +52,76 @@ const PermBadges = ({ permissions }) => {
 const PERMISSIONS = ROLE_PERMISSION_OPTIONS;
 const emptyPermissionMap = () =>
   Object.fromEntries(PERMISSIONS.map(({ key }) => [key, false]));
-const normalizeRolePermissionMap = (permissions = {}) =>
-  Object.fromEntries(
-    PERMISSIONS.map(({ key }) => [key, Boolean(permissions?.[key])])
+// Keeps every key the role has stored, including ones this build does not list.
+const normalizeRolePermissionMap = (permissions = {}) => ({
+  ...emptyPermissionMap(),
+  ...Object.fromEntries(Object.entries(permissions || {}).map(([key, value]) => [key, Boolean(value)])),
+});
+
+// The role permission catalog comes from the backend (ManagerRoleDefaults), so
+// a permission added there appears here without a UI release. The built-in
+// list is only the fallback when that call fails.
+let permissionCatalogRequest = null;
+const loadPermissionCatalog = () => {
+  if (!permissionCatalogRequest) {
+    permissionCatalogRequest = ManagerService.getRoleDefaults()
+      .then((res) => {
+        const list = (res?.available_permissions || []).filter(p => p && typeof p.key === 'string' && p.key);
+        if (!list.length) throw new Error('empty permission catalog');
+        return { permissions: list, fromBackend: true };
+      })
+      .catch(() => {
+        permissionCatalogRequest = null; // retry on the next open
+        return { permissions: PERMISSIONS.map(p => ({ ...p, category: 'Permissions' })), fromBackend: false };
+      });
+  }
+  return permissionCatalogRequest;
+};
+
+const usePermissionCatalog = () => {
+  const [catalog, setCatalog] = useState(null);
+  useEffect(() => {
+    let active = true;
+    loadPermissionCatalog().then(result => { if (active) setCatalog(result); });
+    return () => { active = false; };
+  }, []);
+  return catalog;
+};
+
+const PermissionChecklist = ({ permissions, onToggle }) => {
+  const catalog = usePermissionCatalog();
+  if (!catalog) {
+    return <div className="text-[11px] text-[#888] italic p-3">Loading permissions…</div>;
+  }
+  const groups = [];
+  for (const perm of catalog.permissions) {
+    const category = perm.category || 'Other';
+    let group = groups.find(g => g.category === category);
+    if (!group) { group = { category, items: [] }; groups.push(group); }
+    group.items.push(perm);
+  }
+  return (
+    <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-sm p-3 flex flex-col gap-2.5 max-h-[45vh] overflow-auto">
+      {!catalog.fromBackend && (
+        <div className="text-[10px] text-orange-400">Could not load the permission list from the server; showing the built-in list.</div>
+      )}
+      {groups.map(({ category, items }) => (
+        <div key={category} className="flex flex-col gap-1.5">
+          <div className="text-[10px] uppercase tracking-wide text-[#888]">{category}</div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+            {items.map(({ key, label, description }) => (
+              <label key={key} title={description || key} className="flex items-center gap-2 cursor-pointer select-none">
+                <input type="checkbox" checked={Boolean(permissions[key])} onChange={() => onToggle(key)}
+                  className="accent-[color:var(--accent-500)] w-3 h-3 cursor-pointer" />
+                <span className="text-[11px] text-[#ccc]">{label || key}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
   );
+};
 
 const CreateRoleModal = ({ onClose, onCreated }) => {
   const [form, setForm] = useState({
@@ -105,15 +171,7 @@ const CreateRoleModal = ({ onClose, onCreated }) => {
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-[#ccc]">Permissions</label>
-            <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-sm p-3 grid grid-cols-2 gap-2">
-              {PERMISSIONS.map(({ key, label }) => (
-                <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
-                  <input type="checkbox" checked={form.permissions[key]} onChange={() => togglePerm(key)}
-                    className="accent-[color:var(--accent-500)] w-3 h-3 cursor-pointer" />
-                  <span className="text-[11px] text-[#ccc]">{label}</span>
-                </label>
-              ))}
-            </div>
+            <PermissionChecklist permissions={form.permissions} onToggle={togglePerm} />
           </div>
           <div className="flex justify-end gap-2 pt-3 border-t border-[color:var(--border-default)]">
             <button type="button" onClick={onClose} className="px-4 py-1.5 bg-[#444] hover:bg-[#555] text-white rounded-[2px]">Cancel</button>
@@ -468,15 +526,7 @@ const EditRoleModal = ({ role, onClose, onSaved }) => {
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-[#ccc]">Permissions</label>
-            <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-sm p-3 grid grid-cols-2 gap-2">
-              {PERMISSIONS.map(({ key, label }) => (
-                <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
-                  <input type="checkbox" checked={form.permissions[key]} onChange={() => togglePerm(key)}
-                    className="accent-[color:var(--accent-500)] w-3 h-3 cursor-pointer" />
-                  <span className="text-[11px] text-[#ccc]">{label}</span>
-                </label>
-              ))}
-            </div>
+            <PermissionChecklist permissions={form.permissions} onToggle={togglePerm} />
           </div>
           <div className="flex justify-end gap-2 pt-3 border-t border-[color:var(--border-default)]">
             <button type="button" onClick={onClose} className="px-4 py-1.5 bg-[#444] hover:bg-[#555] text-white rounded-[2px]">Cancel</button>

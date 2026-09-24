@@ -368,6 +368,12 @@ export const ManagerService = {
     return res.data;
   },
 
+  // { available_permissions: [{ key, label, description, category }], default_roles }
+  getRoleDefaults: async () => {
+    const res = await api.get('/manager/ManagerRoleDefaults');
+    return res.data;
+  },
+
   deleteRole: async (roleId) => {
     const res = await api.post('/manager/ManagerRoleDelete', { role_id: Number(roleId) });
     return res.data;
