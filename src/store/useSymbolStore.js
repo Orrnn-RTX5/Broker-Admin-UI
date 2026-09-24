@@ -277,7 +277,10 @@ const useSymbolStore = create(
           if (!statusUrl) return;
 
           try {
-            const res = await fetch(statusUrl, { credentials: 'include' });
+            // The feed status is public. Sending cookies makes the browser drop
+            // the response from backends that omit Access-Control-Allow-Credentials,
+            // which silently fell back to the full instrument list.
+            const res = await fetch(statusUrl, { credentials: 'omit' });
             if (!res.ok) return;
             const payload = await res.json();
             const streamed = extractStreamedSymbols(payload);
