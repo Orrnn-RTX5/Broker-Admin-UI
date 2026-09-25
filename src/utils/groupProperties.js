@@ -175,6 +175,45 @@ export const addGroupSymbolRow = (rows, symbol, options = {}) => {
   return [...(rows || []), createGroupSymbolRow(name, options)];
 };
 
+/**
+ * Categories for "add by category": LP/configured symbol entries grouped by
+ * their category (instrument category, e.g. a clone category, or the inferred
+ * market). Each option lists its symbols and how many are not yet in `existing`.
+ */
+export const symbolCategoryOptions = (entries = [], existing = []) => {
+  const listed = new Set((existing || []).map(upper));
+  const byCategory = new Map();
+  for (const entry of entries || []) {
+    const symbol = String(entry?.symbol ?? '').trim();
+    if (!symbol) continue;
+    const category = String(entry.category || '').trim() || 'Others';
+    if (!byCategory.has(category)) byCategory.set(category, []);
+    byCategory.get(category).push({ symbol, configured: entry.configured !== false });
+  }
+  return [...byCategory.entries()]
+    .map(([category, symbols]) => ({
+      category,
+      symbols,
+      addable: symbols.filter((item) => !listed.has(upper(item.symbol))).length,
+    }))
+    .sort((a, b) => a.category.localeCompare(b.category));
+};
+
+/** Appends every symbol not already listed; returns { rows, added }. */
+export const addGroupSymbolRows = (rows, items = []) => {
+  const next = [...(rows || [])];
+  const listed = new Set(next.map((row) => upper(row.symbol)));
+  let added = 0;
+  for (const item of items) {
+    const symbol = String(item?.symbol ?? '').trim();
+    if (!symbol || listed.has(upper(symbol))) continue;
+    listed.add(upper(symbol));
+    next.push(createGroupSymbolRow(symbol, { configured: item.configured !== false }));
+    added += 1;
+  }
+  return { rows: next, added };
+};
+
 export const removeGroupSymbolRow = (rows, index) => (
   (rows || []).filter((_, i) => i !== index)
 );

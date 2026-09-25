@@ -10,6 +10,8 @@ import {
   COMMISSION_TYPE_OPTIONS,
   EXECUTION_MODE_OPTIONS,
   addGroupSymbolRow,
+  addGroupSymbolRows,
+  symbolCategoryOptions,
   buildCommissionSchedulePayload,
   buildGroupSymbolsSavePayload,
   buildMarginChanges,
@@ -144,9 +146,70 @@ const ModalRow = ({ label, htmlFor, children, labelWidth = '100px' }) => (
 );
 
 /** Inline "add symbol" picker; mounted only while adding so LP symbols load on demand. */
-const SymbolAddPicker = ({ groupName, existing, error, onAdd, onCancel, onInput }) => {
+const SymbolAddPicker = ({ groupName, existing, error, onAdd, onAddMany, onCancel, onInput }) => {
   const [value, setValue] = useState('');
+  const [mode, setMode] = useState('symbol');
+  const [category, setCategory] = useState('');
   const { symbols } = useLpSymbols();
+  const categories = useMemo(() => symbolCategoryOptions(symbols, existing), [symbols, existing]);
+  const selectedCategory = categories.find((option) => option.category === category);
+
+  const modeButton = (key, label) => (
+    <button
+      type="button"
+      onClick={() => { setMode(key); onInput(); }}
+      className={`px-2 py-0.5 text-[10px] rounded-sm border ${mode === key
+        ? 'bg-[color:var(--accent-500)] border-[color:var(--accent-500)] text-white'
+        : 'bg-transparent border-[color:var(--border-default)] text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]'}`}
+    >
+      {label}
+    </button>
+  );
+
+  if (mode === 'category') {
+    return (
+      <div className="px-3 py-2 border-t border-black/10 bg-[color:var(--bg-surface-1)] flex flex-col gap-1.5">
+        <div className="flex items-center gap-1">{modeButton('symbol', 'Symbol')}{modeButton('category', 'By category')}</div>
+        <div className="flex items-center gap-1.5">
+          <select
+            autoFocus
+            value={category}
+            onChange={(e) => { setCategory(e.target.value); onInput(); }}
+            aria-label={`Category to add to ${groupName}`}
+            className="flex-1 min-w-0 bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-2 py-1 text-[11px] text-[color:var(--text-primary)] outline-none focus:border-blue-500/50"
+          >
+            <option value="">Select a category…</option>
+            {categories.map((option) => (
+              <option key={option.category} value={option.category} disabled={option.addable === 0}>
+                {option.category} ({option.symbols.length} symbols{option.addable < option.symbols.length ? `, ${option.addable} new` : ''})
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => selectedCategory && onAddMany(selectedCategory.symbols)}
+            disabled={!selectedCategory || selectedCategory.addable === 0}
+            className="px-3 py-1 text-[11px] bg-[color:var(--accent-500)] text-white rounded-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            {selectedCategory ? `Add ${selectedCategory.addable} symbol${selectedCategory.addable === 1 ? '' : 's'}` : 'Add'}
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-3 py-1 text-[11px] bg-[color:var(--bg-surface-3)] border border-[color:var(--border-default)] text-[color:var(--text-primary)] rounded-sm transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+        {selectedCategory && (
+          <div className="text-[10px] text-[color:var(--text-muted)] truncate" title={selectedCategory.symbols.map((s) => s.symbol).join(', ')}>
+            {selectedCategory.symbols.map((s) => s.symbol).join(', ')}
+          </div>
+        )}
+        {error && <div className="text-[11px] text-[color:var(--danger-500)]">{error}</div>}
+      </div>
+    );
+  }
 
   const confirm = () => {
     const name = value.trim();
@@ -157,6 +220,7 @@ const SymbolAddPicker = ({ groupName, existing, error, onAdd, onCancel, onInput 
 
   return (
     <div className="px-3 py-2 border-t border-black/10 bg-[color:var(--bg-surface-1)] flex flex-col gap-1.5">
+      <div className="flex items-center gap-1">{modeButton('symbol', 'Symbol')}{modeButton('category', 'By category')}</div>
       <div className="flex items-center gap-1.5">
         <input
           type="text"
@@ -307,6 +371,18 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
     } catch (error) {
       setAddSymbolError(error.message);
     }
+  };
+
+  const handleAddSymbols = (items) => {
+    const { rows, added } = addGroupSymbolRows(symbolRows, items);
+    if (added === 0) {
+      setAddSymbolError('Every symbol in this category is already in the list.');
+      return;
+    }
+    setSymbolRows(rows);
+    setSelectedSymbolIndex(rows.length - 1);
+    setIsAddingSymbol(false);
+    setAddSymbolError('');
   };
 
   const moveSelectedSymbol = (delta) => {
@@ -685,6 +761,7 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
                             existing={listedSymbols}
                             error={addSymbolError}
                             onAdd={handleAddSymbol}
+                            onAddMany={handleAddSymbols}
                             onCancel={cancelAddSymbol}
                             onInput={() => setAddSymbolError('')}
                           />

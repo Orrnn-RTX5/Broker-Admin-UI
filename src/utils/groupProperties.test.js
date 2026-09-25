@@ -281,3 +281,29 @@ test('buildCommissionSchedulePayload rejects invalid input', () => {
   assert.throws(() => buildCommissionSchedulePayload({ ...base, time_from: '09:00' }, 'g'), /both/);
   assert.throws(() => buildCommissionSchedulePayload({ ...base, time_from: '25:00', time_to: '26:00' }, 'g'), /HH:MM/);
 });
+
+test('symbolCategoryOptions groups symbols by category and counts what can still be added', async () => {
+  const { symbolCategoryOptions } = await import('./groupProperties.js');
+  const options = symbolCategoryOptions([
+    { symbol: 'EURUSD', category: 'Forex', configured: true },
+    { symbol: 'GBPUSD', category: 'Forex', configured: true },
+    { symbol: 'EURUSD.PRO', category: 'Bidyut_Symbols', configured: true },
+    { symbol: 'US30', category: '', configured: false },
+  ], ['eurusd']);
+  assert.deepEqual(options.map((o) => [o.category, o.symbols.length, o.addable]), [
+    ['Bidyut_Symbols', 1, 1],
+    ['Forex', 2, 1],
+    ['Others', 1, 1],
+  ]);
+  assert.equal(options[2].symbols[0].configured, false);
+});
+
+test('addGroupSymbolRows appends only symbols that are not listed yet', async () => {
+  const { addGroupSymbolRows, createGroupSymbolRow } = await import('./groupProperties.js');
+  const { rows, added } = addGroupSymbolRows(
+    [createGroupSymbolRow('EURUSD')],
+    [{ symbol: 'eurusd' }, { symbol: 'GBPUSD' }, { symbol: 'GBPUSD' }, { symbol: 'US30', configured: false }],
+  );
+  assert.equal(added, 2);
+  assert.deepEqual(rows.map((r) => [r.symbol, r.configured]), [['EURUSD', true], ['GBPUSD', true], ['US30', false]]);
+});
