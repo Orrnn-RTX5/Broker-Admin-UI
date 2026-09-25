@@ -8,6 +8,11 @@ import { dirname, resolve } from 'node:path';
 
 import {
   AUTOMATIC_DEMO_GROUP_LABEL,
+  DEMO_SIGNUP_DISABLED_MESSAGE,
+  DEMO_SERVER_DISABLED_WARNING,
+  DEMO_DISABLE_CONFIRM_MESSAGE,
+  buildDemoAccountGroupSetBody,
+  buildDemoServerWarning,
   normalizeDemoAccountGroupState,
   formatDemoGroupOptionLabel,
   buildDemoGroupStatus,
@@ -120,13 +125,97 @@ test('selection helpers: preselect configured group and detect changes', () => {
   assert.equal(isDemoGroupSelectionChanged(automatic, 'demo\\pro'), true);
 });
 
+test('normalizeDemoAccountGroupState maps the signup switches', () => {
+  const s = normalizeDemoAccountGroupState(response({ signup_enabled: false, server_enabled: true, signup_available: false }));
+  assert.equal(s.signupEnabled, false);
+  assert.equal(s.serverEnabled, true);
+  assert.equal(s.signupAvailable, false);
+
+  const off = normalizeDemoAccountGroupState(response({ signup_enabled: true, server_enabled: false, signup_available: false }));
+  assert.equal(off.signupEnabled, true);
+  assert.equal(off.serverEnabled, false);
+  assert.equal(off.signupAvailable, false);
+});
+
+test('normalizeDemoAccountGroupState defaults both switches to on when missing', () => {
+  const s = normalizeDemoAccountGroupState(response());
+  assert.equal(s.signupEnabled, true);
+  assert.equal(s.serverEnabled, true);
+  // signup_available missing: derived from switches + effective group.
+  assert.equal(s.signupAvailable, true);
+  assert.equal(normalizeDemoAccountGroupState(response({ effective_group: '' })).signupAvailable, false);
+  assert.equal(normalizeDemoAccountGroupState(response({ signup_enabled: false })).signupAvailable, false);
+  assert.equal(normalizeDemoAccountGroupState(response({ server_enabled: false })).signupAvailable, false);
+  for (const raw of [null, {}, { signup_enabled: null, server_enabled: 'yes' }]) {
+    const e = normalizeDemoAccountGroupState(raw);
+    assert.equal(e.signupEnabled, true);
+    assert.equal(e.serverEnabled, true);
+  }
+  // Backend value wins when present.
+  assert.equal(normalizeDemoAccountGroupState(response({ signup_available: false })).signupAvailable, false);
+});
+
+test('buildDemoGroupStatus: admin switch off takes precedence over the group state', () => {
+  const expected = { tone: 'warning', message: 'Demo signup is disabled — guests cannot create demo accounts.' };
+  assert.deepEqual(buildDemoGroupStatus(normalizeDemoAccountGroupState(response({ signup_enabled: false }))), expected);
+  assert.deepEqual(buildDemoGroupStatus(normalizeDemoAccountGroupState(response({
+    signup_enabled: false, server_enabled: false, group: 'demo\gone', valid: false,
+  }))), expected);
+  assert.equal(DEMO_SIGNUP_DISABLED_MESSAGE, expected.message);
+});
+
+test('buildDemoGroupStatus: server switch off', () => {
+  const status = buildDemoGroupStatus(normalizeDemoAccountGroupState(response({ server_enabled: false })));
+  assert.deepEqual(status, {
+    tone: 'warning',
+    message: 'Demo signup is switched off on the server — guests cannot create demo accounts.',
+  });
+});
+
+test('buildDemoServerWarning only when the server switch is off', () => {
+  assert.equal(buildDemoServerWarning(normalizeDemoAccountGroupState(response())), null);
+  assert.equal(buildDemoServerWarning(normalizeDemoAccountGroupState(response({ signup_enabled: false }))), null);
+  assert.equal(buildDemoServerWarning(null), null);
+  assert.equal(
+    buildDemoServerWarning(normalizeDemoAccountGroupState(response({ server_enabled: false }))),
+    'Demo signup is switched off on the server (PUBLIC_DEMO_ENABLED=false in the backend .env). ' +
+      'Set it to true and restart the gateway and manager to allow demo accounts.',
+  );
+  assert.equal(DEMO_SERVER_DISABLED_WARNING, buildDemoServerWarning({ serverEnabled: false }));
+});
+
+test('buildDemoAccountGroupSetBody sends only the provided keys', () => {
+  assert.deepEqual(buildDemoAccountGroupSetBody({ group: 'demo\pro' }), { group: 'demo\pro' });
+  assert.deepEqual(buildDemoAccountGroupSetBody({ group: '' }), { group: '' });
+  assert.deepEqual(buildDemoAccountGroupSetBody({ group: null }), { group: '' });
+  assert.deepEqual(buildDemoAccountGroupSetBody({ signupEnabled: false }), { signup_enabled: false });
+  assert.deepEqual(buildDemoAccountGroupSetBody({ signupEnabled: true }), { signup_enabled: true });
+  assert.deepEqual(buildDemoAccountGroupSetBody({ group: 'demo\a', signupEnabled: true }), { group: 'demo\a', signup_enabled: true });
+  assert.deepEqual(buildDemoAccountGroupSetBody({ group: undefined, signupEnabled: false }), { signup_enabled: false });
+  for (const bad of [undefined, null, {}, { group: undefined }, { signupEnabled: 'yes' }]) {
+    assert.throws(() => buildDemoAccountGroupSetBody(bad), /requires a group and\/or signupEnabled/);
+  }
+});
+
 test('service and view are wired to the DemoAccountGroup endpoints', () => {
   const service = readFileSync(resolve(__dirname, '../services/serverConfig.service.js'), 'utf8');
   const view = readFileSync(resolve(__dirname, '../components/organisms/ServerConfigView.jsx'), 'utf8');
   assert.match(service, /\/DemoAccountGroupGet`,\s*\{\s*timeout:\s*SERVER_CONFIG_READ_TIMEOUT_MS/);
-  assert.match(service, /api\.post\(`\$\{MANAGER\}\/DemoAccountGroupSet`,\s*\{\s*group:/);
+  assert.match(service, /setDemoAccountGroup:\s*\(changes\)\s*=>\s*api\.post\(`\$\{MANAGER\}\/DemoAccountGroupSet`,\s*buildDemoAccountGroupSetBody\(changes\)\)/);
+  assert.match(service, /import \{ buildDemoAccountGroupSetBody \} from '\.\.\/utils\/demoAccountGroup'/);
   assert.match(service, /const MANAGER = '\/manager'/);
   assert.match(view, /'Demo Accounts'/);
   assert.match(view, /Demo accounts created from the web terminal are opened in this group\./);
   assert.match(view, /Demo account group failed to load\./);
+  // Group Save sends only the group; the switch sends only signupEnabled.
+  assert.match(view, /setDemoAccountGroup\(\{ group: selected \}\)/);
+  assert.match(view, /setDemoAccountGroup\(\{ signupEnabled: next \}\)/);
+  assert.match(view, /if \(!next && !window\.confirm\(DEMO_DISABLE_CONFIRM_MESSAGE\)\) return;/);
+  assert.match(view, /Allow demo account creation from the web terminal/);
+  assert.match(view, /role="switch"/);
+  assert.match(view, /To stop demo accounts entirely, use the switch above\./);
+  assert.equal(
+    DEMO_DISABLE_CONFIRM_MESSAGE,
+    'Disable demo signup? Guests in the web terminal will no longer be able to create demo accounts.',
+  );
 });

@@ -3,6 +3,15 @@
 
 export const AUTOMATIC_DEMO_GROUP_LABEL = 'Automatic (alphabetically first demo group)';
 
+export const DEMO_SIGNUP_DISABLED_MESSAGE = 'Demo signup is disabled — guests cannot create demo accounts.';
+export const DEMO_SERVER_OFF_STATUS_MESSAGE =
+  'Demo signup is switched off on the server — guests cannot create demo accounts.';
+export const DEMO_SERVER_DISABLED_WARNING =
+  'Demo signup is switched off on the server (PUBLIC_DEMO_ENABLED=false in the backend .env). ' +
+  'Set it to true and restart the gateway and manager to allow demo accounts.';
+export const DEMO_DISABLE_CONFIRM_MESSAGE =
+  'Disable demo signup? Guests in the web terminal will no longer be able to create demo accounts.';
+
 const asString = (value) => (typeof value === 'string' ? value : value == null ? '' : String(value));
 
 const toPositiveNumber = (value) => {
@@ -23,14 +32,39 @@ export const normalizeDemoAccountGroupState = (raw) => {
       currency: asString(g.currency).trim(),
       leverage: toPositiveNumber(g.leverage),
     }));
+  const effectiveGroup = asString(data.effective_group).trim();
+  // Both switches default to "on" when an older backend omits them.
+  const signupEnabled = data.signup_enabled !== false;
+  const serverEnabled = data.server_enabled !== false;
   return {
     brokerId: asString(data.broker_id),
     group,
     configured: data.configured === true || (data.configured == null && group !== ''),
     valid: data.valid === true,
-    effectiveGroup: asString(data.effective_group).trim(),
+    effectiveGroup,
     demoGroups,
+    signupEnabled,
+    serverEnabled,
+    signupAvailable: typeof data.signup_available === 'boolean'
+      ? data.signup_available
+      : serverEnabled && signupEnabled && effectiveGroup !== '',
   };
+};
+
+/**
+ * Body for POST DemoAccountGroupSet. Only the provided keys are sent:
+ * `group` (string; '' or null clears it back to Automatic) and/or `signupEnabled` (boolean).
+ * Throws when neither is provided.
+ */
+export const buildDemoAccountGroupSetBody = (changes) => {
+  const c = changes && typeof changes === 'object' ? changes : {};
+  const body = {};
+  if (c.group !== undefined) body.group = asString(c.group);
+  if (typeof c.signupEnabled === 'boolean') body.signup_enabled = c.signupEnabled;
+  if (Object.keys(body).length === 0) {
+    throw new Error('setDemoAccountGroup requires a group and/or signupEnabled.');
+  }
+  return body;
 };
 
 /** e.g. `demo\standard (USD, 1:100)`; omits missing parts. */
@@ -45,11 +79,15 @@ export const formatDemoGroupOptionLabel = (demoGroup) => {
 };
 
 /**
- * Status line for the current configuration.
- * tone: 'ok' (configured & valid), 'info' (automatic default in use), 'error' (demo signup blocked/unavailable).
+ * Overall status line for the tab. The signup switches take precedence over the group state.
+ * tone: 'ok' (configured & valid), 'info' (automatic default in use),
+ * 'warning' (signup switched off by the admin or on the server),
+ * 'error' (demo signup blocked/unavailable because of the group configuration).
  */
 export const buildDemoGroupStatus = (state) => {
   const s = state || normalizeDemoAccountGroupState(null);
+  if (!s.signupEnabled) return { tone: 'warning', message: DEMO_SIGNUP_DISABLED_MESSAGE };
+  if (!s.serverEnabled) return { tone: 'warning', message: DEMO_SERVER_OFF_STATUS_MESSAGE };
   if (s.configured && s.group) {
     if (s.valid) return { tone: 'ok', message: `Current demo group: ${s.group}` };
     return {
@@ -68,6 +106,10 @@ export const buildDemoGroupStatus = (state) => {
   }
   return { tone: 'error', message: 'Not set — no automatic default is available, so demo signup is unavailable. Pick a demo group.' };
 };
+
+/** Prominent warning when the server master switch (PUBLIC_DEMO_ENABLED) is off; null otherwise. */
+export const buildDemoServerWarning = (state) =>
+  (state && state.serverEnabled === false ? DEMO_SERVER_DISABLED_WARNING : null);
 
 /**
  * Options for the group <select>. The first option clears the setting (value '').

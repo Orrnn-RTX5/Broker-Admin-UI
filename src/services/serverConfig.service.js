@@ -1,4 +1,5 @@
 import { api } from '../lib/api';
+import { buildDemoAccountGroupSetBody } from '../utils/demoAccountGroup';
 
 const EXT = '/ext-api';
 const MANAGER = '/manager';
@@ -40,7 +41,8 @@ export const ServerConfigService = {
   getDemoAccountGroup: () =>
     api.get(`${MANAGER}/DemoAccountGroupGet`, { timeout: SERVER_CONFIG_READ_TIMEOUT_MS }).then(r => r.data),
 
+  // setDemoAccountGroup({ group?, signupEnabled? }) sends only the provided keys.
   // group === '' clears the setting (back to the automatic default).
-  setDemoAccountGroup: (group) =>
-    api.post(`${MANAGER}/DemoAccountGroupSet`, { group: group ?? '' }).then(r => r.data),
+  setDemoAccountGroup: (changes) =>
+    api.post(`${MANAGER}/DemoAccountGroupSet`, buildDemoAccountGroupSetBody(changes)).then(r => r.data),
 };
