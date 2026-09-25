@@ -1,6 +1,7 @@
 import { api } from '../lib/api';
 
 const EXT = '/ext-api';
+const MANAGER = '/manager';
 export const SERVER_CONFIG_READ_TIMEOUT_MS = 8000;
 
 const getConfig = (path, config = {}) =>
@@ -34,4 +35,12 @@ export const ServerConfigService = {
   // --- Trading Halt ---
   setTradingHalt: (symbol, enabled, reason) =>
     api.get(`${EXT}/TradingHalt`, { params: { symbol, enabled, ...(reason ? { reason } : {}) } }).then(r => r.data),
+
+  // --- Demo Accounts (global demo account group for web-terminal demo signup) ---
+  getDemoAccountGroup: () =>
+    api.get(`${MANAGER}/DemoAccountGroupGet`, { timeout: SERVER_CONFIG_READ_TIMEOUT_MS }).then(r => r.data),
+
+  // group === '' clears the setting (back to the automatic default).
+  setDemoAccountGroup: (group) =>
+    api.post(`${MANAGER}/DemoAccountGroupSet`, { group: group ?? '' }).then(r => r.data),
 };

@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { ServerConfigService } from '../../services/serverConfig.service';
-import { RefreshCw, Save, Search, ShieldOff, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Save, Search, ShieldOff, ShieldCheck } from 'lucide-react';
 import ActionableErrorState from '../atoms/ActionableErrorState';
 import { getApiErrorMessage } from '../../utils/apiShapes';
+import {
+  normalizeDemoAccountGroupState,
+  buildDemoGroupStatus,
+  buildDemoGroupOptions,
+  initialDemoGroupSelection,
+  isDemoGroupSelectionChanged,
+} from '../../utils/demoAccountGroup';
 
-const TABS = ['Server Status', 'Server Settings', 'Swap Rates', 'Trading Halt'];
+const TABS = ['Server Status', 'Server Settings', 'Swap Rates', 'Trading Halt', 'Demo Accounts'];
 
 // ─── Server Status ───────────────────────────────────────────────────────────
 const ServerStatusTab = () => {
@@ -387,6 +394,109 @@ const TradingHaltTab = () => {
   );
 };
 
+// ─── Demo Accounts ────────────────────────────────────────────────────────────
+const DEMO_STATUS_TONE = {
+  ok:    { border: 'border-[#4ec9b0]/40', text: 'text-[#4ec9b0]' },
+  info:  { border: 'border-[color:var(--accent-500)]/40', text: 'text-[#9cdcfe]' },
+  error: { border: 'border-[#f48771]/50', text: 'text-[#f48771]' },
+};
+
+const DemoAccountsTab = () => {
+  const [state, setState] = useState(null);
+  const [selected, setSelected] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [saved, setSaved] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const next = normalizeDemoAccountGroupState(await ServerConfigService.getDemoAccountGroup());
+      setState(next);
+      setSelected(initialDemoGroupSelection(next));
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Demo account group failed to load.'));
+    } finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError('');
+    setSaved(false);
+    try {
+      await ServerConfigService.setDemoAccountGroup(selected);
+      setSaved(true);
+      await load();
+    } catch (err) {
+      setSaveError(getApiErrorMessage(err, 'Failed to save the demo account group.'));
+    } finally { setSaving(false); }
+  };
+
+  if (!state && loading) return <div className="flex items-center justify-center flex-1 text-[#888] text-[11px]">Loading…</div>;
+  if (!state && error) return <ActionableErrorState title="Unable to load data" message={error} actionLabel="Refresh" onAction={load} />;
+  if (!state) return <div className="flex items-center justify-center flex-1 text-[#555] text-[11px]">No data.</div>;
+
+  const status = buildDemoGroupStatus(state);
+  const tone = DEMO_STATUS_TONE[status.tone] || DEMO_STATUS_TONE.info;
+  const options = buildDemoGroupOptions(state);
+  const changed = isDemoGroupSelectionChanged(state, selected);
+
+  return (
+    <div className="flex-1 overflow-auto p-5">
+      <div className="max-w-[520px] flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] font-semibold text-[#9cdcfe]">Demo Account Group</span>
+          <button onClick={load} disabled={loading || saving}
+            className="flex items-center gap-1.5 h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px] disabled:opacity-50">
+            <RefreshCw size={11} className={loading ? 'animate-spin' : ''} /> Refresh
+          </button>
+        </div>
+        <p className="text-[11px] text-[#888] -mt-2">Demo accounts created from the web terminal are opened in this group.</p>
+
+        {error && <ActionableErrorState title="Unable to refresh" message={error} actionLabel="Refresh" onAction={load} compact />}
+
+        <div role="status" className={`bg-[color:var(--bg-surface-1)] border rounded-[3px] px-4 py-3 flex items-start gap-2 ${tone.border}`}>
+          {status.tone === 'error' && <AlertTriangle size={13} className={`${tone.text} shrink-0 mt-0.5`} />}
+          <span className={`text-[11px] font-semibold break-words ${tone.text}`}>{status.message}</span>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label htmlFor="demo-account-group-select" className="text-[10px] text-[#888] uppercase tracking-wider">Demo group</label>
+          <select id="demo-account-group-select" value={selected} disabled={saving}
+            onChange={e => { setSelected(e.target.value); setSaved(false); setSaveError(''); }}
+            className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[26px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)] font-mono disabled:opacity-50">
+            {options.map(o => (
+              <option key={o.value || '__automatic__'} value={o.value} disabled={o.disabled}>{o.label}</option>
+            ))}
+          </select>
+          {state.demoGroups.length === 0 && (
+            <span className="text-[10px] text-[#555]">No enabled demo groups found for this broker.</span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button onClick={handleSave} disabled={saving || !changed}
+            className="flex items-center gap-1.5 h-[28px] px-4 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] disabled:opacity-50">
+            <Save size={12} /> {saving ? 'Saving…' : 'Save'}
+          </button>
+          {saved && !saveError && <span className="text-[11px] text-[#4ec9b0]">Saved</span>}
+        </div>
+
+        {saveError && <ActionableErrorState title="Save failed" message={saveError} compact />}
+
+        <p className="text-[10px] text-[#555] mt-2">
+          Only this broker's enabled groups with "Demo Account" checked can be selected. Choose Automatic to clear the setting.
+        </p>
+      </div>
+    </div>
+  );
+};
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 const ServerConfigView = () => {
   const [tab, setTab] = useState('Server Status');
@@ -405,6 +515,7 @@ const ServerConfigView = () => {
       {tab === 'Server Settings' && <ServerSettingsTab />}
       {tab === 'Swap Rates'      && <SwapRatesTab />}
       {tab === 'Trading Halt'    && <TradingHaltTab />}
+      {tab === 'Demo Accounts'   && <DemoAccountsTab />}
     </div>
   );
 };
