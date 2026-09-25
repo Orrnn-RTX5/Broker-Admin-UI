@@ -9,6 +9,7 @@ import { buildActionableErrorState } from '../../../utils/errorState';
 import { invalidateLpSymbols, loadLpSymbols } from '../../../utils/lpSymbols';
 import useSymbolStore from '../../../store/useSymbolStore';
 import SymbolFormModal from './SymbolFormModal';
+import BulkCloneWizard from './BulkCloneWizard';
 import ActionableErrorState from '../../atoms/ActionableErrorState';
 import {
   STATUS_FILTERS, buildSymbolRows, categoryFilterOptions, cloneSourceOptions, cloneDefaultsFromSource,
@@ -292,7 +293,7 @@ const SymbolsTab = () => {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterEnabled, setFilterEnabled] = useState('');
-  const [modal, setModal] = useState(null); // null | 'add' | 'edit' | 'configure' | 'clone'
+  const [modal, setModal] = useState(null); // null | 'add' | 'edit' | 'configure' | 'clone' (bulk wizard) | 'clone-single'
   const [editTarget, setEditTarget] = useState(null);
   const [configureSymbol, setConfigureSymbol] = useState('');
   const [togglingSymbol, setTogglingSymbol] = useState(null);
@@ -547,6 +548,13 @@ const SymbolsTab = () => {
         />
       )}
       {modal === 'clone' && (
+        <BulkCloneWizard
+          onClose={() => setModal(null)}
+          onChanged={reloadAfterChange}
+          onSingleClone={() => setModal('clone-single')}
+        />
+      )}
+      {modal === 'clone-single' && (
         <CloneModal
           categories={categories}
           onClose={() => setModal(null)}

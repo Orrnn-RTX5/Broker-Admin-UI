@@ -48,3 +48,23 @@ test('SymbolFormModal preselects initialSymbol from the loaded catalogue', () =>
   assert.match(modal, /initialSymbol = ''/);
   assert.match(modal, /selectSymbol\(match \? match\.symbol : wanted\)/);
 });
+
+test('SymbolsTab Clone button opens the bulk clone wizard; single clone stays reachable', () => {
+  assert.match(source, /onClick=\{\(\) => setModal\('clone'\)\}[\s\S]{0,120}Clone/);
+  assert.match(source, /modal === 'clone' && \(\s*<BulkCloneWizard/);
+  assert.match(source, /onChanged=\{reloadAfterChange\}/);
+  assert.match(source, /onSingleClone=\{\(\) => setModal\('clone-single'\)\}/);
+  assert.match(source, /modal === 'clone-single' && \(\s*<CloneModal/);
+
+  const wizard = readFileSync(join(here, 'BulkCloneWizard.jsx'), 'utf8');
+  assert.match(wizard, /symbolCloneCategoryList\(\)/);
+  assert.match(wizard, /symbolCloneCategoryCreate\(body\)/);
+  assert.match(wizard, /symbolCloneBulk\(buildBulkClonePayload\(category\.id, rows\)\)/);
+  assert.match(wizard, /loadLpSymbols\(InstrumentsService/);
+  assert.match(wizard, /invalidateLpSymbols\(\);\s*onChanged\(\);/);
+
+  const api = readFileSync(join(here, '../../../services/api.js'), 'utf8');
+  assert.match(api, /symbolCloneCategoryList = \(\) => apiClient\.get\('\/SymbolCloneCategoryList'\)/);
+  assert.match(api, /symbolCloneCategoryCreate = \(body\) => apiClient\.post\('\/SymbolCloneCategoryCreate', body\)/);
+  assert.match(api, /symbolCloneBulk = \(body\) => apiClient\.post\('\/SymbolCloneBulk', body\)/);
+});

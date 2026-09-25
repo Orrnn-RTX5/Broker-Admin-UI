@@ -312,6 +312,11 @@ export const symbolUpdate = (params) => apiClient.get(`/SymbolUpdate?${query(nor
 export const symbolEnable = (symbol) => apiClient.get(`/SymbolEnable?symbol=${encodeURIComponent(symbol)}`);
 export const symbolDisable = (symbol) => apiClient.get(`/SymbolDisable?symbol=${encodeURIComponent(symbol)}`);
 export const symbolClone = (body) => apiClient.post('/SymbolClone', body);
+// Clone categories: clones of a category share its suffix (EURUSD + .PRO).
+export const symbolCloneCategoryList = () => apiClient.get('/SymbolCloneCategoryList');
+export const symbolCloneCategoryCreate = (body) => apiClient.post('/SymbolCloneCategoryCreate', body);
+// body: { category_id, symbols: [{ base_symbol, spread_markup_pips?, contract_size?, min_volume?, max_volume?, volume_step?, description? }] }
+export const symbolCloneBulk = (body) => apiClient.post('/SymbolCloneBulk', body);
 export const symbolsByCategory = (category) => apiClient.get(`/SymbolsByCategory?category=${encodeURIComponent(category)}`);
 
 export const symbolCategoryList = () => apiClient.get('/SymbolCategoryList');
