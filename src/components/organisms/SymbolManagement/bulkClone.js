@@ -1,8 +1,9 @@
 // Pure helpers for the bulk clone wizard (BulkCloneWizard.jsx).
 //
-// A clone is a derived instrument named UPPER(base) + category suffix that
-// copies every specification of a configured, non-derived base instrument and
-// prices from it (plus its spread markup). Backend: /SymbolCloneCategoryList,
+// A clone is a derived instrument named category prefix + UPPER(base) +
+// category suffix (either may be empty, not both) that copies every
+// specification of a configured, non-derived base instrument and prices from
+// it (plus its spread markup). Backend: /SymbolCloneCategoryList,
 // /SymbolCloneCategoryCreate, /SymbolCloneBulk.
 
 import { normalizeArrayResponse } from '../../../utils/apiShapes.js';
@@ -12,51 +13,87 @@ import { cloneDefaultsFromSource } from './symbolRows.js';
 export const CLONE_NAME_MAX_LENGTH = 20;
 export const BULK_CLONE_MAX_SYMBOLS = 500;
 export const CLONE_SUFFIX_MAX_LENGTH = 12;
+export const CLONE_AFFIX_MAX_LENGTH = CLONE_SUFFIX_MAX_LENGTH;
 
 const upper = (value) => String(value ?? '').trim().toUpperCase();
 
 // ─── Clone categories ─────────────────────────────────────────────────────────
 
-/** Suffix as the backend stores it (trimmed, upper case). */
+/** Suffix (or prefix) as the backend stores it (trimmed, upper case). */
 export const normalizeCloneSuffix = (suffix) => upper(suffix);
 
-/** EURUSD + .pro → EURUSD.PRO */
-export const cloneSymbolName = (baseSymbol, suffix) => `${upper(baseSymbol)}${normalizeCloneSuffix(suffix)}`;
+/**
+ * A category's naming as { prefix, suffix } (upper case). Accepts a category
+ * object or, for suffix-only callers, a plain suffix string.
+ */
+export const cloneAffix = (value) => {
+  if (value && typeof value === 'object') return { prefix: upper(value.prefix), suffix: upper(value.suffix) };
+  return { prefix: '', suffix: upper(value) };
+};
 
-/** "" when valid, otherwise why the suffix is rejected (mirrors the backend rule). */
-export const cloneSuffixError = (suffix) => {
-  const value = String(suffix ?? '').trim();
-  if (!value) return 'Suffix is required';
-  if (value.length > CLONE_SUFFIX_MAX_LENGTH) return `Suffix must be at most ${CLONE_SUFFIX_MAX_LENGTH} characters`;
-  if (!/^[A-Za-z0-9._-]+$/.test(value)) return "Suffix may only contain letters, digits, '.', '-' and '_'";
-  if (!/[A-Za-z0-9]/.test(value)) return 'Suffix needs at least one letter or digit';
+/** EURUSD + .pro → EURUSD.PRO; with prefix PRO. → PRO.EURUSD */
+export const cloneSymbolName = (baseSymbol, affix) => {
+  const { prefix, suffix } = cloneAffix(affix);
+  return `${prefix}${upper(baseSymbol)}${suffix}`;
+};
+
+/** Naming pattern of a category for display, e.g. "PRO.SYMBOL", "SYMBOL.PRO". */
+export const formatCloneAffix = (affix) => {
+  const { prefix, suffix } = cloneAffix(affix);
+  return `${prefix}SYMBOL${suffix}`;
+};
+
+/** "" when valid, otherwise why a prefix/suffix is rejected (mirrors the backend rule). */
+export const cloneAffixError = (value, label = 'Suffix', { required = false } = {}) => {
+  const trimmed = String(value ?? '').trim();
+  if (!trimmed) return required ? `${label} is required` : '';
+  if (trimmed.length > CLONE_AFFIX_MAX_LENGTH) return `${label} must be at most ${CLONE_AFFIX_MAX_LENGTH} characters`;
+  if (!/^[A-Za-z0-9._-]+$/.test(trimmed)) return `${label} may only contain letters, digits, '.', '-' and '_'`;
+  if (!/[A-Za-z0-9]/.test(trimmed)) return `${label} needs at least one letter or digit`;
   return '';
 };
 
+/** Suffix-only rule (kept for callers without a prefix). */
+export const cloneSuffixError = (suffix) => cloneAffixError(suffix, 'Suffix', { required: true });
+
 /**
- * Validates the "+ New clone category" form. Duplicates are checked against
- * the known clone categories (the backend also rejects names used by any
- * other symbol category with 409). Returns { name?, suffix? }; {} is valid.
+ * Validates the "+ New clone category" form: a name and at least one of
+ * prefix/suffix. Duplicates are checked against the known clone categories
+ * (the backend also rejects names used by any other symbol category with 409).
+ * Returns { name?, prefix?, suffix? }; {} is valid.
  */
-export const validateCloneCategoryForm = ({ name = '', suffix = '' } = {}, existing = []) => {
+export const validateCloneCategoryForm = ({ name = '', prefix = '', suffix = '' } = {}, existing = []) => {
   const errors = {};
   const trimmed = String(name ?? '').trim();
   if (!trimmed) errors.name = 'Name is required';
   else if (existing.some((category) => upper(category.name) === upper(trimmed))) errors.name = 'A clone category with this name already exists';
-  const suffixError = cloneSuffixError(suffix);
+  const prefixError = cloneAffixError(prefix, 'Prefix');
+  const suffixError = cloneAffixError(suffix, 'Suffix');
+  if (prefixError) errors.prefix = prefixError;
   if (suffixError) errors.suffix = suffixError;
-  else if (existing.some((category) => normalizeCloneSuffix(category.suffix) === normalizeCloneSuffix(suffix))) {
-    errors.suffix = 'Another clone category already uses this suffix';
+  if (!prefixError && !suffixError) {
+    if (!String(prefix ?? '').trim() && !String(suffix ?? '').trim()) {
+      errors.suffix = 'Enter a prefix, a suffix or both';
+    } else {
+      const wanted = cloneAffix({ prefix, suffix });
+      if (existing.some((category) => {
+        const other = cloneAffix(category);
+        return other.prefix === wanted.prefix && other.suffix === wanted.suffix;
+      })) {
+        errors.suffix = 'Another clone category already uses this prefix/suffix';
+      }
+    }
   }
   return errors;
 };
 
-/** GET /SymbolCloneCategoryList → [{ id, name, suffix, description, symbolCount }] sorted by name. */
+/** GET /SymbolCloneCategoryList → [{ id, name, prefix, suffix, description, symbolCount }] sorted by name. */
 export const normalizeCloneCategories = (response) => normalizeArrayResponse(response, ['categories', 'data', 'items'])
   .filter((row) => row && typeof row === 'object' && row.id !== undefined && row.id !== null && row.name)
   .map((row) => ({
     id: row.id,
     name: String(row.name),
+    prefix: normalizeCloneSuffix(row.prefix),
     suffix: normalizeCloneSuffix(row.suffix),
     description: row.description || '',
     symbolCount: Number(row.symbol_count ?? row.symbolCount ?? 0) || 0,
@@ -90,13 +127,13 @@ const groupRank = (name) => {
 /**
  * Candidates grouped by market category. Each item has a status:
  *   eligible      configured base instrument, clone name free
- *   cloned        BASE+SUFFIX already exists
- *   too_long      BASE+SUFFIX exceeds CLONE_NAME_MAX_LENGTH
+ *   cloned        PREFIX+BASE+SUFFIX already exists
+ *   too_long      PREFIX+BASE+SUFFIX exceeds CLONE_NAME_MAX_LENGTH
  *   unconfigured  LP symbol without an instrument (configure first)
  * Derived instruments (existing clones) are not bases and are left out.
  * Returns [{ name, items, eligible, total }] with configured items first.
  */
-export const buildCloneCandidates = (entries = [], suffix = '') => {
+export const buildCloneCandidates = (entries = [], affix = '') => {
   const list = Array.isArray(entries) ? entries : [];
   const existing = new Set(list.map((entry) => upper(entry?.symbol)).filter(Boolean));
   const groups = new Map();
@@ -104,7 +141,7 @@ export const buildCloneCandidates = (entries = [], suffix = '') => {
     const symbol = upper(entry?.symbol);
     if (!symbol) continue;
     if (entry.configured && isDerivedInstrument(entry.instrument)) continue;
-    const cloneName = cloneSymbolName(symbol, suffix);
+    const cloneName = cloneSymbolName(symbol, affix);
     let status = 'eligible';
     if (!entry.configured) status = 'unconfigured';
     else if (existing.has(cloneName)) status = 'cloned';
@@ -184,13 +221,13 @@ const text = (value) => (value === undefined || value === null ? '' : String(val
  * 0 markup; rows in `previous` keep their edited values. Values are strings
  * (input values); an empty value is omitted so the backend copies the base.
  */
-export const buildCloneRows = (symbols = [], entries = [], suffix = '', previous = []) => {
+export const buildCloneRows = (symbols = [], entries = [], affix = '', previous = []) => {
   const instruments = new Map((Array.isArray(entries) ? entries : [])
     .filter((entry) => entry?.configured && entry.instrument)
     .map((entry) => [upper(entry.symbol), entry.instrument]));
   const kept = new Map((previous || []).map((row) => [row.baseSymbol, row]));
   return [...symbols].map(upper).sort((a, b) => a.localeCompare(b)).map((baseSymbol) => {
-    const newSymbol = cloneSymbolName(baseSymbol, suffix);
+    const newSymbol = cloneSymbolName(baseSymbol, affix);
     const old = kept.get(baseSymbol);
     if (old) return { ...old, newSymbol };
     const defaults = cloneDefaultsFromSource(instruments.get(baseSymbol));
@@ -275,7 +312,7 @@ export const buildBulkClonePayload = (categoryId, rows = []) => ({
   }),
 });
 
-/** POST /SymbolCloneBulk response → { category, suffix, created, skipped }. */
+/** POST /SymbolCloneBulk response → { category, prefix, suffix, created, skipped }. */
 export const normalizeBulkCloneResult = (response) => {
   const data = response && typeof response === 'object' ? response : {};
   const list = (value) => (Array.isArray(value) ? value : [])
@@ -287,6 +324,7 @@ export const normalizeBulkCloneResult = (response) => {
     }));
   return {
     category: String(data.category || ''),
+    prefix: String(data.prefix || ''),
     suffix: String(data.suffix || ''),
     created: list(data.created),
     skipped: list(data.skipped),

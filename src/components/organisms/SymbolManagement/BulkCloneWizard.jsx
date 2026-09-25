@@ -8,7 +8,7 @@ import { invalidateLpSymbols, loadLpSymbols } from '../../../utils/lpSymbols';
 import ActionableErrorState from '../../atoms/ActionableErrorState';
 import {
   APPLY_ALL_FIELDS, BULK_CLONE_MAX_SYMBOLS, CLONE_NAME_MAX_LENGTH,
-  applyToAllRows, buildBulkClonePayload, buildCloneCandidates, buildCloneRows, cloneSymbolName,
+  applyToAllRows, buildBulkClonePayload, buildCloneCandidates, buildCloneRows, cloneAffix, cloneSymbolName, formatCloneAffix,
   filterCloneCandidates, groupSelectionState, normalizeBulkCloneResult, normalizeCloneCategories,
   pruneSelection, selectionError, toggleGroupSelection, validateCloneCategoryForm, validateCloneRows,
 } from './bulkClone';
@@ -63,14 +63,15 @@ const StepIndicator = ({ step }) => (
 // ─── Step 1: clone category ────────────────────────────────────────────────────
 const CategoryStep = ({ categories, loading, error, onRetry, selectedId, onSelect, onCreated, exampleBase }) => {
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: '', suffix: '', description: '' });
+  const [form, setForm] = useState({ name: '', prefix: '', suffix: '', description: '' });
   const [touched, setTouched] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const errors = validateCloneCategoryForm(form, categories);
   const formValid = Object.keys(errors).length === 0;
   const selected = categories.find((category) => category.id === selectedId);
-  const previewSuffix = showForm && form.suffix.trim() && !errors.suffix ? form.suffix : selected?.suffix;
+  const formHasAffix = Boolean(form.prefix.trim() || form.suffix.trim()) && !errors.prefix && !errors.suffix;
+  const previewAffix = showForm && formHasAffix ? { prefix: form.prefix, suffix: form.suffix } : selected;
 
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
   const create = async (event) => {
@@ -80,11 +81,11 @@ const CategoryStep = ({ categories, loading, error, onRetry, selectedId, onSelec
     setSaving(true);
     setSaveError('');
     try {
-      const body = { name: form.name.trim(), suffix: form.suffix.trim() };
+      const body = { name: form.name.trim(), prefix: form.prefix.trim(), suffix: form.suffix.trim() };
       if (form.description.trim()) body.description = form.description.trim();
       const created = await symbolCloneCategoryCreate(body);
       onCreated(created);
-      setForm({ name: '', suffix: '', description: '' });
+      setForm({ name: '', prefix: '', suffix: '', description: '' });
       setTouched(false);
       setShowForm(false);
     } catch (e) {
@@ -97,7 +98,7 @@ const CategoryStep = ({ categories, loading, error, onRetry, selectedId, onSelec
   return (
     <div className="flex flex-col gap-3">
       <p className="text-xs" style={{ color: 'var(--text-2)' }}>
-        Clones of a clone category share its suffix and appear under that category. Each clone copies every specification of its base symbol and prices from it plus its spread markup.
+        Clones of a clone category share its name prefix and/or suffix (e.g. PRO.EURUSD, EURUSD.PRO) and appear under that category. Each clone copies every specification of its base symbol and prices from it plus its spread markup.
       </p>
       {loading ? (
         <div className="flex items-center gap-2 text-xs py-4" style={{ color: 'var(--muted)' }}>
@@ -120,7 +121,7 @@ const CategoryStep = ({ categories, loading, error, onRetry, selectedId, onSelec
                 <input type="radio" name="clone-category" className="mt-0.5" checked={active} onChange={() => onSelect(category.id)} />
                 <span className="flex flex-col gap-0.5 min-w-0">
                   <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>
-                    {category.name} <span className="ui-badge ui-badge-primary text-[10px] ml-1">{category.suffix}</span>
+                    {category.name} <span className="ui-badge ui-badge-primary text-[10px] ml-1">{formatCloneAffix(category)}</span>
                   </span>
                   <span className="text-[11px]" style={{ color: 'var(--muted)' }}>
                     {category.symbolCount} symbol{category.symbolCount === 1 ? '' : 's'}
@@ -136,14 +137,19 @@ const CategoryStep = ({ categories, loading, error, onRetry, selectedId, onSelec
       {showForm ? (
         <form onSubmit={create} className="ui-card p-3 flex flex-col gap-2" style={{ border: '1px solid var(--border)' }}>
           <div className="text-xs font-semibold" style={{ color: 'var(--text)' }}>New clone category</div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
             <label className="flex flex-col gap-1 text-xs" style={{ color: 'var(--text-2)' }}>
               Name *
               <input className="ui-input ui-input-sm" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. PRO" autoFocus />
               {touched && errors.name && <span className="text-[10px]" style={{ color: 'var(--danger)' }}>{errors.name}</span>}
             </label>
             <label className="flex flex-col gap-1 text-xs" style={{ color: 'var(--text-2)' }}>
-              Suffix *
+              Prefix
+              <input className="ui-input ui-input-sm" value={form.prefix} onChange={(e) => set('prefix', e.target.value)} placeholder="e.g. pro." maxLength={12} />
+              {(touched || form.prefix) && errors.prefix && <span className="text-[10px]" style={{ color: 'var(--danger)' }}>{errors.prefix}</span>}
+            </label>
+            <label className="flex flex-col gap-1 text-xs" style={{ color: 'var(--text-2)' }}>
+              Suffix
               <input className="ui-input ui-input-sm" value={form.suffix} onChange={(e) => set('suffix', e.target.value)} placeholder="e.g. .pro" maxLength={12} />
               {(touched || form.suffix) && errors.suffix && <span className="text-[10px]" style={{ color: 'var(--danger)' }}>{errors.suffix}</span>}
             </label>
@@ -168,9 +174,9 @@ const CategoryStep = ({ categories, loading, error, onRetry, selectedId, onSelec
         </div>
       )}
 
-      {previewSuffix && (
+      {previewAffix && (
         <p className="text-xs" style={{ color: 'var(--text-2)' }}>
-          Clones will be named like <strong style={{ color: 'var(--text)' }}>{cloneSymbolName(exampleBase, previewSuffix)}</strong>
+          Clones will be named like <strong style={{ color: 'var(--text)' }}>{cloneSymbolName(exampleBase, previewAffix)}</strong>
         </p>
       )}
     </div>
@@ -351,7 +357,7 @@ const ReviewStep = ({ category, rows, submitError, onRetry }) => (
   <div className="flex flex-col gap-3">
     <div className="ui-card p-3 grid grid-cols-3 gap-3 text-xs" style={{ border: '1px solid var(--border)' }}>
       <div><div style={{ color: 'var(--muted)' }}>Category</div><div className="text-sm font-medium" style={{ color: 'var(--text)' }}>{category?.name}</div></div>
-      <div><div style={{ color: 'var(--muted)' }}>Suffix</div><div className="text-sm font-medium" style={{ color: 'var(--text)' }}>{category?.suffix}</div></div>
+      <div><div style={{ color: 'var(--muted)' }}>Naming</div><div className="text-sm font-medium" style={{ color: 'var(--text)' }}>{category ? formatCloneAffix(category) : ''}</div></div>
       <div><div style={{ color: 'var(--muted)' }}>Symbols</div><div className="text-sm font-medium" style={{ color: 'var(--text)' }}>{rows.length}</div></div>
     </div>
     <div className="flex flex-wrap gap-1">
@@ -404,7 +410,7 @@ const ResultView = ({ result }) => (
 
 // ─── Wizard ────────────────────────────────────────────────────────────────────
 /**
- * Bulk clone: pick a clone category (suffix), pick base symbols by market
+ * Bulk clone: pick a clone category (prefix/suffix), pick base symbols by market
  * group, adjust markup/volumes, create them in one /SymbolCloneBulk request.
  * `onChanged` reloads the Symbols tab; `onSingleClone` opens the one-symbol form.
  */
@@ -464,10 +470,10 @@ const BulkCloneWizard = ({ onClose, onChanged, onSingleClone }) => {
   }, [entriesAttempt]);
 
   const category = categories.find((row) => row.id === categoryId) || null;
-  const suffix = category?.suffix || '';
-  const groups = useMemo(() => buildCloneCandidates(entries, suffix), [entries, suffix]);
+  const affix = useMemo(() => cloneAffix(category), [category]);
+  const groups = useMemo(() => buildCloneCandidates(entries, affix), [entries, affix]);
 
-  // A different suffix changes which symbols are already cloned.
+  // A different prefix/suffix changes which symbols are already cloned.
   useEffect(() => { setSelected((current) => pruneSelection(current, groups)); }, [groups]);
 
   const validation = useMemo(() => validateCloneRows(rows), [rows]);
@@ -501,7 +507,7 @@ const BulkCloneWizard = ({ onClose, onChanged, onSingleClone }) => {
 
   const next = () => {
     if (!stepValid) return;
-    if (step === 2) setRows((current) => buildCloneRows(selected, entries, suffix, current));
+    if (step === 2) setRows((current) => buildCloneRows(selected, entries, affix, current));
     setStep((current) => Math.min(current + 1, STEPS.length));
   };
   const back = () => { setSubmitError(null); setStep((current) => Math.max(current - 1, 1)); };

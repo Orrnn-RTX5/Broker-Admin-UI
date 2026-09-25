@@ -64,8 +64,8 @@ test('normalizeCloneCategories reads the list response', () => {
     { name: 'no id' },
   ] });
   assert.deepEqual(rows, [
-    { id: 3, name: 'PRO', suffix: '.PRO', description: 'Pro', symbolCount: 12 },
-    { id: 4, name: 'VIP', suffix: '.VIP', description: '', symbolCount: 2 },
+    { id: 3, name: 'PRO', prefix: '', suffix: '.PRO', description: 'Pro', symbolCount: 12 },
+    { id: 4, name: 'VIP', prefix: '', suffix: '.VIP', description: '', symbolCount: 2 },
   ]);
   assert.deepEqual(normalizeCloneCategories(null), []);
 });
@@ -204,9 +204,32 @@ test('normalizeBulkCloneResult reads created and skipped', () => {
   });
   assert.deepEqual(result, {
     category: 'PRO',
+    prefix: '',
     suffix: '.PRO',
     created: [{ symbol: 'EURUSD.PRO', baseSymbol: 'EURUSD', reason: '' }],
     skipped: [{ symbol: 'GBPUSD.PRO', baseSymbol: 'GBPUSD', reason: 'already exists' }],
   });
-  assert.deepEqual(normalizeBulkCloneResult(undefined), { category: '', suffix: '', created: [], skipped: [] });
+  assert.deepEqual(normalizeBulkCloneResult(undefined), { category: '', prefix: '', suffix: '', created: [], skipped: [] });
+});
+
+test('clone categories can use a prefix, a suffix or both', async () => {
+  const { cloneSymbolName, formatCloneAffix, validateCloneCategoryForm, normalizeCloneCategories, buildCloneCandidates } = await import('./bulkClone.js');
+  assert.equal(cloneSymbolName('eurusd', '.pro'), 'EURUSD.PRO');
+  assert.equal(cloneSymbolName('eurusd', { prefix: 'pro.', suffix: '' }), 'PRO.EURUSD');
+  assert.equal(cloneSymbolName('eurusd', { prefix: 'm.', suffix: '.pro' }), 'M.EURUSD.PRO');
+  assert.equal(formatCloneAffix({ prefix: 'PRO.', suffix: '' }), 'PRO.SYMBOL');
+
+  const existing = normalizeCloneCategories({ categories: [{ id: 1, name: 'Suffix PRO', suffix: '.pro' }] });
+  assert.equal(existing[0].prefix, '');
+  assert.deepEqual(validateCloneCategoryForm({ name: 'P', prefix: 'pro.' }, existing), {});
+  assert.match(validateCloneCategoryForm({ name: 'X' }, existing).suffix, /prefix, a suffix or both/);
+  assert.match(validateCloneCategoryForm({ name: 'X', suffix: '.PRO' }, existing).suffix, /already uses/);
+  assert.match(validateCloneCategoryForm({ name: 'X', prefix: 'bad/' }, existing).prefix, /Prefix may only contain/);
+
+  const groups = buildCloneCandidates([
+    { symbol: 'EURUSD', configured: true, instrument: { symbolType: 'base', category: 'Forex' } },
+    { symbol: 'PRO.EURUSD', configured: true, instrument: { symbolType: 'derived', parentSymbol: 'EURUSD' } },
+  ], { prefix: 'PRO.', suffix: '' });
+  assert.equal(groups[0].items[0].cloneName, 'PRO.EURUSD');
+  assert.equal(groups[0].items[0].status, 'cloned');
 });
