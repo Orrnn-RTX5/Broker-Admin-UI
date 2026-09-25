@@ -7,6 +7,7 @@ import {
   formatMarketPrice,
   getSymbolFriendlyDescription,
   isMarketQuoteFresh,
+  mapFeedStatusRows,
   readMarketWatchViewCache,
   seedMarketTickHistory,
   writeMarketWatchViewCache,
@@ -121,4 +122,44 @@ test('Market Watch falls back to the configured stream list before the first tic
   assert.deepEqual([...extractStreamedSymbols(status)].sort(), ['BTCUSD', 'XAUUSD']);
   assert.equal(extractStreamedSymbols({}).size, 0);
   assert.equal(extractStreamedSymbols(null).size, 0);
+});
+
+// Shape returned by the real bridge GET /ws/feed/status (no `symbols` key).
+const bridgeStatusPayload = () => ({
+  connected: true,
+  tenant: 'broker-a',
+  available_symbols: ['BTCUSD', 'EURUSD', 'GBPUSD', 'XAUUSD'],
+  symbol_status: [
+    { symbol: 'BTCUSD', has_data: true, fresh: true, stale: false, tradable: true, last_tick_ms: 1727000000000, bid: 63000.5, ask: 63010.5 },
+    { symbol: 'EURUSD', has_data: false, fresh: false, stale: false, tradable: true, last_tick_ms: null },
+    { symbol: 'gbpusd', has_data: true, fresh: false, stale: true, tradable: true, last_tick_ms: 1726999000000 },
+    { symbol: 'XAUUSD', has_data: true, fresh: true, stale: false, tradable: false, last_tick_ms: 1727000000500 },
+  ],
+});
+
+test('Market Watch reads the bridge symbol_status rows', () => {
+  const payload = bridgeStatusPayload();
+  assert.deepEqual([...extractStreamedSymbols(payload)].sort(), ['BTCUSD', 'GBPUSD', 'XAUUSD']);
+
+  const rows = mapFeedStatusRows(payload);
+  assert.deepEqual([...rows.keys()].sort(), ['BTCUSD', 'EURUSD', 'GBPUSD', 'XAUUSD']);
+  assert.equal(rows.get('BTCUSD').bid, 63000.5);
+  assert.equal(rows.get('GBPUSD').stale, true);
+});
+
+test('Market Watch falls back to available_symbols when no bridge symbol has data yet', () => {
+  const payload = bridgeStatusPayload();
+  payload.symbol_status = payload.symbol_status.map((row) => ({ ...row, has_data: false }));
+  assert.deepEqual([...extractStreamedSymbols(payload)].sort(), ['BTCUSD', 'EURUSD', 'GBPUSD', 'XAUUSD']);
+});
+
+test('Market Watch prefers symbol_status over the legacy symbols rows', () => {
+  const payload = {
+    symbol_status: [{ symbol: 'XAUUSD', has_data: true }],
+    symbols: [{ symbol: 'EURUSD', has_data: true }],
+  };
+  assert.deepEqual([...extractStreamedSymbols(payload)], ['XAUUSD']);
+  assert.deepEqual([...mapFeedStatusRows(payload).keys()], ['XAUUSD']);
+  assert.deepEqual([...mapFeedStatusRows({ symbols: [{ symbol: 'eurusd', bid: 1.1 }] }).keys()], ['EURUSD']);
+  assert.equal(mapFeedStatusRows(null).size, 0);
 });

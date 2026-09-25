@@ -22,3 +22,25 @@ test('SymbolsTab initial load uses InstrumentsService instead of legacy symbolLi
   assert.match(source, /normalizeArrayResponse\(response,\s*SYMBOL_RESPONSE_KEYS\)/);
   assert.match(source, /withTimeout\(\s*symbolCategoryList\(\),\s*CATEGORY_LOAD_TIMEOUT_MS,/);
 });
+
+test('SymbolsTab lists unconfigured LP symbols with a Configure action', () => {
+  assert.match(source, /loadLpSymbols\(InstrumentsService,\s*\{\s*force\s*\}\)/);
+  assert.match(source, /buildSymbolRows\(symbols,\s*lpEntries\)/);
+  assert.match(source, /Not configured/);
+  assert.match(source, /initialSymbol=\{modal === 'configure' \? configureSymbol : ''\}/);
+  assert.match(source, /invalidateLpSymbols\(\)/);
+  assert.match(source, /useSymbolStore\(selectStreamedKey\)/);
+});
+
+test('SymbolsTab clone picker uses configured base instruments, not an ad-hoc feed socket', () => {
+  assert.doesNotMatch(source, /new WebSocket/);
+  assert.doesNotMatch(source, /buildFeedWsUrl/);
+  assert.doesNotMatch(source, /rtx-clone-symbol-names-cache/);
+  assert.match(source, /cloneBaseSymbols\(entries\)/);
+});
+
+test('SymbolFormModal preselects initialSymbol from the loaded catalogue', () => {
+  const modal = readFileSync(join(here, 'SymbolFormModal.jsx'), 'utf8');
+  assert.match(modal, /initialSymbol = ''/);
+  assert.match(modal, /selectSymbol\(match \? match\.symbol : wanted\)/);
+});

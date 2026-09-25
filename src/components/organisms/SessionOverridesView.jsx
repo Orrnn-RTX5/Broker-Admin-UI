@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ManagerService } from '../../services/manager.service';
 import { Plus, Settings, Search, Clock } from 'lucide-react';
 import CreateSessionOverridePopup from '../popups/CreateSessionOverridePopup';
+import LpSymbolDatalist from '../atoms/LpSymbolDatalist';
 
 const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -77,7 +78,9 @@ const SessionOverridesView = () => {
           <div className="flex border border-[#555] bg-[color:var(--bg-app)] h-[22px] items-center rounded-[2px] w-[160px]">
             <div className="px-1.5"><Search size={11} className="text-[#888]" /></div>
             <input type="text" value={symbol} onChange={e => setSymbol(e.target.value)} placeholder="Symbol (EURUSD)"
+              list="session-override-symbol-options" autoComplete="off"
               className="bg-transparent outline-none w-full text-[11px] text-[color:var(--text-primary)] placeholder:text-[#555] h-full" />
+            <LpSymbolDatalist id="session-override-symbol-options" />
           </div>
           <div className="flex border border-[#555] bg-[color:var(--bg-app)] h-[22px] items-center rounded-[2px] w-[120px]">
             <input type="text" value={group} onChange={e => setGroup(e.target.value)} placeholder="Group"

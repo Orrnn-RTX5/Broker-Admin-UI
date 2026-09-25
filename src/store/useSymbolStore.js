@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { buildFeedWsUrl, buildFeedStatusUrl } from '../config/endpoints';
-import { extractMarketTicks, extractStreamedSymbols, validMarketPrice } from '../utils/marketWatch';
+import { extractMarketTicks, extractStreamedSymbols, mapFeedStatusRows, validMarketPrice } from '../utils/marketWatch';
 import { createBrowserDeferredPersistStorage } from './deferredPersistStorage';
 
 const STATUS_SYNC_TTL_MS = 10000;
@@ -286,11 +286,7 @@ const useSymbolStore = create(
             const streamed = extractStreamedSymbols(payload);
             if (streamed.size === 0) return;
 
-            const statusRows = new Map(
-              (Array.isArray(payload.symbols) ? payload.symbols : [])
-                .filter((item) => item && typeof item === 'object')
-                .map((item) => [String(item.symbol || '').trim().toUpperCase(), item])
-            );
+            const statusRows = mapFeedStatusRows(payload);
 
             set((state) => {
               // The list is exactly the streamed symbols: symbols SuperAdmin

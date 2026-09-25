@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ManagerService } from '../../services/manager.service';
+import LpSymbolDatalist from '../atoms/LpSymbolDatalist';
 import { Plus, Trash2, RefreshCw, X, Settings } from 'lucide-react';
 
 const fmt = (v) => (v == null ? '—' : v);
@@ -73,7 +74,9 @@ const CreateSchedulePopup = ({ onClose, onCreated }) => {
               <input className={inp} value={form.group_name} onChange={e => set('group_name', e.target.value)} placeholder="e.g. standard" />
             </Field>
             <Field label="Symbol">
-              <input className={inp} value={form.symbol} onChange={e => set('symbol', e.target.value)} placeholder="* = all symbols" />
+              <input className={inp} value={form.symbol} onChange={e => set('symbol', e.target.value)} placeholder="* = all symbols"
+                list="leverage-schedule-symbol-options" autoComplete="off" />
+              <LpSymbolDatalist id="leverage-schedule-symbol-options" />
             </Field>
           </div>
 

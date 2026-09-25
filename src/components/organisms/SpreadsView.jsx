@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ManagerService } from '../../services/manager.service';
 import { Plus, Settings, Search, Activity } from 'lucide-react';
 import CreateSpreadSchedulePopup from '../popups/CreateSpreadSchedulePopup';
+import LpSymbolDatalist from '../atoms/LpSymbolDatalist';
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -71,7 +72,9 @@ const SpreadsView = () => {
           <div className="flex border border-[#555] bg-[color:var(--bg-app)] h-[22px] items-center rounded-[2px] w-[200px]">
             <div className="px-1.5"><Search size={11} className="text-[#888]" /></div>
             <input type="text" value={symbol} onChange={e => setSymbol(e.target.value)} placeholder="Filter by symbol…"
+              list="spreads-symbol-options" autoComplete="off"
               className="bg-transparent outline-none w-full text-[11px] text-[color:var(--text-primary)] placeholder:text-[#555] h-full" />
+            <LpSymbolDatalist id="spreads-symbol-options" />
           </div>
           <button type="submit" className="h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px] transition-colors">
             Load

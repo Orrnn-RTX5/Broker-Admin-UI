@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { ManagerService } from '../../services/manager.service';
 import { buildGroupRiskPayload } from '../../utils/adminValidation';
+import LpSymbolListAdder from '../molecules/LpSymbolListAdder';
 
 const MotionDiv = motion.div;
 
@@ -171,6 +172,14 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
           <div className="flex items-center gap-3">
             <label className="text-[12px] w-28 shrink-0 text-right">Allowed Symbols:</label>
             <input type="text" name="symbolsAllowed" value={formData.symbolsAllowed} onChange={handleChange} placeholder="EURUSD, GBPUSD" className="flex-1 bg-[color:var(--bg-app)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:border-blue-500 rounded-sm" />
+          </div>
+          <div className="flex items-center gap-3 -mt-1">
+            <span className="w-28 shrink-0" aria-hidden="true" />
+            <LpSymbolListAdder
+              className="flex-1"
+              value={formData.symbolsAllowed}
+              onChange={(symbolsAllowed) => setFormData((prev) => ({ ...prev, symbolsAllowed }))}
+            />
           </div>
 
           <div className="grid grid-cols-3 gap-2 px-10 mt-2">

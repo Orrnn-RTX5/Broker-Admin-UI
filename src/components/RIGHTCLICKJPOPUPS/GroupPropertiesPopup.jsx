@@ -5,6 +5,7 @@ import SymbolPropertiesPopup from './SymbolPropertiesPopup';
 import { ManagerService } from '../../services/manager.service';
 import { buildGroupRiskPayload } from '../../utils/adminValidation';
 import { useToast } from '../ui/useToast';
+import LpSymbolDatalist from '../atoms/LpSymbolDatalist';
 
 const MotionDiv = motion.div;
 
@@ -146,6 +147,14 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
   const [groupSymbols, setGroupSymbols] = useState([]);
   const [isLoadingSymbols, setIsLoadingSymbols] = useState(false);
   const [hasFetchedSymbols, setHasFetchedSymbols] = useState(false);
+  const [isAddingSymbol, setIsAddingSymbol] = useState(false);
+  const [newGroupSymbol, setNewGroupSymbol] = useState('');
+  const [isSavingGroupSymbol, setIsSavingGroupSymbol] = useState(false);
+  const [addSymbolError, setAddSymbolError] = useState('');
+  const groupSymbolNames = React.useMemo(
+    () => groupSymbols.map((sym) => sym?.symbol).filter(Boolean),
+    [groupSymbols]
+  );
 
   const setFormField = (field) => (event) => {
     const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
@@ -266,17 +275,35 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
     }
   };
 
-  const handleAddSymbol = async () => {
-    const symbolStr = window.prompt(`Enter symbol to add to ${currentGroupName} (e.g. xauusd):`);
-    if (!symbolStr) return;
-    
+  const handleAddSymbol = () => {
+    setNewGroupSymbol('');
+    setAddSymbolError('');
+    setIsAddingSymbol(true);
+  };
+
+  const cancelAddSymbol = () => {
+    setIsAddingSymbol(false);
+    setNewGroupSymbol('');
+    setAddSymbolError('');
+  };
+
+  const confirmAddSymbol = async () => {
+    const symbolStr = newGroupSymbol.trim();
+    if (!symbolStr || isSavingGroupSymbol) return;
+
+    setIsSavingGroupSymbol(true);
+    setAddSymbolError('');
     try {
       await ManagerService.getSymbolSet(currentGroupName, symbolStr);
-      alert(`Symbol ${symbolStr} added successfully to ${currentGroupName}!`);
+      notify({ title: 'Symbol added', description: `${symbolStr} added to ${currentGroupName}`, tone: 'success' });
+      setIsAddingSymbol(false);
+      setNewGroupSymbol('');
       setHasFetchedSymbols(false);
     } catch (err) {
       console.error(err);
-      alert(err.message || 'Error adding symbol');
+      setAddSymbolError(err.message || 'Error adding symbol');
+    } finally {
+      setIsSavingGroupSymbol(false);
     }
   };
 
@@ -513,7 +540,53 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
                       ) : (
                         <div className="p-4 text-center text-[color:var(--text-muted)]">No symbols found for this group.</div>
                       )}
-                      <div onClick={handleAddSymbol} className="px-3 py-2 text-[#00a86b] font-medium cursor-pointer hover:bg-white/5 transition-colors">+ click to add...</div>
+                      {isAddingSymbol ? (
+                        <div className="px-3 py-2 border-t border-black/10 bg-[color:var(--bg-surface-1)] flex flex-col gap-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="text"
+                              autoFocus
+                              value={newGroupSymbol}
+                              onChange={(e) => { setNewGroupSymbol(e.target.value); setAddSymbolError(''); }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') { e.preventDefault(); confirmAddSymbol(); }
+                                if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancelAddSymbol(); }
+                              }}
+                              list="group-symbol-add-options"
+                              autoComplete="off"
+                              aria-label={`Symbol to add to ${currentGroupName}`}
+                              placeholder="Symbol (e.g. XAUUSD)"
+                              disabled={isSavingGroupSymbol}
+                              className="flex-1 min-w-0 bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-2 py-1 text-[11px] font-mono text-[color:var(--text-primary)] outline-none focus:border-blue-500/50 disabled:opacity-50"
+                            />
+                            <LpSymbolDatalist
+                              id="group-symbol-add-options"
+                              exclude={groupSymbolNames}
+                            />
+                            <button
+                              type="button"
+                              onClick={confirmAddSymbol}
+                              disabled={!newGroupSymbol.trim() || isSavingGroupSymbol}
+                              className="px-3 py-1 text-[11px] bg-[color:var(--accent-500)] text-white rounded-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              {isSavingGroupSymbol ? 'Adding…' : 'Add'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={cancelAddSymbol}
+                              disabled={isSavingGroupSymbol}
+                              className="px-3 py-1 text-[11px] bg-[color:var(--bg-surface-3)] border border-[color:var(--border-default)] text-[color:var(--text-primary)] rounded-sm transition-colors disabled:opacity-40"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                          {addSymbolError && (
+                            <div className="text-[11px] text-[color:var(--danger-500)]">{addSymbolError}</div>
+                          )}
+                        </div>
+                      ) : (
+                        <div onClick={handleAddSymbol} className="px-3 py-2 text-[#00a86b] font-medium cursor-pointer hover:bg-white/5 transition-colors">+ click to add...</div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -753,7 +826,8 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
                   </div>
                   <div className="grid grid-cols-[100px_1fr] items-center gap-3">
                     <label className="text-[11px] text-[color:var(--text-muted)] text-right">Symbol:</label>
-                    <input type="text" value={commissionFormData.symbol} onChange={(e) => setCommissionFormData({...commissionFormData, symbol: e.target.value})} className="w-full bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-sm px-2 py-1 text-[11px] text-[color:var(--text-primary)] outline-none focus:border-blue-500/50" />
+                    <input type="text" value={commissionFormData.symbol} onChange={(e) => setCommissionFormData({...commissionFormData, symbol: e.target.value})} list="group-commission-symbol-options" autoComplete="off" className="w-full bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-sm px-2 py-1 text-[11px] text-[color:var(--text-primary)] outline-none focus:border-blue-500/50" />
+                    <LpSymbolDatalist id="group-commission-symbol-options" />
                   </div>
                   <div className="grid grid-cols-[100px_1fr] items-center gap-3">
                     <label className="text-[11px] text-[color:var(--text-muted)] text-right">Comm Type:</label>

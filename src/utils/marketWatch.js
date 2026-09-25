@@ -159,27 +159,50 @@ export const getSymbolFriendlyDescription = (symbol) => {
   return `${symbol} · Financial Contract`;
 };
 
+const normalizeStatusSymbol = (item) => String(
+  (typeof item === 'string' ? item : item?.symbol) || ''
+).trim().toUpperCase();
+
 const statusSymbolNames = (payload = {}) => {
   const source = Array.isArray(payload.available_symbols)
     ? payload.available_symbols
     : Array.isArray(payload.symbols)
       ? payload.symbols
       : [];
-  return new Set(
-    source
-      .map((item) => String((typeof item === 'string' ? item : item?.symbol) || '').trim().toUpperCase())
-      .filter(Boolean)
-  );
+  return new Set(source.map(normalizeStatusSymbol).filter(Boolean));
 };
 
+// Per-symbol status rows of the bridge /ws/feed/status payload. The bridge
+// sends `symbol_status`; `symbols` is the older shape, kept for back-compat.
+export const extractFeedStatusRows = (payload) => {
+  if (!payload || typeof payload !== 'object') return [];
+  const source = Array.isArray(payload.symbol_status)
+    ? payload.symbol_status
+    : Array.isArray(payload.symbols)
+      ? payload.symbols
+      : [];
+  return source.filter((item) => item && typeof item === 'object' && normalizeStatusSymbol(item));
+};
+
+/** Status rows keyed by upper-case symbol, for seeding Market Watch quotes. */
+export const mapFeedStatusRows = (payload) => new Map(
+  extractFeedStatusRows(payload).map((item) => [normalizeStatusSymbol(item), item])
+);
+
+const streamedFrom = (entries) => (Array.isArray(entries) ? entries : [])
+  .filter((item) => item && typeof item === 'object' && item.has_data === true)
+  .map(normalizeStatusSymbol)
+  .filter(Boolean);
+
 // The symbols the bridge is actually receiving prices for (SuperAdmin decides
-// which ones the relay streams). Right after a bridge restart no symbol has data
+// which ones the relay streams). Prefers the bridge's `symbol_status` rows, then
+// the legacy `symbols` rows; right after a bridge restart no symbol has data
 // yet, so fall back to the configured stream list until the first ticks arrive.
 export const extractStreamedSymbols = (payload = {}) => {
-  const entries = Array.isArray(payload?.symbols) ? payload.symbols : [];
-  const streamed = entries
-    .filter((item) => item && typeof item === 'object' && item.has_data === true)
-    .map((item) => String(item.symbol || '').trim().toUpperCase())
-    .filter(Boolean);
-  return streamed.length > 0 ? new Set(streamed) : statusSymbolNames(payload || {});
+  if (!payload || typeof payload !== 'object') return new Set();
+  const fromStatus = streamedFrom(payload.symbol_status);
+  if (fromStatus.length > 0) return new Set(fromStatus);
+  const fromLegacy = streamedFrom(payload.symbols);
+  if (fromLegacy.length > 0) return new Set(fromLegacy);
+  return statusSymbolNames(payload);
 };

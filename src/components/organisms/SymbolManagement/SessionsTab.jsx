@@ -8,6 +8,7 @@ import { getApiErrorMessage } from '../../../utils/apiShapes';
 import { buildActionableErrorState } from '../../../utils/errorState';
 import ActionableErrorState from '../../atoms/ActionableErrorState';
 import { loadSymbolOptions, normalizeOverrideRows, normalizeSessionRows } from './symbolManagementData';
+import SymbolOptions from './SymbolOptions';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -250,7 +251,7 @@ const SessionsTab = () => {
             onChange={e => setSelectedSymbol(e.target.value)}
           >
             <option value="">— select symbol —</option>
-            {allSymbols.map(s => <option key={s.symbol || s} value={s.symbol || s}>{s.symbol || s}</option>)}
+            <SymbolOptions symbols={allSymbols} />
           </select>
         )}
       </div>

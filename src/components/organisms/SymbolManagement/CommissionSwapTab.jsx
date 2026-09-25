@@ -15,6 +15,7 @@ import {
   normalizeLeverageRows,
   normalizeSwapFreeRows,
 } from './symbolManagementData';
+import SymbolOptions from './SymbolOptions';
 
 // ─── Generic delete-capable table ─────────────────────────────────────────────
 const DeletableTable = ({ rows, columns, idKey, onDelete, deletingId, emptyMsg }) => (
@@ -446,7 +447,7 @@ const CommissionSwapTab = () => {
         ) : (
           <select className="ui-input ui-input-sm" style={{ width: 200 }} value={selectedSymbol} onChange={e => setSelectedSymbol(e.target.value)}>
             <option value="">— select symbol —</option>
-            {allSymbols.map(s => <option key={s.symbol || s} value={s.symbol || s}>{s.symbol || s}</option>)}
+            <SymbolOptions symbols={allSymbols} />
           </select>
         )}
       </div>

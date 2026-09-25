@@ -5,8 +5,14 @@ import { getApiErrorMessage } from '../../../utils/apiShapes';
 import { buildActionableErrorState } from '../../../utils/errorState';
 import ActionableErrorState from '../../atoms/ActionableErrorState';
 import { normalizeMappingRows } from './symbolManagementData';
+import { useLpSymbols } from '../../../hooks/useLpSymbols';
+import { configuredSymbolNames } from './symbolRows';
 
 const MappingFormModal = ({ onClose, onSuccess }) => {
+  // symbol_mappings.internal_symbol references instruments(symbol): only
+  // configured instruments can be mapped. LP symbols are suggestions only.
+  const { symbols: lpSymbols, names: lpNames, loading: loadingSymbols, error: symbolsError, reload: reloadSymbols } = useLpSymbols();
+  const internalSymbols = useMemo(() => configuredSymbolNames(lpSymbols), [lpSymbols]);
   const [form, setForm] = useState({ lpName: '', lpSymbol: '', internalSymbol: '' });
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
@@ -41,11 +47,29 @@ const MappingFormModal = ({ onClose, onSuccess }) => {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium" style={{ color: 'var(--text-2)' }}>LP Symbol *</label>
-            <input className="ui-input ui-input-sm" value={form.lpSymbol} onChange={e => set('lpSymbol', e.target.value)} required placeholder="e.g. EUR/USD" />
+            <input className="ui-input ui-input-sm" value={form.lpSymbol} onChange={e => set('lpSymbol', e.target.value)} required placeholder="e.g. EUR/USD" list="lp-symbol-suggestions" autoComplete="off" />
+            <datalist id="lp-symbol-suggestions">
+              {lpNames.map(name => <option key={name} value={name} />)}
+            </datalist>
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium" style={{ color: 'var(--text-2)' }}>Internal Symbol *</label>
-            <input className="ui-input ui-input-sm" value={form.internalSymbol} onChange={e => set('internalSymbol', e.target.value)} required placeholder="e.g. EURUSD" />
+            <select className="ui-input ui-input-sm" value={form.internalSymbol} onChange={e => set('internalSymbol', e.target.value)} required disabled={loadingSymbols}>
+              <option value="">{loadingSymbols ? 'Loading configured symbols…' : '— select configured symbol —'}</option>
+              {internalSymbols.map(name => <option key={name} value={name}>{name}</option>)}
+            </select>
+            {!loadingSymbols && !symbolsError && internalSymbols.length === 0 && (
+              <p className="text-xs" style={{ color: 'var(--muted)' }}>No configured symbols yet. Configure the symbol in the Symbols tab first.</p>
+            )}
+            {!loadingSymbols && internalSymbols.length > 0 && (
+              <p className="text-xs" style={{ color: 'var(--muted)' }}>Only configured symbols can be mapped. Configure LP symbols in the Symbols tab first.</p>
+            )}
+            {symbolsError && (
+              <p className="text-xs" style={{ color: 'var(--danger)' }}>
+                {getApiErrorMessage(symbolsError, 'Symbols failed to load.')}{' '}
+                <button type="button" className="underline" onClick={reloadSymbols}>Retry</button>
+              </p>
+            )}
           </div>
           {err && <p className="text-xs" style={{ color: 'var(--danger)' }}>{err}</p>}
           <div className="flex justify-end gap-2 mt-1">

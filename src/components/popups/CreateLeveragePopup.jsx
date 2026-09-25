@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { X, Hash, AlertCircle } from 'lucide-react';
 import { ManagerService } from '../../services/manager.service';
 import { buildDynamicLeveragePayload } from '../../utils/adminValidation';
+import LpSymbolDatalist from '../atoms/LpSymbolDatalist';
 
 const MotionDiv = motion.div;
 
@@ -12,7 +13,7 @@ const CreateLeveragePopup = ({ onClose, onCreated }) => {
     leverage: 500,
     margin_rate: 0.002,
     priority: 1,
-    symbol: 'EURUSD',
+    symbol: '',
     volume_from: 0,
     volume_to: 10
   });
@@ -97,9 +98,12 @@ const CreateLeveragePopup = ({ onClose, onCreated }) => {
                   value={formData.symbol}
                   onChange={handleChange}
                   required
+                  list="dynamic-leverage-symbol-options"
+                  autoComplete="off"
                   placeholder="e.g. EURUSD"
                   className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors"
                 />
+                <LpSymbolDatalist id="dynamic-leverage-symbol-options" />
               </div>
             </div>
 

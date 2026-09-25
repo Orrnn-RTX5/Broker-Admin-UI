@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Calendar, AlertCircle } from 'lucide-react';
 import { ManagerService } from '../../services/manager.service';
+import LpSymbolListAdder from '../molecules/LpSymbolListAdder';
 
 const MotionDiv = motion.div;
 
@@ -9,7 +10,7 @@ const CreateHolidayPopup = ({ onClose, onCreated }) => {
   const [formData, setFormData] = useState({
     date: '2026-12-25',
     name: 'Christmas Day',
-    symbols: 'EURUSD, GBPUSD',
+    symbols: '',
     trading_allowed: false
   });
 
@@ -113,6 +114,10 @@ const CreateHolidayPopup = ({ onClose, onCreated }) => {
                 onChange={handleChange}
                 placeholder="EURUSD, GBPUSD"
                 className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors"
+              />
+              <LpSymbolListAdder
+                value={formData.symbols}
+                onChange={(symbols) => setFormData(prev => ({ ...prev, symbols }))}
               />
             </div>
 

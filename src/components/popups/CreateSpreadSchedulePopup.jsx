@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Activity, AlertCircle } from 'lucide-react';
 import { ManagerService } from '../../services/manager.service';
+import LpSymbolDatalist from '../atoms/LpSymbolDatalist';
 
 const MotionDiv = motion.div;
 
@@ -17,7 +18,7 @@ const DAY_OPTIONS = [
 
 const CreateSpreadSchedulePopup = ({ onClose, onCreated }) => {
   const [formData, setFormData] = useState({
-    symbol: 'EURUSD',
+    symbol: '',
     group_name: 'default',
     day_of_week: 1,
     time_from: '08:00',
@@ -81,7 +82,9 @@ const CreateSpreadSchedulePopup = ({ onClose, onCreated }) => {
             <div className="flex flex-col gap-1.5">
               <label className="text-[color:var(--text-secondary)]">Symbol</label>
               <input type="text" name="symbol" value={formData.symbol} onChange={handleChange} required
+                list="spread-schedule-symbol-options" autoComplete="off" placeholder="e.g. EURUSD"
                 className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors" />
+              <LpSymbolDatalist id="spread-schedule-symbol-options" />
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-[color:var(--text-secondary)]">Group Name</label>

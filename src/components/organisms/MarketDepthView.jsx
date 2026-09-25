@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ManagerService } from '../../services/manager.service';
 import { Search, Save, Database, AlertCircle, Check, Plus } from 'lucide-react';
 import { buildMarketDepthPayload } from '../../utils/adminValidation';
+import LpSymbolDatalist from '../atoms/LpSymbolDatalist';
 
 const MarketDepthView = () => {
   const [searchSymbol, setSearchSymbol] = useState('');
@@ -105,9 +106,12 @@ const MarketDepthView = () => {
               required
               value={searchSymbol}
               onChange={(e) => setSearchSymbol(e.target.value)}
+              list="market-depth-symbol-options"
+              autoComplete="off"
               placeholder="Enter Symbol (e.g. EURUSD)"
               className="bg-transparent border-none outline-none w-full text-[12px] text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] h-full"
             />
+            <LpSymbolDatalist id="market-depth-symbol-options" />
           </div>
           <button 
             type="submit"

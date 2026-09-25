@@ -12,6 +12,7 @@ import {
   normalizeMarketDepthConfig,
   normalizeVisibilityRows,
 } from './symbolManagementData';
+import SymbolOptions from './SymbolOptions';
 
 // ─── Market Depth Section ──────────────────────────────────────────────────────
 const isMissingMarketDepthConfig = (error) => {
@@ -87,7 +88,7 @@ const MarketDepthSection = ({ allSymbols, loadingSymbols }) => {
         ) : (
           <select className="ui-input ui-input-sm" style={{ width: 200 }} value={symbol} onChange={e => setSymbol(e.target.value)}>
             <option value="">— select —</option>
-            {allSymbols.map(s => <option key={s.symbol || s} value={s.symbol || s}>{s.symbol || s}</option>)}
+            <SymbolOptions symbols={allSymbols} />
           </select>
         )}
       </div>
@@ -165,7 +166,7 @@ const VisibilityModal = ({ allSymbols, loadingSymbols, onClose, onSuccess }) => 
             ) : (
               <select className="ui-input ui-input-sm" value={form.symbol} onChange={e => set('symbol', e.target.value)}>
                 <option value="">— select —</option>
-                {allSymbols.map(s => <option key={s.symbol || s} value={s.symbol || s}>{s.symbol || s}</option>)}
+                <SymbolOptions symbols={allSymbols} />
               </select>
             )}
           </div>

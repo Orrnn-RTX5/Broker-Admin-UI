@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PlatformConfigService } from '../../services/platformConfig.service';
 import { getApiErrorMessage, normalizeArrayResponse } from '../../utils/apiShapes';
 import { Plus, Save, Trash2 } from 'lucide-react';
+import LpSymbolListAdder from '../molecules/LpSymbolListAdder';
 
 const SymbolVisibilityView = () => {
   const [list, setList] = useState([]);
@@ -131,6 +132,7 @@ const SymbolVisibilityView = () => {
                 className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] px-2 py-1.5 rounded-[2px] outline-none focus:border-[color:var(--accent-500)] resize-none font-mono"
                 placeholder="EURUSD, GBPUSD, XAUUSD…"
               />
+              <LpSymbolListAdder value={editSymbols} onChange={setEditSymbols} />
               <div className="text-[10px] text-[#555]">
                 {editSymbols.split(',').filter(s => s.trim()).length} symbols
               </div>
@@ -171,6 +173,7 @@ const SymbolVisibilityView = () => {
                 className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] px-2 py-1 rounded-[2px] outline-none focus:border-[color:var(--accent-500)] resize-none font-mono"
                 placeholder="EURUSD, GBPUSD…"
               />
+              <LpSymbolListAdder value={newSymbols} onChange={setNewSymbols} />
             </div>
             <div className="flex gap-2 mt-1 justify-end">
               <button type="button" onClick={() => setShowForm(false)}

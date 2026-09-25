@@ -1,5 +1,7 @@
 import { InstrumentsService } from '../../../services/instruments.service';
 import { normalizeArrayResponse } from '../../../utils/apiShapes';
+import { loadLpSymbols } from '../../../utils/lpSymbols';
+import { lpSymbolOptions } from './symbolRows';
 
 export const SYMBOL_MANAGEMENT_LIMIT = 5000;
 const SYMBOL_OPTIONS_TIMEOUT_MS = 10000;
@@ -72,14 +74,17 @@ export const normalizeSymbolOptions = (response) =>
     })
     .filter(Boolean);
 
-export const loadSymbolOptions = async () => {
-  const response = await withTimeout(
-    InstrumentsService.getInstruments({ page: 1, limit: SYMBOL_MANAGEMENT_LIMIT, search: '', enabled: '' }),
+// Every LP symbol, configured or not: sessions, commission/swap, market depth
+// and visibility accept any symbol text. Options carry `configured` so pickers
+// can label symbols that have no instrument yet (see SymbolOptions).
+export const loadSymbolOptions = async ({ force = false } = {}) => {
+  const entries = await withTimeout(
+    loadLpSymbols(InstrumentsService, { force }),
     SYMBOL_OPTIONS_TIMEOUT_MS,
     'symbol list request timed out'
   );
 
-  return normalizeSymbolOptions(response);
+  return lpSymbolOptions(entries);
 };
 
 export const normalizeCategoryRows = (response) =>

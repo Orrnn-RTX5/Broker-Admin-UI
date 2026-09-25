@@ -21,7 +21,18 @@ test('Symbol Management subtab symbol selectors use manager instruments, not quo
     assert.match(source, /loadSymbolOptions/);
   }
 
-  assert.match(helper, /InstrumentsService\.getInstruments\(\{\s*page:\s*1,\s*limit:\s*SYMBOL_MANAGEMENT_LIMIT,\s*search:\s*'',\s*enabled:\s*''\s*\}\)/);
+  // All LP symbols (configured or not) via the shared merged source.
+  assert.match(helper, /loadLpSymbols\(InstrumentsService,\s*\{\s*force\s*\}\)/);
+  assert.match(helper, /lpSymbolOptions\(entries\)/);
+  for (const source of [sessions, commissionSwap, advanced]) {
+    assert.match(source, /<SymbolOptions symbols=\{allSymbols\} \/>/);
+  }
+});
+
+test('LP mapping internal symbol is restricted to configured instruments', () => {
+  assert.match(mappings, /configuredSymbolNames\(/);
+  assert.match(mappings, /<select[^>]*value=\{form\.internalSymbol\}/);
+  assert.match(mappings, /<datalist id="lp-symbol-suggestions">/);
 });
 
 test('Symbol Management subtab lists normalize wrapped backend responses', () => {

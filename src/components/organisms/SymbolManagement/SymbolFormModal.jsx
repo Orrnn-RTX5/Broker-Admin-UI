@@ -1,9 +1,11 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {InstrumentsService} from '../../../services/instruments.service';
 import {getApiErrorMessage} from '../../../utils/apiShapes';
 import {instrumentForm, instrumentPayload, numericInstrumentFields, calcModes, cryptoSessions, dayNames, instrumentCategories, defaultCategory, categoryTemplate, applyCategoryTemplate} from '../../../utils/instrumentForm';
 
-export default function SymbolFormModal({symbol: existing, categories, instruments = [], onClose, onSuccess}) {
+// `initialSymbol` preselects a feed symbol in the Add form ("Configure" on an
+// unconfigured LP symbol) once the catalogue has loaded.
+export default function SymbolFormModal({symbol: existing, categories, instruments = [], initialSymbol = '', onClose, onSuccess}) {
   const [form, setForm] = useState(() => instrumentForm(existing));
   const [catalogue, setCatalogue] = useState([]);
   const [symbolSearch, setSymbolSearch] = useState('');
@@ -53,6 +55,16 @@ export default function SymbolFormModal({symbol: existing, categories, instrumen
     const next = instrumentForm(source || {symbol: value});
     applyDefaults(defaultCategory(next, instruments), next, source || {});
   };
+  const initialApplied = useRef(false);
+  useEffect(() => {
+    if (existing || !initialSymbol || initialApplied.current || catalogue.length === 0) return;
+    initialApplied.current = true;
+    const wanted = String(initialSymbol).trim().toUpperCase();
+    const match = catalogue.find(row => String(row.symbol || '').trim().toUpperCase() === wanted);
+    selectSymbol(match ? match.symbol : wanted);
+    // selectSymbol reads the loaded catalogue; run once when it arrives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalogue, existing, initialSymbol]);
   const setSession = (index, key, value) => set('sessions', form.sessions.map((session, i) => i === index ? {...session, [key]: value} : session));
   const submit = async event => {
     event.preventDefault(); setError('');

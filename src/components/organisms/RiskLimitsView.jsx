@@ -4,6 +4,7 @@ import { Plus, Trash2, Pencil } from 'lucide-react';
 import { buildRiskLimitPayload } from '../../utils/adminValidation';
 import { buildActionableErrorState } from '../../utils/errorState';
 import ActionableErrorState from '../atoms/ActionableErrorState';
+import LpSymbolDatalist from '../atoms/LpSymbolDatalist';
 
 const SCOPE_TYPES = ['', 'account', 'group', 'symbol', 'global'];
 const LIMIT_TYPES = ['max_drawdown', 'max_volume', 'max_loss', 'max_margin', 'max_positions'];
@@ -179,8 +180,11 @@ const RiskLimitsView = () => {
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] text-[#888] uppercase tracking-wider">Scope Value</label>
                 <input value={form.scope_value} onChange={e => setForm(f => ({ ...f, scope_value: e.target.value }))}
-                  placeholder="login / group / symbol"
+                  placeholder={form.scope_type === 'symbol' ? 'e.g. EURUSD' : 'login / group / symbol'}
+                  list={form.scope_type === 'symbol' ? 'risk-limit-symbol-options' : undefined}
+                  autoComplete="off"
                   className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[24px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]" />
+                {form.scope_type === 'symbol' && <LpSymbolDatalist id="risk-limit-symbol-options" />}
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] text-[#888] uppercase tracking-wider">Limit Type *</label>

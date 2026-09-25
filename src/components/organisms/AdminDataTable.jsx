@@ -11,6 +11,9 @@ import { useInstruments } from '../../hooks/useInstruments';
 import { useAccounts } from '../../hooks/useAccounts';
 import { ManagerService } from '../../services/manager.service';
 import { PositionsService } from '../../services/positions.service';
+import { InstrumentsService } from '../../services/instruments.service';
+import { loadLpSymbols } from '../../utils/lpSymbols';
+import { getUnconfiguredSymbolRows, mergeUnconfiguredSymbolPage } from '../../utils/lpSymbolLists';
 import { useAuthStore } from '../../store/authStore';
 import { normalizePagedResponse, getApiErrorMessage } from '../../utils/apiShapes';
 import {
@@ -840,6 +843,20 @@ const AdminDataTable = ({
   const usesAccountDetailsMany = viewType === 'Clients' || viewType === 'Trading Accounts';
   const { data: accountsResponse, loading: accountsLoading, error: accountsError, mutate: refetchAccounts } = useAccounts(activePage, pageSize, debouncedSearchQuery, '', '', usesAccountDetailsMany);
   const { data: symbolsResponse, loading: symbolsLoading, error: symbolsError, mutate: refetchSymbols } = useInstruments(activePage, pageSize, debouncedSearchQuery, '', viewType === 'Symbols');
+  // The Symbols grid also lists LP symbols that have no configured instrument yet.
+  const [lpSymbolEntries, setLpSymbolEntries] = useState([]);
+  const lpSymbolsRefreshRef = React.useRef(refreshTrigger);
+  const isSymbolsGrid = viewType === 'Symbols';
+  React.useEffect(() => {
+    if (!isSymbolsGrid) return undefined;
+    const force = lpSymbolsRefreshRef.current !== refreshTrigger;
+    lpSymbolsRefreshRef.current = refreshTrigger;
+    let cancelled = false;
+    loadLpSymbols(InstrumentsService, { force })
+      .then((entries) => { if (!cancelled) setLpSymbolEntries(entries); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [isSymbolsGrid, refreshTrigger]);
   const { data: positionsResponse, loading: positionsLoading, error: positionsError, mutate: refetchPositions } = usePositions({ page: activePage, limit: pageSize }, true, 2000, viewType === 'Positions');
   const { data: ordersResponse, loading: ordersLoading, error: ordersError, mutate: refetchOrders } = useOrders({
     limit: pageSize,
@@ -1100,7 +1117,7 @@ const AdminDataTable = ({
       isAccountsViewTemp = true;
       isLoading = accountsLoading;
     } else if (viewType === 'Symbols') {
-      const pageData = getPagedMappedRows({
+      const configuredPage = getPagedMappedRows({
         response: symbolsResponse,
         keys: ['instruments', 'symbols', 'data', 'answer', 'items', 'rows', 'value'],
         page: activePage,
@@ -1108,6 +1125,15 @@ const AdminDataTable = ({
         search: debouncedSearchQuery,
         mapFn: getSymbolRow,
       });
+      const pageData = symbolsResponse
+        ? mergeUnconfiguredSymbolPage({
+          paged: configuredPage,
+          unconfiguredRows: getUnconfiguredSymbolRows(lpSymbolEntries, debouncedSearchQuery),
+          page: activePage,
+          pageSize,
+          fallbackConfiguredTotal: lpSymbolEntries.filter((entry) => entry.configured).length,
+        })
+        : configuredPage;
 
       columns = SYMBOL_COLUMNS;
       data = pageData.rows;
@@ -1219,6 +1245,7 @@ const AdminDataTable = ({
     effectiveOrderFilters,
     groupsLoading,
     groupsResponse,
+    lpSymbolEntries,
     ordersLoading,
     ordersResponse,
     activePage,
@@ -1896,13 +1923,13 @@ const AdminDataTable = ({
             ) : isSymbolsView ? (
               <>
                 <div className="w-48 px-3 py-1.5 text-[12px] flex items-center gap-2 border-r border-[color:var(--border-subtle)] shrink-0">
-                  <OrangeSquareSIcon />
-                  <span className="text-[color:var(--text-primary)] truncate font-normal">{row.symbol}</span>
+                  <span className={row.notConfigured ? 'opacity-40' : undefined}><OrangeSquareSIcon /></span>
+                  <span className={`${row.notConfigured ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]'} truncate font-normal`}>{row.symbol}</span>
                 </div>
                 <div className="w-72 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.description}</div>
                 <div className="w-24 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.digits}</div>
                 <div className="w-32 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.type}</div>
-                <div className="w-48 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.execution}</div>
+                <div className={`w-48 px-3 py-1.5 text-[12px] border-r border-[color:var(--border-subtle)] shrink-0 truncate ${row.notConfigured ? 'text-[color:var(--warning-500)] italic' : 'text-[color:var(--text-secondary)]'}`} title={row.notConfigured ? 'Streamed by the LP but not configured as an instrument' : undefined}>{row.execution}</div>
                 <div className="w-32 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.expiration}</div>
                 <div className="flex-1 bg-transparent"></div>
               </>

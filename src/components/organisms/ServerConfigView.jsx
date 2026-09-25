@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ServerConfigService } from '../../services/serverConfig.service';
 import { AlertTriangle, RefreshCw, Save, Search, ShieldOff, ShieldCheck } from 'lucide-react';
 import ActionableErrorState from '../atoms/ActionableErrorState';
+import LpSymbolDatalist from '../atoms/LpSymbolDatalist';
 import { getApiErrorMessage } from '../../utils/apiShapes';
 import {
   DEMO_DISABLE_CONFIRM_MESSAGE,
@@ -261,7 +262,9 @@ const SwapRatesTab = () => {
         <form onSubmit={handleSearch} className="flex items-center gap-1.5 ml-4">
           <span className="text-[10px] text-[#888]">Symbol</span>
           <input value={symbolSearch} onChange={e => setSymbolSearch(e.target.value)} placeholder="e.g. EURUSD"
+            list="swap-rate-symbol-options" autoComplete="off"
             className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[22px] px-2 w-28 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]" />
+          <LpSymbolDatalist id="swap-rate-symbol-options" />
           <button type="submit" className="flex items-center gap-1 h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]">
             <Search size={11} /> Get
           </button>
@@ -356,7 +359,9 @@ const TradingHaltTab = () => {
         <div className="flex flex-col gap-1">
           <label className="text-[10px] text-[#f48771] uppercase tracking-wider">Symbol *</label>
           <input value={symbol} onChange={e => setSymbol(e.target.value)} placeholder="e.g. EURUSD"
+            list="trading-halt-symbol-options" autoComplete="off"
             className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[26px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)] w-48 font-mono" />
+          <LpSymbolDatalist id="trading-halt-symbol-options" />
         </div>
 
         <div className="flex flex-col gap-1">
