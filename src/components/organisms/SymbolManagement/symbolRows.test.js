@@ -112,3 +112,13 @@ test('groupSymbolOptions splits configured and not configured, legacy options co
     unconfigured: ['C'],
   });
 });
+
+test('cloneSourceOptions lists every LP symbol, splitting ready from configure-first', async () => {
+  const { cloneSourceOptions } = await import('./symbolRows.js');
+  const entries = [
+    { symbol: 'EURUSD', configured: true, instrument: { symbolType: 'base' } },
+    { symbol: 'EURUSDPRO', configured: true, instrument: { symbolType: 'derived', parentSymbol: 'EURUSD' } },
+    { symbol: 'AUDCAD', configured: false, instrument: null },
+  ];
+  assert.deepEqual(cloneSourceOptions(entries), { ready: ['EURUSD'], needsConfig: ['AUDCAD'] });
+});

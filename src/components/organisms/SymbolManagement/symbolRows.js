@@ -98,6 +98,16 @@ export const cloneBaseSymbols = (lpEntries = []) => lpEntries
   })
   .map((entry) => entry.symbol);
 
+/**
+ * Clone source picker: `ready` can be cloned now; `needsConfig` are LP symbols
+ * with no instrument yet — listed so every LP symbol is visible, but they must
+ * be configured before their specifications can be copied.
+ */
+export const cloneSourceOptions = (lpEntries = []) => ({
+  ready: cloneBaseSymbols(lpEntries),
+  needsConfig: lpEntries.filter((entry) => entry && !entry.configured).map((entry) => entry.symbol),
+});
+
 /** Configured instrument names only (e.g. LP mapping internal symbols, FK-bound). */
 export const configuredSymbolNames = (lpEntries = []) => lpEntries
   .filter((entry) => entry?.configured)

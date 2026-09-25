@@ -11,7 +11,7 @@ import useSymbolStore from '../../../store/useSymbolStore';
 import SymbolFormModal from './SymbolFormModal';
 import ActionableErrorState from '../../atoms/ActionableErrorState';
 import {
-  STATUS_FILTERS, buildSymbolRows, categoryFilterOptions, cloneBaseSymbols,
+  STATUS_FILTERS, buildSymbolRows, categoryFilterOptions, cloneSourceOptions,
   filterSymbolRows, streamingState, symbolCountSummary,
 } from './symbolRows';
 
@@ -73,8 +73,9 @@ const normalizeCategoryRows = (response) =>
 // ─── Clone Modal ───────────────────────────────────────────────────────────────
 // SymbolClone copies the base row from `instruments` (derived_symbol_overrides
 // reference it), so the source must be a configured, non-derived instrument.
-const CloneModal = ({ categories, onClose, onSuccess }) => {
+const CloneModal = ({ categories, onClose, onSuccess, onConfigure }) => {
   const [baseSymbols, setBaseSymbols] = useState([]);
+  const [unconfiguredSymbols, setUnconfiguredSymbols] = useState([]);
   const [loadingSymbols, setLoadingSymbols] = useState(true);
   const [form, setForm] = useState({
     baseSymbol: '',
@@ -97,10 +98,11 @@ const CloneModal = ({ categories, onClose, onSuccess }) => {
     loadLpSymbols(InstrumentsService, { force: loadAttempt > 0 })
       .then((entries) => {
         if (!active) return;
-        const names = cloneBaseSymbols(entries);
+        const { ready: names, needsConfig } = cloneSourceOptions(entries);
         setBaseSymbols(names);
-        setSymbolsError(names.length === 0
-          ? buildActionableErrorState('No configured base symbols yet. Configure a symbol first, then clone it.', {
+        setUnconfiguredSymbols(needsConfig);
+        setSymbolsError(names.length === 0 && needsConfig.length === 0
+          ? buildActionableErrorState('No LP or configured symbols are available to clone.', {
             title: 'No source symbols',
             actionLabel: 'Retry',
           })
@@ -119,6 +121,7 @@ const CloneModal = ({ categories, onClose, onSuccess }) => {
   }, [loadAttempt]);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const sourceNeedsConfig = unconfiguredSymbols.includes(form.baseSymbol);
   const retrySymbols = () => {
     setSymbolsError(null);
     setLoadingSymbols(true);
@@ -155,18 +158,35 @@ const CloneModal = ({ categories, onClose, onSuccess }) => {
               <div className="ui-input ui-input-sm flex items-center" style={{ pointerEvents: 'none' }}>
                 <span className="inline-flex items-center gap-2 text-xs" style={{ color: 'var(--muted)' }}>
                   <Loader2 size={12} className="animate-spin" />
-                  Loading configured symbols…
+                  Loading symbols…
                 </span>
               </div>
             ) : (
               <select className="ui-input ui-input-sm" value={form.baseSymbol} onChange={e => set('baseSymbol', e.target.value)} required>
                 <option value="">— select —</option>
-                {baseSymbols.map(name => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
+                {baseSymbols.length > 0 && (
+                  <optgroup label="Configured — ready to clone">
+                    {baseSymbols.map(name => <option key={name} value={name}>{name}</option>)}
+                  </optgroup>
+                )}
+                {unconfiguredSymbols.length > 0 && (
+                  <optgroup label="From LP — configure first">
+                    {unconfiguredSymbols.map(name => <option key={name} value={name}>{name} (not configured)</option>)}
+                  </optgroup>
+                )}
               </select>
             )}
-            <p className="text-[10px]" style={{ color: 'var(--muted)' }}>Only configured base symbols can be cloned.</p>
+            {sourceNeedsConfig ? (
+              <div className="flex items-center justify-between gap-2 rounded px-2 py-1.5 text-[11px]"
+                style={{ color: 'var(--warning, #f59e0b)', border: '1px solid currentColor' }}>
+                <span>{form.baseSymbol} has no specifications yet — a clone copies them from the source, so configure it first.</span>
+                <button type="button" className="ui-btn ui-btn-primary ui-btn-sm shrink-0" onClick={() => onConfigure(form.baseSymbol)}>
+                  Configure {form.baseSymbol}
+                </button>
+              </div>
+            ) : (
+              <p className="text-[10px]" style={{ color: 'var(--muted)' }}>A clone copies the source symbol's specifications, so the source must be configured.</p>
+            )}
             {symbolsError && (
               <ActionableErrorState state={symbolsError} onAction={retrySymbols} compact className="m-0" />
             )}
@@ -213,7 +233,7 @@ const CloneModal = ({ categories, onClose, onSuccess }) => {
           {err && <p className="text-xs" style={{ color: 'var(--danger)' }}>{err}</p>}
           <div className="flex justify-end gap-2 mt-1">
             <button type="button" onClick={onClose} className="ui-btn ui-btn-secondary ui-btn-sm">Cancel</button>
-            <button type="submit" disabled={saving} className="ui-btn ui-btn-primary ui-btn-sm">
+            <button type="submit" disabled={saving || sourceNeedsConfig} className="ui-btn ui-btn-primary ui-btn-sm">
               {saving ? <Loader2 size={13} className="animate-spin" /> : 'Clone'}
             </button>
           </div>
@@ -520,6 +540,7 @@ const SymbolsTab = () => {
           categories={categories}
           onClose={() => setModal(null)}
           onSuccess={() => { setModal(null); reloadAfterChange(); }}
+          onConfigure={(symbol) => { setEditTarget(null); setConfigureSymbol(symbol); setModal('configure'); }}
         />
       )}
     </div>

@@ -32,11 +32,15 @@ test('SymbolsTab lists unconfigured LP symbols with a Configure action', () => {
   assert.match(source, /useSymbolStore\(selectStreamedKey\)/);
 });
 
-test('SymbolsTab clone picker uses configured base instruments, not an ad-hoc feed socket', () => {
+test('SymbolsTab clone picker lists all LP symbols from the shared source, not an ad-hoc feed socket', () => {
   assert.doesNotMatch(source, /new WebSocket/);
   assert.doesNotMatch(source, /buildFeedWsUrl/);
   assert.doesNotMatch(source, /rtx-clone-symbol-names-cache/);
-  assert.match(source, /cloneBaseSymbols\(entries\)/);
+  assert.match(source, /cloneSourceOptions\(entries\)/);
+  // Unconfigured LP sources cannot be cloned (no specs to copy): Clone stays
+  // disabled and the admin is offered Configure instead.
+  assert.match(source, /disabled=\{saving \|\| sourceNeedsConfig\}/);
+  assert.match(source, /onConfigure\(form\.baseSymbol\)/);
 });
 
 test('SymbolFormModal preselects initialSymbol from the loaded catalogue', () => {
