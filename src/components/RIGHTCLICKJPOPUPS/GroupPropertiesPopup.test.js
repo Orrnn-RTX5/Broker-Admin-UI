@@ -1,4 +1,4 @@
-// Source-level regression guard for admin-ui-R01.
+// Source-level regression guard for the Group properties dialog.
 // Run with: node --test src/components/RIGHTCLICKJPOPUPS/GroupPropertiesPopup.test.js
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,23 +6,49 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-test('GroupPropertiesPopup renders exactly one nested SymbolPropertiesPopup with group context', () => {
-  const here = dirname(fileURLToPath(import.meta.url));
-  const src = readFileSync(join(here, 'GroupPropertiesPopup.jsx'), 'utf8');
-  const renderCount = (src.match(/<SymbolPropertiesPopup\b/g) || []).length;
+const here = dirname(fileURLToPath(import.meta.url));
+const src = readFileSync(join(here, 'GroupPropertiesPopup.jsx'), 'utf8');
+const serviceSrc = readFileSync(join(here, '..', '..', 'services', 'manager.service.js'), 'utf8');
 
-  assert.equal(renderCount, 1, 'selectedSymbol must mount one SymbolPropertiesPopup, not two overlapping modals');
-  assert.match(src, /groupName=\{currentGroupName\}/, 'nested symbol popup must receive current group context');
+test('Margin: OK sends only the changed margin fields to GroupUpdate', () => {
+  assert.match(src, /const \{ changes, errors \} = buildMarginChanges\(initialMargin, marginForm\);/);
+  assert.match(src, /await ManagerService\.updateGroup\(\{ originalName: currentGroupName, \.\.\.marginChanges \}\);/);
+  assert.match(src, /describeAccountsUpdated\(res\)/, 'toast reports accounts_updated');
+  assert.doesNotMatch(src, /buildGroupRiskPayload/, 'the whole-form payload (with symbol arrays) is no longer sent');
+  assert.doesNotMatch(src, /symbolsAllowed|symbolsBlocked/);
+  assert.match(src, /checked=\{marginForm\.negativeBalanceProtection\}/);
+  assert.match(src, /label="Execution mode"/);
+  assert.doesNotMatch(src, /label="Risk management"/);
 });
 
-test('GroupPropertiesPopup saves supported group fields through ManagerService.updateGroup', () => {
-  const here = dirname(fileURLToPath(import.meta.url));
-  const src = readFileSync(join(here, 'GroupPropertiesPopup.jsx'), 'utf8');
+test('Symbols: staged list loads from GroupSymbolsGet and saves via GroupSymbolsSave on OK', () => {
+  assert.match(src, /ManagerService\.getGroupAllowedSymbols\(currentGroupName\)/);
+  assert.match(src, /await ManagerService\.saveGroupAllowedSymbols\(payload\.group, payload\.symbols\);/);
+  assert.match(src, /isGroupSymbolListDirty\(symbolsBaseline, symbolRows\)/);
+  assert.match(src, /accounts in this group see ALL broker symbols/);
+  assert.doesNotMatch(src, /getSymbolSet\(/, 'ADD no longer upserts immediately via the legacy GET');
+  assert.doesNotMatch(src, /SymbolPropertiesPopup/, 'rows no longer open the nested symbol popup');
+  assert.match(serviceSrc, /api\.get\('\/manager\/GroupSymbolsGet', \{ params: \{ group: groupName \} \}\)/);
+  assert.match(serviceSrc, /api\.post\('\/manager\/GroupSymbolsSave', \{ group: groupName, symbols \}\)/);
+});
 
-  assert.match(src, /import \{ buildGroupRiskPayload \} from '\.\.\/\.\.\/utils\/adminValidation';/);
-  assert.match(src, /const \[formData, setFormData\] = useState\(\(\) => buildInitialGroupForm\(group\)\);/);
-  assert.match(src, /const payload = buildGroupRiskPayload\(formData\);/);
-  assert.match(src, /await ManagerService\.updateGroup\(payload\);/);
-  assert.match(src, /onClick=\{handleSaveGroup\}/);
-  assert.match(src, /setSaveError\(error\?\.response\?\.data\?\.message \|\| error\?\.message \|\| 'Failed to update group\.'\);/);
+test('Commissions: scoped to the group, editable, no alert()', () => {
+  assert.match(src, /ManagerService\.getCommissionScheduleList\(currentGroupName\)/);
+  assert.match(src, /ManagerService\.updateCommissionSchedule\(payload\)/);
+  assert.match(src, /buildCommissionSchedulePayload\(commissionEditor\.form, currentGroupName/);
+  assert.doesNotMatch(src, /\balert\(/);
+  assert.doesNotMatch(src, /EURUSD Standard/, 'no hardcoded create-form defaults');
+  assert.match(serviceSrc, /api\.post\('\/manager\/CommissionScheduleUpdate', data\)/);
+  assert.match(serviceSrc, /api\.post\('\/manager\/CommissionScheduleDelete', \{\s*schedule_id: Number\(scheduleId\),\s*\}\)/);
+  assert.match(serviceSrc, /params: cleanParams\(\{ group \}\)/);
+});
+
+test('Dialog chrome: Help works, dead tabs and window buttons are gone', () => {
+  assert.match(src, /const TABS = \['Margin', 'Symbols', 'Commissions'\];/);
+  assert.match(src, /onClick=\{\(\) => setShowHelp\(\(value\) => !value\)\}/);
+  for (const dead of ["'Statistics'", "'Company'", "'Reports'", "'News & Mail'", "'Permissions'", "'Common'"]) {
+    assert.equal(src.includes(`activeTab === ${dead}`), false, `unreachable tab body ${dead} removed`);
+  }
+  assert.doesNotMatch(src, /getGroupStats/);
+  assert.doesNotMatch(src, /\bMinus\b|\bSquare\b/, 'minimize/maximize buttons removed');
 });

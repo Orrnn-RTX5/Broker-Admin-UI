@@ -89,6 +89,22 @@ export const ManagerService = {
     return res.data;
   },
 
+  // The group's ordered allowed-symbol list with per-symbol settings:
+  // { group, unrestricted, symbols: [{ symbol, spread_markup, commission,
+  //   swap_multiplier, trade_allowed, configured }], blocked }.
+  // unrestricted=true (empty list) means every broker symbol is allowed.
+  getGroupAllowedSymbols: async (groupName) => {
+    const res = await api.get('/manager/GroupSymbolsGet', { params: { group: groupName } });
+    return res.data;
+  },
+
+  // Atomically replaces the group's ordered allowed-symbol list; an empty
+  // array makes the group unrestricted. Returns the GroupSymbolsGet shape.
+  saveGroupAllowedSymbols: async (groupName, symbols) => {
+    const res = await api.post('/manager/GroupSymbolsSave', { group: groupName, symbols });
+    return res.data;
+  },
+
   toggleGroupSymbol: async (group, symbol, enabled) => {
     const res = await api.get('/manager/GroupSymbolToggle', {
       params: { group, symbol, enabled }
@@ -144,15 +160,25 @@ export const ManagerService = {
     return res.data;
   },
 
+  // body: { id, name, symbol, group_name, commission_type, value,
+  //         min_volume, max_volume, time_from, time_to, enabled }
+  updateCommissionSchedule: async (data) => {
+    const res = await api.post('/manager/CommissionScheduleUpdate', data);
+    return res.data;
+  },
+
   deleteCommissionSchedule: async (scheduleId) => {
-    const res = await api.get('/manager/CommissionScheduleDelete', {
-      params: { schedule_id: scheduleId }
+    const res = await api.post('/manager/CommissionScheduleDelete', {
+      schedule_id: Number(scheduleId),
     });
     return res.data;
   },
 
-  getCommissionScheduleList: async () => {
-    const res = await api.get('/manager/CommissionScheduleList');
+  // Pass a group name to list only that group's schedules.
+  getCommissionScheduleList: async (group) => {
+    const res = await api.get('/manager/CommissionScheduleList', {
+      params: cleanParams({ group }),
+    });
     return res.data;
   },
 
