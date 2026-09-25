@@ -108,6 +108,38 @@ export const cloneSourceOptions = (lpEntries = []) => ({
   needsConfig: lpEntries.filter((entry) => entry && !entry.configured).map((entry) => entry.symbol),
 });
 
+const firstNumber = (...values) => {
+  for (const value of values) {
+    if (value === null || value === undefined || value === '') continue;
+    const number = Number(value);
+    if (Number.isFinite(number)) return number;
+  }
+  return undefined;
+};
+
+/**
+ * Clone form values taken from the chosen source instrument. The backend
+ * applies the form's contract size and volumes as overrides, so they must start
+ * at the source's own values; the category is preselected when it is one of
+ * the category options. Fields the source does not carry are omitted.
+ */
+export const cloneDefaultsFromSource = (instrument, categoryNames = []) => {
+  if (!instrument || typeof instrument !== 'object') return {};
+  const defaults = {};
+  const contractSize = firstNumber(instrument.contractSize, instrument.contract_size);
+  const minVolume = firstNumber(instrument.minVolume, instrument.min_volume);
+  const maxVolume = firstNumber(instrument.maxVolume, instrument.max_volume);
+  const volumeStep = firstNumber(instrument.volumeStep, instrument.volume_step);
+  if (contractSize !== undefined && contractSize > 0) defaults.contractSize = contractSize;
+  if (minVolume !== undefined && minVolume > 0) defaults.minVolume = minVolume;
+  if (maxVolume !== undefined && maxVolume > 0) defaults.maxVolume = maxVolume;
+  if (volumeStep !== undefined && volumeStep > 0) defaults.volumeStep = volumeStep;
+  const category = String(instrument.category || '').trim().toLowerCase();
+  const match = categoryNames.find((name) => String(name).trim().toLowerCase() === category);
+  defaults.category = match || '';
+  return defaults;
+};
+
 /** Configured instrument names only (e.g. LP mapping internal symbols, FK-bound). */
 export const configuredSymbolNames = (lpEntries = []) => lpEntries
   .filter((entry) => entry?.configured)

@@ -11,7 +11,7 @@ import useSymbolStore from '../../../store/useSymbolStore';
 import SymbolFormModal from './SymbolFormModal';
 import ActionableErrorState from '../../atoms/ActionableErrorState';
 import {
-  STATUS_FILTERS, buildSymbolRows, categoryFilterOptions, cloneSourceOptions,
+  STATUS_FILTERS, buildSymbolRows, categoryFilterOptions, cloneSourceOptions, cloneDefaultsFromSource,
   filterSymbolRows, streamingState, symbolCountSummary,
 } from './symbolRows';
 
@@ -76,6 +76,7 @@ const normalizeCategoryRows = (response) =>
 const CloneModal = ({ categories, onClose, onSuccess, onConfigure }) => {
   const [baseSymbols, setBaseSymbols] = useState([]);
   const [unconfiguredSymbols, setUnconfiguredSymbols] = useState([]);
+  const [sourceInstruments, setSourceInstruments] = useState({});
   const [loadingSymbols, setLoadingSymbols] = useState(true);
   const [form, setForm] = useState({
     baseSymbol: '',
@@ -101,6 +102,9 @@ const CloneModal = ({ categories, onClose, onSuccess, onConfigure }) => {
         const { ready: names, needsConfig } = cloneSourceOptions(entries);
         setBaseSymbols(names);
         setUnconfiguredSymbols(needsConfig);
+        setSourceInstruments(Object.fromEntries(entries
+          .filter((entry) => entry.configured && entry.instrument)
+          .map((entry) => [entry.symbol, entry.instrument])));
         setSymbolsError(names.length === 0 && needsConfig.length === 0
           ? buildActionableErrorState('No LP or configured symbols are available to clone.', {
             title: 'No source symbols',
@@ -122,6 +126,13 @@ const CloneModal = ({ categories, onClose, onSuccess, onConfigure }) => {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const sourceNeedsConfig = unconfiguredSymbols.includes(form.baseSymbol);
+  // Picking a source starts the form at that symbol's category, contract size
+  // and volumes (the backend treats these fields as overrides of the source).
+  const selectSource = (symbol) => setForm(f => ({
+    ...f,
+    baseSymbol: symbol,
+    ...cloneDefaultsFromSource(sourceInstruments[symbol], categories.map(c => c.name)),
+  }));
   const retrySymbols = () => {
     setSymbolsError(null);
     setLoadingSymbols(true);
@@ -162,7 +173,7 @@ const CloneModal = ({ categories, onClose, onSuccess, onConfigure }) => {
                 </span>
               </div>
             ) : (
-              <select className="ui-input ui-input-sm" value={form.baseSymbol} onChange={e => set('baseSymbol', e.target.value)} required>
+              <select className="ui-input ui-input-sm" value={form.baseSymbol} onChange={e => selectSource(e.target.value)} required>
                 <option value="">— select —</option>
                 {baseSymbols.length > 0 && (
                   <optgroup label="Configured — ready to clone">

@@ -122,3 +122,17 @@ test('cloneSourceOptions lists every LP symbol, splitting ready from configure-f
   ];
   assert.deepEqual(cloneSourceOptions(entries), { ready: ['EURUSD'], needsConfig: ['AUDCAD'] });
 });
+
+test('cloneDefaultsFromSource starts the clone at the source specs and category', async () => {
+  const { cloneDefaultsFromSource } = await import('./symbolRows.js');
+  assert.deepEqual(
+    cloneDefaultsFromSource(
+      { symbol: 'BTCUSD', category: 'crypto', contractSize: 1, min_volume: 0.01, max_volume: 50, volume_step: 0.01 },
+      ['Crypto', 'Forex'],
+    ),
+    { contractSize: 1, minVolume: 0.01, maxVolume: 50, volumeStep: 0.01, category: 'Crypto' },
+  );
+  // Unknown category → none; missing specs are left to the form defaults.
+  assert.deepEqual(cloneDefaultsFromSource({ category: 'Exotics' }, ['Forex']), { category: '' });
+  assert.deepEqual(cloneDefaultsFromSource(null, ['Forex']), {});
+});
