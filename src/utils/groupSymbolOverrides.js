@@ -27,6 +27,8 @@ const EDITABLE = new Set(['global', 'override_off']);
 const upper = (value) => String(value ?? '').trim().toUpperCase();
 
 export const normalizeGroupSymbolOverrides = (response) => {
+  // Absent in older responses; the server then did not report a group gate.
+  const groupTrading = response?.group_trading !== false;
   const list = Array.isArray(response?.symbols) ? response.symbols : [];
   const rows = list
     .map((raw) => ({
@@ -36,6 +38,7 @@ export const normalizeGroupSymbolOverrides = (response) => {
       override: raw?.group_override === 'off' ? 'off' : null,
       status: GROUP_SYMBOL_STATUS[raw?.status] ? raw.status : 'global',
       effective: raw?.effective === true,
+      groupTrading,
     }))
     .filter((row) => row.symbol);
   return {
@@ -44,6 +47,7 @@ export const normalizeGroupSymbolOverrides = (response) => {
     allowListCount: Number(response?.allow_list_count) || 0,
     blocked: Array.isArray(response?.blocked) ? response.blocked : [],
     feedScoped: response?.feed_scoped === true,
+    groupTrading,
   };
 };
 
@@ -58,7 +62,7 @@ export const applyStagedOverride = (row, staged) => {
     ...row,
     override,
     status: override === 'off' ? 'override_off' : 'global',
-    effective: override !== 'off',
+    effective: override !== 'off' && row.groupTrading !== false,
     staged: true,
   };
 };

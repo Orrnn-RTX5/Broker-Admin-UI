@@ -38,6 +38,11 @@ test('Symbols: global symbols with group overrides; saving never sends the symbo
   assert.match(src, /const changes = buildGroupSymbolOverrideChanges\(stagedOverrides\);/);
   assert.match(src, /await ManagerService\.saveGroupSymbolOverrides\(currentGroupName, changes\);/);
   assert.match(src, /disabled=\{!editable\}/, 'rows blocked above the group cannot be toggled');
+  assert.ok(
+    src.indexOf('saveGroupAllowedSymbols(') < src.indexOf('saveGroupSymbolOverrides(currentGroupName'),
+    'the symbol list saves before overrides so overrides win'
+  );
+  assert.match(src, /Trading is switched off for this group/);
   assert.match(src, /if \(tab === 'Symbols' && !overridesView && !overridesLoading\) loadOverrides\(\);/);
   assert.match(src, /if \(tab === 'Symbol List' && !symbolsLoaded && !symbolsLoading\) loadSymbols\(\);/);
   assert.match(serviceSrc, /api\.get\('\/manager\/GroupSymbolOverridesGet', \{ params: \{ group: groupName \} \}\)/);

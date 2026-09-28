@@ -571,6 +571,18 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
         summary.push(describeAccountsUpdated(res) || 'Margin settings saved.');
       }
 
+      // The symbol list goes first: GroupSymbolsSave rewrites trade_allowed of
+      // listed symbols, and the staged overrides must win.
+      if (symbolsDirty) {
+        failedTab = 'Symbol List';
+        const payload = buildGroupSymbolsSavePayload(currentGroupName, symbolRows);
+        const res = await ManagerService.saveGroupAllowedSymbols(payload.group, payload.symbols);
+        persistedRef.current = true;
+        const saved = normalizeGroupSymbolsResponse(res).rows;
+        const count = res && Array.isArray(res.symbols) ? saved.length : payload.symbols.length;
+        summary.push(count === 0 ? 'All broker symbols allowed.' : `${count} symbol${count === 1 ? '' : 's'} allowed.`);
+      }
+
       if (overridesDirty) {
         failedTab = 'Symbols';
         const changes = buildGroupSymbolOverrideChanges(stagedOverrides);
@@ -584,16 +596,6 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
           off && `${off} symbol${off === 1 ? '' : 's'} turned off.`,
           on && `${on} symbol${on === 1 ? '' : 's'} follow global again.`,
         ].filter(Boolean).join(' '));
-      }
-
-      if (symbolsDirty) {
-        failedTab = 'Symbol List';
-        const payload = buildGroupSymbolsSavePayload(currentGroupName, symbolRows);
-        const res = await ManagerService.saveGroupAllowedSymbols(payload.group, payload.symbols);
-        persistedRef.current = true;
-        const saved = normalizeGroupSymbolsResponse(res).rows;
-        const count = res && Array.isArray(res.symbols) ? saved.length : payload.symbols.length;
-        summary.push(count === 0 ? 'All broker symbols allowed.' : `${count} symbol${count === 1 ? '' : 's'} allowed.`);
       }
 
       notify({ title: 'Group updated', description: `${currentGroupName} — ${summary.join(' ')}`, tone: 'success' });
@@ -754,6 +756,11 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
               {/* --- SYMBOLS TAB (global symbols + group overrides) --- */}
               {activeTab === 'Symbols' && (
                 <div className="flex flex-col gap-2">
+                  {overridesView && !overridesView.groupTrading && (
+                    <div className="px-3 py-2 border border-red-500/40 bg-red-500/5 rounded-sm text-[11px] text-[color:var(--danger-500)]" role="note">
+                      Trading is switched off for this group (or the group is disabled), so no symbol is tradeable. Overrides set here apply once it is on again.
+                    </div>
+                  )}
                   {overridesView?.legacyAllowList && (
                     <div className="px-3 py-2 border border-amber-500/40 bg-amber-500/5 rounded-sm text-[11px] text-amber-300" role="note">
                       This group has a legacy allowed-symbols list ({overridesView.allowListCount} symbols). Symbols outside it stay blocked

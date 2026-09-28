@@ -32,7 +32,7 @@ test('normalizes the Get response', () => {
   const view = normalizeGroupSymbolOverrides(response);
   assert.equal(view.rows.length, 4);
   assert.equal(view.legacyAllowList, false);
-  assert.deepEqual(bySymbol(view.rows, 'EURUSD'), { symbol: 'EURUSD', category: 'forex', globalEnabled: true, override: 'off', status: 'override_off', effective: false });
+  assert.deepEqual(bySymbol(view.rows, 'EURUSD'), { symbol: 'EURUSD', category: 'forex', globalEnabled: true, override: 'off', status: 'override_off', effective: false, groupTrading: true });
   assert.deepEqual(normalizeGroupSymbolOverrides(null).rows, []);
 });
 
@@ -86,4 +86,16 @@ test('filters and summary', () => {
   assert.deepEqual(filterGroupSymbolRows(list, '', 'on').map((r) => r.symbol), ['BTCUSD']);
   assert.deepEqual(filterGroupSymbolRows(list, '', 'overrides').map((r) => r.symbol), ['EURUSD']);
   assert.deepEqual(summarizeGroupSymbols(list), { total: 4, tradeable: 1, overrides: 1 });
+});
+
+test('group trading off: nothing becomes effective, overrides can still be staged', () => {
+  const view = normalizeGroupSymbolOverrides({ ...response, group_trading: false });
+  assert.equal(view.groupTrading, false);
+  const btc = bySymbol(view.rows, 'BTCUSD');
+  const eur = bySymbol(view.rows, 'EURUSD');
+  assert.equal(isGroupSymbolEditable(btc), true);
+  const staged = toggleStagedOverride(new Map(), eur);
+  assert.equal(applyStagedOverride(eur, staged).effective, false, 'reset does not make it tradeable while group trading is off');
+  assert.equal(applyStagedOverride(eur, staged).status, 'global');
+  assert.equal(normalizeGroupSymbolOverrides(response).groupTrading, true, 'absent flag defaults to on');
 });
