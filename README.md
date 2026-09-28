@@ -30,6 +30,38 @@ cookies; Vite strips those cookies and, where configured, the path prefix before
 forwarding. Authentication fetches use `same-origin` credentials so those local
 cookies reach Vite without including cookies on cross-origin login requests.
 
+## Production Docker configuration
+
+Give the production manager a broker-specific `.env` file and place it at
+`$HOME/broker-admin-ui.env` on the deployment server, where `$HOME` belongs to
+the SSH user used by the deploy workflow. At minimum, set `BROKER_ID` and
+`API_HOST` to the broker's ID and API origin. For example:
+
+```env
+BACKEND_TARGET=web
+BROKER_ID=your-broker-id
+API_HOST=https://api.your-broker.example
+WS_HOST=wss://api.your-broker.example
+USE_MOCK_DISCOVERY=false
+```
+
+Set `BROKER_NAME` for a display name, `BROKER_SERVER` if login needs a specific
+server handle, `DEFAULT_MT5_SERVER` if it uses a separate MT5 host,
+`API_HOST_EXT` if the extended API uses another origin, and `FEED_WS_URL` or
+`FEED_STATUS_URL` if the market feed uses different endpoints.
+Keep `WS_HOST` at the WebSocket origin; other WebSocket routes use it too.
+The `VITE_` names in the local `.env` are accepted by the container as well;
+copy that file as-is and edit its broker values. Do not include both forms of
+the same key. The desktop mode file changes only `VITE_BACKEND_TARGET`, so it
+uses the same broker values from `.env`.
+
+The deploy workflow passes this file to Docker with `--env-file`. The image
+excludes source `.env` files, and the container generates browser runtime
+configuration from the supplied values when it starts. After editing the server
+file, restart or redeploy the container to apply changes. Runtime configuration
+is public in the browser, so keep passwords and tokens in a separate secret
+store, not in this file.
+
 ## Windows Desktop App
 
 Run the Electron desktop app locally:

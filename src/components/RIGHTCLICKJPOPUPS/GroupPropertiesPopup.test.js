@@ -44,11 +44,36 @@ test('Commissions: scoped to the group, editable, no alert()', () => {
 });
 
 test('Dialog chrome: Help works, dead tabs and window buttons are gone', () => {
-  assert.match(src, /const TABS = \['Margin', 'Symbols', 'Commissions'\];/);
+  assert.match(src, /const TABS = \['Accounts', 'Margin', 'Symbols', 'Commissions'\];/);
   assert.match(src, /onClick=\{\(\) => setShowHelp\(\(value\) => !value\)\}/);
   for (const dead of ["'Statistics'", "'Company'", "'Reports'", "'News & Mail'", "'Permissions'", "'Common'"]) {
     assert.equal(src.includes(`activeTab === ${dead}`), false, `unreachable tab body ${dead} removed`);
   }
   assert.doesNotMatch(src, /getGroupStats/);
   assert.doesNotMatch(src, /\bMinus\b|\bSquare\b/, 'minimize/maximize buttons removed');
+});
+
+test('GroupPropertiesPopup opens on an Accounts tab that lists every account of the group', () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const src = readFileSync(join(here, 'GroupPropertiesPopup.jsx'), 'utf8');
+  const tab = readFileSync(join(here, 'GroupAccountsTab.jsx'), 'utf8');
+
+  assert.match(src, /initialTab = 'Accounts',/);
+  assert.match(src, /const TABS = \['Accounts', 'Margin', 'Symbols', 'Commissions'\];/);
+  assert.match(src, /<GroupAccountsTab groupName=\{currentGroupName\} onOpenAccount=\{onOpenAccount\} \/>/);
+  assert.match(tab, /loadGroupsExplorerNodes\(\s*\{ type: 'group', groupName \}/, 'accounts come from the paged, exact-group loader');
+});
+
+test("Double-clicking an account opens its group's Margin / Symbols / Commissions window with live data", () => {
+  const explorer = readFileSync(join(here, '..', 'organisms', 'GroupsExplorer.jsx'), 'utf8');
+  const app = readFileSync(join(here, '..', '..', 'AuthenticatedApp.jsx'), 'utf8');
+
+  assert.match(explorer, /if \(node\.type === 'group-account'\) openAccountGroup\(node\);/);
+  assert.match(explorer, /onSelect=\{\(\) => onAccountOpen\?\.\(node\)\}>Open account</, 'the account editor stays on the context menu');
+  assert.match(app, /onAccountGroupOpen=\{openAccountGroupProperties\}/);
+  assert.match(app, /initialTab=\{groupPopupFromAccount \? 'Margin' : 'Accounts'\}/);
+  assert.match(app, /showAccountsTab=\{!groupPopupFromAccount\}/);
+  assert.match(src, /const tabs = showAccountsTab \? TABS : TABS\.filter\(\(tab\) => tab !== 'Accounts'\);/);
+  assert.match(src, /loadGroupTreePages\(ManagerService\.getGroupList, \{ arrayKeys: GROUP_LIST_ARRAY_KEYS \}\)/, 'margin values are reloaded from the server');
+  assert.match(src, /findGroupRecord\(rows, currentGroupName\)/);
 });

@@ -109,39 +109,39 @@ const RiskLimitsView = () => {
             {SCOPE_TYPES.map(s => <option key={s} value={s}>{s || 'All scopes'}</option>)}
           </select>
           <button onClick={() => fetchLimits(scopeFilter)}
-            className="h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]">Load</button>
+            className="h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-white text-[11px] rounded-[2px]">Load</button>
         </div>
       </div>
 
       {/* Header */}
       <div className="flex items-center px-3 h-[24px] bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0">
         {[['ID','w-12'],['Scope','w-24'],['Value','w-36'],['Limit Type','w-36'],['Limit Value','w-28'],['Action','w-24'],['Threshold','w-28'],['Enabled','w-20'],['Created By','w-28'],['Created','w-40']].map(([l,w]) => (
-          <div key={l} className={`${w} text-[10px] font-semibold text-[#888] uppercase tracking-wider pr-2`}>{l}</div>
+          <div key={l} className={`${w} text-[10px] font-semibold text-white uppercase tracking-wider pr-2`}>{l}</div>
         ))}
       </div>
 
       {/* Rows */}
       <div className="flex-1 overflow-auto">
-        {loading ? <div className="flex items-center justify-center h-24 text-[#888] text-[11px]">Loading…</div>
+        {loading ? <div className="flex items-center justify-center h-24 text-white text-[11px]">Loading…</div>
           : loadError ? <ActionableErrorState state={loadError} onAction={() => fetchLimits(scopeFilter)} />
-          : data.length === 0 ? <div className="flex items-center justify-center h-24 text-[#555] text-[11px]">No risk limits configured</div>
+          : data.length === 0 ? <div className="flex items-center justify-center h-24 text-white text-[11px]">No risk limits configured</div>
           : data.map((row, i) => (
             <div key={row.id}
               onContextMenu={e => { e.preventDefault(); e.stopPropagation(); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, row }); }}
               onDoubleClick={() => openEdit(row)}
               className={`flex items-center px-3 h-[22px] border-b border-black/20 cursor-default select-none ${i % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-[#2a2d2e]`}>
               <div className="w-12 text-[11px] text-[color:var(--text-primary)] pr-2">{row.id}</div>
-              <div className="w-24 text-[11px] text-[#9cdcfe] pr-2">{row.scope_type}</div>
-              <div className="w-36 text-[11px] text-[color:var(--text-primary)] pr-2 truncate">{row.scope_value || <span className="text-[#555]">—</span>}</div>
-              <div className="w-36 text-[11px] text-[#888] pr-2">{row.limit_type}</div>
+              <div className="w-24 text-[11px] text-white pr-2">{row.scope_type}</div>
+              <div className="w-36 text-[11px] text-[color:var(--text-primary)] pr-2 truncate">{row.scope_value || <span className="text-white">—</span>}</div>
+              <div className="w-36 text-[11px] text-white pr-2">{row.limit_type}</div>
               <div className="w-28 text-[11px] text-[#f48771] pr-2">{typeof row.limit_value === 'number' ? row.limit_value.toFixed(2) : '—'}</div>
               <div className="w-24 text-[11px] text-[#d4a017] pr-2">{row.action}</div>
-              <div className="w-28 text-[11px] text-[#888] pr-2">{typeof row.alert_threshold === 'number' ? row.alert_threshold.toFixed(2) : '—'}</div>
+              <div className="w-28 text-[11px] text-white pr-2">{typeof row.alert_threshold === 'number' ? row.alert_threshold.toFixed(2) : '—'}</div>
               <div className="w-20 pr-2">
-                <span className={row.enabled ? 'text-[#4ec9b0] text-[11px]' : 'text-[#555] text-[11px]'}>{row.enabled ? 'Yes' : 'No'}</span>
+                <span className={row.enabled ? 'text-white text-[11px]' : 'text-white text-[11px]'}>{row.enabled ? 'Yes' : 'No'}</span>
               </div>
-              <div className="w-28 text-[11px] text-[#888] pr-2">{row.created_by || '—'}</div>
-              <div className="w-40 text-[11px] text-[#888]">{tsFormat(row.created_at)}</div>
+              <div className="w-28 text-[11px] text-white pr-2">{row.created_by || '—'}</div>
+              <div className="w-40 text-[11px] text-white">{tsFormat(row.created_at)}</div>
             </div>
           ))}
       </div>
@@ -171,14 +171,14 @@ const RiskLimitsView = () => {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-[#888] uppercase tracking-wider">Scope Type *</label>
+                <label className="text-[10px] text-white uppercase tracking-wider">Scope Type *</label>
                 <select value={form.scope_type} onChange={e => setForm(f => ({ ...f, scope_type: e.target.value }))}
                   className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[24px] px-1.5 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]">
                   {SCOPE_TYPES.filter(Boolean).map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-[#888] uppercase tracking-wider">Scope Value</label>
+                <label className="text-[10px] text-white uppercase tracking-wider">Scope Value</label>
                 <input value={form.scope_value} onChange={e => setForm(f => ({ ...f, scope_value: e.target.value }))}
                   placeholder={form.scope_type === 'symbol' ? 'e.g. EURUSD' : 'login / group / symbol'}
                   list={form.scope_type === 'symbol' ? 'risk-limit-symbol-options' : undefined}
@@ -187,39 +187,39 @@ const RiskLimitsView = () => {
                 {form.scope_type === 'symbol' && <LpSymbolDatalist id="risk-limit-symbol-options" />}
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-[#888] uppercase tracking-wider">Limit Type *</label>
+                <label className="text-[10px] text-white uppercase tracking-wider">Limit Type *</label>
                 <select value={form.limit_type} onChange={e => setForm(f => ({ ...f, limit_type: e.target.value }))}
                   className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[24px] px-1.5 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]">
                   {LIMIT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-[#888] uppercase tracking-wider">Action *</label>
+                <label className="text-[10px] text-white uppercase tracking-wider">Action *</label>
                 <select value={form.action} onChange={e => setForm(f => ({ ...f, action: e.target.value }))}
                   className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[24px] px-1.5 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]">
                   {ACTIONS.map(a => <option key={a} value={a}>{a}</option>)}
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-[#888] uppercase tracking-wider">Limit Value *</label>
+                <label className="text-[10px] text-white uppercase tracking-wider">Limit Value *</label>
                 <input type="number" step="any" required value={form.limit_value} onChange={e => setForm(f => ({ ...f, limit_value: e.target.value }))}
                   className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[24px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]" />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-[#888] uppercase tracking-wider">Alert Threshold</label>
+                <label className="text-[10px] text-white uppercase tracking-wider">Alert Threshold</label>
                 <input type="number" step="any" value={form.alert_threshold} onChange={e => setForm(f => ({ ...f, alert_threshold: e.target.value }))}
                   className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[24px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]" />
               </div>
             </div>
 
-            <label className="flex items-center gap-1.5 text-[11px] text-[#ccc] cursor-pointer">
+            <label className="flex items-center gap-1.5 text-[11px] text-white cursor-pointer">
               <input type="checkbox" checked={form.enabled} onChange={e => setForm(f => ({ ...f, enabled: e.target.checked }))} className="accent-[color:var(--accent-500)]" />
               Enabled
             </label>
 
             <div className="flex gap-2 justify-end mt-1">
               <button type="button" onClick={() => setShowForm(false)}
-                className="h-[24px] px-4 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]">Cancel</button>
+                className="h-[24px] px-4 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-white text-[11px] rounded-[2px]">Cancel</button>
               <button type="submit" disabled={saving}
                 className="h-[24px] px-4 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] disabled:opacity-50">
                 {saving ? 'Saving…' : editing ? 'Update' : 'Create'}

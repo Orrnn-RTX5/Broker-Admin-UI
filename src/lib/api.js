@@ -7,6 +7,7 @@ import {
   validateAuthSession,
 } from '../store/authStore.js';
 import { useConnectionStore } from '../store/connectionStore.js';
+import { refreshSession } from '../services/authService.js';
 import { redactForLog, redactUrlForLog } from './logRedaction.js';
 
 
@@ -33,6 +34,18 @@ const createSilentError = (message, flags = {}) => {
   const error = new Error(message);
   error[SILENT_ERROR_FLAG] = true;
   return Object.assign(error, flags);
+};
+
+// A refresh that failed for a transient reason (network, 5xx) keeps the user
+// signed in; only a session that is actually gone reports "Session expired".
+const createRenewalError = () => new Error(useAuthStore.getState().isAuthenticated
+  ? 'Could not renew the session. Check the connection and try again.'
+  : 'Session expired. Please log in again.');
+
+const getBearerToken = (headers) => {
+  const value = headers?.Authorization ?? headers?.authorization ?? headers?.get?.('Authorization');
+  const match = /^Bearer\s+(.+)$/i.exec(String(value || ''));
+  return match ? match[1] : null;
 };
 
 const expireMissingBrokerBackendSession = () => {
@@ -143,7 +156,7 @@ export const api = axios.create({
   },
 });
 
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(async (config) => {
   if (config.url && !config.url.startsWith('http')) {
     if (config.url.startsWith('/ext-api')) {
       config.url = buildExtApiUrl(config.url);
@@ -172,10 +185,12 @@ api.interceptors.request.use((config) => {
   const authState = useAuthStore.getState().accessToken
     ? useAuthStore.getState()
     : recoveredAuthState;
-  const token = authState.accessToken;
+  let token = authState.accessToken;
   if (token && isTokenExpired(authState.tokenExpiresAt)) {
-    expireAuthSession('token_expired');
-    return Promise.reject(new Error('Session expired. Please log in again.'));
+    // A passed local expiry renews the token before sending instead of
+    // rejecting the request; refreshSession logs out only if it is refused.
+    token = await refreshSession();
+    if (!token) return Promise.reject(createRenewalError());
   }
 
   if (!token && isProtectedApiRequest(config.url)) {
@@ -234,62 +249,28 @@ api.interceptors.response.use((response) => {
     return Promise.reject(error);
   }
 
-  if (isAuthRejectionError(error) && error.response?.status !== 401) {
-    expireAuthSession('token_rejected');
-    return Promise.reject(error);
-  }
-
-  if (error.response?.status === 401 && !originalRequest) {
-    expireAuthSession('token_rejected');
-    return Promise.reject(error);
-  }
-
-  if (error.response?.status === 401 && (originalRequest._retry || originalRequest._noRetry)) {
-    expireAuthSession('token_rejected');
-    return Promise.reject(error);
-  }
-
-  if (error.response?.status === 401 && !originalRequest._retry && !originalRequest._noRetry) {
+  // 401, or 403 "Not authenticated"/expired token (the manager backend's
+  // answer for an expired access token): refresh once and retry. Other 403s
+  // are permission denials and fall through untouched.
+  if (isAuthRejectionError(error)) {
+    if (!originalRequest || originalRequest._retry || originalRequest._noRetry) {
+      expireAuthSession('token_rejected');
+      return Promise.reject(error);
+    }
     if (validateAuthSession('auth_storage_invalid')) {
       return Promise.reject(error);
     }
 
     originalRequest._retry = true;
-    
-    try {
-      const refreshToken = useAuthStore.getState().refreshToken;
-      if (!refreshToken) {
-        throw new Error('No refresh token available');
-      }
-
-
-      const res = await axios.post(buildManagerApiUrl('/api/v1/auth/refresh'), {
-        refresh_token: refreshToken
-      });
-
-      const access_token = res.data.token || res.data.access_token || res.data.session_token;
-      const nextRefreshToken = res.data.refresh_token || refreshToken;
-      if (!access_token) {
-        throw new Error('Refresh response did not include access token');
-      }
-      
-      // Update store
-      useAuthStore.getState().setToken(
-        access_token,
-        nextRefreshToken,
-        res.data.expires_at || res.data.expiresAt || res.data.token_expires_at,
-        res.data.expires_in || res.data.expiresIn
-      );
-      
-      // Retry original request
-      originalRequest.headers = originalRequest.headers || {};
-      originalRequest.headers.Authorization = `Bearer ${access_token}`;
-      return api(originalRequest);
-    } catch (refreshError) {
-      console.error('Session expired. Please log in again.');
-      expireAuthSession('refresh_failed');
-      return Promise.reject(refreshError);
+    const nextToken = await refreshSession({ rejectedToken: getBearerToken(originalRequest.headers) });
+    if (!nextToken) {
+      // refreshSession has already logged out if the refresh token was refused.
+      return Promise.reject(error);
     }
+
+    originalRequest.headers = originalRequest.headers || {};
+    originalRequest.headers.Authorization = `Bearer ${nextToken}`;
+    return api(originalRequest);
   }
 
   return Promise.reject(error);

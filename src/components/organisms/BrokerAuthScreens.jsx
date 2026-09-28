@@ -18,6 +18,8 @@ import authTradingVisual960Webp from '../../assets/auth-trading-visual-960.webp'
 import authTradingVisual1280Webp from '../../assets/auth-trading-visual-1280.webp';
 import authTradingVisualWebp from '../../assets/auth-trading-visual.webp';
 import authTradingVisual1920Webp from '../../assets/auth-trading-visual-1920.webp';
+import AdminLoginBackdrop from './AdminLoginBackdrop';
+import './AdminLogin.css';
 import {
   clearBrokerInfo,
   discoverBrokerById,
@@ -53,11 +55,10 @@ const comparableHost = (value = '') => {
 
 const brokerMatchesRuntime = (broker) => {
   const runtimeBrokerId = String(RUNTIME_BROKER_ID || '').trim().toLowerCase();
-  if (
-    runtimeBrokerId &&
-    [broker.broker_id, broker.id].some((value) => String(value || '').trim().toLowerCase() === runtimeBrokerId)
-  ) {
-    return true;
+  if (runtimeBrokerId) {
+    return [broker.broker_id, broker.id].some(
+      (value) => String(value || '').trim().toLowerCase() === runtimeBrokerId
+    );
   }
 
   const runtimeServer = comparableHost(RUNTIME_DEFAULT_MT5_SERVER);
@@ -89,6 +90,11 @@ const getRuntimeLockedBroker = (list = []) => {
 };
 
 const RTX5_LOGO_SRC = `${import.meta.env.BASE_URL || './'}logo-full-light.webp`;
+const REMEMBERED_ADMIN_LOGIN_KEY = 'rtx5-admin-remembered-login';
+const getRememberedAdminLogin = () => {
+  try { return window.localStorage.getItem(REMEMBERED_ADMIN_LOGIN_KEY) || ''; }
+  catch { return ''; }
+};
 const AUTH_VISUAL_SRC_SET = [
   `${authTradingVisual960Webp} 960w`,
   `${authTradingVisual1280Webp} 1280w`,
@@ -110,7 +116,15 @@ const AuthLogo = () => (
   />
 );
 
-const AuthShell = ({ children }) => (
+const AuthShell = ({ children, variant }) => variant === 'admin' ? (
+  <div className="admin-login-shell" style={{ fontFamily: 'var(--font-auth)' }}>
+    <AdminLoginBackdrop />
+    <div className="admin-login-scrim" aria-hidden="true" />
+    <div className="admin-login-scroll">
+      <div className="admin-login-panel">{children}</div>
+    </div>
+  </div>
+) : (
   <div
     className="fixed inset-0 z-[9999] grid h-[100dvh] min-h-0 overflow-hidden bg-white font-sans text-[#111827] lg:grid-cols-[60%_40%]"
     style={{ fontFamily: 'var(--font-auth)' }}
@@ -137,9 +151,9 @@ const AuthShell = ({ children }) => (
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,6,23,0.05),rgba(2,6,23,0.04)_58%,rgba(2,6,23,0.22))]" />
     </div>
 
-    <div className="h-full min-h-0 overflow-hidden bg-white">
-      <div className="mx-auto flex h-full min-h-0 w-full items-center justify-center px-6 py-6 sm:px-8 sm:py-8">
-        <div className="w-full max-w-[420px]">
+    <div className="h-full min-h-0 overflow-y-auto bg-white">
+      <div className="mx-auto flex min-h-full w-full items-center justify-center px-6 py-6 sm:px-8 sm:py-8">
+        <div className="my-auto w-full max-w-[420px]">
           {children}
         </div>
       </div>
@@ -577,6 +591,7 @@ export const ManagerLogin = ({ navigate, onLoginSuccess }) => {
 // ---------------------------------------------------------------------------
 export const AdminLogin = ({ navigate, onLoginSuccess }) => {
   const initialBrokerInfo = React.useMemo(() => getBrokerInfo(), []);
+  const rememberedUser = React.useMemo(getRememberedAdminLogin, []);
   const runtimeBrokerConstrained = hasRuntimeBrokerConstraint();
   const initialBrokerLocked = React.useMemo(() => isRuntimeLockedBroker(initialBrokerInfo), [initialBrokerInfo]);
   const [brokerList, setBrokerList] = React.useState(() => (initialBrokerInfo ? [initialBrokerInfo] : []));
@@ -584,12 +599,21 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
   const [selectedBroker, setSelectedBroker] = React.useState(() => initialBrokerInfo);
   const [listError, setListError] = React.useState('');
   const [listLoading, setListLoading] = React.useState(!initialBrokerInfo || (runtimeBrokerConstrained && !initialBrokerLocked));
-  const [user, setUser] = React.useState('');
+  const [user, setUser] = React.useState(rememberedUser);
+  const [rememberLogin, setRememberLogin] = React.useState(Boolean(rememberedUser));
   const [password, setPassword] = React.useState('');
   const [server, setServer] = React.useState(() => getBrokerDisplayServer(initialBrokerInfo || {}));
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const runtimeLockedBroker = React.useMemo(() => getRuntimeLockedBroker(brokerList), [brokerList]);
+
+  const handleRememberLoginChange = (checked) => {
+    setRememberLogin(checked);
+    if (!checked) {
+      try { window.localStorage.removeItem(REMEMBERED_ADMIN_LOGIN_KEY); }
+      catch { /* Storage may be unavailable in restricted browsers. */ }
+    }
+  };
 
   React.useEffect(() => {
     let cancelled = false;
@@ -721,6 +745,10 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
       const auth = await loginAdmin(brokerInfo, { user, password });
       const session = setAuthSession(auth, brokerInfo);
       requireAdminAuthSessionToken(session);
+      try {
+        if (rememberLogin) window.localStorage.setItem(REMEMBERED_ADMIN_LOGIN_KEY, user);
+        else window.localStorage.removeItem(REMEMBERED_ADMIN_LOGIN_KEY);
+      } catch { /* Sign-in remains available when storage is blocked. */ }
       onLoginSuccess(session, '/admin-dashboard');
     } catch (err) {
       setError(err.message || 'Login failed.');
@@ -742,6 +770,8 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
       brokerLocked={!!runtimeLockedBroker}
       onRegisterBroker={runtimeLockedBroker ? undefined : () => navigate('/broker-manual-entry')}
       onSuperAdminLogin={() => navigate('/super-admin-login')}
+      rememberMe={rememberLogin}
+      onRememberMeChange={handleRememberLoginChange}
     >
 
       <div className="flex flex-col gap-2">
@@ -749,7 +779,7 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
           Broker
         </label>
         {listLoading && (
-          <div className="flex h-[56px] items-center gap-2 rounded-[8px] border border-[#dce3ec] bg-white px-4 text-[14px] text-[#6b7280]">
+          <div className="admin-broker-loading flex h-[56px] items-center gap-2 rounded-[8px] border border-[#dce3ec] bg-white px-4 text-[14px] text-[#6b7280]">
             <Loader2 size={13} className="animate-spin" aria-hidden="true" />
             Loading brokers...
           </div>
@@ -808,15 +838,59 @@ const LoginScreen = ({
   switchToLabel,
   onSwitchRole,
   onSuperAdminLogin,
+  rememberMe = false,
+  onRememberMeChange,
   children,
 }) => {
+  const [showPasswordHelp, setShowPasswordHelp] = React.useState(false);
   const supportSubtitle = getLoginSubtitle(tone, subtitle);
   const showFooterActions =
     (!brokerLocked && Boolean(onSwitchBroker || onRegisterBroker)) ||
     Boolean(switchToLabel && onSwitchRole);
 
   return (
-    <AuthShell>
+    <AuthShell variant={tone}>
+      {tone === 'admin' ? (
+        <>
+          <header className="admin-login-heading">
+            <div className="admin-login-wordmark" aria-label="RTX5">RTX<span>5</span></div>
+            <h1>ADMIN LOGIN</h1>
+            <p>{supportSubtitle}</p>
+          </header>
+          <div className="admin-login-rule" />
+          <InlineError>{error}</InlineError>
+          <form onSubmit={onSubmit} className="admin-login-form">
+            {children}
+            <div className="admin-login-options">
+              <label className="admin-login-remember"><input type="checkbox" checked={rememberMe} onChange={(event) => onRememberMeChange?.(event.target.checked)} /> Remember me</label>
+              <button type="button" onClick={() => setShowPasswordHelp((value) => !value)}>Forgot password?</button>
+            </div>
+            {showPasswordHelp && <p className="admin-login-help" role="status">Contact your broker administrator to reset your password.</p>}
+            <button type="submit" disabled={loading || submitDisabled} className="admin-login-submit">
+              {loading ? <SpinnerLabel>Signing in</SpinnerLabel> : 'Sign in'}
+            </button>
+          </form>
+          <footer className="admin-login-footer">
+            {showFooterActions && (
+              <div className="admin-login-footer-actions">
+                {!brokerLocked && onSwitchBroker && <button type="button" onClick={onSwitchBroker}>Switch broker</button>}
+                {!brokerLocked && onRegisterBroker && <button type="button" onClick={onRegisterBroker}>Register broker</button>}
+                {switchToLabel && onSwitchRole && <button type="button" onClick={onSwitchRole}>{switchToLabel}</button>}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={onSuperAdminLogin || (() => {
+                window.history.pushState(null, '', '#super-admin-login');
+                window.dispatchEvent(new Event('popstate'));
+              })}
+            >
+              Super Admin Portal <ArrowRight size={12} aria-hidden="true" />
+            </button>
+          </footer>
+        </>
+      ) : (
+      <>
       <Header title="Welcome Back!" subtitle={supportSubtitle} />
       <div>
         <InlineError>{error}</InlineError>
@@ -888,6 +962,8 @@ const LoginScreen = ({
           </button>
         </div>
       </div>
+      </>
+      )}
     </AuthShell>
   );
 };
@@ -915,7 +991,7 @@ const Field = ({ id, label, icon: Icon, value, onChange, type = 'text', readOnly
           readOnly={readOnly}
           required={required}
           placeholder={resolvedPlaceholder}
-          className="h-[56px] w-full rounded-[8px] border border-[#dce3ec] bg-white pl-[54px] pr-4 text-[14px] font-medium text-[#111827] outline-none transition-colors placeholder:text-[#b8c0cc] focus:border-[#2563eb] focus:ring-2 focus:ring-[#dbeafe] read-only:bg-white"
+          className="h-[56px] w-full rounded-[8px] border border-[#dce3ec] bg-white pl-[54px] pr-4 text-[14px] font-medium text-[#111827] outline-none transition-colors placeholder:text-[#6b7280] focus:border-[#2563eb] focus:ring-2 focus:ring-[#dbeafe] read-only:bg-white"
         />
       </div>
     </div>
@@ -941,13 +1017,12 @@ const PasswordField = ({ id, value, onChange }) => {
           onChange={(event) => onChange(event.target.value)}
           required
           placeholder="Enter your password"
-          className="h-[56px] w-full rounded-[8px] border border-[#dce3ec] bg-white pl-[54px] pr-[54px] text-[14px] font-medium text-[#111827] outline-none transition-colors placeholder:text-[#b8c0cc] focus:border-[#2563eb] focus:ring-2 focus:ring-[#dbeafe]"
+          className="h-[56px] w-full rounded-[8px] border border-[#dce3ec] bg-white pl-[54px] pr-[54px] text-[14px] font-medium text-[#111827] outline-none transition-colors placeholder:text-[#6b7280] focus:border-[#2563eb] focus:ring-2 focus:ring-[#dbeafe]"
         />
         <button
           type="button"
           onClick={() => setShowPassword((v) => !v)}
-          className="absolute inset-y-0 right-0 flex items-center pr-4 text-[#6b7280] hover:text-[#111827]"
-          tabIndex={-1}
+          className="absolute inset-y-0 right-0 flex items-center rounded-r-[8px] pr-4 text-[#6b7280] hover:text-[#111827] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2563eb]"
           aria-label={showPassword ? 'Hide password' : 'Show password'}
         >
           {showPassword ? <EyeOff size={20} strokeWidth={1.9} aria-hidden="true" /> : <Eye size={20} strokeWidth={1.9} aria-hidden="true" />}

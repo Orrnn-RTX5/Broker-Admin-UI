@@ -16,13 +16,14 @@ import { AboutModal } from './components/organisms/AboutModal';
 import { SuperAdminConsole } from './components/organisms/SuperAdminConsole';
 
 import {
-  expireAuthSession,
+  getSearchesStorageKey,
   isAuthStorageEvent,
-  normalizeTokenExpiresAt,
+  LEGACY_SEARCHES_KEY,
   SESSION_EXPIRED_EVENT,
   useAuthStore,
   validateAuthSession,
 } from './store/authStore';
+import { startSessionRefreshScheduler } from './services/sessionRefreshScheduler';
 import { useConnectionStore } from './store/connectionStore';
 import useSymbolStore from './store/useSymbolStore';
 import { useLocalStorage } from './lib/useLocalStorage';
@@ -102,6 +103,8 @@ const AuthenticatedAppInner = ({ navigate }) => {
   const [selectedGroup, setSelectedGroup] = React.useState(null);
   const dummyGroupsRef = React.useRef(null);
   const [isPopupOpen, setIsPopupOpen] = React.useState(false);
+  // Opened by double-clicking an account: that account's group, on Margin, without the Accounts tab.
+  const [groupPopupFromAccount, setGroupPopupFromAccount] = React.useState(false);
   const [selectedEditTarget, setSelectedEditTarget] = React.useState(null);
   const [selectedSidebarNodeId, setSelectedSidebarNodeId] = React.useState(null);
   const [editingAccount, setEditingAccount] = React.useState(null);
@@ -121,7 +124,12 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
   const [globalTheme, setGlobalTheme] = useLocalStorage('rtx5.theme', 'light');
   const [density, setDensity] = useLocalStorage('rtx5.density', 'compact');
-  const [savedSearches, setSavedSearches] = useLocalStorage('rtx5.searches', {});
+  // Searches last for this tab and broker only, so a filter typed in an earlier
+  // session (or for another broker) can never silently hide this session's rows.
+  const [savedSearches, setSavedSearches] = useLocalStorage(getSearchesStorageKey(), {}, 'sessionStorage');
+  React.useEffect(() => {
+    try { localStorage.removeItem(LEGACY_SEARCHES_KEY); } catch { /* noop */ }
+  }, []);
   const defaultLandingView = canAccessView(currentUser, 'Integrations') ? 'Integrations' : 'Groups';
   // Keep the existing storage key so the last selected page still restores.
   const [activeTab, setActiveTab] = useLocalStorage('rtx5.activeTab', defaultLandingView);
@@ -208,21 +216,11 @@ const AuthenticatedAppInner = ({ navigate }) => {
   React.useEffect(() => {
     if (!isAuthenticated || !tokenExpiresAt) return undefined;
 
-    const expiryMs = normalizeTokenExpiresAt(tokenExpiresAt);
-    if (!expiryMs) return undefined;
-
-    const delay = expiryMs - Date.now();
-    if (delay <= 0) {
-      expireAuthSession('token_expired');
-      return undefined;
-    }
-
-    const timeoutId = window.setTimeout(
-      () => expireAuthSession('token_expired'),
-      Math.min(delay, 2147483647)
-    );
-
-    return () => window.clearTimeout(timeoutId);
+    // The access token lasts about an hour; renew it before it expires instead
+    // of logging out. Restarts whenever the expiry changes, including after a
+    // refresh done by another tab.
+    const scheduler = startSessionRefreshScheduler();
+    return () => scheduler.stop();
   }, [isAuthenticated, tokenExpiresAt]);
 
   React.useEffect(() => {
@@ -517,6 +515,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
     if (target.type === 'group') {
       setSelectedGroup(target.row);
+      setGroupPopupFromAccount(false);
       setIsPopupOpen(true);
       return true;
     }
@@ -567,8 +566,15 @@ const AuthenticatedAppInner = ({ navigate }) => {
       return;
     }
     setSelectedGroup({ group: 'New Group\\Demo' });
+    setGroupPopupFromAccount(false);
     setIsPopupOpen(true);
   };
+
+  const openAccountGroupProperties = React.useCallback((group) => {
+    setSelectedGroup(group);
+    setGroupPopupFromAccount(true);
+    setIsPopupOpen(true);
+  }, []);
 
   const handleRefresh = React.useCallback(() => {
     AccountsService.invalidateCache();
@@ -639,7 +645,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
     });
   };
 
-  const parseImportFile = (text, name) => {
+  const parseImportFile = (text) => {
     const trimmed = text.trim();
     if (!trimmed) throw new Error('file is empty');
     if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
@@ -747,13 +753,13 @@ const AuthenticatedAppInner = ({ navigate }) => {
       setIsDeletingTarget(true);
       const failed = [];
       for (const name of names) {
-        try { await ManagerService.deleteGroup(name); } catch { failed.push(name); }
+        try { await ManagerService.deleteGroup(name); } catch (err) { failed.push(`${name}: ${err?.response?.data?.message || err?.message || 'unknown error'}`); }
       }
       setIsDeletingTarget(false);
       setSelectedEditTarget(null);
       setRefreshKey((p) => p + 1);
       notify(failed.length
-        ? { title: 'Some groups were not deleted', description: failed.join(', '), tone: 'danger' }
+        ? { title: 'Some groups were not deleted', description: failed.join(' · '), tone: 'danger' }
         : { title: 'Groups deleted', description: `Removed ${names.length} group(s) under "${target.path}"`, tone: 'success' });
       return;
     }
@@ -772,14 +778,14 @@ const AuthenticatedAppInner = ({ navigate }) => {
         setSelectedEditTarget(null);
         setRefreshKey((p) => p + 1);
       } catch (err) {
-        notify({ title: 'Delete failed', description: err?.message || 'Unable to delete group', tone: 'danger' });
+        notify({ title: 'Delete failed', description: err?.response?.data?.message || err?.message || 'Unable to delete group', tone: 'danger' });
       } finally {
         setIsDeletingTarget(false);
       }
     } else {
       notify({ title: 'Delete unavailable', description: `Deleting ${target.type} is not supported from the toolbar.`, tone: 'warning' });
     }
-  }, [selectedEditTarget, canEditGroups, notify]);
+  }, [selectedEditTarget, notify]);
 
   const canAdd = Boolean(canEditGroups || activeNode === 'Groups' || activeNode === 'Trading Accounts' || activeNode === 'Clients' || activeNode === 'Managers');
   const canImport = Boolean(canEditGroups || activeNode === 'Groups');
@@ -900,7 +906,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[color:var(--bg-app)] text-[color:var(--text-primary)] font-sans">
+    <div className="admin-workspace flex flex-col h-screen w-screen overflow-hidden bg-[color:var(--bg-app)] text-[color:var(--text-primary)] font-sans">
       <MenuBar
         onMenuSelect={handleNodeSelect}
         activeNode={activeNode}
@@ -918,7 +924,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
         onAbout={() => setAboutOpen(true)}
         canUndo={currentIndex > 0}
         canRedo={currentIndex < history.length - 1}
-      />
+      >
 
       <ActionToolBar
         onDisconnect={handleDisconnect}
@@ -955,6 +961,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
         onHelp={() => setHelpOpen(true)}
         connStatus={connStatus}
       />
+      </MenuBar>
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <MarketWatchDock>
@@ -971,23 +978,23 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
         <div className={`flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden border-l border-[color:var(--border-default)] bg-[color:var(--bg-app)]${activeNode === 'Allocations' ? ' allocation-typography' : ''}`}>
           {!(canViewActive && ['Integrations', 'Market Overview', 'Symbols Browser', 'Symbol Management'].includes(activeNode)) && (
-          <div className="h-9 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] flex items-center px-4 gap-3 text-xs text-[color:var(--text-muted)] shadow-[var(--shadow-sm)] select-none">
-            <div className="flex items-center gap-2 text-[color:var(--text-primary)] font-semibold text-xs tracking-wide">
+          <div className="min-h-10 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] flex items-center px-4 gap-3 text-xs text-[color:var(--text-muted)] shadow-[var(--shadow-sm)] select-none">
+            <div role="heading" aria-level="1" className="flex items-center gap-2 text-[color:var(--text-primary)] font-semibold tracking-wide" style={{ fontSize: '14px', lineHeight: '18px' }}>
               {activeNode === 'Groups' ? (
-                <FolderTree size={13} className="text-[color:var(--accent-500)]" />
+                <FolderTree size={13} className="text-white" />
               ) : (activeNode === 'Trading Accounts' || activeNode === 'Clients') ? (
-                <Users size={13} className="text-[color:var(--accent-500)]" />
+                <Users size={13} className="text-white" />
               ) : activeNode !== 'Allocations' ? (
-                <Network size={13} className="text-[color:var(--accent-500)]" />
+                <Network size={13} className="text-white" />
               ) : null}
               <span>{activeNode}</span>
             </div>
             {canViewActive && rowCount.total > 0 && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-[color:var(--bg-surface-3)] text-[color:var(--text-secondary)] border border-[color:var(--border-subtle)] shadow-xs">
                 {searchQuery ? (
-                  <>Showing <strong className="text-[color:var(--accent-500)]">{rowCount.filtered}</strong> of {rowCount.total}</>
+                  <>Showing <strong className="text-white">{rowCount.filtered}</strong> of {rowCount.total}</>
                 ) : (
-                  <>{rowCount.total} {rowCount.total === 1 ? (activeNode === 'Groups' ? 'group folder' : 'row') : (activeNode === 'Groups' ? 'groups' : 'rows')}</>
+                  <>{rowCount.total} {rowCount.total === 1 ? (activeNode === 'Groups' ? 'item' : 'row') : (activeNode === 'Groups' ? 'items' : 'rows')}</>
                 )}
               </span>
             )}
@@ -998,10 +1005,10 @@ const AuthenticatedAppInner = ({ navigate }) => {
           {canViewActive && activeNode === 'Groups' ? (
             <GroupsExplorer
               dummyActionsRef={dummyGroupsRef}
-              key={groupExplorerLocation.id}
               location={groupExplorerLocation}
               onNavigate={navigateGroupExplorer}
               onAccountOpen={handleNodeDoubleClick}
+              onAccountGroupOpen={openAccountGroupProperties}
               onSelectionChange={handleEditableTargetSelect}
               selectedNodeId={selectedSidebarNodeId}
               onGroupEdit={(node) => openEditTarget({ type: 'group', row: node.group, viewType: 'Groups', id: node.groupName })}
@@ -1045,6 +1052,10 @@ const AuthenticatedAppInner = ({ navigate }) => {
             group={selectedGroup}
             onClose={() => setIsPopupOpen(false)}
             onSaved={handleGroupSaved}
+            onOpenAccount={openAccountEditor}
+            onNoChanges={groupPopupFromAccount ? undefined : (groupName) => navigateGroupExplorer({ type: 'group', groupName })}
+            initialTab={groupPopupFromAccount ? 'Margin' : 'Accounts'}
+            showAccountsTab={!groupPopupFromAccount}
           />
         )}
         {editingAccount && (

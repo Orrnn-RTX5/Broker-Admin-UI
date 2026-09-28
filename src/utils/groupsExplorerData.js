@@ -19,18 +19,18 @@ const marginText = (group) => {
   return [call, stop].filter(value => value !== '').map(value => `${value}%`).join(' / ');
 };
 
-export const loadGroupsExplorerNodes = async (location, { getGroups, getAccounts }) => {
+/** The accounts of exactly one group, picked from the full account list. */
+export const getGroupAccountNodes = (accountRows, groupName) => normalizeNavigationAccounts(accountRows, groupName)
+  .map(account => ({ ...account, type: 'group-account' }));
+
+export const loadGroupsExplorerNodes = async (location, { getGroups, getAllAccounts }) => {
   if (location.type === 'root') return [GROUPS_ADMIN_NODE];
   if (location.type === 'admin') {
     const rows = await loadGroupTreePages(getGroups, { arrayKeys: ['answer', 'groups', 'data', 'items', 'rows'] });
     return normalizeNavigationGroups(rows).map(group => ({ ...group, type: 'group' }));
   }
   if (location.type === 'group' && location.groupName) {
-    const rows = await loadGroupTreePages(getAccounts, {
-      group: location.groupName,
-      arrayKeys: ['accounts', 'data', 'answer', 'items', 'rows'],
-    });
-    return normalizeNavigationAccounts(rows, location.groupName).map(account => ({ ...account, type: 'group-account' }));
+    return getGroupAccountNodes(await getAllAccounts(), location.groupName);
   }
   return [];
 };
@@ -72,12 +72,26 @@ const ACCOUNT_COLUMNS = [
   { key: 'status', label: 'Status' },
 ];
 
+// A folder that is itself a group lists its subgroups and its own accounts together.
+const MIXED_COLUMNS = [
+  { key: 'group', label: 'Group / Login', primary: true },
+  { key: 'name', label: 'Name' },
+  { key: 'risk', label: 'Risk Management' },
+  { key: 'margin', label: 'Margin', numeric: true },
+  { key: 'balance', label: 'Balance', numeric: true },
+  { key: 'equity', label: 'Equity', numeric: true },
+  { key: 'currency', label: 'Currency' },
+  { key: 'status', label: 'Status' },
+];
+
 // Header labels describe the API schema; account columns appear only when the
 // current collection supplies values, including numeric zero balances.
 export const getGroupsExplorerColumns = (location, nodes) => {
-  if (location.type !== 'group') return FOLDER_COLUMNS;
+  const hasAccounts = nodes.some(node => node.type === 'group-account');
+  if (location.type !== 'group' && !hasAccounts) return FOLDER_COLUMNS;
   const rows = nodes.map(getGroupsExplorerRow);
-  return ACCOUNT_COLUMNS.filter(column => column.primary || rows.some(row => row[column.key] !== ''));
+  const columns = location.type === 'group' ? ACCOUNT_COLUMNS : MIXED_COLUMNS;
+  return columns.filter(column => column.primary || rows.some(row => row[column.key] !== '' && row[column.key] !== undefined));
 };
 
 export const filterGroupsExplorerNodes = (nodes, searchQuery = '', sortDirection = 'asc') => {

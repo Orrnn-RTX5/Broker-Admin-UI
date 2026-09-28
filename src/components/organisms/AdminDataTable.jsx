@@ -196,6 +196,7 @@ const IMPORTED_VIEW_TYPES = new Set([
   'Regulatory Reports',
   'Complaints',
   'Server Config',
+  'Server Configuration',
   'Managers',
   'Network Cluster',
   'Allocations',
@@ -354,6 +355,10 @@ const getTradeSideLabel = (value) => {
 const renderTableValue = (value) => (
   value === undefined || value === null || value === '' ? '-' : value
 );
+const NUMERIC_COLUMN_LABELS = new Set([
+  'Volume', 'Price Open', 'Price Current', 'Price', 'S/L', 'T/P',
+  'Swap', 'Profit', 'Commission', 'Fee', 'Balance', 'Equity', 'Margin',
+]);
 
 const getOrderRow = (order, idx) => ({
   id: pickDefined(order, ['ticket', 'Ticket', 'order', 'Order', 'orderTicket', 'OrderTicket'], idx),
@@ -692,7 +697,7 @@ const DEAL_COLUMNS = [
 const TimePropertyRow = ({ idx, icon, label, value }) => (
   <div className={`flex min-h-[var(--row-h)] items-center text-[12px] border-b border-[color:var(--border-subtle)] ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-[color:var(--bg-surface-3)] cursor-default`}>
     <div className="w-[320px] flex items-center gap-2 px-3 py-[5px] border-r border-[color:var(--border-subtle)] shrink-0">
-      {React.createElement(icon, { size: 13, className: 'text-[color:var(--accent-500)]' })}
+      {React.createElement(icon, { size: 13, className: 'text-[color:var(--text-primary)]' })}
       <span className="text-[color:var(--text-primary)]">{label}</span>
     </div>
     <div className="flex-1 px-3 py-[5px] text-[color:var(--text-primary)]">
@@ -1463,7 +1468,7 @@ const AdminDataTable = ({
   if (viewType === 'Complaints') {
     return <ComplaintsView />;
   }
-  if (viewType === 'Server Config') {
+  if (viewType === 'Server Config' || viewType === 'Server Configuration') {
     return <ServerConfigView />;
   }
   if (viewType === 'Managers') {
@@ -1665,20 +1670,10 @@ const AdminDataTable = ({
           {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, idx) => (
             <TimePropertyRow key={day} idx={idx} icon={Calendar} label={day} value="00:00-24:00" />
           ))}
-
-          {/* Placeholder fill */}
-          {[...Array(25)].map((_, i) => (
-            <div key={i} className={`flex border-b border-[color:var(--border-subtle)] opacity-40 ${i % 2 !== 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
-              <div className="w-[320px] h-7 border-r border-[color:var(--border-subtle)]"></div>
-              <div className="flex-1 h-6"></div>
-            </div>
-          ))}
         </div>
       </div>
     );
   }
-
-  const showSearchFilters = viewType === 'Orders' || viewType === 'Deals' || viewType === 'Positions';
 
   return (
     <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative" onContextMenu={handleContextMenu}>
@@ -1690,14 +1685,13 @@ const AdminDataTable = ({
           serverId={serverPopupData.id}
         />
       )}
-      {/* Search Filters Bar for Orders, Deals, Positions */}
-
-      {showSearchFilters && (
+      {viewType === 'Orders' && (
         <div className="flex items-center px-3 py-2 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] text-[11px] shrink-0 overflow-x-auto no-scrollbar whitespace-nowrap shadow-[var(--shadow-sm)]">
           <div className="flex border border-[color:var(--border-strong)] bg-[color:var(--bg-surface-1)] h-[26px] items-center text-[color:var(--text-muted)] mr-1 rounded-[2px]">
             <div className="px-1.5"><Search size={10} /></div>
             <input
               type="text"
+              aria-label="Search orders by group, account, or ticket"
               value={viewType === 'Orders' ? orderFilters.query : ''}
               onChange={(event) => {
                 if (viewType !== 'Orders') return;
@@ -1709,12 +1703,9 @@ const AdminDataTable = ({
               onKeyDown={(event) => {
                 if (viewType === 'Orders' && event.key === 'Enter') handleOrderRequest();
               }}
-              placeholder="Group or Accounts [1,2,..,1000] or Orders (#1,#2,..#1000)"
+              placeholder="Group, account, or order ticket"
               className="bg-transparent border-none outline-none w-[280px] text-[11px] text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)]"
             />
-            <div className="border-l border-[color:var(--border-strong)] px-1 hover:bg-[color:var(--bg-surface-3)] cursor-pointer h-full flex items-center">
-              <ChevronDown size={12} />
-            </div>
           </div>
 
           <div
@@ -1788,7 +1779,7 @@ const AdminDataTable = ({
             <button
               type="button"
               onClick={() => openOrderDatePicker(orderFromDateInputRef)}
-              className="border-l border-[color:var(--border-strong)] px-1.5 text-[color:var(--accent-500)] hover:bg-[color:var(--bg-surface-3)] cursor-pointer h-full flex items-center"
+              className="border-l border-[color:var(--border-strong)] px-1.5 text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)] cursor-pointer h-full flex items-center"
               aria-label="Select orders from date"
             >
               <Calendar size={12} />
@@ -1815,35 +1806,20 @@ const AdminDataTable = ({
             <button
               type="button"
               onClick={() => openOrderDatePicker(orderToDateInputRef)}
-              className="border-l border-[color:var(--border-strong)] px-1.5 text-[color:var(--accent-500)] hover:bg-[color:var(--bg-surface-3)] cursor-pointer h-full flex items-center"
+              className="border-l border-[color:var(--border-strong)] px-1.5 text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)] cursor-pointer h-full flex items-center"
               aria-label="Select orders to date"
             >
               <Calendar size={12} />
             </button>
           </div>
 
-          <div
-            className={`${orderFilterSelectShellClassName} w-[120px] mr-1`}
-            onMouseDown={handleOrderFilterSelectMouseDown}
-          >
-            <select
-              value={viewType === 'Orders' ? orderFilters.database : 'current'}
-              onChange={(event) => {
-                if (viewType !== 'Orders') return;
-                setOrderFilters((current) => ({
-                  ...current,
-                  database: event.target.value,
-                }));
-              }}
-              className={orderFilterSelectClassName}
-            >
-              <option value="current" className={orderFilterSelectOptionClassName} style={orderFilterSelectOptionStyle}>Current database</option>
-            </select>
-            <div className="px-1 pointer-events-none text-[color:var(--text-muted)]"><ChevronDown size={12} /></div>
-          </div>
+        </div>
+      )}
 
-          {viewType === 'Positions' && (
-            <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-[color:var(--border-strong)]">
+      {viewType === 'Positions' && (
+        <div className="flex min-h-10 shrink-0 items-center gap-2 border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] px-3 py-1.5 text-[11px]">
+          <span className="shrink-0 font-medium text-[color:var(--text-secondary)]">Close positions by symbol</span>
+          <div className="flex min-w-0 items-center gap-1.5">
               <input
                 type="text"
                 value={closeAllSymbol}
@@ -1882,17 +1858,18 @@ const AdminDataTable = ({
                   {closeAllNotice.message}
                 </span>
               )}
-            </div>
-          )}
+          </div>
         </div>
       )}
 
-      {/* Table Header */}
-      <div data-export-header="true" className="flex border-b border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-2)] sticky top-0 z-10 shadow-sm h-[30px] items-center">
+      {/* Header and rows share one scroll surface so columns stay aligned. */}
+      <div className="flex-1 min-h-0 overflow-auto bg-[color:var(--bg-app)]">
+        <div className="w-max min-w-full">
+      <div data-export-header="true" className="sticky top-0 z-10 flex h-[30px] w-full items-center border-b border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-2)] shadow-sm">
         {columns.map((col, idx) => (
           <div
             key={idx}
-            className={`admin-column-header ${col.width} px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] hover:bg-[color:var(--bg-surface-3)] cursor-default flex items-center shrink-0`}
+            className={`admin-column-header ${col.width} px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] hover:bg-[color:var(--bg-surface-3)] cursor-default flex items-center shrink-0 ${NUMERIC_COLUMN_LABELS.has(col.label) ? 'justify-end tabular-nums text-right' : ''}`}
           >
             {col.label}
           </div>
@@ -1901,8 +1878,6 @@ const AdminDataTable = ({
         {viewType === 'Groups' && <div className="flex-1 border-b border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-2)]"></div>}
       </div>
 
-      {/* Table Body */}
-      <div className="flex-1 overflow-auto no-scrollbar bg-[color:var(--bg-app)]">
         {data.map((row, idx) => (
           <div
             key={row.id}
@@ -1910,7 +1885,7 @@ const AdminDataTable = ({
             onClick={() => handleRowClick(row)}
             onDoubleClick={() => onRowDoubleClick && onRowDoubleClick(row)}
             onContextMenu={(e) => { e.stopPropagation(); handleContextMenu(e, row); }}
-            className={`flex min-h-[var(--row-h)] cursor-pointer group border-b border-[color:var(--border-subtle)] transition-colors ${isSelectedEditableRow(row) ? 'bg-[#04395e] text-[color:var(--text-primary)] border-l-2 border-l-[#0078d4]' : (idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]')} hover:bg-[color:var(--bg-surface-3)]`}
+            className={`flex min-h-[var(--row-h)] w-full cursor-pointer group border-b border-[color:var(--border-subtle)] transition-colors ${isSelectedEditableRow(row) ? 'bg-[#04395e] text-[color:var(--text-primary)] shadow-[inset_2px_0_0_0_#0078d4]' : (idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]')} hover:bg-[color:var(--bg-surface-3)]`}
           >
             {isClientsView ? (
               <>
@@ -1943,9 +1918,9 @@ const AdminDataTable = ({
                   if (col.label === 'Login') val = row.login;
                   if (col.label === 'Time') val = row.time;
                   if (col.label === 'Symbol') val = row.symbol;
-                  if (col.label === 'Side' || col.label === 'Action') val = row.side || row.action;
+                  if (col.label === 'Side' || col.label === 'Action') val = row.side ?? row.action;
                   if (col.label === 'Volume') val = row.volume;
-                  if (col.label === 'Price Open' || col.label === 'Price') val = row.open_price || row.price;
+                  if (col.label === 'Price Open' || col.label === 'Price') val = row.open_price ?? row.price;
                   if (col.label === 'Price Current') val = row.current_price;
                   if (col.label === 'S/L') val = row.sl;
                   if (col.label === 'T/P') val = row.tp;
@@ -1960,9 +1935,15 @@ const AdminDataTable = ({
                   const isSideCol = col.label === 'Side' || col.label === 'Action';
                   const sideIsBuy = isSideCol && String(val).toLowerCase() === 'buy';
                   const sideIsSell = isSideCol && String(val).toLowerCase() === 'sell';
+                  const isNumeric = NUMERIC_COLUMN_LABELS.has(col.label);
+                  const cellToneClass = (col.label === 'Profit' && row.profit > 0) || sideIsBuy
+                    ? 'text-[color:var(--success-500)]'
+                    : (col.label === 'Profit' && row.profit < 0) || sideIsSell
+                      ? 'text-[color:var(--danger-500)]'
+                      : 'text-[color:var(--text-primary)]';
 
                   return (
-                    <div key={cIdx} className={`${col.width} px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 ${col.label === 'Profit' && row.profit > 0 ? 'text-[color:var(--success-500)]' : ''} ${col.label === 'Profit' && row.profit < 0 ? 'text-[color:var(--danger-500)]' : ''} ${sideIsBuy ? 'text-[color:var(--info-500)]' : ''} ${sideIsSell ? 'text-[color:var(--danger-500)]' : ''} truncate`}>
+                    <div key={cIdx} title={String(renderTableValue(val))} className={`${col.width} px-3 py-1.5 text-[11px] ${cellToneClass} border-r border-[color:var(--border-subtle)] shrink-0 ${isNumeric ? 'text-right tabular-nums' : ''} truncate`}>
                        {renderTableValue(val)}
                     </div>
                   );
@@ -1976,8 +1957,8 @@ const AdminDataTable = ({
                 </div>
                 <div className="w-48 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.name}</div>
                 <div className="w-48 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.group}</div>
-                <div className="w-32 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.balance}</div>
-                <div className="w-32 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.equity}</div>
+                <div title={String(row.balance)} className="w-32 px-3 py-1.5 text-right tabular-nums text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.balance}</div>
+                <div title={String(row.equity)} className="w-32 px-3 py-1.5 text-right tabular-nums text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.equity}</div>
                 <div className="w-24 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.currency}</div>
                 <div className="w-32 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.status}</div>
                 <div className="flex-1 bg-transparent"></div>
@@ -1993,7 +1974,7 @@ const AdminDataTable = ({
                 <div className="w-32 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">{row.type}</div>
                 <div className="w-40 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">{row.auth}</div>
                 <div className="w-48 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">{row.risk}</div>
-                <div className="w-32 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">{row.margin}</div>
+                <div title={String(row.margin ?? '')} className="w-32 px-3 py-1.5 text-right tabular-nums text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">{row.margin}</div>
                 <div className="w-56 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">{row.leverage}</div>
                 <div className="w-24 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">{row.currency}</div>
                 <div className="flex-1 bg-transparent"></div>
@@ -2002,22 +1983,21 @@ const AdminDataTable = ({
           </div>
         ))}
         {isLoading && data.length === 0 && (
-          <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">Loading data...</div>
+          <div role="status" className="m-4 w-fit rounded-[4px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] px-4 py-3 text-[12px] text-[color:var(--text-secondary)]">
+            Loading {viewType.toLowerCase()}...
+          </div>
         )}
         {!isLoading && activeError && (
-          <div className="p-4 text-[color:var(--danger-500)] text-[12px] bg-[color:var(--danger-500)]/12 border-b border-[color:var(--danger-500)]/30">
+          <div role="alert" className="m-4 w-fit max-w-[540px] rounded-[4px] border border-[color:var(--danger-500)]/30 bg-[color:var(--danger-500)]/10 px-4 py-3 text-[12px] text-[color:var(--danger-500)]">
             {activeErrorMessage}
           </div>
         )}
         {!isLoading && !activeError && data.length === 0 && (
-          <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">No data available</div>
-        )}
-        {/* Placeholder Rows to fill screen */}
-        {[...Array(30)].map((_, i) => (
-          <div key={i} className={`flex border-b border-[color:var(--border-subtle)] opacity-40 ${(data.length + i) % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
-            <div className="w-full h-7 border-r border-[color:var(--border-subtle)]"></div>
+          <div role="status" className="m-4 w-fit rounded-[4px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] px-4 py-3 text-[12px] text-[color:var(--text-secondary)]">
+            No {viewType.toLowerCase()} to show.
           </div>
-        ))}
+        )}
+        </div>
       </div>
 
       {/* Bottom Tab Bar (MT5 Style) */}

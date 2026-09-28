@@ -45,9 +45,10 @@ test('optional auth hydration requests do not expire the global session', () => 
     apiSource,
     /originalRequest\?\._allowAuthFailure && isAuthRejectionError\(error\)/
   );
+  // Optional requests opt out before the refresh-and-retry path runs.
   assert.match(
     apiSource,
-    /return Promise\.reject\(error\);[\s\S]*?if \(isAuthRejectionError\(error\) && error\.response\?\.status !== 401\)/
+    /_allowAuthFailure && isAuthRejectionError\(error\)\) \{\s*return Promise\.reject\(error\);[\s\S]*?if \(isAuthRejectionError\(error\)\) \{[\s\S]*?refreshSession\(/
   );
 });
 

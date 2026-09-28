@@ -143,6 +143,23 @@ test('local web dev proxy keeps manager login on the Vite origin', async () => {
   assert.match(decodeURIComponent(document.cookie), /https:\/\/services\.growtradingacademy\.com/);
 });
 
+test('feed WebSocket omits session token when broker feed does not require it', async () => {
+  installWindow({
+    BACKEND_TARGET: 'web',
+    FEED_WS_URL: 'wss://feed.example/ws/feed',
+    FEED_SEND_TOKEN: 'false',
+  });
+  installStorage({
+    broker_info: JSON.stringify({ broker_id: 'demo', feed_token: 'private-feed-token' }),
+  });
+
+  const endpoints = await importFreshEndpoints();
+  const url = new URL(endpoints.buildFeedWsUrl());
+  assert.equal(url.origin, 'wss://feed.example');
+  assert.equal(url.searchParams.get('broker_id'), 'demo');
+  assert.equal(url.searchParams.has('token'), false);
+});
+
 test('GTA web services host keeps manager API calls on the manager proxy namespace', async () => {
   installWindow({
     BACKEND_TARGET: 'web',

@@ -16,7 +16,7 @@ export const Tooltip = ({ content, children, side = 'top', className }) => (
         className={cn(
           'z-50 px-2 py-1 rounded-[var(--radius-sm)]',
           'bg-[color:var(--text-primary)] text-[color:var(--text-inverse)]',
-          'text-[11px] font-medium shadow-[var(--shadow-md)]',
+          'text-[11px] font-normal shadow-[var(--shadow-md)]',
           className
         )}
       >

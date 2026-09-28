@@ -199,12 +199,14 @@ test('buildDemoAccountGroupSetBody sends only the provided keys', () => {
 
 test('service and view are wired to the DemoAccountGroup endpoints', () => {
   const service = readFileSync(resolve(__dirname, '../services/serverConfig.service.js'), 'utf8');
-  const view = readFileSync(resolve(__dirname, '../components/organisms/ServerConfigView.jsx'), 'utf8');
+  const workspace = readFileSync(resolve(__dirname, '../components/organisms/ServerConfigWorkspace.jsx'), 'utf8');
+  const view = readFileSync(resolve(__dirname, '../components/organisms/ServerConfigDemoAccounts.jsx'), 'utf8');
+  assert.match(workspace, /\{ id: 'demo', label: 'Demo Accounts'/);
+  assert.match(workspace, /\{tab === 'demo' && <DemoAccountsTab \/>\}/);
   assert.match(service, /\/DemoAccountGroupGet`,\s*\{\s*timeout:\s*SERVER_CONFIG_READ_TIMEOUT_MS/);
   assert.match(service, /setDemoAccountGroup:\s*\(changes\)\s*=>\s*api\.post\(`\$\{MANAGER\}\/DemoAccountGroupSet`,\s*buildDemoAccountGroupSetBody\(changes\)\)/);
   assert.match(service, /import \{ buildDemoAccountGroupSetBody \} from '\.\.\/utils\/demoAccountGroup'/);
   assert.match(service, /const MANAGER = '\/manager'/);
-  assert.match(view, /'Demo Accounts'/);
   assert.match(view, /Demo accounts created from the web terminal are opened in this group\./);
   assert.match(view, /Demo account group failed to load\./);
   // Group Save sends only the group; the switch sends only signupEnabled.

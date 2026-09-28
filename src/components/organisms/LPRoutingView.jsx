@@ -6,9 +6,9 @@ import { gatewayGetRoutingOptions } from '../../services/gateway.service';
 import LPRouteFormPopup from '../popups/LPRouteFormPopup';
 
 const ROUTING_MODE_COLOR = {
-  b_book: 'text-[#16a34a]',
+  b_book: 'text-[color:var(--success-500)]',
   a_book: 'text-[#d97706]',
-  hybrid:  'text-[#3b82f6]',
+  hybrid:  'text-white',
 };    
 
 const ROUTING_MODE_LABEL = {
@@ -127,7 +127,7 @@ const LpRoutingOptionsPanel = () => {
                       {opt.adapter_type}
                     </span>
                   </div>
-                  <div className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${opt.routing_mode === 'a_book' ? 'bg-blue-500/10 text-blue-400' : 'bg-orange-500/10 text-orange-400'}`}>
+                  <div className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${opt.routing_mode === 'a_book' ? 'bg-blue-500/10 text-white' : 'bg-orange-500/10 text-orange-400'}`}>
                     {opt.routing_mode.replace('_', '-')}</div>
                 </div>
 
@@ -294,7 +294,7 @@ const GroupDashboardPanel = ({ groupName, onClose }) => {
                     {data.group_symbols_allowed && data.group_symbols_allowed.length > 0 ? (
                       <div className="flex flex-wrap gap-1.5">
                         {data.group_symbols_allowed.map(sym => (
-                          <span key={sym} className="px-2 py-0.5 bg-green-500/10 text-green-400 text-[10px] rounded border border-green-500/20 font-mono">
+                          <span key={sym} className="px-2 py-0.5 bg-green-500/10 text-white text-[10px] rounded border border-green-500/20 font-mono">
                             {sym}
                           </span>
                         ))}
@@ -421,7 +421,7 @@ const LPRoutingView = () => {
       ) : (
         <>
           {/* ── Top Bar ─────────────────────────────────────────────────────────── */}
-          <div className="flex items-center gap-2 px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0 select-none flex-wrap">
+          <div className="flex items-center gap-2 px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] shrink-0 select-none flex-wrap">
         <button
           onClick={openCreate}
           className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:opacity-90 text-white text-[11px] rounded-[2px] transition-colors"
@@ -459,11 +459,11 @@ const LPRoutingView = () => {
         )}
 
         <div className="ml-auto flex items-center gap-2 pr-1">
-          <span className="text-[10px] text-[#555]">{filtered.length} route{filtered.length !== 1 ? 's' : ''}</span>
+          <span className="text-[11px] tabular-nums text-[color:var(--text-secondary)]">{filtered.length} route{filtered.length !== 1 ? 's' : ''}</span>
           <button
             onClick={fetchRoutes}
             disabled={loading}
-            className="text-[#666] hover:text-white transition-colors disabled:opacity-40"
+            className="text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] transition-colors disabled:opacity-40"
             title="Refresh"
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
@@ -477,40 +477,48 @@ const LPRoutingView = () => {
         <LpRoutingOptionsPanel />
 
         {/* Table */}
-        <div className="flex overflow-hidden flex-1 border border-black/20 rounded-md">
+        <div className="flex overflow-hidden flex-1 border border-[color:var(--border-default)] rounded-md">
           <div className="flex flex-col overflow-hidden flex-1">
 
           {/* Grid Header */}
-          <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 shadow-sm sticky top-0 z-10 select-none shrink-0">
-            <div className="w-[60px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0">ID</div>
-            <div className="w-[60px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0">Status</div>
-            <div className="w-[160px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0">Group</div>
-            <div className="w-[130px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0">Symbol</div>
-            <div className="w-[90px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0">Mode</div>
-            <div className="w-[120px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0">LP Name</div>
-            <div className="w-[70px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0">Priority</div>
-            <div className="w-[130px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0">Fallback</div>
-            <div className="w-[80px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0">Max Vol</div>
+          <div className="flex bg-[color:var(--bg-surface-2)] border-b border-[color:var(--border-default)] sticky top-0 z-10 select-none shrink-0">
+            <div className="w-[60px]  px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">ID</div>
+            <div className="w-[72px]  px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">Status</div>
+            <div className="w-[160px] px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">Group</div>
+            <div className="w-[130px] px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">Symbol</div>
+            <div className="w-[90px]  px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">Mode</div>
+            <div className="w-[120px] px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">LP Name</div>
+            <div className="w-[80px]  px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">Priority</div>
+            <div className="w-[130px] px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">Fallback</div>
+            <div className="w-[80px]  px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">Max Vol</div>
             <div className="flex-1 px-3 py-1.5 bg-[color:var(--bg-surface-2)]"></div>
           </div>
 
           {/* Grid Body */}
-          <div className="flex-1 overflow-auto no-scrollbar bg-[color:var(--bg-app)]">
-            {loading && (
-              <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">Loading routing rules…</div>
+          <div className="flex-1 overflow-auto no-scrollbar bg-[color:var(--bg-app)]" aria-busy={loading}>
+            {loading && filtered.length === 0 && (
+              <div role="status" className="flex min-h-40 items-center justify-center gap-2 px-6 text-[12px] text-[color:var(--text-secondary)]">
+                <RefreshCw size={14} className="animate-spin text-white" />
+                Loading routing rules…
+              </div>
             )}
             {!loading && filtered.length === 0 && (
-              <div className="flex flex-col items-center justify-center gap-2 py-16">
-                <GitBranch size={28} className="text-[#444]" />
-                <span className="text-[#555] text-[12px] italic">
-                  {data.length === 0 ? 'No routing rules configured yet.' : 'No routes match your filter.'}
-                </span>
+              <div className="flex min-h-44 flex-col items-center justify-center gap-2 px-6 text-center">
+                <div className="flex h-9 w-9 items-center justify-center rounded-md border border-[color:var(--border-default)] bg-[color:var(--bg-surface-2)] text-white">
+                  <GitBranch size={17} />
+                </div>
+                <p className="m-0 text-[13px] font-semibold text-[color:var(--text-primary)]">
+                  {data.length === 0 ? 'No routing rules configured' : 'No routes match your filter'}
+                </p>
+                <p className="m-0 text-[12px] text-[color:var(--text-secondary)]">
+                  {data.length === 0 ? 'Create a route to connect a group to an LP.' : 'Try another group, symbol, or LP name.'}
+                </p>
                 {data.length === 0 && (
                   <button
                     onClick={openCreate}
-                    className="mt-2 flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:opacity-90 text-white text-[11px] rounded-[2px]"
+                    className="mt-2 inline-flex h-7 items-center gap-1.5 rounded-[3px] border border-[color:var(--border-strong)] bg-[color:var(--bg-surface-2)] px-3 text-[11px] text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)]"
                   >
-                    <Plus size={12} /> Create First Route
+                    <Plus size={12} /> Add Route
                   </button>
                 )}
               </div>
@@ -526,57 +534,57 @@ const LPRoutingView = () => {
                   onClick={(e) => { e.stopPropagation(); setSelectedRow(row); }}
                   onDoubleClick={(e) => { e.stopPropagation(); setBlankUiGroup(row.group_name); }}
                   onContextMenu={(e) => handleContextMenu(e, row)}
-                  className={`flex cursor-pointer border-b border-black/10 transition-colors
+                  className={`flex cursor-pointer border-b border-[color:var(--border-subtle)] transition-colors
                     ${isSelected
                       ? 'bg-[color:var(--accent-700)] border-l-2 border-l-[color:var(--accent-500)]'
                       : idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}
-                    hover:bg-blue-600/20`}
+                    hover:bg-[color:var(--bg-surface-3)]`}
                 >
                   {/* ID */}
-                  <div className="w-[60px] px-3 py-1 text-[12px] flex items-center gap-1.5 border-r border-black/10 shrink-0">
+                  <div className="w-[60px] px-3 py-1 text-[12px] flex items-center gap-1.5 border-r border-[color:var(--border-subtle)] shrink-0">
                     <RouteIcon />
                     <span className="text-[color:var(--text-primary)] font-mono truncate">{rowId ?? '—'}</span>
                   </div>
                   {/* Status */}
-                  <div className="w-[60px] px-3 py-1 text-[12px] border-r border-black/10 shrink-0 flex items-center">
-                    <span className={`text-[11px] font-semibold ${row.enabled ? 'text-[#4ec9b0]' : 'text-[#f48771]'}`}>
+                  <div className="w-[72px] px-3 py-1 text-[12px] border-r border-[color:var(--border-subtle)] shrink-0 flex items-center">
+                    <span className={`text-[11px] font-semibold ${row.enabled ? 'text-white' : 'text-[#f48771]'}`}>
                       {row.enabled ? 'Active' : 'Off'}
                     </span>
                   </div>
                   {/* Group */}
-                  <div className="w-[160px] px-3 py-1 text-[12px] text-[#9cdcfe] font-medium border-r border-black/10 shrink-0 truncate flex items-center">
+                  <div className="w-[160px] px-3 py-1 text-[12px] text-white font-medium border-r border-[color:var(--border-subtle)] shrink-0 truncate flex items-center">
                     {row.group_name}
                   </div>
                   {/* Symbol */}
-                  <div className="w-[130px] px-3 py-1 text-[12px] font-mono text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate flex items-center">
+                  <div className="w-[130px] px-3 py-1 text-[12px] font-mono text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate flex items-center">
                     {row.symbol_pattern}
                   </div>
                   {/* Mode */}
-                  <div className="w-[90px] px-3 py-1 text-[12px] border-r border-black/10 shrink-0 flex items-center">
-                    <span className={`text-[11px] font-semibold ${ROUTING_MODE_COLOR[row.routing_mode] ?? 'text-[#ccc]'}`}>
+                  <div className="w-[90px] px-3 py-1 text-[12px] border-r border-[color:var(--border-subtle)] shrink-0 flex items-center">
+                    <span className={`text-[11px] font-semibold ${ROUTING_MODE_COLOR[row.routing_mode] ?? 'text-white'}`}>
                       {ROUTING_MODE_LABEL[row.routing_mode] ?? row.routing_mode}
                     </span>
                   </div>
                   {/* LP Name */}
-                  <div className="w-[120px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] font-medium border-r border-black/10 shrink-0 truncate flex items-center">
+                  <div className="w-[120px] px-3 py-1 text-[12px] text-[color:var(--text-secondary)] font-medium border-r border-[color:var(--border-subtle)] shrink-0 truncate flex items-center">
                     {row.lp_name}
                   </div>
                   {/* Priority */}
-                  <div className="w-[70px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate flex items-center tabular-nums">
+                  <div className="w-[80px] px-3 py-1 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate flex items-center tabular-nums">
                     {row.priority}
                   </div>
                   {/* Fallback */}
-                  <div className="w-[130px] px-3 py-1 text-[11px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate flex items-center">
+                  <div className="w-[130px] px-3 py-1 text-[11px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate flex items-center">
                     {FALLBACK_LABEL[row.fallback_policy] ?? row.fallback_policy}
                   </div>
                   {/* Max Vol */}
-                  <div className="w-[80px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate flex items-center tabular-nums">
+                  <div className="w-[80px] px-3 py-1 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate flex items-center tabular-nums">
                     {row.max_volume ?? '—'}
                   </div>
                   <div className="flex-1 flex items-center justify-end pr-2 gap-1">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleEdit(row); }}
-                      className="opacity-0 group-hover:opacity-100 text-[#555] hover:text-[#9cdcfe] transition-colors p-0.5"
+                      className="opacity-0 group-hover:opacity-100 text-white hover:text-white transition-colors p-0.5"
                       title="Edit"
                     >
                       <Edit2 size={11} />
@@ -586,12 +594,6 @@ const LPRoutingView = () => {
               );
             })}
 
-            {/* Filler rows */}
-            {[...Array(12)].map((_, i) => (
-              <div key={`e-${i}`} className={`flex border-b border-black/5 opacity-30 ${i % 2 !== 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
-                <div className="w-full h-6 border-r border-black/10" />
-              </div>
-            ))}
           </div>
         </div>
 
@@ -600,12 +602,12 @@ const LPRoutingView = () => {
           <div className="w-[300px] flex flex-col border-l border-black/40 bg-[color:var(--bg-app)] shrink-0">
             {/* Panel Header */}
             <div className="flex items-center px-3 h-[30px] bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0">
-              <span className="text-[11px] font-semibold text-[#9cdcfe] flex-1 truncate">
+              <span className="text-[11px] font-semibold text-white flex-1 truncate">
                 Route #{selectedRow.route_id ?? selectedRow.id} — {selectedRow.group_name}
               </span>
               <button
                 onClick={() => setSelectedRow(null)}
-                className="text-[#555] hover:text-[#ccc] transition-colors"
+                className="text-white hover:text-white transition-colors"
               >
                 <X size={13} />
               </button>
@@ -627,8 +629,8 @@ const LPRoutingView = () => {
                   ['Status',         selectedRow.enabled ? 'Active' : 'Disabled'],
                 ].map(([k, v]) => (
                   <div key={k} className="flex items-start py-0.5">
-                    <span className="text-[10px] text-[#555] w-28 shrink-0">{k}</span>
-                    <span className={`text-[11px] font-mono truncate ${k === 'Status' ? (selectedRow.enabled ? 'text-[#4ec9b0]' : 'text-[#f48771]') : 'text-[color:var(--text-primary)]'}`}>
+                    <span className="text-[10px] text-white w-28 shrink-0">{k}</span>
+                    <span className={`text-[11px] font-mono truncate ${k === 'Status' ? (selectedRow.enabled ? 'text-white' : 'text-[#f48771]') : 'text-[color:var(--text-primary)]'}`}>
                       {v ?? '—'}
                     </span>
                   </div>
@@ -638,10 +640,10 @@ const LPRoutingView = () => {
 
             {/* Actions */}
             <div className="px-3 py-2.5 flex flex-col gap-2 shrink-0">
-              <p className="text-[10px] uppercase tracking-widest text-[#444] font-semibold">Actions</p>
+              <p className="text-[10px] uppercase tracking-widest text-white font-semibold">Actions</p>
               <button
                 onClick={() => handleEdit(selectedRow)}
-                className="flex items-center gap-2 h-[26px] px-3 bg-[#2a3a4a] hover:bg-[#3a4a5a] text-[#9cdcfe] text-[11px] rounded-[2px] transition-colors w-full"
+                className="flex items-center gap-2 h-[26px] px-3 bg-[#2a3a4a] hover:bg-[#3a4a5a] text-white text-[11px] rounded-[2px] transition-colors w-full"
               >
                 <Edit2 size={12} /> Edit Route
               </button>
@@ -656,19 +658,19 @@ const LPRoutingView = () => {
             {/* Timestamps */}
             {(selectedRow.created_at || selectedRow.updated_at) && (
               <div className="px-3 pb-3 mt-auto">
-                <p className="text-[10px] uppercase tracking-widest text-[#444] font-semibold mb-1.5">Timestamps</p>
+                <p className="text-[10px] uppercase tracking-widest text-white font-semibold mb-1.5">Timestamps</p>
                 {selectedRow.created_at && (
                   <div className="flex items-center py-0.5">
-                    <span className="text-[10px] text-[#555] w-20 shrink-0">Created</span>
-                    <span className="text-[10px] font-mono text-[#666]">
+                    <span className="text-[10px] text-white w-20 shrink-0">Created</span>
+                    <span className="text-[10px] font-mono text-white">
                       {new Date(selectedRow.created_at * 1000).toLocaleString()}
                     </span>
                   </div>
                 )}
                 {selectedRow.updated_at && (
                   <div className="flex items-center py-0.5">
-                    <span className="text-[10px] text-[#555] w-20 shrink-0">Updated</span>
-                    <span className="text-[10px] font-mono text-[#666]">
+                    <span className="text-[10px] text-white w-20 shrink-0">Updated</span>
+                    <span className="text-[10px] font-mono text-white">
                       {new Date(selectedRow.updated_at * 1000).toLocaleString()}
                     </span>
                   </div>
@@ -691,7 +693,7 @@ const LPRoutingView = () => {
             onClick={() => handleEdit()}
             className="flex items-center gap-2.5 w-full px-3 py-1.5 text-left text-[color:var(--text-primary)] hover:bg-[color:var(--accent-700)] transition-colors"
           >
-            <Edit2 size={12} className="text-[#9cdcfe]" /> Edit Route
+            <Edit2 size={12} className="text-white" /> Edit Route
           </button>
           <div className="border-t border-[#333] my-0.5" />
           <button

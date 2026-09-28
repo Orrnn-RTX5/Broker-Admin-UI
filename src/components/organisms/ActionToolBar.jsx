@@ -104,10 +104,10 @@ const ActionToolBar = ({
             </Tooltip>
             <DropdownMenuContent align="start" className="w-48">
               <DropdownMenuItem onSelect={onExportCsv}>
-                <span className="text-[color:var(--success-500)] font-semibold">CSV:</span> Export Table
+                <span className="text-[color:var(--text-primary)] font-semibold">CSV:</span> Export Table
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onExport}>
-                <span className="text-[color:var(--info-500)] font-semibold">JSON:</span> Export Table
+                <span className="text-[color:var(--text-primary)] font-semibold">JSON:</span> Export Table
               </DropdownMenuItem>
               {canImport && (
                 <>
@@ -222,7 +222,7 @@ const ActionToolBar = ({
               </DropdownMenuTrigger>
             </Tooltip>
             <DropdownMenuContent align="end" className="w-56">
-              <div className="px-3 py-2 text-xs font-semibold text-[color:var(--text-primary)]">
+              <div className="px-3 py-2 text-[11px] font-semibold text-[color:var(--text-primary)]">
                 Server Connection
               </div>
               <DropdownMenuItem onSelect={onSync}>

@@ -662,7 +662,7 @@ const FeedTenantsView = () => {
       <div className="flex justify-between items-start px-5 py-4 border-b border-black/40 shrink-0 bg-[color:var(--bg-surface-1)]">
         <div>
           <h1 className="text-[17px] font-semibold text-white mb-1 flex items-center gap-2">
-            <Users size={16} className="text-sky-400" /> Feed Tenants
+            <Users size={16} className="text-white" /> Feed Tenants
           </h1>
           <p className="text-[12px] text-[color:var(--text-muted)]">
             Multi-tenant FIX 4.4 market-data subscribers. Credentials are write-only and shown exactly once.
@@ -690,7 +690,7 @@ const FeedTenantsView = () => {
           <div className="flex items-center gap-2 py-10 text-sm justify-center" style={{ color: 'var(--muted)' }}>
             <Loader2 size={14} className="animate-spin" /> Loading feed tenants…
           </div>
-        ) : tenants.length === 0 ? (
+        ) : err ? null : tenants.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-12">
             <Users size={28} style={{ color: 'var(--muted)' }} />
             <p className="text-sm" style={{ color: 'var(--text-3)' }}>No feed tenants yet</p>

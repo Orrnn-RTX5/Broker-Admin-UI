@@ -12,16 +12,16 @@ const TRADER_RANKING_LOADERS = {
 };
 
 const fmt = (v) => typeof v === 'number' ? v.toFixed(2) : String(v ?? '—');
-const pnlColor = (v) => (v > 0 ? 'text-[#4ec9b0]' : v < 0 ? 'text-[#f48771]' : 'text-[color:var(--text-primary)]');
+const pnlColor = (v) => (v > 0 ? 'text-[color:var(--success-500)]' : v < 0 ? 'text-[color:var(--danger-500)]' : 'text-[color:var(--text-primary)]');
 
 const TradersTable = ({ data }) => {
-  if (!data) return <div className="flex items-center justify-center h-24 text-[#555] text-[11px]">Loading…</div>;
-  if (!Array.isArray(data) || data.length === 0) return <div className="flex items-center justify-center h-24 text-[#555] text-[11px]">No data available.</div>;
+  if (!data) return <div className="flex items-center justify-center h-24 text-white text-[11px]">Loading…</div>;
+  if (!Array.isArray(data) || data.length === 0) return <div className="flex items-center justify-center h-24 text-white text-[11px]">No data available.</div>;
   const cols = Object.keys(data[0]);
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       <div className="flex items-center px-3 h-[24px] bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0">
-        {cols.map(c => <div key={c} className="min-w-[140px] text-[10px] font-semibold text-[#888] uppercase tracking-wider pr-3">{c}</div>)}
+        {cols.map(c => <div key={c} className="min-w-[140px] text-[10px] font-semibold text-white uppercase tracking-wider pr-3">{c}</div>)}
       </div>
       <div className="flex-1 overflow-auto">
         {data.map((row, i) => (
@@ -54,18 +54,18 @@ const AnalyticsTradersView = () => {
       <div className="flex items-center bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0">
         {[TAB_TOP, TAB_WORST].map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-4 h-[30px] text-[11px] border-r border-black/30 transition-colors ${tab === t ? 'bg-[color:var(--bg-app)] text-[color:var(--text-primary)] border-t-2 border-t-[color:var(--accent-500)]' : 'text-[#888] hover:text-[#ccc]'}`}>
+            className={`px-4 h-[30px] text-[11px] border-r border-black/30 transition-colors ${tab === t ? 'bg-[color:var(--bg-app)] text-[color:var(--text-primary)] border-t-2 border-t-[color:var(--accent-500)]' : 'text-white hover:text-white'}`}>
             {t}
           </button>
         ))}
         <div className="flex-1" />
-        <button onClick={refresh} className="flex items-center gap-1.5 h-[24px] px-3 mr-2 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]">
+        <button onClick={refresh} className="flex items-center gap-1.5 h-[24px] px-3 mr-2 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-white text-[11px] rounded-[2px]">
           <RefreshCw size={11} /> Refresh
         </button>
       </div>
 
       {loading
-        ? <div className="flex items-center justify-center flex-1 text-[#888] text-[11px]">Loading…</div>
+        ? <div className="flex items-center justify-center flex-1 text-white text-[11px]">Loading…</div>
         : error
           ? <ActionableErrorState title="Unable to load data" message={error} actionLabel="Refresh" onAction={refresh} />
           : <TradersTable data={Array.isArray(data) ? data : []} />}

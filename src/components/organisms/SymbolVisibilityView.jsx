@@ -73,7 +73,7 @@ const SymbolVisibilityView = () => {
       {/* Left: list */}
       <div className="w-[260px] border-r border-black/40 flex flex-col">
         <div className="flex items-center px-3 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0">
-          <span className="text-[11px] text-[#888] flex-1">Groups</span>
+          <span className="text-[11px] text-white flex-1">Groups</span>
           <button
             onClick={() => setShowForm(true)}
             className="flex items-center gap-1 h-[22px] px-2 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[10px] rounded-[2px]"
@@ -83,14 +83,14 @@ const SymbolVisibilityView = () => {
         </div>
         <div className="flex-1 overflow-auto">
           {loading ? (
-            <div className="text-[#888] text-[11px] p-3">Loading…</div>
+            <div className="text-white text-[11px] p-3">Loading…</div>
           ) : loadError ? (
             <div className="p-3 text-[11px]">
               <div className="font-semibold text-[#f48771]">Failed to load symbol visibility</div>
-              <div className="mt-1 text-[#888]">{loadError}</div>
+              <div className="mt-1 text-white">{loadError}</div>
             </div>
           ) : list.length === 0 ? (
-            <div className="text-[#555] text-[11px] p-3">No entries</div>
+            <div className="text-white text-[11px] p-3">No entries</div>
           ) : (
             list.map(row => (
               <div
@@ -99,7 +99,7 @@ const SymbolVisibilityView = () => {
                 className={`px-3 h-[24px] flex items-center cursor-pointer text-[11px] border-b border-black/20 ${selected?.group === row.group ? 'bg-[color:var(--accent-700)] text-white' : 'text-[color:var(--text-primary)] hover:bg-[#2a2d2e]'}`}
               >
                 {row.group}
-                <span className="ml-auto text-[10px] text-[#888]">{Array.isArray(row.symbols) ? row.symbols.length : 0} sym</span>
+                <span className="ml-auto text-[10px] text-white">{Array.isArray(row.symbols) ? row.symbols.length : 0} sym</span>
               </div>
             ))
           )}
@@ -111,8 +111,8 @@ const SymbolVisibilityView = () => {
         {selected ? (
           <>
             <div className="flex items-center px-3 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0 gap-2">
-              <span className="text-[11px] text-[#9cdcfe] font-semibold">{selected.group}</span>
-              <span className="text-[#555] text-[11px]">— symbol visibility</span>
+              <span className="text-[11px] text-white font-semibold">{selected.group}</span>
+              <span className="text-white text-[11px]">— symbol visibility</span>
               <button
                 onClick={handleSave}
                 disabled={saving}
@@ -122,7 +122,7 @@ const SymbolVisibilityView = () => {
               </button>
             </div>
             <div className="flex-1 p-4 flex flex-col gap-2">
-              <label className="text-[10px] text-[#888] uppercase tracking-wider">
+              <label className="text-[10px] text-white uppercase tracking-wider">
                 Symbols (comma-separated)
               </label>
               <textarea
@@ -133,13 +133,13 @@ const SymbolVisibilityView = () => {
                 placeholder="EURUSD, GBPUSD, XAUUSD…"
               />
               <LpSymbolListAdder value={editSymbols} onChange={setEditSymbols} />
-              <div className="text-[10px] text-[#555]">
+              <div className="text-[10px] text-white">
                 {editSymbols.split(',').filter(s => s.trim()).length} symbols
               </div>
             </div>
           </>
         ) : (
-          <div className="flex items-center justify-center flex-1 text-[#555] text-[11px]">
+          <div className="flex items-center justify-center flex-1 text-white text-[11px]">
             Select a group to edit symbol visibility
           </div>
         )}
@@ -155,7 +155,7 @@ const SymbolVisibilityView = () => {
           >
             <div className="text-[12px] font-semibold text-[color:var(--text-primary)] mb-1">New Symbol Visibility</div>
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-[#888] uppercase tracking-wider">Group *</label>
+              <label className="text-[10px] text-white uppercase tracking-wider">Group *</label>
               <input
                 required
                 value={newGroup}
@@ -165,7 +165,7 @@ const SymbolVisibilityView = () => {
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-[#888] uppercase tracking-wider">Symbols (comma-separated)</label>
+              <label className="text-[10px] text-white uppercase tracking-wider">Symbols (comma-separated)</label>
               <textarea
                 value={newSymbols}
                 onChange={e => setNewSymbols(e.target.value)}
@@ -177,7 +177,7 @@ const SymbolVisibilityView = () => {
             </div>
             <div className="flex gap-2 mt-1 justify-end">
               <button type="button" onClick={() => setShowForm(false)}
-                className="h-[24px] px-4 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]">
+                className="h-[24px] px-4 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-white text-[11px] rounded-[2px]">
                 Cancel
               </button>
               <button type="submit" disabled={saving}

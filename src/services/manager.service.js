@@ -30,7 +30,19 @@ export const ManagerService = {
     return res.data;
   },
 
+  // The broker retired mutating GETs (410) but has not published the POST successor
+  // yet. Try the POST shape used by GroupCreate/GroupUpdate first, and fall back to
+  // the legacy GET so the server's own message still reaches the UI.
   deleteGroup: async (groupName) => {
+    try {
+      const res = await api.post('/manager/GroupDelete', { group_name: groupName, group: groupName }, {
+        params: { group_name: groupName },
+      });
+      return res.data;
+    } catch (error) {
+      const status = error?.response?.status;
+      if (status !== 404 && status !== 405) throw error;
+    }
     const res = await api.get('/manager/GroupDelete', {
       params: { group: groupName }
     });

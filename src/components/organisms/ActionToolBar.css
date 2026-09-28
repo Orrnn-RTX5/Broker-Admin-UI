@@ -18,8 +18,19 @@
   border-bottom: 1px solid var(--border-default, #333333);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
   font-family: var(--font-sans);
-  font-size: var(--ui-font-base, 12px);
+  font-size: var(--ui-font-base, 11px);
   user-select: none;
+}
+
+.admin-unified-header > .admin-action-toolbar.mt5-action-toolbar {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  padding: 0 5px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 /* Left region scrolls when the window is narrow; right region stays pinned. */
@@ -101,7 +112,7 @@
 
 .mt5-tool.is-active {
   background: var(--tb-accent-tint);
-  color: var(--accent-600, #42a5f5);
+  color: var(--text-primary);
   box-shadow: inset 0 0 0 1px var(--tb-accent-ring);
 }
 
@@ -110,12 +121,12 @@
 }
 
 .mt5-tool--add:not(:disabled) {
-  color: var(--success-500, #2ebd59);
+  color: var(--success-500, #6db3f2);
 }
 
 .mt5-tool--add:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--success-500, #2ebd59) 14%, transparent);
-  color: var(--success-500, #2ebd59);
+  background: color-mix(in srgb, var(--success-500, #6db3f2) 14%, transparent);
+  color: var(--success-500, #6db3f2);
 }
 
 .mt5-tool--danger:hover:not(:disabled) {
@@ -145,7 +156,7 @@
   font-size: 7px;
   font-weight: 800;
   line-height: 1;
-  color: var(--accent-600, #42a5f5);
+  color: var(--text-primary);
 }
 
 /* ---------- Text chips (Connect / Automation / Filter) ---------- */
@@ -161,8 +172,8 @@
   background: var(--bg-surface-2, #252526);
   color: var(--text-secondary, #cccccc);
   font: inherit;
-  font-size: var(--ui-font-base, 12px);
-  font-weight: 500;
+  font-size: var(--ui-font-base, 11px);
+  font-weight: 400;
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
@@ -174,7 +185,7 @@
 .mt5-chip[data-state="open"] {
   background: var(--bg-surface-3, #2a2d2e);
   border-color: var(--border-strong, #454545);
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .mt5-chip:active {
@@ -194,11 +205,11 @@
 
 .mt5-chip:hover .mt5-chip-caret,
 .mt5-chip[data-state="open"] .mt5-chip-caret {
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .mt5-chip.is-connected .mt5-chip-icon {
-  color: var(--success-500, #4ec9b0);
+  color: var(--success-500, #6db3f2);
 }
 
 .mt5-chip.is-error {
@@ -290,14 +301,14 @@
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: var(--ui-font-base, 12px);
+  font-size: var(--ui-font-base, 11px);
   line-height: 1;
   padding: 0;
 }
 
 .mt5-toolbar-search input::placeholder {
   color: var(--text-muted, #71717a);
-  font-size: 11.5px;
+  font-size: 11px;
 }
 
 .mt5-toolbar-search input::-webkit-search-cancel-button,
@@ -357,7 +368,7 @@
 
 .mt5-search-clear:hover {
   background: var(--tb-hover);
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 /* ---------- Focus & motion ---------- */
@@ -380,4 +391,15 @@
   .mt5-chip-caret { margin-left: 0; }
   .mt5-toolbar-search { width: 150px; }
   .mt5-toolbar-search:focus-within { width: 190px; }
+}
+
+@media (max-width: 700px) {
+  .admin-unified-header .mt5-toolbar-search { width: 112px; }
+  .admin-unified-header .mt5-toolbar-search:focus-within { width: 140px; }
+}
+
+@media (max-width: 480px) {
+  .admin-unified-header .mt5-toolbar-search,
+  .admin-unified-header .mt5-toolbar-search:focus-within { width: 60px; }
+  .admin-unified-header .mt5-search-kbd { display: none; }
 }

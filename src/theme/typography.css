@@ -1,59 +1,79 @@
-/* Manager reference: src/index.css. Keep the admin's functional components
-   on the same 10px/12px scale, including dialogs portaled outside #root. */
+/* Keep auth and branding at their own scale. The signed-in workspace and
+   its portaled menus/dialogs use the compact manager typography. */
 body {
   font-family: var(--font-sans);
-  font-size: var(--ui-font-base);
+  font-size: var(--ui-font-heading);
   font-weight: var(--ui-weight-regular);
   letter-spacing: -0.005em;
 }
 
-:is(#root, [data-radix-portal], [role="dialog"], [role="menu"]) :where(
+.admin-workspace,
+:root:has(.admin-workspace) :is([role="dialog"], [role="menu"], [role="listbox"]) {
+  font-size: var(--ui-font-base);
+  font-weight: var(--ui-weight-regular);
+  color: var(--text-primary);
+}
+
+:is(.admin-workspace, :root:has(.admin-workspace) [role="dialog"], :root:has(.admin-workspace) [role="menu"], :root:has(.admin-workspace) [role="listbox"]) :where(
   .text-xs, .text-\[6px\], .text-\[8px\], .text-\[9px\], .text-\[10px\]
 ) {
   font-size: var(--ui-font-small) !important;
   line-height: 1.4;
 }
 
-:is(#root, [data-radix-portal], [role="dialog"], [role="menu"]) :where(
-  .text-sm, .text-base, .text-lg, .text-xl, .text-2xl,
-  .text-\[11px\], .text-\[12px\], .text-\[13px\], .text-\[14px\],
-  .text-\[15px\], .text-\[16px\], .text-\[18px\], .text-\[20px\],
-  .text-\[22px\], .text-\[24px\], .text-\[26px\], .text-\[28px\]
+:is(.admin-workspace, :root:has(.admin-workspace) [role="dialog"], :root:has(.admin-workspace) [role="menu"], :root:has(.admin-workspace) [role="listbox"]) :where(
+  .text-sm, .text-\[11px\], .text-\[12px\]
 ) {
   font-size: var(--ui-font-base) !important;
   line-height: 1.4;
 }
 
-:is(#root, [role="dialog"], [role="menu"]) :where(h1, h2, h3, h4, h5, h6) {
-  font-size: var(--ui-font-base) !important;
+:is(.admin-workspace, :root:has(.admin-workspace) [role="dialog"], :root:has(.admin-workspace) [role="menu"]) :where(h1, h2, h3, h4, h5, h6, [role="heading"]) {
   font-weight: var(--ui-weight-semibold) !important;
   line-height: 1.35;
 }
 
-:is(#root, [role="dialog"], [role="menu"]) :where(button, input, select, textarea) {
+:is(.admin-workspace, :root:has(.admin-workspace) [role="dialog"], :root:has(.admin-workspace) [role="menu"], :root:has(.admin-workspace) [role="listbox"]) :where(button, input, select, textarea) {
   font-size: var(--ui-font-base);
-  font-weight: var(--ui-weight-medium);
 }
 
-:is(#root, [role="dialog"], [role="menu"]) :where(.font-normal) { font-weight: 400 !important; }
-:is(#root, [role="dialog"], [role="menu"]) :where(.font-medium) { font-weight: 500 !important; }
-:is(#root, [role="dialog"], [role="menu"]) :where(.font-semibold, .font-bold, .font-extrabold, .font-black) {
+:is(.admin-workspace, :root:has(.admin-workspace) [role="dialog"], :root:has(.admin-workspace) [role="menu"], :root:has(.admin-workspace) [role="listbox"]) :where(.font-normal) { font-weight: 400 !important; }
+:is(.admin-workspace, :root:has(.admin-workspace) [role="dialog"], :root:has(.admin-workspace) [role="menu"], :root:has(.admin-workspace) [role="listbox"]) :where(.font-medium) { font-weight: 500 !important; }
+:is(.admin-workspace, :root:has(.admin-workspace) [role="dialog"], :root:has(.admin-workspace) [role="menu"], :root:has(.admin-workspace) [role="listbox"]) :where(.font-semibold, .font-bold, .font-extrabold, .font-black) {
   font-weight: 600 !important;
 }
 
 .ui-btn, .ui-input, .ui-select, .ui-textarea, .ui-grid,
-.ui-modal-header, .ui-modal-body { font-size: var(--ui-font-base); }
-.ui-grid thead th { font-size: var(--ui-font-small); }
+.ui-modal-body { font-size: var(--ui-font-base); }
+.ui-modal-header { font-size: var(--ui-font-heading); }
+.ui-grid thead th { font-size: var(--ui-font-small); font-weight: var(--ui-weight-semibold); }
 input::placeholder, textarea::placeholder { color: var(--text-placeholder); }
 
+/* Legacy utility labels should share the foreground token. This leaves
+   component-specific state colors free to win when they are more specific. */
+:where(.admin-workspace, :root:has(.admin-workspace) [role="dialog"], :root:has(.admin-workspace) [role="menu"]) :where(
+  .text-white, [class~="text-[#fff]"], [class~="text-[#ffffff]"]
+) { color: var(--text-primary); }
+
 /* The rendered command-center navigator overrides the base manager scale. */
-#root .admin-tree-label { font-size: 9px !important; font-weight: 400 !important; line-height: 1.35; }
-#root .admin-tree-branch > .admin-tree-label { font-weight: 500 !important; color: var(--text-primary); }
+#root .admin-tree-label { font-size: var(--ui-font-base) !important; font-weight: var(--ui-weight-regular) !important; line-height: 1.35; }
+#root .admin-tree-branch > .admin-tree-label { font-weight: var(--ui-weight-semibold) !important; color: var(--text-primary); }
+#root .admin-tree-row[aria-selected="true"] > .admin-tree-label { font-weight: var(--ui-weight-semibold) !important; }
+
+#root .admin-tree-row:focus-visible {
+  outline: 2px solid var(--accent-600);
+  outline-offset: -2px;
+}
+
+#root .admin-tree-row > button:focus-visible {
+  outline: 2px solid var(--accent-600);
+  outline-offset: 1px;
+}
 
 /* Shared native and div-based data grids use the manager's quiet headings. */
-#root .admin-column-header,
-:is(#root, [role="dialog"]) :where(th) {
+.admin-workspace .admin-column-header,
+:is(.admin-workspace, :root:has(.admin-workspace) [role="dialog"]) :where(th) {
   font-size: var(--ui-font-small) !important;
   font-weight: var(--ui-weight-semibold) !important;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }

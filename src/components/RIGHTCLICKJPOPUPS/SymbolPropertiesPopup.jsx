@@ -153,7 +153,7 @@ const SymbolPropertiesPopup = ({ symbol, groupName, onClose }) => {
             <div className="w-12 h-12 bg-[#E8B339] rounded-md flex items-center justify-center shrink-0 shadow-inner">
               <DollarSign size={28} className="text-[#B38600] drop-shadow-sm" />
             </div>
-            <div className="text-[11px] text-[#dedede] leading-normal pt-1 pb-4 font-medium">
+            <div className="text-[11px] text-white leading-normal pt-1 pb-4 font-medium">
               {activeTab === 'Margin' && "Please specify margin requirements for the symbols group."}
               {activeTab === 'Margin Rates' && "Please specify margin rates for different types of trade operations."}
               {activeTab === 'Swaps' && "Please set up parameters of charging swaps by symbols for the group."}
@@ -242,13 +242,13 @@ const SymbolPropertiesPopup = ({ symbol, groupName, onClose }) => {
                   <div className="grid grid-cols-[300px_300px] mb-2 mt-2">
                     <div className="flex items-center gap-2">
                       <Label width="w-24">Long positions</Label>
-                      <select className="w-[124px] bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-1 py-0.5 text-[11px] text-blue-400 outline-none">
+                      <select className="w-[124px] bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-1 py-0.5 text-[11px] text-white outline-none">
                         <option>0</option>
                       </select>
                     </div>
                     <div className="flex items-center gap-2">
                       <Label width="w-[110px]">Short positions</Label>
-                      <select className="w-[124px] bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-1 py-0.5 text-[11px] text-blue-400 outline-none">
+                      <select className="w-[124px] bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-1 py-0.5 text-[11px] text-white outline-none">
                         <option>0</option>
                       </select>
                     </div>
@@ -257,7 +257,7 @@ const SymbolPropertiesPopup = ({ symbol, groupName, onClose }) => {
                   <div className="grid grid-cols-[300px_300px] mb-4">
                     <div className="flex items-center gap-2">
                       <Label width="w-24">Days in year</Label>
-                      <select className="w-[124px] bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-1 py-0.5 text-[11px] text-blue-400 outline-none">
+                      <select className="w-[124px] bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-1 py-0.5 text-[11px] text-white outline-none">
                         <option>0</option>
                       </select>
                     </div>
@@ -280,7 +280,7 @@ const SymbolPropertiesPopup = ({ symbol, groupName, onClose }) => {
                         {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, idx) => (
                           <div key={day} className={`grid grid-cols-2 border-b border-black/10 last:border-0 ${idx === 0 ? 'bg-[#1a334d]' : 'hover:bg-white/5 cursor-default'}`}>
                             <div className={`px-2 py-1 border-r border-black/10 ${idx === 0 ? 'text-white' : 'text-[color:var(--text-primary)]'}`}>{day}</div>
-                            <div className="px-2 py-1 text-center text-blue-400">0</div>
+                            <div className="px-2 py-1 text-center text-white">0</div>
                           </div>
                         ))}
                       </div>

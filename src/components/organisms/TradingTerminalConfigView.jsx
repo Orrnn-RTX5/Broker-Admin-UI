@@ -85,7 +85,7 @@ const TradingTerminalConfigView = () => {
           />
           <button
             type="submit"
-            className="flex items-center gap-1.5 h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]"
+            className="flex items-center gap-1.5 h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-white text-[11px] rounded-[2px]"
           >
             <Search size={11} /> Load
           </button>
@@ -103,21 +103,21 @@ const TradingTerminalConfigView = () => {
 
       {/* Content */}
       {loading ? (
-        <div className="flex items-center justify-center flex-1 text-[#888] text-[11px]">Loading…</div>
+        <div className="flex items-center justify-center flex-1 text-white text-[11px]">Loading…</div>
       ) : loadError ? (
         <div className="flex flex-col items-center justify-center flex-1 text-center px-6">
           <div className="text-[12px] font-semibold text-[#f48771]">Failed to load trading terminal config</div>
-          <div className="mt-1 text-[11px] text-[#888] max-w-[520px]">{loadError}</div>
+          <div className="mt-1 text-[11px] text-white max-w-[520px]">{loadError}</div>
         </div>
       ) : !group ? (
-        <div className="flex items-center justify-center flex-1 text-[#555] text-[11px]">Enter a group name and click Load</div>
+        <div className="flex items-center justify-center flex-1 text-white text-[11px]">Enter a group name and click Load</div>
       ) : (
         <div className="flex-1 overflow-auto p-6">
           <div className="max-w-[500px] flex flex-col gap-4">
-            <div className="text-[12px] font-semibold text-[#9cdcfe]">
+            <div className="text-[12px] font-semibold text-white">
               Trading Terminal Config — <span className="text-[color:var(--text-primary)]">{group}</span>
               {config?.updated_at && (
-                <span className="ml-3 text-[10px] text-[#555] font-normal">
+                <span className="ml-3 text-[10px] text-white font-normal">
                   Last updated: {new Date(config.updated_at).toLocaleString()}
                 </span>
               )}
@@ -125,7 +125,7 @@ const TradingTerminalConfigView = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-[#888] uppercase tracking-wider">Default Chart</label>
+                <label className="text-[10px] text-white uppercase tracking-wider">Default Chart</label>
                 <select
                   value={form.default_chart}
                   onChange={e => setForm(f => ({ ...f, default_chart: e.target.value }))}
@@ -136,7 +136,7 @@ const TradingTerminalConfigView = () => {
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-[#888] uppercase tracking-wider">Default Timeframe</label>
+                <label className="text-[10px] text-white uppercase tracking-wider">Default Timeframe</label>
                 <select
                   value={form.default_timeframe}
                   onChange={e => setForm(f => ({ ...f, default_timeframe: e.target.value }))}
@@ -147,7 +147,7 @@ const TradingTerminalConfigView = () => {
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-[#888] uppercase tracking-wider">Theme</label>
+                <label className="text-[10px] text-white uppercase tracking-wider">Theme</label>
                 <select
                   value={form.theme}
                   onChange={e => setForm(f => ({ ...f, theme: e.target.value }))}
@@ -159,7 +159,7 @@ const TradingTerminalConfigView = () => {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-[#888] uppercase tracking-wider">Config JSON (advanced)</label>
+              <label className="text-[10px] text-white uppercase tracking-wider">Config JSON (advanced)</label>
               <textarea
                 value={form.config_json}
                 onChange={e => setForm(f => ({ ...f, config_json: e.target.value }))}

@@ -76,29 +76,29 @@ const SessionOverridesView = () => {
 
         <form onSubmit={handleSearch} className="flex items-center gap-2">
           <div className="flex border border-[#555] bg-[color:var(--bg-app)] h-[22px] items-center rounded-[2px] w-[160px]">
-            <div className="px-1.5"><Search size={11} className="text-[#888]" /></div>
+            <div className="px-1.5"><Search size={11} className="text-white" /></div>
             <input type="text" value={symbol} onChange={e => setSymbol(e.target.value)} placeholder="Symbol (EURUSD)"
               list="session-override-symbol-options" autoComplete="off"
-              className="bg-transparent outline-none w-full text-[11px] text-[color:var(--text-primary)] placeholder:text-[#555] h-full" />
+              className="bg-transparent outline-none w-full text-[11px] text-[color:var(--text-primary)] placeholder:text-white h-full" />
             <LpSymbolDatalist id="session-override-symbol-options" />
           </div>
           <div className="flex border border-[#555] bg-[color:var(--bg-app)] h-[22px] items-center rounded-[2px] w-[120px]">
             <input type="text" value={group} onChange={e => setGroup(e.target.value)} placeholder="Group"
-              className="bg-transparent outline-none w-full text-[11px] text-[color:var(--text-primary)] placeholder:text-[#555] h-full px-2" />
+              className="bg-transparent outline-none w-full text-[11px] text-[color:var(--text-primary)] placeholder:text-white h-full px-2" />
           </div>
-          <button type="submit" className="h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px] transition-colors">
+          <button type="submit" className="h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-white text-[11px] rounded-[2px] transition-colors">
             Load
           </button>
         </form>
 
         {searchedSymbol && (
-          <span className="text-[11px] text-[#888]">
+          <span className="text-[11px] text-white">
             <strong className="text-white">{searchedSymbol}</strong> / <strong className="text-white">{searchedGroup}</strong>
           </span>
         )}
 
         <div className="ml-auto">
-          <Settings size={14} className="text-[#999] hover:text-white cursor-pointer" />
+          <Settings size={14} className="text-white hover:text-white cursor-pointer" />
         </div>
       </div>
 
@@ -118,15 +118,15 @@ const SessionOverridesView = () => {
       <div className="flex-1 overflow-auto bg-[color:var(--bg-app)]">
         {!searched && (
           <div className="flex flex-col items-center justify-center h-full opacity-30 select-none">
-            <Clock size={48} className="mb-3 text-[#888]" />
+            <Clock size={48} className="mb-3 text-white" />
             <p className="text-[13px]">Enter a symbol and group to load session overrides</p>
           </div>
         )}
 
-        {searched && loading && <div className="p-4 text-[#aaa] text-[12px] italic">Loading...</div>}
+        {searched && loading && <div className="p-4 text-white text-[12px] italic">Loading...</div>}
 
         {searched && !loading && data.length === 0 && (
-          <div className="p-4 text-[#aaa] text-[12px] italic">
+          <div className="p-4 text-white text-[12px] italic">
             No session overrides for <strong className="text-white">{searchedSymbol}</strong> / <strong className="text-white">{searchedGroup}</strong>.
           </div>
         )}
@@ -135,13 +135,13 @@ const SessionOverridesView = () => {
           <div key={row.id || idx} onContextMenu={e => handleContextMenu(e, row)}
             className={`flex cursor-default border-b border-black/10 transition-colors hover:bg-blue-600/20 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
             <div className="w-[60px]  px-3 py-1 text-[12px] text-[color:var(--text-primary)] border-r border-black/10">{row.id}</div>
-            <div className="w-[110px] px-3 py-1 text-[12px] text-[#aaa] border-r border-black/10">{DAY_LABELS[row.day_of_week] ?? row.day_of_week}</div>
-            <div className="w-[90px]  px-3 py-1 text-[12px] text-[#aaa] border-r border-black/10">{row.quote_from}</div>
-            <div className="w-[90px]  px-3 py-1 text-[12px] text-[#aaa] border-r border-black/10">{row.quote_to}</div>
-            <div className="w-[90px]  px-3 py-1 text-[12px] text-[#aaa] border-r border-black/10">{row.trade_from}</div>
-            <div className="w-[90px]  px-3 py-1 text-[12px] text-[#aaa] border-r border-black/10">{row.trade_to}</div>
+            <div className="w-[110px] px-3 py-1 text-[12px] text-white border-r border-black/10">{DAY_LABELS[row.day_of_week] ?? row.day_of_week}</div>
+            <div className="w-[90px]  px-3 py-1 text-[12px] text-white border-r border-black/10">{row.quote_from}</div>
+            <div className="w-[90px]  px-3 py-1 text-[12px] text-white border-r border-black/10">{row.quote_to}</div>
+            <div className="w-[90px]  px-3 py-1 text-[12px] text-white border-r border-black/10">{row.trade_from}</div>
+            <div className="w-[90px]  px-3 py-1 text-[12px] text-white border-r border-black/10">{row.trade_to}</div>
             <div className="w-[80px]  px-3 py-1 text-[12px] border-r border-black/10">
-              <span className={row.enabled ? 'text-green-400' : 'text-[#888]'}>{row.enabled ? 'Yes' : 'No'}</span>
+              <span className={row.enabled ? 'text-white' : 'text-white'}>{row.enabled ? 'Yes' : 'No'}</span>
             </div>
             <div className="flex-1"></div>
           </div>

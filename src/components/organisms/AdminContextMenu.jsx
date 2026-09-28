@@ -68,24 +68,24 @@ const ContextMenu = ({ x, y, onClose, onAdd, onEdit, onDelete, selectedRow }) =>
     >
       <ContextMenuItem onClose={onClose} label="Servers" rightArrow />
       <ContextMenuItem onClose={onClose} separator />
-      <ContextMenuItem onClose={onClose} icon={Plus} iconColor="text-emerald-500" label="Add" shortcut="Ctrl+N" onClick={onAdd} />
-      <ContextMenuItem onClose={onClose} icon={Settings} iconColor="text-blue-500" label="Edit" shortcut="Ctrl+U" onClick={selectedRow ? onEdit : null} />
+      <ContextMenuItem onClose={onClose} icon={Plus} iconColor="text-white" label="Add" shortcut="Ctrl+N" onClick={onAdd} />
+      <ContextMenuItem onClose={onClose} icon={Settings} iconColor="text-white" label="Edit" shortcut="Ctrl+U" onClick={selectedRow ? onEdit : null} />
       <ContextMenuItem onClose={onClose} icon={X} iconColor="text-red-500" label="Delete" shortcut="Ctrl+D" onClick={selectedRow ? onDelete : null} />
       <ContextMenuItem onClose={onClose} separator />
       <ContextMenuItem onClose={onClose} icon={ArrowUp} iconColor="text-[color:var(--text-muted)]" label="Move Up" />
       <ContextMenuItem onClose={onClose} icon={ArrowDown} iconColor="text-[color:var(--text-muted)]" label="Move Down" />
-      <ContextMenuItem onClose={onClose} icon={ArrowDownAZ} iconColor="text-blue-500" label="Sort Alphabetically" />
+      <ContextMenuItem onClose={onClose} icon={ArrowDownAZ} iconColor="text-white" label="Sort Alphabetically" />
       <ContextMenuItem onClose={onClose} separator />
       <ContextMenuItem onClose={onClose} label="Automation Triggers" rightArrow />
       <ContextMenuItem onClose={onClose} label="Automation Actions" rightArrow />
       <ContextMenuItem onClose={onClose} separator />
       <ContextMenuItem onClose={onClose} label="Copy As" rightArrow />
-      <ContextMenuItem onClose={onClose} icon={Upload} iconColor="text-emerald-500" label="Export to File" />
-      <ContextMenuItem onClose={onClose} icon={Download} iconColor="text-emerald-500" label="Import from File" />
-      <ContextMenuItem onClose={onClose} icon={Download} iconColor="text-emerald-500" label="Import from Server" />
+      <ContextMenuItem onClose={onClose} icon={Upload} iconColor="text-white" label="Export to File" />
+      <ContextMenuItem onClose={onClose} icon={Download} iconColor="text-white" label="Import from File" />
+      <ContextMenuItem onClose={onClose} icon={Download} iconColor="text-white" label="Import from Server" />
       <ContextMenuItem onClose={onClose} separator />
       <ContextMenuItem onClose={onClose} label="Request" rightArrow />
-      <ContextMenuItem onClose={onClose} icon={Search} iconColor="text-blue-500" label="Find" shortcut="Ctrl+F" />
+      <ContextMenuItem onClose={onClose} icon={Search} iconColor="text-white" label="Find" shortcut="Ctrl+F" />
       <ContextMenuItem onClose={onClose} separator />
       <ContextMenuItem onClose={onClose} checked label="Auto Arrange" />
       <ContextMenuItem onClose={onClose} checked label="Grid" />

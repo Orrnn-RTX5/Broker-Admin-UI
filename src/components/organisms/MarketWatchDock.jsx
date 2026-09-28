@@ -1,8 +1,8 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import {
-  ArrowDownRight, ArrowUpRight, ChartNoAxesCombined, ChevronUp, ChevronDown,
-  Folder, Search, ArrowLeft, Activity, Info, Clock, CheckCircle2,
+  ArrowDownRight, ArrowUpRight, ChartNoAxesCombined, ChevronUp, ChevronDown, Minus,
+  Folder, Search, ArrowLeft, Activity, Info, Clock, CheckCircle2, PanelLeftOpen, X,
 } from 'lucide-react';
 import useSymbolStore from '../../store/useSymbolStore';
 import { InstrumentsService } from '../../services/instruments.service';
@@ -14,10 +14,18 @@ import {
   seedMarketTickHistory,
   validMarketPrice,
   writeMarketWatchViewCache,
+  resolveSymbolQuote,
 } from '../../utils/marketWatch';
 import './MarketWatchDock.css';
 
 const MARKET_WATCH_CACHE_WRITE_MS = 250;
+
+const quotePriceClass = (direction, fresh = true) => {
+  if (!fresh) return 'market-quote-neutral';
+  if (direction === 'up') return 'market-quote-up';
+  if (direction === 'down') return 'market-quote-down';
+  return 'market-quote-neutral';
+};
 
 const MarketSymbolRow = memo(function MarketSymbolRow({
   name,
@@ -29,11 +37,13 @@ const MarketSymbolRow = memo(function MarketSymbolRow({
 }) {
   const row = useSymbolStore((state) => state.symbols[name]);
   const live = isMarketQuoteFresh(row, connected, now);
-  const Direction = row?.dir === 'down' ? ArrowDownRight : ArrowUpRight;
+  const quote = resolveSymbolQuote(name, row);
+  const direction = live ? (quote?.bidDir || quote?.askDir) : null;
+  const Direction = direction === 'down' ? ArrowDownRight : direction === 'up' ? ArrowUpRight : Minus;
 
   return (
     <tr
-      className={`market-table-row ${selected ? 'is-selected' : ''} ${live ? row?.dir === 'down' ? 'quote-down' : 'quote-up' : 'quote-stale'}`}
+      className={`market-table-row ${selected ? 'is-selected' : ''} ${live ? direction === 'down' ? 'quote-down' : direction === 'up' ? 'quote-up' : 'quote-neutral' : 'quote-stale'}`}
       onClick={() => onClick(name)}
       onDoubleClick={() => onDoubleClick(name)}
       title={`Click for ${name} description · Double-click for live ticks`}
@@ -55,8 +65,8 @@ const MarketSymbolRow = memo(function MarketSymbolRow({
           <span title={name}>{name}</span>
         </button>
       </td>
-      <td>{formatMarketPrice(row?.bid)}</td>
-      <td>{formatMarketPrice(row?.ask)}</td>
+      <td className={`market-bid-cell admin-quote-value ${quotePriceClass(quote?.bidDir, live)}`}>{formatMarketPrice(quote?.bid)}</td>
+      <td className={`market-ask-cell admin-quote-value ${quotePriceClass(quote?.askDir, live)}`}>{formatMarketPrice(quote?.ask)}</td>
     </tr>
   );
 });
@@ -141,6 +151,71 @@ export default function MarketWatchDock({ children }) {
     }
   });
   const [isDragging, setIsDragging] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const mobileTriggerRef = useRef(null);
+  const mobilePanelRef = useRef(null);
+  const mobileCloseRef = useRef(null);
+
+  const closeMobileDock = useCallback(() => {
+    setMobileOpen(false);
+    window.requestAnimationFrame(() => mobileTriggerRef.current?.focus());
+  }, []);
+
+  useEffect(() => {
+    if (!mobileOpen) return undefined;
+
+    const focusFrame = window.requestAnimationFrame(() => mobileCloseRef.current?.focus());
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeMobileDock();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      const focusable = [...(mobilePanelRef.current?.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+      ) || [])].filter(element => element.getClientRects().length > 0);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    const handleResize = () => {
+      if (window.innerWidth > 640) setMobileOpen(false);
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [mobileOpen, closeMobileDock]);
+
+  const handleMobileNavigatorClick = (event) => {
+    if (!mobileOpen || event.target.closest('button')) return;
+    const item = event.target.closest('[role="treeitem"]');
+    if (item && item.getAttribute('aria-disabled') !== 'true') closeMobileDock();
+  };
+
+  const handleMobileNavigatorKeyDown = (event) => {
+    if (!mobileOpen || (event.key !== 'Enter' && event.key !== ' ')) return;
+    if (event.target.getAttribute('role') === 'treeitem' && event.target.getAttribute('aria-disabled') !== 'true') {
+      closeMobileDock();
+    }
+  };
 
   const viewport = useRef(null);
   const selectedRef = useRef(selected);
@@ -321,10 +396,37 @@ export default function MarketWatchDock({ children }) {
 
   return (
     <aside
-      className={`admin-market-dock ${collapsed ? 'is-collapsed' : ''} ${navigatorCollapsed ? 'is-navigator-collapsed' : ''}`}
+      className={`admin-market-dock ${collapsed ? 'is-collapsed' : ''} ${navigatorCollapsed ? 'is-navigator-collapsed' : ''} ${mobileOpen ? 'is-mobile-open' : ''}`}
       ref={dockRef}
       aria-label="Market Watch and Navigator"
     >
+      <button
+        ref={mobileTriggerRef}
+        type="button"
+        className="admin-dock-mobile-trigger"
+        onClick={() => setMobileOpen(true)}
+        aria-label="Open Market Watch and Navigator"
+        aria-expanded={mobileOpen}
+        aria-controls="admin-dock-mobile-panel"
+      >
+        <PanelLeftOpen size={17} />
+        <span>Panels</span>
+      </button>
+      <div className="admin-dock-mobile-backdrop" onClick={closeMobileDock} aria-hidden="true" />
+      <div
+        ref={mobilePanelRef}
+        id="admin-dock-mobile-panel"
+        className="admin-dock-mobile-panel"
+        role={mobileOpen ? 'dialog' : undefined}
+        aria-modal={mobileOpen ? 'true' : undefined}
+        aria-label={mobileOpen ? 'Market Watch and Navigator' : undefined}
+      >
+      <div className="admin-dock-mobile-header">
+        <span>Workspace panels</span>
+        <button ref={mobileCloseRef} type="button" onClick={closeMobileDock} aria-label="Close Market Watch and Navigator">
+          <X size={16} />
+        </button>
+      </div>
       {collapsed ? (
         <button
           type="button"
@@ -388,9 +490,9 @@ export default function MarketWatchDock({ children }) {
                 <table className="admin-market-table">
                   <thead>
                     <tr>
-                      <th>Symbol</th>
-                      <th>Bid</th>
-                      <th>Ask</th>
+                      <th className="market-col-symbol">Symbol</th>
+                      <th className="market-col-bid">Bid</th>
+                      <th className="market-col-ask">Ask</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -449,15 +551,15 @@ export default function MarketWatchDock({ children }) {
 
                   <div className="market-details-live-bar">
                     <div className="market-price-box">
-                      <span className="market-price-label">BID</span>
-                      <span className={`market-price-val ${quote?.dir === 'down' ? 'text-danger' : 'text-success'}`}>
-                        {formatMarketPrice(quote?.bid)}
+                      <span className="market-price-label">BID (SELL)</span>
+                      <span className={`market-price-val market-price-val--bid admin-quote-value ${quotePriceClass(quote?.bidDir, fresh)}`}>
+                        {formatMarketPrice(resolveSymbolQuote(selected, quote)?.bid)}
                       </span>
                     </div>
                     <div className="market-price-box text-right">
-                      <span className="market-price-label">ASK</span>
-                      <span className={`market-price-val ${quote?.dir === 'down' ? 'text-danger' : 'text-success'}`}>
-                        {formatMarketPrice(quote?.ask)}
+                      <span className="market-price-label">ASK (BUY)</span>
+                      <span className={`market-price-val market-price-val--ask admin-quote-value ${quotePriceClass(quote?.askDir, fresh)}`}>
+                        {formatMarketPrice(resolveSymbolQuote(selected, quote)?.ask)}
                       </span>
                     </div>
                   </div>
@@ -500,7 +602,7 @@ export default function MarketWatchDock({ children }) {
                 </div>
               ) : (
                 <div className="market-watch-empty">
-                  <Info size={24} className="mx-auto mb-2 opacity-50 text-[color:var(--accent-500)]" />
+                  <Info size={24} className="mx-auto mb-2 opacity-50 text-white" />
                   <p>Click any symbol in the Symbols table to view its full specification and description.</p>
                 </div>
               )
@@ -515,7 +617,8 @@ export default function MarketWatchDock({ children }) {
                       {selected || 'No Symbol'}
                     </span>
                     <span className="text-[10px] text-[color:var(--text-muted)] font-mono">
-                      Bid: {formatMarketPrice(quote?.bid)} · Ask: {formatMarketPrice(quote?.ask)}
+                      Bid: <span className={`admin-quote-value ${quotePriceClass(quote?.bidDir, fresh)}`}>{formatMarketPrice(quote?.bid)}</span>
+                      {' · '}Ask: <span className={`admin-quote-value ${quotePriceClass(quote?.askDir, fresh)}`}>{formatMarketPrice(quote?.ask)}</span>
                     </span>
                   </div>
                 </div>
@@ -524,16 +627,16 @@ export default function MarketWatchDock({ children }) {
                   <thead>
                     <tr>
                       <th>Time</th>
-                      <th>Bid</th>
-                      <th>Ask</th>
+                      <th className="market-col-bid">Bid</th>
+                      <th className="market-col-ask">Ask</th>
                     </tr>
                   </thead>
                   <tbody>
                     {history.map((tick, i) => (
                       <tr key={`${tick.lastUpdate}-${i}`}>
                         <td>{new Date(tick.lastUpdate).toLocaleTimeString()}</td>
-                        <td>{formatMarketPrice(tick.bid)}</td>
-                        <td>{formatMarketPrice(tick.ask)}</td>
+                        <td className={`market-bid-cell admin-quote-value ${quotePriceClass(tick.bidDir)}`}>{formatMarketPrice(tick.bid)}</td>
+                        <td className={`market-ask-cell admin-quote-value ${quotePriceClass(tick.askDir)}`}>{formatMarketPrice(tick.ask)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -637,11 +740,12 @@ export default function MarketWatchDock({ children }) {
               </button>
             </div>
           </header>
-          <div className="admin-navigator-content">
+          <div className="admin-navigator-content" onClick={handleMobileNavigatorClick} onKeyDown={handleMobileNavigatorKeyDown}>
             {children}
           </div>
         </section>
       )}
+      </div>
     </aside>
   );
 }

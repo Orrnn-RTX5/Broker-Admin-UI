@@ -36,11 +36,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Create .env
-        env:
-          ADMIN_UI_ENV: ${{ secrets.ADMIN_UI_ENV }}
-        run: printf '%s\n' "$ADMIN_UI_ENV" > .env
-
       - name: Run tests
         run: npm test
 
@@ -115,9 +110,21 @@ jobs:
             CONTAINER_NAME="broker-admin-ui"
             NEW_IMAGE="${{ env.IMAGE_NAME }}:${{ github.sha }}"
             PREVIOUS_IMAGE=""
-            # Runtime config (API_HOST, WS_HOST, BROKER_ID, ...) carried across deploys.
+            # The server-owned file is the source of truth for runtime broker config.
             ENV_FILE="$HOME/broker-admin-ui.env"
-            touch "$ENV_FILE"
+            if [ ! -f "$ENV_FILE" ] || [ ! -s "$ENV_FILE" ]; then
+              echo "Missing or empty runtime env file: $ENV_FILE" >&2
+              echo "Place the broker's production .env there before deploying." >&2
+              exit 1
+            fi
+            if ! grep -Eq '^(BROKER_ID|VITE_BROKER_ID)=[[:space:]]*[^[:space:]]' "$ENV_FILE"; then
+              echo "Runtime env file must set BROKER_ID (or VITE_BROKER_ID): $ENV_FILE" >&2
+              exit 1
+            fi
+            if ! grep -Eq '^(API_HOST|VITE_API_HOST)=[[:space:]]*[^[:space:]]' "$ENV_FILE"; then
+              echo "Runtime env file must set API_HOST (or VITE_API_HOST): $ENV_FILE" >&2
+              exit 1
+            fi
 
             rollback() {
               echo "Deployment failed. Starting rollback..."
@@ -147,13 +154,6 @@ jobs:
                 "$CONTAINER_NAME")
 
               echo "Current image: $PREVIOUS_IMAGE"
-
-              # Keep the running container's runtime config, minus image-provided vars.
-              docker inspect \
-                --format '{{range .Config.Env}}{{println .}}{{end}}' \
-                "$CONTAINER_NAME" \
-                | grep -vE '^(PATH|NODE_VERSION|YARN_VERSION)=' \
-                | grep -v '^$' > "$ENV_FILE" || true
             else
               echo "No existing deployment found."
             fi

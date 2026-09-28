@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { getRuntimeValue } from '../config/runtimeConfig.js';
 
 export const SESSION_EXPIRED_EVENT = 'auth:session-expired';
 export const TOKEN_UPDATED_EVENT = 'auth:token-updated';
@@ -15,7 +16,21 @@ export const AUTH_STORAGE_KEYS = {
   tokenExpiresAtSnake: 'token_expires_at',
 };
 
-const AUTH_STORAGE_EVENT_KEYS = new Set(Object.values(AUTH_STORAGE_KEYS));
+// Toolbar search text per view, kept in sessionStorage per broker.
+export const SEARCHES_KEY_PREFIX = 'rtx5.searches';
+// Earlier builds kept searches in localStorage indefinitely, across brokers.
+export const LEGACY_SEARCHES_KEY = 'rtx5.searches';
+export const getSearchesStorageKey = () => {
+  let brokerId = '';
+  try {
+    brokerId = String(localStorage.getItem(AUTH_STORAGE_KEYS.brokerId) || '').trim().toLowerCase();
+  } catch {
+    // Storage can be unavailable in constrained browser contexts.
+  }
+  return `${SEARCHES_KEY_PREFIX}:${brokerId || 'default'}`;
+};
+
+const AUTH_STORAGE_EVENT_KEYS =new Set(Object.values(AUTH_STORAGE_KEYS));
 const MIN_REASONABLE_EPOCH_SECONDS = 1_000_000_000;
 
 const normalizeExpiresIn = (expiresIn) => {
@@ -61,6 +76,11 @@ const dispatchAuthEvent = (eventName, detail) => {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new CustomEvent(eventName, { detail }));
 };
+
+const normalizeIdentityPart = (value) => String(value ?? '').trim().toLowerCase();
+const getUserIdentity = (user) => (
+  user ? `${normalizeIdentityPart(user.login ?? user.id)}|${normalizeIdentityPart(user.broker_id)}` : null
+);
 
 const readJson = (raw) => {
   if (!raw) return null;
@@ -143,7 +163,6 @@ export const writeAuthSessionStorage = (accessToken, refreshToken, tokenExpiresA
 
   try {
     sessionStorage.setItem(AUTH_STORAGE_KEYS.session, JSON.stringify(nextSessionAuth));
-    localStorage.setItem(AUTH_STORAGE_KEYS.accessToken, accessToken);
     localStorage.setItem(AUTH_STORAGE_KEYS.refreshToken, refreshToken || accessToken);
 
     if (tokenExpiresAt) {
@@ -153,6 +172,9 @@ export const writeAuthSessionStorage = (accessToken, refreshToken, tokenExpiresA
       localStorage.removeItem(AUTH_STORAGE_KEYS.tokenExpiresAt);
       localStorage.removeItem(AUTH_STORAGE_KEYS.tokenExpiresAtSnake);
     }
+    // Written last: other tabs adopt a rotation when they see the new access
+    // token, and by then its refresh token and expiry are already in place.
+    localStorage.setItem(AUTH_STORAGE_KEYS.accessToken, accessToken);
   } catch {
     // Storage can be unavailable in constrained browser contexts.
   }
@@ -163,7 +185,10 @@ export const ensureAuthStateFromStorage = () => {
   if (state.accessToken) return state;
 
   const stored = getStoredAuthSession();
-  if (!stored?.accessToken || isTokenExpired(stored.tokenExpiresAt)) return state;
+  if (!stored?.accessToken) return state;
+  // A passed expiry is recoverable while a refresh token exists; the request
+  // layer renews the token before sending.
+  if (isTokenExpired(stored.tokenExpiresAt) && !stored.refreshToken) return state;
 
   useAuthStore.setState({
     accessToken: stored.accessToken,
@@ -190,12 +215,114 @@ export const clearAuthStorage = () => {
     sessionStorage.removeItem(AUTH_STORAGE_KEYS.brokerInfo);
     localStorage.removeItem(AUTH_STORAGE_KEYS.tokenExpiresAt);
     localStorage.removeItem(AUTH_STORAGE_KEYS.tokenExpiresAtSnake);
+    // Toolbar searches belong to one sign-in; a stale filter would hide the
+    // next session's rows (e.g. a Nexa search emptying ORRNN's managers).
+    localStorage.removeItem(LEGACY_SEARCHES_KEY);
+    for (let index = sessionStorage.length - 1; index >= 0; index -= 1) {
+      const key = sessionStorage.key(index);
+      if (key?.startsWith(`${SEARCHES_KEY_PREFIX}:`)) sessionStorage.removeItem(key);
+    }
   } catch {
     // Ignore storage cleanup failures; auth state is still cleared in memory.
   }
 };
 
+// A deployed admin URL may be repointed to another broker. Discard the old
+// browser session before Zustand restores it and protected views make requests.
+export const resetSessionForConfiguredBroker = () => {
+  if (typeof window === 'undefined') return false;
+
+  const configuredId = normalizeIdentityPart(
+    getRuntimeValue('BROKER_ID', 'VITE_BROKER_ID') || import.meta.env?.VITE_BROKER_ID
+  );
+  if (!configuredId) return false;
+
+  try {
+    const sessionBroker = readJson(sessionStorage.getItem(AUTH_STORAGE_KEYS.brokerInfo));
+    const localBroker = readJson(localStorage.getItem(AUTH_STORAGE_KEYS.brokerInfo));
+    const sessionAuth = getSessionAuth();
+    const persistedAuth = getPersistedAuthState();
+    const storedIds = [
+      sessionBroker?.broker_id ?? sessionBroker?.brokerId,
+      localBroker?.broker_id ?? localBroker?.brokerId,
+      sessionAuth?.broker_id ?? sessionAuth?.brokerId,
+      persistedAuth?.user?.broker_id ?? persistedAuth?.user?.brokerId,
+      localStorage.getItem(AUTH_STORAGE_KEYS.brokerId),
+    ].map(normalizeIdentityPart).filter(Boolean);
+    const hasStoredAuth = Boolean(
+      getTokenFromSessionAuth(sessionAuth) ||
+      localStorage.getItem(AUTH_STORAGE_KEYS.accessToken) ||
+      persistedAuth?.accessToken
+    );
+
+    if (!storedIds.some((id) => id !== configuredId) && !(hasStoredAuth && storedIds.length === 0)) {
+      return false;
+    }
+
+    clearAuthStorage();
+    localStorage.removeItem('feedBrokerToken');
+    localStorage.removeItem('feed_broker_token');
+    localStorage.removeItem('feedBrokerId');
+    localStorage.removeItem('feed_broker_id');
+    return true;
+  } catch {
+    // Storage can be unavailable in restricted browsers.
+    return false;
+  }
+};
+
+resetSessionForConfiguredBroker();
+
+// Another tab refreshing the token (refresh tokens are single-use) or signing
+// in again as the same admin writes new tokens to localStorage. Adopt them
+// instead of treating the change as a storage mismatch and logging out.
+export const adoptRotatedTokens = () => {
+  if (typeof window === 'undefined') return false;
+  const state = useAuthStore.getState();
+  if (!state.accessToken) return false;
+
+  let local;
+  try {
+    local = {
+      accessToken: localStorage.getItem(AUTH_STORAGE_KEYS.accessToken),
+      refreshToken: localStorage.getItem(AUTH_STORAGE_KEYS.refreshToken),
+      tokenExpiresAt: normalizeTokenExpiresAt(firstValue(
+        localStorage.getItem(AUTH_STORAGE_KEYS.tokenExpiresAt),
+        localStorage.getItem(AUTH_STORAGE_KEYS.tokenExpiresAtSnake)
+      )),
+    };
+  } catch {
+    return false;
+  }
+  if (!local.accessToken) return false;
+
+  const stateExpiresAt = normalizeTokenExpiresAt(state.tokenExpiresAt);
+  const refreshTokenChanged = Boolean(local.refreshToken && local.refreshToken !== state.refreshToken);
+  if (local.accessToken !== state.accessToken) {
+    // A rotation always brings a new single-use refresh token; a different
+    // access token without one is a real storage conflict, not a refresh.
+    if (!refreshTokenChanged) return false;
+  } else if (!refreshTokenChanged && local.tokenExpiresAt === stateExpiresAt) {
+    return false;
+  }
+
+  const currentIdentity = getUserIdentity(state.user);
+  const storedIdentity = getUserIdentity(getPersistedAuthState()?.user);
+  if (currentIdentity && storedIdentity && currentIdentity !== storedIdentity) return false;
+
+  const refreshToken = local.refreshToken || state.refreshToken;
+  useAuthStore.setState({
+    accessToken: local.accessToken,
+    refreshToken,
+    tokenExpiresAt: local.tokenExpiresAt,
+    isAuthenticated: true,
+  });
+  writeAuthSessionStorage(local.accessToken, refreshToken, local.tokenExpiresAt);
+  return true;
+};
+
 export const getAuthStorageStatus = (authState) => {
+  if (!authState) adoptRotatedTokens();
   const state = authState || useAuthStore.getState();
   const accessToken = state.accessToken;
 
@@ -260,7 +387,8 @@ export const getAuthStorageStatus = (authState) => {
   );
 
   if (isTokenExpired(expiresAt)) {
-    return { ok: false, reason: 'token_expired' };
+    // Not a logout while the token can still be renewed.
+    return state.refreshToken ? { ok: true, needsRefresh: true } : { ok: false, reason: 'token_expired' };
   }
 
   return { ok: true };
@@ -322,9 +450,11 @@ export const validateAuthSession = (fallbackReason = 'auth_storage_invalid') => 
 };
 
 export const expireAuthSession = (reason = 'token_expired') => {
-  const { user } = useAuthStore.getState();
+  const { user, accessToken, isAuthenticated } = useAuthStore.getState();
   const loginPath = getLoginPathForExpiredSession(reason, user);
+  const wasSignedIn = Boolean(accessToken || isAuthenticated);
 
   useAuthStore.getState().logout();
-  dispatchAuthEvent(SESSION_EXPIRED_EVENT, { reason, loginPath });
+  // Several in-flight requests can fail together; redirect to login once.
+  if (wasSignedIn) dispatchAuthEvent(SESSION_EXPIRED_EVENT, { reason, loginPath });
 };

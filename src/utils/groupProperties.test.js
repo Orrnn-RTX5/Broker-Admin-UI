@@ -8,6 +8,7 @@ import {
   buildMarginChanges,
   buildMarginForm,
   commissionFormFromSchedule,
+  findGroupRecord,
   createGroupSymbolRow,
   describeAccountsUpdated,
   emptyCommissionForm,
@@ -306,4 +307,16 @@ test('addGroupSymbolRows appends only symbols that are not listed yet', async ()
   );
   assert.equal(added, 2);
   assert.deepEqual(rows.map((r) => [r.symbol, r.configured]), [['EURUSD', true], ['GBPUSD', true], ['US30', false]]);
+});
+
+test('findGroupRecord matches the server group by any name key, ignoring case', () => {
+  const rows = [
+    { name: 'dipannita', marginCallLevel: 100 },
+    { group: 'Orrnn/demo-std', marginCallLevel: 80, stopOutLevel: 50 },
+  ];
+  assert.equal(findGroupRecord(rows, 'orrnn/demo-std'), rows[1]);
+  assert.equal(findGroupRecord(rows, ' Dipannita '), rows[0]);
+  assert.equal(findGroupRecord(rows, 'missing'), null);
+  assert.equal(findGroupRecord(rows, ''), null);
+  assert.equal(findGroupRecord(null, 'dipannita'), null);
 });

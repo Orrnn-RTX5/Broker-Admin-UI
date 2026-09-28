@@ -251,7 +251,7 @@ const GatewaysView = () => {
             </div>
             <div
               className="rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wide"
-              style={{ background: 'rgba(96,165,250,0.12)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.25)' }}
+              style={{ background: 'rgba(96,165,250,0.12)', color: '#ffffff', border: '1px solid rgba(96,165,250,0.25)' }}
             >
               {providerLabel(form.feed_provider)}
             </div>

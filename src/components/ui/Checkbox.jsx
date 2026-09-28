@@ -15,7 +15,7 @@ export const Checkbox = React.forwardRef(function Checkbox(
         'bg-[color:var(--bg-surface-1)] border border-[color:var(--border-strong)]',
         'data-[state=checked]:bg-[color:var(--accent-500)] data-[state=checked]:border-[color:var(--accent-500)]',
         'data-[state=indeterminate]:bg-[color:var(--accent-500)] data-[state=indeterminate]:border-[color:var(--accent-500)]',
-        'transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--text-primary)]',
+        'transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent-600)]',
         'disabled:opacity-40 disabled:cursor-not-allowed',
         className
       )}

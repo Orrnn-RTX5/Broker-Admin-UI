@@ -82,7 +82,7 @@ const CustomFieldsView = () => {
           <Plus size={12} /> Add Field
         </button>
         <div className="flex items-center gap-1.5 ml-2">
-          <span className="text-[#888] text-[11px]">Entity:</span>
+          <span className="text-white text-[11px]">Entity:</span>
           <select
             value={entityType}
             onChange={e => setEntityType(e.target.value)}
@@ -96,21 +96,21 @@ const CustomFieldsView = () => {
       {/* Header */}
       <div className="flex items-center px-3 h-[24px] bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0">
         {[['ID', 'w-16'], ['Field Name', 'w-48'], ['Field Type', 'w-32'], ['Required', 'w-24'], ['Options', 'flex-1'], ['Created', 'w-44']].map(([label, w]) => (
-          <div key={label} className={`${w} text-[10px] font-semibold text-[#888] uppercase tracking-wider pr-3`}>{label}</div>
+          <div key={label} className={`${w} text-[10px] font-semibold text-white uppercase tracking-wider pr-3`}>{label}</div>
         ))}
       </div>
 
       {/* Rows */}
       <div className="flex-1 overflow-auto">
         {loading ? (
-          <div className="flex items-center justify-center h-24 text-[#888] text-[11px]">Loading…</div>
+          <div className="flex items-center justify-center h-24 text-white text-[11px]">Loading…</div>
         ) : loadError ? (
           <div className="flex flex-col items-center justify-center h-24 text-center px-4">
             <div className="text-[12px] font-semibold text-[#f48771]">Failed to load custom fields</div>
-            <div className="mt-1 text-[11px] text-[#888] max-w-[520px]">{loadError}</div>
+            <div className="mt-1 text-[11px] text-white max-w-[520px]">{loadError}</div>
           </div>
         ) : data.length === 0 ? (
-          <div className="flex items-center justify-center h-24 text-[#555] text-[11px]">No custom fields defined</div>
+          <div className="flex items-center justify-center h-24 text-white text-[11px]">No custom fields defined</div>
         ) : (
           data.map((row, i) => (
             <div
@@ -120,14 +120,14 @@ const CustomFieldsView = () => {
             >
               <div className="w-16 text-[11px] text-[color:var(--text-primary)] pr-3">{row.id}</div>
               <div className="w-48 text-[11px] text-[color:var(--text-primary)] pr-3 truncate">{row.field_name}</div>
-              <div className="w-32 text-[11px] text-[#9cdcfe] pr-3">{row.field_type}</div>
+              <div className="w-32 text-[11px] text-white pr-3">{row.field_type}</div>
               <div className="w-24 text-[11px] pr-3">
-                <span className={row.required ? 'text-[#4ec9b0]' : 'text-[#888]'}>{row.required ? 'Yes' : 'No'}</span>
+                <span className={row.required ? 'text-white' : 'text-white'}>{row.required ? 'Yes' : 'No'}</span>
               </div>
-              <div className="flex-1 text-[11px] text-[#888] pr-3 truncate">
+              <div className="flex-1 text-[11px] text-white pr-3 truncate">
                 {Array.isArray(row.options) && row.options.length > 0 ? row.options.join(', ') : '—'}
               </div>
-              <div className="w-44 text-[11px] text-[#888]">
+              <div className="w-44 text-[11px] text-white">
                 {row.created_at ? new Date(row.created_at).toLocaleString() : '—'}
               </div>
             </div>
@@ -162,7 +162,7 @@ const CustomFieldsView = () => {
             <div className="text-[12px] font-semibold text-[color:var(--text-primary)] mb-1">Create Custom Field</div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-[#888] uppercase tracking-wider">Entity Type</label>
+              <label className="text-[10px] text-white uppercase tracking-wider">Entity Type</label>
               <select
                 value={form.entity_type}
                 onChange={e => setForm(f => ({ ...f, entity_type: e.target.value }))}
@@ -173,7 +173,7 @@ const CustomFieldsView = () => {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-[#888] uppercase tracking-wider">Field Name *</label>
+              <label className="text-[10px] text-white uppercase tracking-wider">Field Name *</label>
               <input
                 required
                 value={form.field_name}
@@ -184,7 +184,7 @@ const CustomFieldsView = () => {
 
             <div className="flex gap-3">
               <div className="flex flex-col gap-1 flex-1">
-                <label className="text-[10px] text-[#888] uppercase tracking-wider">Field Type</label>
+                <label className="text-[10px] text-white uppercase tracking-wider">Field Type</label>
                 <select
                   value={form.field_type}
                   onChange={e => setForm(f => ({ ...f, field_type: e.target.value }))}
@@ -194,7 +194,7 @@ const CustomFieldsView = () => {
                 </select>
               </div>
               <div className="flex flex-col gap-1 justify-end">
-                <label className="flex items-center gap-1.5 text-[11px] text-[#ccc] cursor-pointer">
+                <label className="flex items-center gap-1.5 text-[11px] text-white cursor-pointer">
                   <input
                     type="checkbox"
                     checked={form.required}
@@ -207,7 +207,7 @@ const CustomFieldsView = () => {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-[#888] uppercase tracking-wider">Options (comma-separated)</label>
+              <label className="text-[10px] text-white uppercase tracking-wider">Options (comma-separated)</label>
               <input
                 value={form.options}
                 onChange={e => setForm(f => ({ ...f, options: e.target.value }))}
@@ -220,7 +220,7 @@ const CustomFieldsView = () => {
               <button
                 type="button"
                 onClick={() => setShowForm(false)}
-                className="h-[24px] px-4 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]"
+                className="h-[24px] px-4 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-white text-[11px] rounded-[2px]"
               >
                 Cancel
               </button>

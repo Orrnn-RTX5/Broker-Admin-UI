@@ -18,10 +18,10 @@ const networkNodesData = [
 ];
 
 const renderIcon = (type) => {
-   if (type === 'Main Trade Server') return <Database size={13} className="text-green-500" />;
+   if (type === 'Main Trade Server') return <Database size={13} className="text-white" />;
    if (type === 'Access Server') return <Lock size={13} className="text-yellow-500" />;
-   if (type === 'History Server') return <Clock size={13} className="text-blue-500" />;
-   return <Database size={13} className="text-green-500" />;
+   if (type === 'History Server') return <Clock size={13} className="text-white" />;
+   return <Database size={13} className="text-white" />;
 };
 
 const NetworkOverviewMap = () => (
@@ -221,8 +221,8 @@ const NetworkGraphPanel = ({ title, type, servers }) => {
                ) : type === 'Connections' ? (
                   <div className="absolute top-[26px] left-[6px] z-20 select-none">
                      <div className="text-[10px] font-sans leading-[14px]">
-                        <div><span className="text-[#2563eb] font-bold mr-1">-</span><span className="text-[color:var(--text-muted)] tracking-tight">Connections: <span className="text-white">{deterministicInt(5, 19, title, type, srv.name, idx, 'connections')}</span></span></div>
-                        <div><span className="text-[#4ade80] font-bold mr-1">-</span><span className="text-[color:var(--text-muted)] tracking-tight">Sockets: <span className="text-white">{deterministicInt(40, 119, title, type, srv.name, idx, 'sockets')}</span></span></div>
+                        <div><span className="text-white font-bold mr-1">-</span><span className="text-[color:var(--text-muted)] tracking-tight">Connections: <span className="text-white">{deterministicInt(5, 19, title, type, srv.name, idx, 'connections')}</span></span></div>
+                        <div><span className="text-white font-bold mr-1">-</span><span className="text-[color:var(--text-muted)] tracking-tight">Sockets: <span className="text-white">{deterministicInt(40, 119, title, type, srv.name, idx, 'sockets')}</span></span></div>
                      </div>
                   </div>
                ) : (
@@ -298,7 +298,7 @@ const NetworkGraphPanel = ({ title, type, servers }) => {
 
                {/* X-Axis Final Node Timeline */}
                {idx === servers.length - 1 && (
-                  <div className="absolute left-0 -bottom-4 h-4 text-[9px] text-[#888] flex items-center justify-between w-[calc(100%-24px)] pointer-events-none px-1 z-20">
+                  <div className="absolute left-0 -bottom-4 h-4 text-[9px] text-white flex items-center justify-between w-[calc(100%-24px)] pointer-events-none px-1 z-20">
                      <span>2026.03.30</span>
                      <span>2026.03.31 02:00</span>
                      <span>06:00</span>
@@ -351,12 +351,12 @@ const NetworkCluster = () => {
                      Add Server
                   </button>
                   {bottomTab === 'Nodes' && (
-                     <button className="px-2 py-1 bg-transparent text-[color:var(--accent-500)] hover:bg-white/5 transition-colors ml-2">
+                     <button className="px-2 py-1 bg-transparent text-white hover:bg-white/5 transition-colors ml-2">
                         <Router size={16} />
                      </button>
                   )}
                   {bottomTab === 'Nodes' && (
-                     <button className="px-2 py-1 bg-transparent text-[color:var(--accent-500)] hover:bg-white/5 transition-colors">
+                     <button className="px-2 py-1 bg-transparent text-white hover:bg-white/5 transition-colors">
                         <List size={16} />
                      </button>
                   )}
@@ -372,10 +372,10 @@ const NetworkCluster = () => {
                      className={`pb-1 cursor-default flex items-center gap-1.5 transition-colors relative ${topTab === tab ? 'text-[color:var(--text-primary)]' : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]'
                         }`}
                   >
-                     {tab === 'Cluster' && <Database size={13} className={topTab === tab ? "text-[#4ade80]" : "text-green-800"} />}
+                     {tab === 'Cluster' && <Database size={13} className={topTab === tab ? "text-white" : "text-white"} />}
                      {tab === 'Ultency Matching Engines' && <Zap size={13} className={topTab === tab ? "text-[#a78bfa]" : "text-purple-800"} />}
-                     {tab === 'Hosted Access Servers' && <Server size={13} className={topTab === tab ? "text-[#4ade80]" : "text-green-800"} />}
-                     {tab === 'Sponsored VPS' && <Cloud size={13} className={topTab === tab ? "text-[#60a5fa]" : "text-blue-800"} />}
+                     {tab === 'Hosted Access Servers' && <Server size={13} className={topTab === tab ? "text-white" : "text-white"} />}
+                     {tab === 'Sponsored VPS' && <Cloud size={13} className={topTab === tab ? "text-white" : "text-white"} />}
                      {tab}
                      {topTab === tab && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[color:var(--accent-500)]"></div>}
                   </div>
@@ -407,7 +407,7 @@ const NetworkCluster = () => {
                   onClick={() => setBottomTab(tab)}
                   className={`h-[22px] px-3 text-[11px] flex items-center cursor-default transition-colors rounded-sm ${bottomTab === tab
                         ? 'bg-[#3e3e3e] text-white border border-black/40 shadow-sm'
-                        : 'text-[#999999] hover:text-[color:var(--text-secondary)] hover:bg-white/5 border border-transparent'
+                        : 'text-white hover:text-[color:var(--text-secondary)] hover:bg-white/5 border border-transparent'
                      }`}
                >
                   {tab}

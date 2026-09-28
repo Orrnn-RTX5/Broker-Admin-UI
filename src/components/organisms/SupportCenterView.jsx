@@ -9,8 +9,8 @@ const SupportCenterView = () => {
         <div className="mb-8">
           <h1 className="text-[22px] font-normal text-white mb-0.5 tracking-tight">Orrnn Support Center</h1>
           <div className="text-[12.5px] font-sans">
-            <a href="mailto:support@orrnn.com" className="text-[#3b82f6] hover:underline">support@orrnn.com</a>
-            <span className="text-[#888] ml-1">— Authorization</span>
+            <a href="mailto:support@orrnn.com" className="text-white hover:underline">support@orrnn.com</a>
+            <span className="text-white ml-1">— Authorization</span>
           </div>
         </div>
 
@@ -46,18 +46,18 @@ const SupportCenterView = () => {
           </div>
 
           <div className="w-full flex justify-end mb-4">
-            <a href="#" className="text-[12px] text-[#3b82f6] hover:underline font-sans">Password recovery</a>
+            <a href="#" className="text-[12px] text-white hover:underline font-sans">Password recovery</a>
           </div>
 
-          <button className="w-full bg-[#00E676] hover:bg-[#00c853] text-[#000] py-2 rounded-[2px] text-[13px] font-medium transition-colors mb-5 h-[34px] flex items-center justify-center">
+          <button className="w-full bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-700)] text-[color:var(--accent-contrast)] py-2 rounded-[2px] text-[13px] font-medium transition-colors mb-5 h-[34px] flex items-center justify-center">
             Enter Orrnn Support Center
           </button>
 
           <div className="text-[12px] text-[color:var(--text-muted)] mb-3 font-sans">
-            Don't have a Support Center account? <a href="#" className="text-[#3b82f6] hover:underline">Register</a>
+            Don't have a Support Center account? <a href="#" className="text-white hover:underline">Register</a>
           </div>
 
-          <a href="#" className="flex items-center text-[12px] text-[#3b82f6] hover:underline gap-1.5 font-sans">
+          <a href="#" className="flex items-center text-[12px] text-white hover:underline gap-1.5 font-sans">
             <Send size={13} className="fill-[#3b82f6] text-white" /> Official Orrnn Support Channel
           </a>
         </div>
