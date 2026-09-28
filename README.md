@@ -51,20 +51,17 @@ Desktop updates are manual. Publishing a GitHub release does not make running ap
 
 ## Desktop Releases
 
-Create and push a version tag from the source repo:
+The checked-in GitHub Actions workflow builds and deploys the web Docker image on pushes to `main`. Desktop publishing is currently a local command. Set `GH_TOKEN` in the shell environment, then run:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+npm run release
 ```
 
-GitHub Actions runs `.github/workflows/admin-desktop-release.yml` on tags matching `v*`. The workflow installs with `npm ci`, runs tests, lint, web build, and then publishes the Windows installer with `electron-builder`.
-
-Release assets are uploaded to:
+Electron Builder publishes release assets to:
 
 https://github.com/rtx5-orrnn/rtx5-broker-admin-releases/releases
 
-The workflow uses only the repository secret `RTX5_BROKER_ADMIN_RELEASES` as `GH_TOKEN` for cross-repo publishing. Do not commit GitHub tokens to source, `.env`, README, package scripts, or workflow logs.
+Keep `GH_TOKEN` in a secret store or process environment. Do not commit it to source or env files.
 
 ## Broker Discovery Login Flow
 
@@ -85,5 +82,3 @@ Use `VITE_BACKEND_TARGET=web` for the hosted web app so each selected broker use
 Broker discovery entries should include a web URL field such as `backend_url`, `api_url`, `web_backend_url`, or `backend_domain`, plus a desktop field such as `server_ip`/`host` and `server_port`. Optional fields like `web_ext_api_url`, `desktop_backend_url`, and `ws_url` override the derived URLs when needed. A deployment `domain` is treated as the admin UI host, not the backend API URL. Use `nginx.listen_host` only on dedicated listen addresses; leave it empty on shared-IP broker servers.
 
 `VITE_USE_MOCK_DISCOVERY=true` uses the local `testorrnn` and `orrnn` broker map while the SuperAdmin discovery endpoint is pending. Set it to `false` when `/api/v1/brokers/{broker_id}` is available.
-# Broker-Manager-UI
-# Broker-Admin-UI
