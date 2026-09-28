@@ -105,6 +105,22 @@ export const ManagerService = {
     return res.data;
   },
 
+  // Every global instrument with the group's trade override and effective
+  // permission: { group, legacy_allow_list, allow_list_count, blocked,
+  // feed_scoped, symbols: [{ symbol, category, global_enabled,
+  // group_override: null | 'off', effective, status }] }.
+  getGroupSymbolOverrides: async (groupName) => {
+    const res = await api.get('/manager/GroupSymbolOverridesGet', { params: { group: groupName } });
+    return res.data;
+  },
+
+  // Sets (trade_allowed false) or clears (true) group trade overrides. Never
+  // changes the group's allowed/blocked lists. Returns the Get shape.
+  saveGroupSymbolOverrides: async (groupName, changes) => {
+    const res = await api.post('/manager/GroupSymbolOverridesSave', { group: groupName, changes });
+    return res.data;
+  },
+
   toggleGroupSymbol: async (group, symbol, enabled) => {
     const res = await api.get('/manager/GroupSymbolToggle', {
       params: { group, symbol, enabled }

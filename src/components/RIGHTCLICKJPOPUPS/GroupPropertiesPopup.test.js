@@ -21,15 +21,27 @@ test('Margin: OK sends only the changed margin fields to GroupUpdate', () => {
   assert.doesNotMatch(src, /label="Risk management"/);
 });
 
-test('Symbols: staged list loads from GroupSymbolsGet and saves via GroupSymbolsSave on OK', () => {
+test('Symbol List: staged legacy list loads from GroupSymbolsGet and saves via GroupSymbolsSave on OK', () => {
   assert.match(src, /ManagerService\.getGroupAllowedSymbols\(currentGroupName\)/);
   assert.match(src, /await ManagerService\.saveGroupAllowedSymbols\(payload\.group, payload\.symbols\);/);
   assert.match(src, /isGroupSymbolListDirty\(symbolsBaseline, symbolRows\)/);
   assert.match(src, /accounts in this group see ALL broker symbols/);
+  assert.match(src, /Saving a non-empty list restricts this group to exactly the listed symbols/, 'legacy list warns that it restricts');
   assert.doesNotMatch(src, /getSymbolSet\(/, 'ADD no longer upserts immediately via the legacy GET');
   assert.doesNotMatch(src, /SymbolPropertiesPopup/, 'rows no longer open the nested symbol popup');
   assert.match(serviceSrc, /api\.get\('\/manager\/GroupSymbolsGet', \{ params: \{ group: groupName \} \}\)/);
   assert.match(serviceSrc, /api\.post\('\/manager\/GroupSymbolsSave', \{ group: groupName, symbols \}\)/);
+});
+
+test('Symbols: global symbols with group overrides; saving never sends the symbol list', () => {
+  assert.match(src, /ManagerService\.getGroupSymbolOverrides\(currentGroupName\)/);
+  assert.match(src, /const changes = buildGroupSymbolOverrideChanges\(stagedOverrides\);/);
+  assert.match(src, /await ManagerService\.saveGroupSymbolOverrides\(currentGroupName, changes\);/);
+  assert.match(src, /disabled=\{!editable\}/, 'rows blocked above the group cannot be toggled');
+  assert.match(src, /if \(tab === 'Symbols' && !overridesView && !overridesLoading\) loadOverrides\(\);/);
+  assert.match(src, /if \(tab === 'Symbol List' && !symbolsLoaded && !symbolsLoading\) loadSymbols\(\);/);
+  assert.match(serviceSrc, /api\.get\('\/manager\/GroupSymbolOverridesGet', \{ params: \{ group: groupName \} \}\)/);
+  assert.match(serviceSrc, /api\.post\('\/manager\/GroupSymbolOverridesSave', \{ group: groupName, changes \}\)/);
 });
 
 test('Commissions: scoped to the group, editable, no alert()', () => {
@@ -44,7 +56,7 @@ test('Commissions: scoped to the group, editable, no alert()', () => {
 });
 
 test('Dialog chrome: Help works, dead tabs and window buttons are gone', () => {
-  assert.match(src, /const TABS = \['Margin', 'Symbols', 'Commissions'\];/);
+  assert.match(src, /const TABS = \['Margin', 'Symbols', 'Symbol List', 'Commissions'\];/);
   assert.match(src, /onClick=\{\(\) => setShowHelp\(\(value\) => !value\)\}/);
   for (const dead of ["'Statistics'", "'Company'", "'Reports'", "'News & Mail'", "'Permissions'", "'Common'"]) {
     assert.equal(src.includes(`activeTab === ${dead}`), false, `unreachable tab body ${dead} removed`);

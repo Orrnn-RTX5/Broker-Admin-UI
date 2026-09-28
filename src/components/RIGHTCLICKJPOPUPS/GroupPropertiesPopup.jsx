@@ -34,20 +34,33 @@ import {
   validateGroupSymbolEdit,
   validateMarginForm,
 } from '../../utils/groupProperties';
+import {
+  GROUP_SYMBOL_FILTERS,
+  GROUP_SYMBOL_STATUS,
+  applyStagedOverride,
+  buildGroupSymbolOverrideChanges,
+  filterGroupSymbolRows,
+  isGroupSymbolEditable,
+  normalizeGroupSymbolOverrides,
+  summarizeGroupSymbols,
+  toggleStagedOverride,
+} from '../../utils/groupSymbolOverrides';
 
 const MotionDiv = motion.div;
 
-const TABS = ['Margin', 'Symbols', 'Commissions'];
+const TABS = ['Margin', 'Symbols', 'Symbol List', 'Commissions'];
 
 const TAB_INTRO = {
   Margin: 'Please set up the mechanism of margin calculation for the group: execution mode and margin requirements.',
-  Symbols: 'Please set up the symbols accounts in this group can see and trade, with individual trade parameters per symbol.',
+  Symbols: 'Every symbol from Symbol Management. A symbol is tradeable in this group when it is enabled globally and not turned off for this group.',
+  'Symbol List': 'Legacy allowed-symbols list with individual trade parameters per symbol.',
   Commissions: 'Please set up commissions for accounts in the group. Changes on this tab are saved immediately.',
 };
 
 const TAB_HELP = {
   Margin: 'Execution mode selects market or instant execution for the group. Margin call and stop out levels are margin levels in percent; the stop out level must not exceed the margin call level. "Compensate negative balance after stop out" resets a negative balance to zero after a stop out. When you press OK, changed values are also applied to the accounts already in the group. Greyed-out options are not available yet.',
-  Symbols: 'The ordered list of symbols that accounts in this group see and trade in the terminal. An empty list means all broker symbols are allowed. Each symbol has its own spread markup (points), commission, swap multiplier and trading switch. Use Add, Edit (or double-click a row), Delete, Up and Down; changes are kept until you press OK, and Cancel discards them.',
+  Symbols: 'All global symbols. "Global" means the group follows Symbol Management; turning a symbol off here blocks it for this group only and never changes the group\'s symbol list. A symbol disabled globally (or excluded by the blocked list or a legacy allow-list) cannot be turned on here. Changes are kept until you press OK, and Cancel discards them.',
+  'Symbol List': 'The ordered list of symbols that accounts in this group see and trade in the terminal. An empty list means all broker symbols are allowed; a non-empty list restricts the group to exactly those symbols. Each symbol has its own spread markup (points), commission, swap multiplier and trading switch. Use Add, Edit (or double-click a row), Delete, Up and Down; changes are kept until you press OK, and Cancel discards them.',
   Commissions: 'Commission schedules charged to accounts in this group, by symbol and volume range. Per lot charges the value per lot, Percentage charges a percent of the deal notional, Flat charges a fixed amount per deal. Add, Edit and Delete save immediately; OK and Cancel do not affect them.',
 };
 
@@ -301,6 +314,24 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
   const listedSymbols = useMemo(() => symbolRows.map((row) => row.symbol), [symbolRows]);
   const selectedSymbolRow = symbolRows[selectedSymbolIndex] || null;
 
+  // --- Symbol overrides (staged, saved on OK) ---
+  const [overridesView, setOverridesView] = useState(null);
+  const [overridesLoading, setOverridesLoading] = useState(false);
+  const [overridesError, setOverridesError] = useState('');
+  const [stagedOverrides, setStagedOverrides] = useState(() => new Map());
+  const [overrideQuery, setOverrideQuery] = useState('');
+  const [overrideFilter, setOverrideFilter] = useState('all');
+  const overridesDirty = stagedOverrides.size > 0;
+  const overrideRows = useMemo(
+    () => (overridesView ? overridesView.rows.map((row) => applyStagedOverride(row, stagedOverrides)) : []),
+    [overridesView, stagedOverrides]
+  );
+  const visibleOverrideRows = useMemo(
+    () => filterGroupSymbolRows(overrideRows, overrideQuery, overrideFilter),
+    [overrideRows, overrideQuery, overrideFilter]
+  );
+  const overrideSummary = useMemo(() => summarizeGroupSymbols(overrideRows), [overrideRows]);
+
   // --- Commissions (immediate CRUD) ---
   const [commissions, setCommissions] = useState([]);
   const [commissionsLoaded, setCommissionsLoaded] = useState(false);
@@ -327,6 +358,19 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
     }
   }, [currentGroupName]);
 
+  const loadOverrides = useCallback(async () => {
+    setOverridesLoading(true);
+    setOverridesError('');
+    try {
+      setOverridesView(normalizeGroupSymbolOverrides(await ManagerService.getGroupSymbolOverrides(currentGroupName)));
+      setStagedOverrides(new Map());
+    } catch (error) {
+      setOverridesError(getApiErrorMessage(error, 'Failed to load group symbols.'));
+    } finally {
+      setOverridesLoading(false);
+    }
+  }, [currentGroupName]);
+
   const loadCommissions = useCallback(async () => {
     setCommissionsLoading(true);
     setCommissionsError('');
@@ -345,7 +389,8 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
 
   const selectTab = (tab) => {
     setActiveTab(tab);
-    if (tab === 'Symbols' && !symbolsLoaded && !symbolsLoading) loadSymbols();
+    if (tab === 'Symbols' && !overridesView && !overridesLoading) loadOverrides();
+    if (tab === 'Symbol List' && !symbolsLoaded && !symbolsLoading) loadSymbols();
     if (tab === 'Commissions' && !commissionsLoading) loadCommissions();
   };
 
@@ -510,24 +555,39 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
     }
 
     const saveMargin = Object.keys(marginChanges).length > 0;
-    if (!saveMargin && !symbolsDirty) {
+    if (!saveMargin && !symbolsDirty && !overridesDirty) {
       closeDialog();
       return;
     }
 
     setIsSaving(true);
     const summary = [];
-    let marginSaved = false;
+    let failedTab = 'Margin';
     try {
       if (saveMargin) {
         const res = await ManagerService.updateGroup({ originalName: currentGroupName, ...marginChanges });
-        marginSaved = true;
         persistedRef.current = true;
         setInitialMargin(marginForm);
         summary.push(describeAccountsUpdated(res) || 'Margin settings saved.');
       }
 
+      if (overridesDirty) {
+        failedTab = 'Symbols';
+        const changes = buildGroupSymbolOverrideChanges(stagedOverrides);
+        const res = await ManagerService.saveGroupSymbolOverrides(currentGroupName, changes);
+        persistedRef.current = true;
+        setOverridesView(normalizeGroupSymbolOverrides(res));
+        setStagedOverrides(new Map());
+        const off = changes.filter((change) => !change.trade_allowed).length;
+        const on = changes.length - off;
+        summary.push([
+          off && `${off} symbol${off === 1 ? '' : 's'} turned off.`,
+          on && `${on} symbol${on === 1 ? '' : 's'} follow global again.`,
+        ].filter(Boolean).join(' '));
+      }
+
       if (symbolsDirty) {
+        failedTab = 'Symbol List';
         const payload = buildGroupSymbolsSavePayload(currentGroupName, symbolRows);
         const res = await ManagerService.saveGroupAllowedSymbols(payload.group, payload.symbols);
         persistedRef.current = true;
@@ -540,22 +600,18 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
       onSaved?.();
       onClose();
     } catch (error) {
-      if (marginSaved) {
-        setActiveTab('Symbols');
-        setSaveError(`Margin settings saved, but saving symbols failed: ${getApiErrorMessage(error, 'request failed.')}`);
-      } else if (saveMargin) {
-        setActiveTab('Margin');
-        setSaveError(`Failed to save margin settings: ${getApiErrorMessage(error, 'request failed.')}`);
-      } else {
-        setActiveTab('Symbols');
-        setSaveError(`Failed to save symbols: ${getApiErrorMessage(error, 'request failed.')}`);
-      }
+      const reason = getApiErrorMessage(error, 'request failed.');
+      const what = { Margin: 'margin settings', Symbols: 'symbol overrides', 'Symbol List': 'symbol list' }[failedTab];
+      setActiveTab(failedTab);
+      setSaveError(summary.length > 0
+        ? `${summary.join(' ')} But saving the ${what} failed: ${reason}`
+        : `Failed to save ${what}: ${reason}`);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const tabDirty = { Margin: marginDirty, Symbols: symbolsDirty, Commissions: false };
+  const tabDirty = { Margin: marginDirty, Symbols: overridesDirty, 'Symbol List': symbolsDirty, Commissions: false };
   const commissionTypeHint = COMMISSION_TYPE_OPTIONS.find((option) => option.value === commissionEditor?.form.commission_type)?.valueHint;
 
   return (
@@ -695,8 +751,103 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
                 </div>
               )}
 
-              {/* --- SYMBOLS TAB --- */}
+              {/* --- SYMBOLS TAB (global symbols + group overrides) --- */}
               {activeTab === 'Symbols' && (
+                <div className="flex flex-col gap-2">
+                  {overridesView?.legacyAllowList && (
+                    <div className="px-3 py-2 border border-amber-500/40 bg-amber-500/5 rounded-sm text-[11px] text-amber-300" role="note">
+                      This group has a legacy allowed-symbols list ({overridesView.allowListCount} symbols). Symbols outside it stay blocked
+                      (&quot;Not in allow-list&quot;). Clear it on the Symbol List tab to let the group follow Symbol Management.
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="search"
+                      value={overrideQuery}
+                      onChange={(event) => setOverrideQuery(event.target.value)}
+                      placeholder="Search symbol or category"
+                      aria-label="Search symbols"
+                      className={`flex-1 min-w-0 ${inputClass}`}
+                    />
+                    <select
+                      value={overrideFilter}
+                      onChange={(event) => setOverrideFilter(event.target.value)}
+                      aria-label="Filter symbols"
+                      className={`w-40 ${inputClass}`}
+                    >
+                      {GROUP_SYMBOL_FILTERS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  </div>
+                  {overridesView && (
+                    <div className="text-[10px] text-[color:var(--text-muted)]">
+                      {overrideSummary.tradeable} of {overrideSummary.total} symbols tradeable · {overrideSummary.overrides} group override{overrideSummary.overrides === 1 ? '' : 's'}
+                      {visibleOverrideRows.length !== overrideRows.length && ` · showing ${visibleOverrideRows.length}`}
+                    </div>
+                  )}
+                  <div className="border border-[color:var(--border-default)] bg-[color:var(--bg-app)] overflow-hidden rounded-sm">
+                    <div className="grid grid-cols-[1fr_84px_120px_70px_64px] border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] text-[11px] font-medium text-[color:var(--text-muted)]">
+                      <div className="px-3 py-1.5 border-r border-[color:var(--border-default)]">Symbol</div>
+                      <div className="px-2 py-1.5 border-r border-[color:var(--border-default)] text-center">Global</div>
+                      <div className="px-2 py-1.5 border-r border-[color:var(--border-default)] text-center">Group</div>
+                      <div className="px-2 py-1.5 border-r border-[color:var(--border-default)] text-center">Effective</div>
+                      <div className="px-2 py-1.5 text-center">Trading</div>
+                    </div>
+                    <div className="text-[11px] tabular-nums max-h-[260px] overflow-y-auto custom-scrollbar" aria-label={`Symbols of ${currentGroupName}`}>
+                      {overridesLoading && <div className="p-4 text-center text-[color:var(--text-muted)]">Loading symbols...</div>}
+                      {!overridesLoading && overridesError && (
+                        <div className="p-4 text-center text-[color:var(--danger-500)]">
+                          {overridesError}{' '}
+                          <button type="button" onClick={loadOverrides} className="underline text-[color:var(--text-secondary)] hover:text-white">Retry</button>
+                        </div>
+                      )}
+                      {!overridesLoading && overridesView && visibleOverrideRows.length === 0 && (
+                        <div className="p-4 text-center text-[color:var(--text-muted)]">No symbols match.</div>
+                      )}
+                      {!overridesLoading && visibleOverrideRows.map((row) => {
+                        const editable = isGroupSymbolEditable(row);
+                        const status = GROUP_SYMBOL_STATUS[row.status];
+                        const statusColor = row.status === 'global'
+                          ? 'text-[color:var(--text-muted)]'
+                          : row.status === 'override_off' ? 'text-amber-400' : 'text-[color:var(--danger-500)]';
+                        return (
+                          <div
+                            key={row.symbol}
+                            className={`grid grid-cols-[1fr_84px_120px_70px_64px] border-b border-black/10 items-center ${row.staged ? 'bg-amber-500/5' : ''}`}
+                          >
+                            <div className="px-3 py-1 border-r border-black/10 truncate font-mono text-[color:var(--text-primary)] min-w-0" title={row.category || undefined}>
+                              {row.symbol}{row.staged && <span className="ml-1 text-amber-400">*</span>}
+                            </div>
+                            <div className={`px-2 py-1 border-r border-black/10 text-center ${row.globalEnabled ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--danger-500)]'}`}>
+                              {row.globalEnabled ? 'Enabled' : 'Disabled'}
+                            </div>
+                            <div className={`px-2 py-1 border-r border-black/10 text-center truncate ${statusColor}`} title={status.hint}>
+                              {status.label}
+                            </div>
+                            <div className={`px-2 py-1 border-r border-black/10 text-center font-medium ${row.effective ? 'text-emerald-400' : 'text-[color:var(--text-muted)]'}`}>
+                              {row.effective ? 'ON' : 'OFF'}
+                            </div>
+                            <div className="px-2 py-0.5 text-center">
+                              <button
+                                type="button"
+                                onClick={() => setStagedOverrides((current) => toggleStagedOverride(current, row))}
+                                disabled={!editable}
+                                title={editable ? (row.override === 'off' ? 'Follow the global setting again' : 'Turn off for this group') : status.hint}
+                                aria-label={`${row.override === 'off' ? 'Follow global for' : 'Turn off'} ${row.symbol}`}
+                                className="px-2 py-0.5 text-[10px] border border-[color:var(--border-default)] rounded-sm text-[color:var(--text-secondary)] hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                              >
+                                {row.override === 'off' ? 'Reset' : 'Off'}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* --- SYMBOL LIST TAB (legacy allow-list + per-symbol parameters) --- */}
+              {activeTab === 'Symbol List' && (
                 <div className="flex gap-4">
                   <div className="flex flex-col pt-2">
                     <SideButton icon={ChevronUp} label="Up" onClick={() => moveSelectedSymbol(-1)} disabled={selectedSymbolIndex <= 0} />
@@ -707,6 +858,10 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
                     <SideButton icon={Trash2} label="Delete" onClick={deleteSelectedSymbol} disabled={!selectedSymbolRow} />
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col gap-2">
+                    <div className="px-3 py-2 border border-amber-500/40 bg-amber-500/5 rounded-sm text-[11px] text-amber-300" role="note">
+                      Saving a non-empty list restricts this group to exactly the listed symbols — every other symbol is blocked.
+                      To turn single symbols off, use the Symbols tab instead.
+                    </div>
                     {symbolsLoaded && symbolRows.length === 0 && (
                       <div className="px-3 py-2 border border-blue-500/30 bg-blue-500/5 rounded-sm text-[11px] text-[color:var(--text-secondary)]">
                         No symbols listed — accounts in this group see ALL broker symbols. Add symbols to limit them.
