@@ -12,7 +12,7 @@ const serviceSrc = readFileSync(join(here, '..', '..', 'services', 'manager.serv
 
 test('Margin: OK sends only the changed margin fields to GroupUpdate', () => {
   assert.match(src, /const \{ changes, errors \} = buildMarginChanges\(initialMargin, marginForm\);/);
-  assert.match(src, /await ManagerService\.updateGroup\(\{ originalName: currentGroupName, \.\.\.marginChanges \}\);/);
+  assert.match(src, /await ManagerService\.updateGroup\(withExpectedRevision\(\{ originalName: currentGroupName, \.\.\.marginChanges \}, groupRevision\)\);/);
   assert.match(src, /describeAccountsUpdated\(res\)/, 'toast reports accounts_updated');
   assert.doesNotMatch(src, /buildGroupRiskPayload/, 'the whole-form payload (with symbol arrays) is no longer sent');
   assert.doesNotMatch(src, /symbolsAllowed|symbolsBlocked/);
@@ -23,23 +23,24 @@ test('Margin: OK sends only the changed margin fields to GroupUpdate', () => {
 
 test('Symbols: staged list loads from GroupSymbolsGet and saves via GroupSymbolsSave on OK', () => {
   assert.match(src, /ManagerService\.getGroupAllowedSymbols\(currentGroupName\)/);
-  assert.match(src, /await ManagerService\.saveGroupAllowedSymbols\(payload\.group, payload\.symbols\);/);
+  assert.match(src, /await ManagerService\.saveGroupAllowedSymbols\(payload\.group, payload\.symbols, symbolsRevision\);/);
   assert.match(src, /isGroupSymbolListDirty\(symbolsBaseline, symbolRows\)/);
   assert.match(src, /accounts in this group see ALL broker symbols/);
   assert.doesNotMatch(src, /getSymbolSet\(/, 'ADD no longer upserts immediately via the legacy GET');
   assert.doesNotMatch(src, /SymbolPropertiesPopup/, 'rows no longer open the nested symbol popup');
   assert.match(serviceSrc, /api\.get\('\/manager\/GroupSymbolsGet', \{ params: \{ group: groupName \} \}\)/);
-  assert.match(serviceSrc, /api\.post\('\/manager\/GroupSymbolsSave', \{ group: groupName, symbols \}\)/);
+  assert.match(serviceSrc, /const body = \{ group: groupName, symbols \};\s*if \(expectedRevision\) body\.expected_revision = expectedRevision;\s*const res = await api\.post\('\/manager\/GroupSymbolsSave', body\);/);
 });
 
 test('Commissions: scoped to the group, editable, no alert()', () => {
   assert.match(src, /ManagerService\.getCommissionScheduleList\(currentGroupName\)/);
-  assert.match(src, /ManagerService\.updateCommissionSchedule\(payload\)/);
+  assert.match(src, /ManagerService\.updateCommissionSchedule\(withExpectedRevision\(payload, commissionEditor\.revision\)\)/);
+  assert.match(src, /ManagerService\.deleteCommissionSchedule\(getScheduleId\(row\), readRevision\(row\)\)/);
   assert.match(src, /buildCommissionSchedulePayload\(commissionEditor\.form, currentGroupName/);
   assert.doesNotMatch(src, /\balert\(/);
   assert.doesNotMatch(src, /EURUSD Standard/, 'no hardcoded create-form defaults');
   assert.match(serviceSrc, /api\.post\('\/manager\/CommissionScheduleUpdate', data\)/);
-  assert.match(serviceSrc, /api\.post\('\/manager\/CommissionScheduleDelete', \{\s*schedule_id: Number\(scheduleId\),\s*\}\)/);
+  assert.match(serviceSrc, /const body = \{ schedule_id: Number\(scheduleId\) \};\s*if \(expectedRevision\) body\.expected_revision = expectedRevision;\s*const res = await api\.post\('\/manager\/CommissionScheduleDelete', body\);/);
   assert.match(serviceSrc, /params: cleanParams\(\{ group \}\)/);
 });
 

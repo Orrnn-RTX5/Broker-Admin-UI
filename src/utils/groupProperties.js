@@ -81,11 +81,26 @@ export const validateMarginForm = (form) => {
   return { values, errors };
 };
 
+const MARGIN_FIELDS = ['executionMode', 'marginCallLevel', 'stopOutLevel', 'negativeBalanceProtection'];
+const sameMarginValue = (a, b) => String(a ?? '').trim() === String(b ?? '').trim();
+
 /** True when the raw Margin form differs from the loaded one. */
 export const isMarginFormDirty = (initial, form) => (
-  ['executionMode', 'marginCallLevel', 'stopOutLevel', 'negativeBalanceProtection']
-    .some((key) => String(initial?.[key] ?? '').trim() !== String(form?.[key] ?? '').trim())
+  MARGIN_FIELDS.some((key) => !sameMarginValue(initial?.[key], form?.[key]))
 );
+
+/**
+ * After a revision conflict the group is reloaded: a field the admin edited
+ * keeps the admin's value, every untouched field takes the freshly loaded
+ * value, so pressing OK again never reverts someone else's change.
+ */
+export const rebaseMarginForm = (previousBaseline, form, freshBaseline) => {
+  const next = { ...freshBaseline };
+  for (const key of MARGIN_FIELDS) {
+    if (!sameMarginValue(previousBaseline?.[key], form?.[key])) next[key] = form[key];
+  }
+  return next;
+};
 
 /**
  * The GroupUpdate body for the Margin tab: ONLY the fields whose parsed value

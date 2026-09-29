@@ -1,0 +1,102 @@
+{
+  "harness": "account-config-popups",
+  "pass": true,
+  "steps": [
+    {
+      "step": "create-validation-sends-nothing",
+      "ok": true,
+      "ms": 153,
+      "result": {
+        "sent": 0
+      }
+    },
+    {
+      "step": "create-refused-by-server",
+      "ok": true,
+      "ms": 98,
+      "result": {
+        "refused": true
+      }
+    },
+    {
+      "step": "create-without-login-is-not-success",
+      "ok": true,
+      "ms": 418,
+      "result": {
+        "replies": 3
+      }
+    },
+    {
+      "step": "create-confirmed-then-deposit-request",
+      "ok": true,
+      "ms": 153,
+      "result": {
+        "login": 70001
+      }
+    },
+    {
+      "step": "withdrawal-refusal-keeps-dialog",
+      "ok": true,
+      "ms": 60,
+      "result": {
+        "refused": true
+      }
+    },
+    {
+      "step": "group-leverage-revision-conflict",
+      "ok": true,
+      "ms": 375,
+      "result": {
+        "conflict": true,
+        "reloaded": true
+      }
+    },
+    {
+      "step": "group-leverage-locked-by-open-positions",
+      "ok": true,
+      "ms": 75,
+      "result": {
+        "locked": true
+      }
+    },
+    {
+      "step": "group-save-confirmed",
+      "ok": true,
+      "ms": 89,
+      "result": {
+        "saved": true
+      }
+    },
+    {
+      "step": "commission-delete-conflict-reloads-list",
+      "ok": true,
+      "ms": 144,
+      "result": {
+        "reloaded": true
+      }
+    },
+    {
+      "step": "group-new-account-opens-create",
+      "ok": true,
+      "ms": 86,
+      "result": {
+        "preset": "real-qa"
+      }
+    }
+  ],
+  "exceptions": [],
+  "consoleErrors": [],
+  "offPageRequests": [],
+  "screenshots": [
+    "01-create-validation-sends-nothing.png",
+    "02-create-refused-by-server.png",
+    "03-create-without-login-is-not-success.png",
+    "04-create-confirmed-then-deposit-request.png",
+    "05-withdrawal-refusal-keeps-dialog.png",
+    "06-group-leverage-revision-conflict.png",
+    "07-group-leverage-locked-by-open-positions.png",
+    "08-group-save-confirmed.png",
+    "09-commission-delete-conflict-reloads-list.png",
+    "10-group-new-account-opens-create.png"
+  ]
+}

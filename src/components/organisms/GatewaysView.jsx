@@ -1,3 +1,9 @@
+import LPCleanupPolicyPanel from './LPCleanupPolicyPanel.jsx';
+import LPRecoveryPolicyPanel from './LPRecoveryPolicyPanel.jsx';
+import LPExactPendingModifyAdmissionPanel from './LPExactPendingModifyAdmissionPanel.jsx';
+import LPNativePendingEnablementPanel from './LPNativePendingEnablementPanel.jsx';
+import BrokerCapabilitiesPanel from './BrokerCapabilitiesPanel.jsx';
+import PrivateFIXReadinessPanel from './PrivateFIXReadinessPanel.jsx';
 import React, { useEffect, useState } from 'react';
 import { AlertCircle, CheckCircle2, Loader2, Save, Zap } from 'lucide-react';
 import {
@@ -8,6 +14,13 @@ import {
 import { buildFeedConfigPayload, normalizeFeedProvider } from '../../lib/feedConfigPayload';
 import { useToast } from '../ui/useToast';
 import FixRelayConfigPanel from './FixRelayConfigPanel';
+import NamedLPConnectionsPanel from './NamedLPConnectionsPanel';
+import NamedLPRoutingPanel from './NamedLPRoutingPanel';
+import LPFeedsPanel from './LPFeedsPanel';
+import LPManagerPermissionsPanel from './LPManagerPermissionsPanel';
+import LPJournalPanel from './LPJournalPanel';
+import LPDemoMarketWorkspace from './LPDemoMarketWorkspace.jsx';
+import CalculationBaselineWorkspace from './CalculationBaselineWorkspace.jsx';
 
 const PROVIDER_OPTIONS = [
   { value: 'rtxmd', label: 'RTX Market Data FIX' },
@@ -236,6 +249,14 @@ const GatewaysView = () => {
       </div>
 
       <div className="p-5 pb-12">
+        <NamedLPConnectionsPanel />
+        <LPFeedsPanel />
+        <LPDemoMarketWorkspace />
+        <CalculationBaselineWorkspace />
+        <LPJournalPanel />
+        <NamedLPRoutingPanel /><LPCleanupPolicyPanel /><LPRecoveryPolicyPanel /><LPExactPendingModifyAdmissionPanel /><LPNativePendingEnablementPanel />
+        <LPManagerPermissionsPanel />
+        <PrivateFIXReadinessPanel /><BrokerCapabilitiesPanel />
         {import.meta.env.VITE_FIX_RELAY_ENABLED === 'true' && <FixRelayConfigPanel />}
         <form
           onSubmit={handleSubmit}

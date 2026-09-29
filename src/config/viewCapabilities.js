@@ -36,6 +36,11 @@ export const VIEW_CAPABILITIES = Object.freeze({
     'Deals partially connected',
     'This view uses an undocumented endpoint, so data can be unavailable until the backend contract is confirmed.'
   ),
+  'Downstream access': capability(
+    PARTIAL,
+    'Downstream access is gated',
+    'Broker Admin only. The server answers only when RTX5_C09_DOWNSTREAM_ADMIN_ENABLED=1; saved access is not applied, connected or verified.'
+  ),
   Gateways: capability(
     PARTIAL,
     'Gateways partially connected',

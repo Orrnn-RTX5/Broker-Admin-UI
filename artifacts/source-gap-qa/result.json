@@ -1,0 +1,47 @@
+{
+  "harness": "source-gap",
+  "pass": true,
+  "steps": [
+    {
+      "step": "status-held-normal-and-awaiting-first-fresh",
+      "ok": true,
+      "ms": 140,
+      "result": {
+        "shown": 3
+      }
+    },
+    {
+      "step": "release-refused-keeps-the-row",
+      "ok": true,
+      "ms": 318,
+      "result": {
+        "refusals": 5
+      }
+    },
+    {
+      "step": "release-allowed-row-stays-until-poll",
+      "ok": true,
+      "ms": 83,
+      "result": {
+        "released": "9007199254740993"
+      }
+    },
+    {
+      "step": "typed-off-unavailable-and-invalid-policy",
+      "ok": true,
+      "ms": 90,
+      "result": {
+        "cases": 4
+      }
+    }
+  ],
+  "exceptions": [],
+  "consoleErrors": [],
+  "offPageRequests": [],
+  "screenshots": [
+    "01-status-held-normal-and-awaiting-first-fresh.png",
+    "02-release-refused-keeps-the-row.png",
+    "03-release-allowed-row-stays-until-poll.png",
+    "04-typed-off-unavailable-and-invalid-policy.png"
+  ]
+}

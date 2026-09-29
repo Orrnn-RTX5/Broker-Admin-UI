@@ -1,0 +1,69 @@
+{
+  "harness": "exact-modify-admission",
+  "pass": true,
+  "steps": [
+    {
+      "step": "unconfigured-default-and-explanation",
+      "ok": true,
+      "ms": 86,
+      "result": {
+        "default": 3
+      }
+    },
+    {
+      "step": "save-confirmed-by-server",
+      "ok": true,
+      "ms": 54,
+      "result": {
+        "saved": 5
+      }
+    },
+    {
+      "step": "unconfirmed-save-shows-no-success-and-locks",
+      "ok": true,
+      "ms": 139,
+      "result": {
+        "refused": 3
+      }
+    },
+    {
+      "step": "error-codes-and-reload",
+      "ok": true,
+      "ms": 164,
+      "result": {
+        "codes": [
+          "CONFIGURATION_CONFLICT",
+          "INVALID_INPUT",
+          "FORBIDDEN"
+        ]
+      }
+    },
+    {
+      "step": "client-bounds-send-nothing",
+      "ok": true,
+      "ms": 280,
+      "result": {
+        "sent": 0
+      }
+    },
+    {
+      "step": "storage-unavailable-offers-only-reload",
+      "ok": true,
+      "ms": 26,
+      "result": {
+        "buttons": 1
+      }
+    }
+  ],
+  "exceptions": [],
+  "consoleErrors": [],
+  "offPageRequests": [],
+  "screenshots": [
+    "01-unconfigured-default-and-explanation.png",
+    "02-save-confirmed-by-server.png",
+    "03-unconfirmed-save-shows-no-success-and-locks.png",
+    "04-error-codes-and-reload.png",
+    "05-client-bounds-send-nothing.png",
+    "06-storage-unavailable-offers-only-reload.png"
+  ]
+}

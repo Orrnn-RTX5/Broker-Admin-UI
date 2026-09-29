@@ -1,12 +1,29 @@
-import React, { useMemo, useState } from 'react';
+import {useAuthStore} from '../../store/authStore.js';
+import {hasPermission,PERMISSION_KEYS} from '../../utils/permissions.js';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Wallet } from 'lucide-react';
+import AccountTradeControls from './AccountTradeControls.jsx';
+import PendingTradeControls from './PendingTradeControls.jsx';
+import CustomerNativePending from './CustomerNativePending.jsx';
 import { AccountsService } from '../../services/accounts.service';
+import { AdminConfigApi } from '../../services/adminConfigApi';
+import FundingPopup from './FundingPopup';
+import {
+  ACCOUNT_MODE_OPTIONS,
+  buildAccountTradingChanges,
+  describeConfigError,
+  readConfigError,
+} from '../../utils/legacyConfig';
 import { useToast } from '../ui/useToast';
 
 const MotionDiv = motion.div;
 
-const PROFILE_FIELDS = ['name', 'email', 'phone', 'group', 'currency'];
+// name/email/phone stay on the account profile update. Group and currency,
+// like leverage and account mode, are trading configuration: they go through
+// the G8-guarded manager PATCH (expected revision + active-trade lock).
+const PROFILE_FIELDS = ['name', 'email', 'phone'];
+const GUARDED_PROFILE_FIELDS = ['group', 'currency'];
 
 const pickDefined = (source, keys, fallback = '') => {
   for (const key of keys) {
@@ -55,14 +72,16 @@ const buildFormState = (row) => {
     currency: normalizeText(pickDefined(source, ['currency', 'Currency'], row?.currency || '')),
     status: normalizeStatus(statusValue, enabled),
     readOnly: normalizeBoolean(pickDefined(source, ['readonly', 'readOnly', 'ReadOnly', 'read_only', 'is_readonly', 'IsReadOnly'], false)),
+    leverage: normalizeText(pickDefined(source, ['leverage', 'Leverage'], '')),
+    accountMode: normalizeText(pickDefined(source, ['account_mode', 'accountMode', 'AccountMode'], 'hedging')).toLowerCase() || 'hedging',
     balance: pickDefined(source, ['balance', 'Balance'], row?.balance ?? 0),
     equity: pickDefined(source, ['equity', 'Equity'], row?.equity ?? 0),
     reason: 'Account updated from admin UI',
   };
 };
 
-const buildChangedProfilePayload = (form, original) => (
-  PROFILE_FIELDS.reduce((payload, field) => {
+const buildChangedProfilePayload = (form, original, fields = PROFILE_FIELDS) => (
+  fields.reduce((payload, field) => {
     const next = normalizeText(form[field]);
     const previous = normalizeText(original[field]);
     if (next !== previous) payload[field] = next;
@@ -81,16 +100,53 @@ const inputClassName = 'min-w-0 w-full flex-1 bg-[color:var(--bg-surface-1)] bor
 const selectClassName = 'min-w-0 w-full flex-1 bg-[color:var(--bg-surface-1)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-[color:var(--text-primary)] focus:outline-none focus:border-blue-500 rounded-sm cursor-pointer disabled:opacity-60';
 
 const AccountEditPopup = ({ account, onClose, onSaved }) => {
+	const nativeCancelUser=useAuthStore(state=>state.user);
   const original = useMemo(() => buildFormState(account), [account]);
   const login = useMemo(() => getAccountLogin(account), [account]);
   const [form, setForm] = useState(original);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [lockDetails, setLockDetails] = useState([]);
+  const [fundingOpen, setFundingOpen] = useState(false);
+  // G8: the trading configuration (group, currency, leverage, account mode)
+  // and its revision come from UserDetails; '' revision (older backend)
+  // keeps the legacy write.
+  const [config, setConfig] = useState(() => ({
+    group: original.group, currency: original.currency, leverage: original.leverage,
+    accountMode: original.accountMode, revision: '',
+  }));
+  const touchedRef = useRef({});
   const { notify } = useToast();
+
+  useEffect(() => {
+    if (!login) return undefined;
+    let active = true;
+    AdminConfigApi.getAccountConfig(login).then((fresh) => {
+      if (!active) return;
+      setConfig(fresh);
+      setForm((current) => ({
+        ...current,
+        ...(touchedRef.current.group ? {} : { group: fresh.group || current.group }),
+        ...(touchedRef.current.currency ? {} : { currency: fresh.currency || current.currency }),
+        ...(touchedRef.current.leverage ? {} : { leverage: fresh.leverage || current.leverage }),
+        ...(touchedRef.current.accountMode ? {} : { accountMode: fresh.accountMode || current.accountMode }),
+      }));
+    }).catch(() => {});
+    return () => { active = false; };
+    // Load once per account; later edits are tracked in touchedRef.
+  }, [login]);
 
   const setField = (field) => (event) => {
     const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
     setForm((current) => ({ ...current, [field]: value }));
+    touchedRef.current = { ...touchedRef.current, [field]: true };
+  };
+
+  const reloadConfig = async () => {
+    const fresh = await AdminConfigApi.getAccountConfig(login);
+    setConfig(fresh);
+    setForm((current) => ({ ...current, group: fresh.group, currency: fresh.currency, leverage: fresh.leverage, accountMode: fresh.accountMode }));
+    touchedRef.current = {};
   };
 
   const handleSave = async () => {
@@ -99,11 +155,28 @@ const AccountEditPopup = ({ account, onClose, onSaved }) => {
       return;
     }
 
+    const trading = buildAccountTradingChanges(config, form);
+    const firstTradingError = Object.values(trading.errors)[0];
+    if (firstTradingError) {
+      setError(firstTradingError);
+      return;
+    }
+    const guardedPayload = { ...buildChangedProfilePayload(form, config, GUARDED_PROFILE_FIELDS), ...trading.changes };
+
     setIsSaving(true);
     setError(null);
+    setLockDetails([]);
 
+    let changed = false;
     try {
-      let changed = false;
+      // Trading configuration first: a stale revision or an active-trade
+      // lock stops the save before any other change is written.
+      if (Object.keys(guardedPayload).length > 0) {
+        const saved = await AdminConfigApi.updateAccountTrading(login, guardedPayload, config.revision, form.reason);
+        setConfig(saved);
+        changed = true;
+      }
+
       const profilePayload = buildChangedProfilePayload(form, original);
 
       if (Object.keys(profilePayload).length > 0) {
@@ -131,7 +204,11 @@ const AccountEditPopup = ({ account, onClose, onSaved }) => {
       }
       onClose();
     } catch (err) {
-      setError(err?.response?.data?.message || err?.message || 'Failed to update account.');
+      const parsed = readConfigError(err, 'Failed to update account.');
+      setError(describeConfigError(err, 'Failed to update account.'));
+      setLockDetails(parsed.lockDetails);
+      if (parsed.kind === 'conflict') reloadConfig().catch(() => {});
+      if (changed) onSaved?.();
     } finally {
       setIsSaving(false);
     }
@@ -175,6 +252,19 @@ const AccountEditPopup = ({ account, onClose, onSaved }) => {
           <Field label="Currency:">
             <input value={form.currency} onChange={setField('currency')} className={inputClassName} />
           </Field>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Leverage 1:">
+              <input type="number" min="1" max="10000" step="1" value={form.leverage} onChange={setField('leverage')} aria-label="Leverage" className={inputClassName} />
+            </Field>
+            <Field label="Account mode:">
+              <select value={form.accountMode} onChange={setField('accountMode')} aria-label="Account mode" className={selectClassName}>
+                {ACCOUNT_MODE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </Field>
+          </div>
+          <div className="text-[10px] text-[color:var(--text-muted)] pl-[108px] -mt-1">
+            Group, currency, leverage and account mode cannot change while the account has open positions, pending orders or unfinished orders.
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <Field label="Balance:">
@@ -201,10 +291,27 @@ const AccountEditPopup = ({ account, onClose, onSaved }) => {
             <input value={form.reason} onChange={setField('reason')} className={inputClassName} />
           </Field>
 
-          {error && <div className="text-red-400 text-[11px] text-center mt-1">{error}</div>}
+          {error && <div role="alert" className="text-red-400 text-[11px] text-center mt-1">{error}</div>}
+          {lockDetails.length > 0 && (
+            <ul aria-label="Why the change is locked" className="text-red-300 text-[11px] list-disc pl-8 -mt-1">
+              {lockDetails.map((detail) => <li key={detail}>{detail}</li>)}
+            </ul>
+          )}
+          <AccountTradeControls key={login} login={login} />
+          <PendingTradeControls key={'pending-'+login} login={login} />
+          <CustomerNativePending key={'native:'+login} login={login} canPlace={hasPermission(nativeCancelUser,PERMISSION_KEYS.MANAGE_TRADES)} canCancel={hasPermission(nativeCancelUser,PERMISSION_KEYS.MANAGE_TRADES)||hasPermission(nativeCancelUser,PERMISSION_KEYS.CLOSE_POSITIONS)} />
         </div>
 
         <div className="px-4 py-3 bg-[color:var(--bg-app)] flex justify-end gap-2 border-t border-white/5 select-none shrink-0">
+          <button
+            type="button"
+            onClick={() => setFundingOpen(true)}
+            disabled={isSaving || !login}
+            title="Create a deposit or withdrawal request (posted to the ledger when approved)"
+            className="mr-auto px-3 h-[24px] flex items-center gap-1.5 bg-transparent border border-[color:var(--border-strong)] rounded text-[12px] text-white hover:bg-white/10 transition-all disabled:opacity-50"
+          >
+            <Wallet size={12} /> Funding...
+          </button>
           <button
             onClick={handleSave}
             disabled={isSaving}
@@ -221,6 +328,9 @@ const AccountEditPopup = ({ account, onClose, onSaved }) => {
           </button>
         </div>
       </MotionDiv>
+      {fundingOpen && (
+        <FundingPopup login={login} currency={config.currency || form.currency} onClose={() => setFundingOpen(false)} />
+      )}
     </div>
   );
 };

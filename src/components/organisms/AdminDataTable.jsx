@@ -1,4 +1,5 @@
 import { sortToolbarRows } from '../../utils/toolbarActions';
+import { formatDealActionLabel, formatDealEntryLabel } from '../../utils/dealDisplayLabels';
 import React, { useState } from 'react';
 import {
   clientsAccountsTableData,
@@ -41,6 +42,7 @@ import AdminContextMenu from './AdminContextMenu';
 import NetworkCluster from './NetworkCluster';
 import AllocationsView from './AllocationsView';
 import GatewaysView from './GatewaysView';
+import DownstreamAccessView from './DownstreamAccessView';
 import ServerStatusPanel from './ServerStatusPanel';
 import ServerPropertiesPopup from '../RIGHTCLICKJPOPUPS/ServerPropertiesPopup';
 import CreateGroupPopup from '../RIGHTCLICKJPOPUPS/CreateGroupPopup';
@@ -210,6 +212,7 @@ const IMPORTED_VIEW_TYPES = new Set([
   'Reconciliation',
   'Chargebacks',
   'Gateways',
+  'Downstream access',
   'Feed Tenants',
 ]);
 
@@ -356,9 +359,9 @@ const renderTableValue = (value) => (
 );
 
 const getOrderRow = (order, idx) => ({
-  id: pickDefined(order, ['ticket', 'Ticket', 'order', 'Order', 'orderTicket', 'OrderTicket'], idx),
+  id: pickDefined(order, ['ticket_text', 'order_ticket_text', 'ticket', 'Ticket', 'order', 'Order', 'orderTicket', 'OrderTicket'], idx),
   raw: order,
-  ticket: pickDefined(order, ['ticket', 'Ticket', 'order', 'Order', 'orderTicket', 'OrderTicket']),
+  ticket: pickDefined(order, ['ticket_text', 'order_ticket_text', 'ticket', 'Ticket', 'order', 'Order', 'orderTicket', 'OrderTicket']),
   login: pickDefined(order, ['login', 'Login', 'accountLogin', 'account_login']),
   time: formatTradeTimestamp(pickDefined(order, ['timeSetupFormatted', 'timeDoneFormatted', 'timeSetup', 'TimeSetup', 'timeDone', 'TimeDone', 'time', 'Time', 'openTime', 'OpenTime', 'closeTime', 'CloseTime'])),
   timeMs: getOrderTimestampMs(order),
@@ -373,7 +376,7 @@ const getOrderRow = (order, idx) => ({
 });
 
 const getPositionRow = (position, idx) => {
-  const ticket = pickDefined(position, ['ticket', 'positionTicket', 'Position', 'position', 'id'], idx);
+  const ticket = pickDefined(position, ['position_ticket_text', 'ticket_text', 'ticket', 'positionTicket', 'Position', 'position', 'id'], idx);
   const rawTime = pickDefined(position, ['timeCreateFormatted', 'timeCreate', 'TimeCreate', 'time', 'Time', 'openTime', 'OpenTime']);
 
   return {
@@ -1537,6 +1540,15 @@ const AdminDataTable = ({
     );
   }
 
+  // --- C09 DOWNSTREAM ACCESS INJECTION (broker Admin only) ---
+  if (viewType === 'Downstream access') {
+    return (
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <DownstreamAccessView />
+      </div>
+    );
+  }
+
   // --- FEED TENANTS INJECTION ---
   if (viewType === 'Feed Tenants') {
     return (
@@ -1957,13 +1969,18 @@ const AdminDataTable = ({
                   if (col.label === 'Status') val = row.status;
                   if (col.label === 'Comment') val = row.comment;
 
+                  const displayVal = viewType === 'Deals' && col.label === 'Action'
+                    ? formatDealActionLabel(val)
+                    : viewType === 'Deals' && col.label === 'Entry'
+                      ? formatDealEntryLabel(val)
+                      : val;
                   const isSideCol = col.label === 'Side' || col.label === 'Action';
-                  const sideIsBuy = isSideCol && String(val).toLowerCase() === 'buy';
-                  const sideIsSell = isSideCol && String(val).toLowerCase() === 'sell';
+                  const sideIsBuy = isSideCol && String(displayVal).toLowerCase() === 'buy';
+                  const sideIsSell = isSideCol && String(displayVal).toLowerCase() === 'sell';
 
                   return (
                     <div key={cIdx} className={`${col.width} px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 ${col.label === 'Profit' && row.profit > 0 ? 'text-[color:var(--success-500)]' : ''} ${col.label === 'Profit' && row.profit < 0 ? 'text-[color:var(--danger-500)]' : ''} ${sideIsBuy ? 'text-[color:var(--info-500)]' : ''} ${sideIsSell ? 'text-[color:var(--danger-500)]' : ''} truncate`}>
-                       {renderTableValue(val)}
+                       {renderTableValue(displayVal)}
                     </div>
                   );
                 })}
