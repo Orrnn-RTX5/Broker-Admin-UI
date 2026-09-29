@@ -1,3 +1,4 @@
+import './lp-connections.css';
 import React, { useEffect, useRef, useState } from 'react';
 import LPRuntimeReadinessPanel from './LPRuntimeReadinessPanel.jsx';
 import LPSourceGapPanel from './LPSourceGapPanel.jsx';
@@ -8,7 +9,16 @@ import { emptyConnection, emptyCredentials, saveConnectionPayload, connectionErr
 
 const secrets = () => ({ quote: emptyCredentials(), trade: emptyCredentials() });
 const inputClass = 'ui-input ui-input-sm w-full';
-const buttonClass = 'rounded border border-white/20 px-3 py-2 disabled:opacity-40';
+const buttonClass = 'ui-btn ui-btn-secondary';
+const primaryButtonClass = 'ui-btn ui-btn-primary';
+// Presentation only: colour a FIX session state reported by the runtime.
+const sessionTone = state => ({ connected: 'is-ok', connecting: 'is-warn', disconnected: 'is-bad', failed: 'is-bad', stop_failed: 'is-bad' }[state] || '');
+const roleInfo = {
+  quote: { sub: 'Prices · streams market data from the provider', subID: 'Leave empty' },
+  trade: { sub: 'Orders · places and manages orders with the provider', subID: 'Usually TRADE' },
+};
+const credentialFields = [['sender_comp_id', 'Sender Comp ID'], ['sender_sub_id', 'Sender sub ID (optional)'], ['username', 'Username'], ['password', 'Password'], ['account_id', 'Account ID']];
+const credentialHint = (role, key) => ({ sender_comp_id: 'e.g. demo.pepperstone.5328266', sender_sub_id: roleInfo[role].subID, account_id: 'Last part of Sender Comp ID' }[key]);
 function Workspace() {
   const [records, setRecords] = useState([]);
   const [config, setConfig] = useState(emptyConnection);
@@ -61,34 +71,89 @@ function Workspace() {
   const field = (key, value) => setConfig(old => ({ ...old, [key]: value }));
   const sessionField = (role, key, value) => setConfig(old => ({ ...old, [role]: { ...old[role], [key]: value } }));
   const endpointField = (role, key, value) => setConfig(old => ({ ...old, [role]: { ...old[role], endpoint: { ...old[role].endpoint, [key]: value } } }));
-  return <section aria-label="Named FIX connections" className="mb-6 rounded border border-white/15 p-4 space-y-4">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-base font-semibold">Named FIX connections</h2><p className="text-xs text-[color:var(--text-muted)]">Independent quote and trade sessions. Saving does not select a quote feed or authorize trading.</p></div>
-      <div className="flex gap-2"><button type="button" className={buttonClass} disabled={busy} onClick={refresh}>Refresh</button><button type="button" className={buttonClass} disabled={busy} onClick={() => select(null)}>New connection</button></div></div>
-    <label className="block text-xs">Saved connections<select className={inputClass} value={config.revision ? config.id : ''} disabled={busy} onChange={e => select(records.find(item => item.config.id === e.target.value))}><option value="">New connection</option>{records.map(item => <option key={item.config.id} value={item.config.id}>{item.config.name} · {item.config.enabled ? 'Enabled' : 'Disabled'} · revision {item.config.revision}</option>)}</select></label>
-    {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
-    {message && <p role="status" className="text-sm">{message}</p>}
-    {config.revision > 0 && <LPRuntimeReadinessPanel key={`${config.id}:${config.revision}`} connectionID={config.id} load={readLPRuntimeReadiness} />}
-    {config.revision > 0 && <LPSourceGapPanel key={config.id} connectionID={config.id} revision={config.revision} />}
-    <div className="text-xs flex flex-wrap gap-4"><span>Saved revision: {config.revision || 'Not saved'}</span><span>Runtime revision: {status?.revision ?? 'Unknown'}</span><span>Quote: {status?.quote || 'Unknown'}</span><span>Trade: {status?.trade || 'Unknown'}</span>{status?.error_code && <span>{status.error_code}</span>}</div>
-    {supplied && <p className="text-xs">RTX supplied connection. Only enable or disable is available.</p>}
-    <form onSubmit={save} autoComplete="off" className="space-y-4">
-      <fieldset disabled={busy || supplied || conflict} className="space-y-4 disabled:opacity-60">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">{[['id','Connection ID'],['name','Name'],['environment','Environment']].map(([key,label]) => <label key={key} className="text-xs">{label}<input className={inputClass} value={config[key]} disabled={key === 'id' && config.revision > 0} onChange={e => field(key,e.target.value)} required /></label>)}
-          <label className="text-xs">Provider<input className={inputClass} value={config.provider === 'cserver' ? 'cServer FIX' : config.provider} readOnly /></label>
-          <label className="text-xs">Account mode<select className={inputClass} value={config.account_mode} onChange={e => field('account_mode',e.target.value)}><option value="hedging">Hedging</option><option value="netting">Netting</option></select></label>
-          <label className="text-xs flex items-center gap-2"><input type="checkbox" checked={config.enabled} onChange={e => field('enabled',e.target.checked)} />Connection enabled</label></div>
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">{['quote','trade'].map(role => <fieldset key={role} className="border border-white/15 rounded p-3 space-y-3"><legend className="capitalize px-1">{role} session</legend>
-          <label className="text-xs flex gap-2"><input type="checkbox" checked={config[role].enabled} onChange={e => sessionField(role,'enabled',e.target.checked)} />Session enabled</label>
-          <div className="grid grid-cols-2 gap-3">{[['host','Host'],['port','Port'],['target_comp_id','Target Comp ID']].map(([key,label]) => <label key={key} className="text-xs">{label}<input className={inputClass} type={key === 'port' ? 'number' : 'text'} min={key === 'port' ? 0 : undefined} max={key === 'port' ? 65535 : undefined} value={config[role].endpoint[key]} onChange={e => endpointField(role,key,key === 'port' ? Number(e.target.value) : e.target.value)} /></label>)}<label className="text-xs flex items-center gap-2"><input type="checkbox" checked={config[role].endpoint.tls} onChange={e => endpointField(role,'tls',e.target.checked)} />TLS</label></div>
-          {!supplied && <><p className="text-xs text-[color:var(--text-muted)]">Write-only credentials. Leave every field empty to retain saved credentials. To replace, enter all required fields. Quote and trade must use the same provider account.</p><div className="grid grid-cols-2 gap-3">{[['sender_comp_id','Sender Comp ID'],['sender_sub_id','Sender sub ID (optional)'],['username','Username'],['password','Password'],['account_id','Account ID']].map(([key,label]) => <label key={key} className="text-xs">{label}<input className={inputClass} type="password" autoComplete="new-password" value={credentials[role][key]} onChange={e => setCredentials(old => ({ ...old,[role]: { ...old[role],[key]:e.target.value } }))} /></label>)}</div></>}
+  const savedConfig = records.find(item => item.config.id === config.id)?.config;
+  const isNew = !config.revision;
+  const hasCredentialEdits = Object.values(credentials).some(role => Object.values(role).some(Boolean));
+  const hasUnsavedChanges = (isNew ? JSON.stringify(config) !== JSON.stringify(emptyConnection()) : Boolean(savedConfig && JSON.stringify(config) !== JSON.stringify(savedConfig))) || hasCredentialEdits;
+  const confirmDiscard = () => !hasUnsavedChanges || window.confirm('Discard unsaved connection changes?');
+  const confirmTest = () => !hasCredentialEdits || window.confirm('Test uses saved settings and will clear the credentials entered here. Continue?');
+  const chooseConnection = record => { if (confirmDiscard()) select(record); };
+  const refreshSelection = () => { if (confirmDiscard()) refresh(); };
+  const runtimeRevision = status?.revision;
+  const notApplied = config.revision > 0 && runtimeRevision != null && String(runtimeRevision) !== String(config.revision);
+  const endpointInput = (role, key, label) => <div className="nfc-field"><label>{label}<input className={inputClass} type={key === 'port' ? 'number' : 'text'} min={key === 'port' ? 0 : undefined} max={key === 'port' ? 65535 : undefined} value={config[role].endpoint[key]} onChange={e => endpointField(role, key, key === 'port' ? Number(e.target.value) : e.target.value)} /></label></div>;
+  return <section aria-label="Named FIX connections" className="nfc">
+    <div className="nfc-head">
+      <div><h2 className="nfc-title">Named FIX connections</h2><p className="nfc-sub">Each connection has two independent FIX sessions: a quote session for prices and a trade session for orders. Saving does not select a quote feed or authorize trading.</p></div>
+      <div className="nfc-head-actions"><button type="button" className={buttonClass} disabled={busy} onClick={refreshSelection}>Refresh</button><button type="button" className={buttonClass} disabled={busy} onClick={() => chooseConnection(null)}>New connection</button></div>
+    </div>
+    <div className="nfc-picker nfc-field">
+      <label>Saved connections<select className={inputClass} value={config.revision ? config.id : ''} disabled={busy} onChange={e => chooseConnection(records.find(item => item.config.id === e.target.value))}><option value="">New connection</option>{records.map(item => <option key={item.config.id} value={item.config.id}>{item.config.name} · {item.config.enabled ? 'Enabled' : 'Disabled'} · revision {item.config.revision}</option>)}</select></label>
+    </div>
+    <div className="nfc-context">
+      <strong>{isNew ? 'New connection' : config.name || config.id}</strong>
+      <span>{isNew ? 'Enter the connection details, then save to inspect runtime status and test the saved settings.' : hasUnsavedChanges ? 'Unsaved changes. Save to store your edits; connection actions use the saved settings. Check runtime revision to confirm application.' : 'Showing saved settings and current runtime status.'}</span>
+    </div>
+    <div className="nfc-status" role="group" aria-label="Connection status summary">
+      <div className="nfc-status-group">
+        <span className={`nfc-pill ${sessionTone(status?.quote)}`} title="Quote session (prices)"><span className="nfc-pill-label">Quote:</span> {isNew ? 'Not saved' : status?.quote || 'Unknown'}</span>
+        <span className={`nfc-pill ${sessionTone(status?.trade)}`} title="Trade session (orders)"><span className="nfc-pill-label">Trade:</span> {isNew ? 'Not saved' : status?.trade || 'Unknown'}</span>
+        {savedConfig && <span className={`nfc-pill ${savedConfig.enabled ? 'is-ok' : ''}`} title="Saved connection switch">{savedConfig.enabled ? 'Enabled' : 'Disabled'}</span>}
+      </div>
+      <span className="nfc-status-sep" aria-hidden="true" />
+      <div className="nfc-status-group">
+        <span className="nfc-stat">Saved revision: <strong>{config.revision || 'Not saved'}</strong></span>
+        <span className="nfc-stat" title="Revision currently applied by the running FIX service">Runtime revision: <strong>{isNew ? 'Not available' : status?.revision ?? 'Unknown'}</strong></span>
+        {notApplied && <span className="nfc-pill is-warn">Latest save not applied yet</span>}
+        {status?.error_code && <span className="nfc-pill is-bad">{status.error_code}</span>}
+      </div>
+    </div>
+    {conflict && <p role="alert" className="nfc-msg is-warn">Saved settings changed or their final state is uncertain. Refresh the connection before editing or taking another action.</p>}
+    {error && <p role="alert" className="nfc-msg is-error">{error}</p>}
+    {message && <p role="status" className="nfc-msg is-ok">{message}</p>}
+    {supplied && <p className="nfc-shared-note">RTX supplied connection. Only enable or disable is available.</p>}
+    <form onSubmit={save} autoComplete="off" className="nfc-form">
+      <fieldset disabled={busy || supplied || conflict} className="nfc-fieldset">
+        <div className="nfc-card">
+          <div className="nfc-card-head"><h3 className="nfc-card-title">General</h3><span className="nfc-card-sub">Identity and account settings shared by both sessions</span></div>
+          <div className="nfc-grid">{[['id','Connection ID'],['name','Name'],['environment','Environment']].map(([key,label]) => <div key={key} className="nfc-field"><label>{label}<input className={inputClass} value={config[key]} disabled={key === 'id' && config.revision > 0} aria-describedby={key === 'id' || key === 'environment' ? `nfc-${key}-hint` : undefined} onChange={e => field(key,e.target.value)} required /></label>{key === 'id' && <span id="nfc-id-hint" className="nfc-hint">{config.revision > 0 ? 'Fixed after first save' : 'Letters, numbers, dot, underscore or hyphen'}</span>}{key === 'environment' && <span id="nfc-environment-hint" className="nfc-hint">e.g. demo or live</span>}</div>)}
+            <div className="nfc-field"><label>Provider<input className={inputClass} value={config.provider === 'cserver' ? 'cServer FIX' : config.provider} readOnly /></label></div>
+            <div className="nfc-field"><label>Account mode<select className={inputClass} value={config.account_mode} onChange={e => field('account_mode',e.target.value)}><option value="hedging">Hedging</option><option value="netting">Netting</option></select></label></div>
+            <div className="nfc-field is-check"><label className="nfc-check"><input type="checkbox" checked={config.enabled} onChange={e => field('enabled',e.target.checked)} />Connection enabled</label><span className="nfc-hint">Master switch for both sessions</span></div></div>
+        </div>
+        {!supplied && <p className="nfc-shared-note">Quote and trade must use the same provider account.</p>}
+        <div className="nfc-sessions">{['quote','trade'].map(role => <fieldset key={role} className={`nfc-session is-${role}`}><legend>{role} session</legend>
+          <p className="nfc-session-sub">{roleInfo[role].sub}</p>
+          <div className="nfc-group">
+            <h4 className="nfc-group-title">Endpoint</h4>
+            <div className="nfc-grid-2">
+              <div className="nfc-field nfc-span-2"><label className="nfc-check"><input type="checkbox" checked={config[role].enabled} onChange={e => sessionField(role,'enabled',e.target.checked)} />Session enabled</label></div>
+              {endpointInput(role, 'host', 'Host')}
+              {endpointInput(role, 'port', 'Port')}
+              {endpointInput(role, 'target_comp_id', 'Target Comp ID')}
+              <div className="nfc-field nfc-tls is-check"><label className="nfc-check"><input type="checkbox" checked={config[role].endpoint.tls} onChange={e => endpointField(role,'tls',e.target.checked)} />TLS</label>{!config[role].endpoint.tls && <span className="nfc-inline-warn">cServer FIX ports 5211/5212 require TLS</span>}</div>
+            </div>
+          </div>
+          {!supplied && <div className="nfc-group">
+            <h4 className="nfc-group-title">Credentials</h4>
+            <p className="nfc-group-hint">{isNew ? 'Required when enabling a new session: Sender Comp ID, Username, Password and Account ID.' : 'Write-only. Leave blank to keep saved credentials. To replace, fill Sender Comp ID, Username, Password and Account ID.'}</p>
+            <div className="nfc-grid-2">{credentialFields.map(([key,label]) => <div key={key} className="nfc-field"><label>{label}<input className={inputClass} type="password" autoComplete="new-password" aria-describedby={credentialHint(role, key) ? `nfc-${role}-${key}-hint` : undefined} value={credentials[role][key]} onChange={e => setCredentials(old => ({ ...old,[role]: { ...old[role],[key]:e.target.value } }))} /></label>{credentialHint(role, key) && <span id={`nfc-${role}-${key}-hint`} className="nfc-hint">{credentialHint(role, key)}</span>}</div>)}</div>
+          </div>}
         </fieldset>)}</div>
       </fieldset>
-      <div className="flex flex-wrap gap-2">{!supplied && <button className={buttonClass} type="submit" disabled={busy || conflict}>Save configuration</button>}
-        <button className={buttonClass} type="button" disabled={busy || conflict || !config.revision} onClick={() => { const saved = records.find(item => item.config.id === config.id)?.config; if (saved) run(() => enableLPConnection(saved,!saved.enabled)); }}>Toggle saved connection {records.find(item => item.config.id === config.id)?.config.enabled ? 'off' : 'on'}</button>
-        <button className={buttonClass} type="button" disabled={busy || conflict || !config.revision || !records.find(item => item.config.id === config.id)?.config.enabled} onClick={() => run(() => testLPConnection(config.id))}>Test saved connection (logon only)</button>
-        {busy && <span role="status" className="text-xs self-center">Working…</span>}</div>
-      <p className="text-xs text-[color:var(--text-muted)]">Test uses saved settings and submits no orders. A successful logon does not establish execution capability.</p>
+      <div className="nfc-footer">
+        <div className="nfc-actions">{!supplied && <button className={primaryButtonClass} type="submit" disabled={busy || conflict}>Save configuration</button>}
+          <button className={buttonClass} type="button" disabled={busy || conflict || !config.revision} onClick={() => { if (savedConfig && confirmDiscard()) run(() => enableLPConnection(savedConfig,!savedConfig.enabled)); }}>Toggle saved connection {savedConfig?.enabled ? 'off' : 'on'}</button>
+          <button className={buttonClass} type="button" disabled={busy || conflict || !config.revision || !savedConfig?.enabled} onClick={() => { if (confirmTest()) run(() => testLPConnection(config.id)); }}>Test saved connection (logon only)</button>
+          {busy && <span role="status" className="nfc-working">Working…</span>}</div>
+        {!isNew && !savedConfig?.enabled && <p className="nfc-note">Enable the saved connection to run a logon test.</p>}
+        <p className="nfc-note">Test uses saved settings and submits no orders. A successful logon does not establish execution capability.</p>
+      </div>
     </form>
+    {config.revision > 0 && <div className="nfc-diagnostics">
+      {config.revision > 0 && <LPRuntimeReadinessPanel key={`${config.id}:${config.revision}`} connectionID={config.id} load={readLPRuntimeReadiness} />}
+      {config.revision > 0 && <LPSourceGapPanel key={config.id} connectionID={config.id} revision={config.revision} />}
+    </div>}
   </section>;
 }
 export default function NamedLPConnectionsPanel() {

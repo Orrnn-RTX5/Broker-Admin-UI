@@ -1,0 +1,123 @@
+/* Named FIX connections (Gateways page). Presentation only; texts and labels
+   are relied on by acceptance scripts, so layout is done with wrappers. */
+.nfc{margin-bottom:24px;padding:16px;border:1px solid var(--border-default,#333);border-radius:var(--radius-xl,8px);background:var(--bg-surface-1,#1e1e1e);color:var(--text-primary,#ccc);font-size:12px;line-height:1.45;min-width:0;display:flex;flex-direction:column;gap:14px}
+.nfc *{box-sizing:border-box}
+.nfc p{margin:0}
+
+/* Header */
+.nfc-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px}
+.nfc-title{margin:0;font-size:15px;font-weight:600;color:#fff;letter-spacing:.01em}
+.nfc-sub{margin-top:2px;font-size:12px;color:var(--text-secondary,#9d9d9d);max-width:680px}
+.nfc-head-actions{display:flex;flex-wrap:wrap;gap:8px}
+
+/* Saved connections picker */
+.nfc-picker,.nfc-picker.nfc-field{display:flex;flex-direction:row;flex-wrap:wrap;align-items:flex-end;gap:12px}
+.nfc-picker > label{flex:1 1 320px;max-width:560px}
+.nfc-context{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;color:var(--text-secondary,#9d9d9d);font-size:12px}
+.nfc-context strong{color:var(--text-primary,#ccc);font-size:13px;overflow-wrap:anywhere}
+
+/* Generic field */
+.nfc label{font-size:12px;color:var(--text-secondary,#9d9d9d)}
+.nfc-field{display:flex;flex-direction:column;gap:3px;min-width:0}
+.nfc-field > label{display:flex;flex-direction:column;gap:4px;font-weight:500}
+.nfc-field > label > .ui-input{color:var(--text-primary,#ccc)}
+.nfc-field input[readonly]{opacity:.75;cursor:default}
+.nfc-hint{font-size:11px;color:var(--text-muted,#6e6e6e);line-height:1.35}
+.nfc-check{display:inline-flex!important;flex-direction:row!important;align-items:center;gap:8px;min-height:28px;font-size:12px;color:var(--text-primary,#ccc)!important;cursor:pointer;user-select:none}
+.nfc-check input{width:14px;height:14px;margin:0;accent-color:var(--accent-500,#0078d4);cursor:pointer}
+.nfc-check-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.nfc :is(button,input,select):focus-visible{outline:2px solid var(--info-500,#3794ff);outline-offset:2px}
+
+/* Status summary strip */
+.nfc-status{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:10px 12px;border:1px solid var(--border-default,#333);border-radius:var(--radius-lg,6px);background:var(--bg-surface-2,#252526)}
+.nfc-status-group{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.nfc-status-sep{width:1px;align-self:stretch;min-height:18px;background:var(--border-strong,#454545)}
+.nfc-stat{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--text-secondary,#9d9d9d)}
+.nfc-stat strong{color:var(--text-primary,#ccc);font-weight:600;font-variant-numeric:tabular-nums}
+.nfc-pill{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;border:1px solid var(--border,#333);background:var(--surface-3,#2a2d2e);color:var(--text-secondary,#9d9d9d);font-size:11px;font-weight:600;line-height:1.5;white-space:nowrap}
+.nfc-pill-label{font-weight:500;opacity:.85}
+.nfc-pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+.nfc-pill.is-plain::before{display:none}
+.nfc-pill.is-ok{background:var(--ok-soft);color:var(--ok-text);border-color:var(--ok-border)}
+.nfc-pill.is-warn{background:var(--warn-soft);color:var(--warn-text);border-color:var(--warn-border)}
+.nfc-pill.is-bad{background:var(--danger-soft);color:var(--danger-text);border-color:var(--danger-border)}
+.nfc-pill.is-info{background:var(--info-soft);color:var(--info-text);border-color:var(--info-border)}
+
+/* Cards */
+.nfc-card{border:1px solid var(--border-default,#333);border-radius:var(--radius-lg,6px);background:var(--bg-surface-2,#252526);padding:12px 14px;min-width:0}
+.nfc-card-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;margin-bottom:10px}
+.nfc-card-title{margin:0;font-size:13px;font-weight:600;color:#fff}
+.nfc-card-sub{font-size:11px;color:var(--text-muted,#6e6e6e)}
+.nfc-grid{display:grid;gap:10px 14px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));align-items:start}
+.nfc-grid-2{display:grid;gap:10px 12px;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+.nfc-span-2{grid-column:1 / -1}
+@media (max-width:560px){.nfc-grid-2{grid-template-columns:minmax(0,1fr)}.nfc{padding:12px}}
+
+/* Form */
+.nfc-form{display:flex;flex-direction:column;gap:14px}
+.nfc-fieldset{margin:0;padding:0;border:0;min-width:0;display:flex;flex-direction:column;gap:14px}
+.nfc-fieldset:disabled{opacity:.6}
+.nfc-shared-note{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--info-border);border-radius:var(--radius-md,4px);background:var(--info-soft);color:var(--info-text);font-size:12px}
+.nfc-sessions{display:grid;gap:14px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:1100px){.nfc-sessions{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Session card: a fieldset whose legend text must stay "<role> session" */
+.nfc-session{margin:0;min-width:0;border:1px solid var(--border-default,#333);border-radius:var(--radius-lg,6px);background:var(--bg-surface-2,#252526);padding:12px 14px}
+.nfc-session > legend{float:left;width:100%;padding:0;margin:0 0 2px;font-size:13px;font-weight:600;color:#fff;text-transform:capitalize}
+.nfc-session > legend + *{clear:both}
+.nfc-session-sub{font-size:11px;color:var(--text-muted,#6e6e6e);margin-bottom:10px!important}
+.nfc-session.is-trade{border-top:2px solid color-mix(in srgb,var(--warning-500,#cca700) 55%,transparent)}
+.nfc-session.is-quote{border-top:2px solid color-mix(in srgb,var(--info-500,#3794ff) 55%,transparent)}
+.nfc-group{padding:10px 0 0;border-top:1px solid var(--border-subtle,#2b2b2b);margin-top:10px}
+.nfc-group:first-of-type{border-top:0;margin-top:0;padding-top:0}
+.nfc-group-title{margin:0 0 8px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-secondary,#9d9d9d)}
+.nfc-group-hint{font-size:11px;color:var(--text-muted,#6e6e6e);margin:-4px 0 8px!important}
+.nfc-tls{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.nfc-inline-warn{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:var(--radius-sm,3px);border:1px solid var(--warn-border);background:var(--warn-soft);color:var(--warn-text);font-size:11px}
+.nfc-inline-warn::before{content:"!";display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:currentColor;color:var(--bg-surface-2,#252526);font-size:9px;font-weight:700}
+
+/* Actions footer */
+.nfc-footer{display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid var(--border-default,#333)}
+.nfc-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.nfc-note{font-size:11px;color:var(--text-muted,#6e6e6e)}
+.nfc-msg{padding:7px 10px;border-radius:var(--radius-md,4px);font-size:12px;border:1px solid var(--border,#333);background:var(--surface-3,#2a2d2e)}
+.nfc-msg.is-error{border-color:var(--danger-border);background:var(--danger-soft);color:var(--danger-text)}
+.nfc-msg.is-warn{border-color:var(--warn-border);background:var(--warn-soft);color:var(--warn-text)}
+.nfc-msg.is-ok{border-color:var(--info-border);background:var(--info-soft);color:var(--text-primary,#ccc)}
+.nfc-working{font-size:11px;color:var(--text-secondary,#9d9d9d)}
+
+/* Diagnostics section */
+.nfc-diagnostics{display:flex;flex-direction:column;gap:12px}
+
+/* Runtime inspection card */
+.nfc-runtime{border:1px solid var(--border-default,#333);border-radius:var(--radius-lg,6px);background:var(--bg-surface-2,#252526);padding:12px 14px;font-size:12px;min-width:0;display:flex;flex-direction:column;gap:10px}
+.nfc-runtime-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:8px 12px}
+.nfc-runtime-head p{font-size:11px;color:var(--text-muted,#6e6e6e);margin-top:2px}
+.nfc-runtime-tiles{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))}
+.nfc-tile{border:1px solid var(--border-default,#333);border-radius:var(--radius-md,4px);background:var(--bg-surface-1,#1e1e1e);padding:10px 12px;min-width:0}
+.nfc-tile-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 10px;margin:0 0 8px!important}
+.nfc-tile-name{font-size:12px;font-weight:600;color:#fff}
+.nfc-tile .nfc-note{margin-top:8px!important;line-height:1.45}
+.nfc-table-wrap{overflow-x:auto;border:1px solid var(--border-subtle,#2b2b2b);border-radius:var(--radius-sm,3px)}
+.nfc-table{width:100%;border-collapse:collapse;font-size:11px;white-space:nowrap}
+.nfc-table th{padding:5px 8px;text-align:left;font-weight:600;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-secondary,#9d9d9d);background:var(--bg-surface-3,#2a2d2e);border-bottom:1px solid var(--border-default,#333)}
+.nfc-table td{padding:4px 8px;border-bottom:1px solid var(--border-subtle,#2b2b2b);color:var(--text-primary,#ccc)}
+.nfc-table tbody tr:nth-child(even) td{background:rgba(255,255,255,.025)}
+.nfc-table tbody tr:last-child td{border-bottom:0}
+.nfc-table tbody tr:hover td{background:rgba(255,255,255,.05)}
+.nfc-yn{display:inline-flex;align-items:center;gap:4px;font-weight:500}
+.nfc-yn::before{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;font-size:9px;font-weight:700;line-height:1}
+.nfc-yn.is-yes{color:var(--ok-text)}
+.nfc-yn.is-yes::before{content:"\2713";background:var(--ok-soft)}
+.nfc-yn.is-no{color:var(--text-muted,#6e6e6e)}
+.nfc-yn.is-no::before{content:"\2715";background:var(--surface-3,#2a2d2e)}
+@media (min-width:561px){.nfc-field.is-check{padding-top:19px}}
+@media (max-width:560px){
+  .nfc-head-actions,.nfc-actions{width:100%}
+  .nfc-head-actions .ui-btn{flex:1 1 auto}
+  .nfc-actions .ui-btn{flex:1 1 100%;justify-content:center}
+  .nfc-picker > label{flex-basis:100%;min-width:0}
+  .nfc-status{align-items:stretch}
+  .nfc-status-sep{width:100%;height:1px;min-height:0}
+  .nfc-status-group{width:100%}
+}
