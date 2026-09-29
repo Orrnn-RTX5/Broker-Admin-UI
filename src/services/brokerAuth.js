@@ -88,15 +88,65 @@ const USE_MOCK_DISCOVERY =
       ''
   ) === 'true';
 
-export const RUNTIME_BROKER_ID =
-  (getRuntimeValue('BROKER_ID', 'VITE_BROKER_ID') ||
+const RUNTIME_BROKER_ID_RAW = String(
+  getRuntimeValue('BROKER_ID', 'VITE_BROKER_ID') ||
   viteEnv.VITE_BROKER_ID ||
-  '').trim().toLowerCase();
+  ''
+).trim();
+
+export const RUNTIME_BROKER_ID = RUNTIME_BROKER_ID_RAW.toLowerCase();
 
 export const RUNTIME_DEFAULT_MT5_SERVER =
   getRuntimeValue('DEFAULT_MT5_SERVER', 'VITE_DEFAULT_MT5_SERVER') ||
   viteEnv.VITE_DEFAULT_MT5_SERVER ||
   '';
+
+const readEnvValue = (key) =>
+  String(getRuntimeValue(key, `VITE_${key}`) || viteEnv[`VITE_${key}`] || '').trim();
+
+// ---------------------------------------------------------------------------
+// Broker pinned by the environment (.env / runtime-config.js). When BROKER_ID
+// and API_HOST are both set, the admin connects to exactly this broker, so
+// pointing .env at another broker's hosts switches the installation.
+// ---------------------------------------------------------------------------
+const buildConfiguredBrokerEntry = () => {
+  if (!RUNTIME_BROKER_ID_RAW || !RUNTIME_API_HOST) return null;
+
+  const wsHost = readEnvValue('WS_HOST').replace(/\/+$/, '');
+  const feedWsUrl = readEnvValue('FEED_WS_URL') ||
+    (wsHost ? (wsHost.endsWith('/ws/feed') ? wsHost : `${wsHost}/ws/feed`) : '');
+  const name = readEnvValue('BROKER_NAME') || RUNTIME_BROKER_ID_RAW;
+
+  // server is the login handle; empty means "keep a known handle, else derive".
+  const entry = {
+    broker_id: RUNTIME_BROKER_ID_RAW,
+    name,
+    broker_name: name,
+    status: 'active',
+    server: readEnvValue('BROKER_SERVER'),
+    backend_url: RUNTIME_API_HOST,
+    ext_api_url: RUNTIME_API_HOST_EXT || RUNTIME_API_HOST,
+    server_url: RUNTIME_API_HOST,
+    server_ip: String(RUNTIME_DEFAULT_MT5_SERVER || '').trim(),
+  };
+  if (feedWsUrl) {
+    entry.ws_url = feedWsUrl;
+    entry.feed_ws_url = feedWsUrl;
+  }
+  const feedStatusUrl = readEnvValue('FEED_STATUS_URL');
+  if (feedStatusUrl) entry.feed_status_url = feedStatusUrl;
+  return entry;
+};
+
+export const CONFIGURED_BROKER_ENTRY = buildConfiguredBrokerEntry();
+
+const getHostAuthority = (value = '') => {
+  try {
+    return new URL(value).host;
+  } catch {
+    return value;
+  }
+};
 
 // ---------------------------------------------------------------------------
 // Mock broker list — mirrors what the real /api/v2/broker/servers returns.
@@ -349,11 +399,31 @@ export const getBrokerDisplayServer = (info = {}) => {
 const resolveBrokerLoginServer = (brokerInfo = {}, server = '') =>
   getBrokerLoginServer(server ? { ...brokerInfo, server } : brokerInfo);
 
+const withConfiguredBroker = (record = {}) => {
+  const defaults = RUNTIME_BROKER_ID === 'nexa' ? NEXA_BROKER_DEFAULT_ENTRY : {};
+  return {
+    ...defaults,
+    ...CONFIGURED_BROKER_ENTRY,
+    server: firstPresent(
+      CONFIGURED_BROKER_ENTRY.server,
+      record.server,
+      defaults.server,
+      RUNTIME_DEFAULT_MT5_SERVER,
+      getHostAuthority(CONFIGURED_BROKER_ENTRY.backend_url)
+    ),
+  };
+};
+
 const normalizeBrokerInfo = (info) => {
   const record = stripLicenseSecrets(info || {});
-  const safeInfo = String(getBrokerRecordId(record)).trim().toLowerCase() === 'nexa'
-    ? { ...NEXA_BROKER_DEFAULT_ENTRY, ...record }
-    : record;
+  const recordId = String(getBrokerRecordId(record)).trim().toLowerCase();
+  // The environment is authoritative for its own broker, so a stored or
+  // discovered record cannot point the admin at stale hosts after .env changes.
+  const safeInfo = CONFIGURED_BROKER_ENTRY && recordId === RUNTIME_BROKER_ID
+    ? withConfiguredBroker(record)
+    : recordId === 'nexa'
+      ? { ...NEXA_BROKER_DEFAULT_ENTRY, ...record }
+      : record;
   const brokerId = getBrokerRecordId(safeInfo);
   const server = getBrokerLoginServer({ ...safeInfo, broker_id: brokerId });
   const backend_url = buildBackendUrl(safeInfo);
@@ -465,7 +535,7 @@ export const fetchBrokerList = async () => {
   // A Nexa-specific installation already knows its backend and does not need
   // platform discovery before the administrator can sign in.
   if (RUNTIME_BROKER_ID === 'nexa') {
-    return [normalizeBrokerInfo(NEXA_BROKER_DEFAULT_ENTRY)];
+    return [normalizeBrokerInfo(CONFIGURED_BROKER_ENTRY || NEXA_BROKER_DEFAULT_ENTRY)];
   }
   if (USE_MOCK_DISCOVERY) {
     // Local fallback only; set VITE_USE_MOCK_DISCOVERY=true to use it.
@@ -489,6 +559,9 @@ export const fetchBrokerList = async () => {
     );
   } catch (err) {
     console.error(`%c[Auth Connection Failed] GET ${redactUrlForLog(url)}`, 'color: #e53935; font-weight: bold;', redactForLog(err));
+    // The environment already names this installation's broker; discovery
+    // only adds its login handle, so sign-in can proceed without it.
+    if (CONFIGURED_BROKER_ENTRY) return [normalizeBrokerInfo(CONFIGURED_BROKER_ENTRY)];
     throw new Error('Cannot reach platform. Try again.');
   }
 
@@ -498,6 +571,7 @@ export const fetchBrokerList = async () => {
       status: response.status,
       data: redactForLog(data)
     });
+    if (CONFIGURED_BROKER_ENTRY) return [normalizeBrokerInfo(CONFIGURED_BROKER_ENTRY)];
     throw new Error(getResponseMessage(data) || 'Failed to load broker list.');
   }
 
@@ -515,8 +589,12 @@ export const fetchBrokerList = async () => {
 
   // Keep the configured Nexa backend selectable until platform discovery lists it.
   // An explicit platform record (including a disabled one) remains authoritative.
-  if (!list.some((broker) => String(getBrokerRecordId(broker)).trim().toLowerCase() === 'nexa')) {
-    normalized.push(normalizeBrokerInfo(NEXA_BROKER_DEFAULT_ENTRY));
+  // Likewise keep the environment's broker selectable when discovery omits it;
+  // an installation pinned to another broker does not need the Nexa fallback.
+  const fallbackBroker = CONFIGURED_BROKER_ENTRY || NEXA_BROKER_DEFAULT_ENTRY;
+  const fallbackId = String(getBrokerRecordId(fallbackBroker)).trim().toLowerCase();
+  if (!list.some((broker) => String(getBrokerRecordId(broker)).trim().toLowerCase() === fallbackId)) {
+    normalized.push(normalizeBrokerInfo(fallbackBroker));
   }
   return normalized;
 };

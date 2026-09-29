@@ -134,7 +134,7 @@
   .bg-\[\#007acc\]\/20                { background-color: color-mix(in srgb, var(--accent-500) 12%, transparent) !important; }
   .bg-\[\#007acc\]\/10                { background-color: color-mix(in srgb, var(--accent-500) 8%, transparent) !important; }
 
-  .text-\[\#9cdcfe\]                  { color: var(--info-500) !important; }
+  .text-\[\#9cdcfe\]                  { color: var(--text-primary) !important; }
   .text-\[\#f48771\]                  { color: var(--danger-500) !important; }
   .bg-\[\#e51400\]                    { background-color: var(--danger-500) !important; }
   .hover\:bg-\[\#e51400\]:hover       { background-color: var(--danger-600, var(--danger-500)) !important; }
@@ -402,4 +402,3 @@
   [fill="#f44336"],
   [fill="#f48771"]
 ) { fill: var(--danger-500) !important; }
-

@@ -30,7 +30,7 @@ const CommonTab = () => (
         <div className="mt-8 flex flex-col gap-[14px] max-w-[420px] ml-11">
             <div className="flex items-center gap-2 h-[22px]">
                 <span className="w-[70px] text-right text-[11px] text-[color:var(--text-primary)]">Type:</span>
-                <div className="flex-1 h-full border border-[#000] bg-[color:var(--bg-surface-1)] text-[#888] flex items-center px-1.5 text-[11px] justify-between cursor-not-allowed shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]">
+                <div className="flex-1 h-full border border-[#000] bg-[color:var(--bg-surface-1)] text-white flex items-center px-1.5 text-[11px] justify-between cursor-not-allowed shadow-[inset_0_1px_2px_rgba(0,0,0,0.3)]">
                     Backup Server <ChevronDown size={14} className="opacity-50"/>
                 </div>
             </div>
@@ -107,7 +107,7 @@ const NetworkTab = () => (
                <span className="text-[11px] text-[color:var(--text-primary)]">Listen on these IP addresses</span>
                <div className="flex gap-2 h-full">
                   <div className="flex-1 border border-[#555] bg-[color:var(--bg-app)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]">
-                     <div className="px-1.5 py-[3px] flex items-center gap-1.5 text-[11px] text-white bg-[#00609c] cursor-default select-none"><Monitor size={11} className="text-[#4ade80]" /> 0.0.0.0:440</div>
+                     <div className="px-1.5 py-[3px] flex items-center gap-1.5 text-[11px] text-white bg-[#00609c] cursor-default select-none"><Monitor size={11} className="text-white" /> 0.0.0.0:440</div>
                   </div>
                   <div className="flex flex-col gap-1.5 pt-[1px] w-[64px]">
                      <button className="flex-1 border border-[#555] rounded-[2px] bg-[#333] text-[color:var(--text-primary)] text-[11px] hover:bg-[#444] hover:border-[#666]">Add</button>
@@ -124,7 +124,7 @@ const NetworkTab = () => (
                </div>
                <div className="flex gap-2 h-full">
                   <div className="flex-1 border border-[#555] bg-[color:var(--bg-app)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]">
-                     <div className="px-1.5 py-[3px] flex items-center gap-1.5 text-[11px] text-white bg-[#003859] cursor-default select-none"><Monitor size={11} className="text-[#4ade80]" /> 89.21.67.29:440</div>
+                     <div className="px-1.5 py-[3px] flex items-center gap-1.5 text-[11px] text-white bg-[#003859] cursor-default select-none"><Monitor size={11} className="text-white" /> 89.21.67.29:440</div>
                   </div>
                   <div className="flex flex-col gap-1.5 pt-[1px] w-[64px]">
                      <button className="flex-1 border border-[#555] rounded-[2px] bg-[#333] text-[color:var(--text-primary)] text-[11px] hover:bg-[#444] hover:border-[#666]">Add</button>
@@ -282,7 +282,7 @@ const ServerPropertiesPopup = ({ isOpen, onClose, serverName = "MainTrade Backup
                   {tabs.map((t) => (
                       <div key={t} 
                            onClick={() => setActiveTab(t)}
-                           className={`text-[11.5px] px-2.5 pb-[5px] pt-1.5 cursor-pointer relative ${activeTab === t ? 'text-white' : 'text-[color:var(--text-primary)] hover:text-[#00a2e8]'}`}>
+                           className={`text-[11.5px] px-2.5 pb-[5px] pt-1.5 cursor-pointer relative ${activeTab === t ? 'text-white' : 'text-[color:var(--text-primary)] hover:text-white'}`}>
                           {t}
                           {activeTab === t && <div className="absolute bottom-0 left-1 right-1 h-[2px] bg-[#00a2e8]" />}
                       </div>

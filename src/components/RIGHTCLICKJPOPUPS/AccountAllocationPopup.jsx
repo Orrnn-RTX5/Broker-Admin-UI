@@ -76,8 +76,8 @@ const AccountAllocationPopup = ({ group, onClose }) => {
           {/* Header Description */}
           <div className="flex gap-4 mb-4">
             <div className="relative w-12 h-12 flex shrink-0 mt-1">
-               <Users size={40} className="text-[#00a86b] absolute left-0" style={{ fill: 'var(--success-500)' }} />
-               <Users size={32} className="text-[#20c997] absolute -right-1 bottom-0" style={{ fill: 'var(--success-500)' }} />
+               <Users size={40} className="text-white absolute left-0" style={{ fill: 'var(--success-500)' }} />
+               <Users size={32} className="text-white absolute -right-1 bottom-0" style={{ fill: 'var(--success-500)' }} />
             </div>
             <div className="text-[12px] text-[color:var(--text-primary)] leading-tight pt-1">
               Please specify a company and a group with description. This group will be available for opening accounts from the client terminals of this company.
@@ -133,7 +133,7 @@ const AccountAllocationPopup = ({ group, onClose }) => {
                 <div className="px-2 border-r border-[color:var(--border-default)]/50">URL</div>
                 <div className="px-2 text-center">Mandatory</div>
              </div>
-             <div className="px-3 py-1 text-[#00a86b] text-[12px] cursor-pointer hover:bg-white/5 transition-colors flex items-center gap-1.5">
+             <div className="px-3 py-1 text-white text-[12px] cursor-pointer hover:bg-white/5 transition-colors flex items-center gap-1.5">
                 <span className="text-[16px] leading-none">+</span> click to add...
              </div>
           </div>

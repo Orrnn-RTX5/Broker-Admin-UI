@@ -50,7 +50,7 @@ export const ToastProvider = ({ children }) => {
             )}
             <div className="flex-1 min-w-0">
               {t.title && (
-                <RToast.Title className="text-[12px] font-semibold text-[color:var(--text-primary)]">
+                <RToast.Title className="text-[11px] font-semibold text-[color:var(--text-primary)]">
                   {t.title}
                 </RToast.Title>
               )}

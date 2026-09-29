@@ -80,7 +80,7 @@ const HolidaysView = () => {
           Add Holiday
         </button>
         <div className="ml-auto flex items-center pr-2">
-          <Settings size={14} className="text-[#999] hover:text-white cursor-pointer" />
+          <Settings size={14} className="text-white hover:text-white cursor-pointer" />
         </div>
       </div>
 

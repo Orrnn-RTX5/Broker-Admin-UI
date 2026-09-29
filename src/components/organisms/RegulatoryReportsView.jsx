@@ -7,16 +7,16 @@ const TABS = ['EMIR', 'MiFID', 'Reconciliation', 'Daily Transactions', 'Generate
 const today = () => new Date().toISOString().split('T')[0];
 const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().split('T')[0]; };
 const fmt = (v) => (v == null ? '—' : typeof v === 'number' ? v.toFixed(4) : String(v));
-const pnlColor = (v) => (v > 0 ? 'text-[#4ec9b0]' : v < 0 ? 'text-[#f48771]' : 'text-[color:var(--text-primary)]');
+const pnlColor = (v) => (v > 0 ? 'text-[color:var(--success-500)]' : v < 0 ? 'text-[color:var(--danger-500)]' : 'text-[color:var(--text-primary)]');
 
 const DataTable = ({ data }) => {
   if (!Array.isArray(data) || data.length === 0)
-    return <div className="flex items-center justify-center h-24 text-[#555] text-[11px]">No data found.</div>;
+    return <div className="flex items-center justify-center h-24 text-white text-[11px]">No data found.</div>;
   const cols = Object.keys(data[0]);
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       <div className="flex items-center px-3 h-[24px] bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0">
-        {cols.map(c => <div key={c} className="min-w-[130px] text-[10px] font-semibold text-[#888] uppercase tracking-wider pr-3">{c.replace(/_/g,' ')}</div>)}
+        {cols.map(c => <div key={c} className="min-w-[130px] text-[10px] font-semibold text-white uppercase tracking-wider pr-3">{c.replace(/_/g,' ')}</div>)}
       </div>
       <div className="flex-1 overflow-auto">
         {data.map((row, i) => (
@@ -34,7 +34,7 @@ const DataTable = ({ data }) => {
         ))}
       </div>
       <div className="px-3 h-[22px] flex items-center bg-[color:var(--bg-surface-1)] border-t border-black/30 shrink-0">
-        <span className="text-[10px] text-[#555]">{data.length} record{data.length !== 1 ? 's' : ''}</span>
+        <span className="text-[10px] text-white">{data.length} record{data.length !== 1 ? 's' : ''}</span>
       </div>
     </div>
   );
@@ -44,15 +44,15 @@ const KVCard = ({ data, title }) => {
   if (!data) return null;
   return (
     <div className="p-6 max-w-[440px]">
-      {title && <div className="text-[12px] font-semibold text-[#9cdcfe] mb-3">{title}</div>}
+      {title && <div className="text-[12px] font-semibold text-white mb-3">{title}</div>}
       <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--bg-surface-2)] rounded-[3px] divide-y divide-black/30">
         {Object.entries(data).map(([k, v]) => {
           const isNum = typeof v === 'number';
           const isProfit = k.includes('profit') || k.includes('revenue') || k.includes('difference');
           return (
             <div key={k} className="flex items-center px-4 h-[34px]">
-              <span className="text-[11px] text-[#888] flex-1">{k.replace(/_/g, ' ')}</span>
-              <span className={`text-[13px] font-mono font-semibold ${isProfit && isNum ? pnlColor(v) : isNum ? 'text-[#9cdcfe]' : typeof v === 'boolean' ? (v ? 'text-[#4ec9b0]' : 'text-[#f48771]') : 'text-[color:var(--text-primary)]'}`}>
+              <span className="text-[11px] text-white flex-1">{k.replace(/_/g, ' ')}</span>
+              <span className={`text-[13px] font-mono font-semibold ${isProfit && isNum ? pnlColor(v) : isNum ? 'text-white' : typeof v === 'boolean' ? (v ? 'text-white' : 'text-[#f48771]') : 'text-[color:var(--text-primary)]'}`}>
                 {isNum ? v.toFixed(2) : String(v)}
               </span>
             </div>
@@ -97,10 +97,10 @@ const DateRangeReport = ({ onLoad }) => {
         </button>
       </form>
       {loading
-        ? <div className="flex items-center justify-center flex-1 text-[#888] text-[11px]">Loading…</div>
+        ? <div className="flex items-center justify-center flex-1 text-white text-[11px]">Loading…</div>
         : data
           ? <DataTable data={data} />
-          : <div className="flex items-center justify-center flex-1 text-[#555] text-[11px]">Set date range and click Load.</div>}
+          : <div className="flex items-center justify-center flex-1 text-white text-[11px]">Set date range and click Load.</div>}
     </div>
   );
 };
@@ -135,10 +135,10 @@ const SingleDateReport = ({ onLoad, renderResult }) => {
         </button>
       </form>
       {loading
-        ? <div className="flex items-center justify-center flex-1 text-[#888] text-[11px]">Loading…</div>
+        ? <div className="flex items-center justify-center flex-1 text-white text-[11px]">Loading…</div>
         : data
           ? renderResult(data)
-          : <div className="flex items-center justify-center flex-1 text-[#555] text-[11px]">Select a date and click Load.</div>}
+          : <div className="flex items-center justify-center flex-1 text-white text-[11px]">Select a date and click Load.</div>}
     </div>
   );
 };
@@ -192,10 +192,10 @@ const GenerateReportTab = () => {
       </form>
       <div className="flex-1 overflow-auto">
         {loading
-          ? <div className="flex items-center justify-center h-24 text-[#888] text-[11px]">Generating…</div>
+          ? <div className="flex items-center justify-center h-24 text-white text-[11px]">Generating…</div>
           : result
             ? <KVCard data={result} title="Generated Report" />
-            : <div className="flex items-center justify-center h-24 text-[#555] text-[11px]">Fill in the fields and click Generate.</div>}
+            : <div className="flex items-center justify-center h-24 text-white text-[11px]">Fill in the fields and click Generate.</div>}
       </div>
     </div>
   );
@@ -230,7 +230,7 @@ const BestExecutionTab = () => {
         <span className="text-[10px] text-[#f48771]">To *</span>
         <input type="date" required value={to} onChange={e => setTo(e.target.value)}
           className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[22px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]" />
-        <span className="text-[10px] text-[#888]">Login</span>
+        <span className="text-[10px] text-white">Login</span>
         <input type="number" value={login} onChange={e => setLogin(e.target.value)} placeholder="Optional"
           className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[22px] px-2 w-28 rounded-[2px] outline-none focus:border-[color:var(--accent-500)]" />
         <button type="submit" disabled={loading}
@@ -239,10 +239,10 @@ const BestExecutionTab = () => {
         </button>
       </form>
       {loading
-        ? <div className="flex items-center justify-center flex-1 text-[#888] text-[11px]">Loading…</div>
+        ? <div className="flex items-center justify-center flex-1 text-white text-[11px]">Loading…</div>
         : data
           ? <DataTable data={data} />
-          : <div className="flex items-center justify-center flex-1 text-[#555] text-[11px]">Set date range and click Load.</div>}
+          : <div className="flex items-center justify-center flex-1 text-white text-[11px]">Set date range and click Load.</div>}
     </div>
   );
 };
@@ -256,7 +256,7 @@ const RegulatoryReportsView = () => {
       <div className="flex items-center bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0 overflow-x-auto">
         {TABS.map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-4 h-[30px] text-[11px] border-r border-black/30 whitespace-nowrap transition-colors ${tab === t ? 'bg-[color:var(--bg-app)] text-[color:var(--text-primary)] border-t-2 border-t-[color:var(--accent-500)]' : 'text-[#888] hover:text-[#ccc]'}`}>
+            className={`px-4 h-[30px] text-[11px] border-r border-black/30 whitespace-nowrap transition-colors ${tab === t ? 'bg-[color:var(--bg-app)] text-[color:var(--text-primary)] border-t-2 border-t-[color:var(--accent-500)]' : 'text-white hover:text-white'}`}>
             {t}
           </button>
         ))}

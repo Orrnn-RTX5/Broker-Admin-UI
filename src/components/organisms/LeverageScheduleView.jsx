@@ -50,7 +50,7 @@ const CreateSchedulePopup = ({ onClose, onCreated }) => {
 
   const Field = ({ label, required, children }) => (
     <div className="flex flex-col gap-0.5">
-      <label className="text-[10px] text-[#888] uppercase tracking-wider">
+      <label className="text-[10px] text-white uppercase tracking-wider">
         {label}{required && <span className="text-[#f48771] ml-0.5">*</span>}
       </label>
       {children}
@@ -65,7 +65,7 @@ const CreateSchedulePopup = ({ onClose, onCreated }) => {
         {/* Header */}
         <div className="flex items-center h-9 px-4 border-b border-black/40 bg-[color:var(--bg-surface-1)] shrink-0">
           <span className="text-[12px] font-semibold text-[color:var(--text-primary)] flex-1">Add Leverage Schedule Rule</span>
-          <button onClick={onClose} className="text-[#555] hover:text-[#ccc]"><X size={14} /></button>
+          <button onClick={onClose} className="text-white hover:text-white"><X size={14} /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3">
@@ -99,7 +99,7 @@ const CreateSchedulePopup = ({ onClose, onCreated }) => {
           </div>
 
           <div className="bg-[color:var(--bg-app)] rounded-[2px] px-3 py-2 border border-[color:var(--border-default)]">
-            <div className="text-[10px] text-[#888] uppercase tracking-wider mb-2">Effective Period (optional — leave blank for no restriction)</div>
+            <div className="text-[10px] text-white uppercase tracking-wider mb-2">Effective Period (optional — leave blank for no restriction)</div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="From">
                 <input className={inp} type="datetime-local" value={form.effective_from} onChange={e => set('effective_from', e.target.value)} />
@@ -114,7 +114,7 @@ const CreateSchedulePopup = ({ onClose, onCreated }) => {
 
           <div className="flex justify-end gap-2 pt-1">
             <button type="button" onClick={onClose}
-              className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] rounded-[2px] transition-colors">
+              className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-white rounded-[2px] transition-colors">
               Cancel
             </button>
             <button type="submit" disabled={loading}
@@ -213,7 +213,7 @@ const LeverageScheduleView = () => {
 
         {/* Group filter */}
         <div className="flex items-center gap-1.5 ml-3">
-          <span className="text-[10px] text-[#888] uppercase tracking-wider">Group:</span>
+          <span className="text-[10px] text-white uppercase tracking-wider">Group:</span>
           <input
             value={groupFilter}
             onChange={e => setGroupFilter(e.target.value)}
@@ -223,30 +223,30 @@ const LeverageScheduleView = () => {
           />
           <button
             onClick={handleApplyFilter}
-            className="h-[22px] px-2.5 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] text-[11px] rounded-[2px] border border-[#555] transition-colors"
+            className="h-[22px] px-2.5 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-white text-[11px] rounded-[2px] border border-[#555] transition-colors"
           >
             Filter
           </button>
           {appliedFilter && (
-            <button onClick={handleClearFilter} className="h-[22px] px-1.5 text-[#888] hover:text-[#ccc] transition-colors">
+            <button onClick={handleClearFilter} className="h-[22px] px-1.5 text-white hover:text-white transition-colors">
               <X size={11} />
             </button>
           )}
         </div>
 
         <div className="ml-auto flex items-center gap-2 pr-2">
-          <button onClick={() => fetchData(appliedFilter)} title="Refresh" className="text-[#999] hover:text-white transition-colors">
+          <button onClick={() => fetchData(appliedFilter)} title="Refresh" className="text-white hover:text-white transition-colors">
             <RefreshCw size={13} />
           </button>
-          <Settings size={14} className="text-[#999] hover:text-white cursor-pointer" />
+          <Settings size={14} className="text-white hover:text-white cursor-pointer" />
         </div>
       </div>
 
       {/* Active filter badge */}
       {appliedFilter && (
         <div className="px-3 py-1 bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0 flex items-center gap-2">
-          <span className="text-[10px] text-[#888]">Showing group:</span>
-          <span className="text-[10px] text-[#9cdcfe] font-mono bg-[color:var(--bg-app)] px-2 py-0.5 rounded-[2px]">{appliedFilter}</span>
+          <span className="text-[10px] text-white">Showing group:</span>
+          <span className="text-[10px] text-white font-mono bg-[color:var(--bg-app)] px-2 py-0.5 rounded-[2px]">{appliedFilter}</span>
         </div>
       )}
 
@@ -268,18 +268,18 @@ const LeverageScheduleView = () => {
               className={`flex cursor-default border-b border-black/10 hover:bg-blue-600/20 transition-colors
                 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}
             >
-              <div className="w-[70px] px-3 py-1 text-[12px] text-[#9cdcfe] font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(sid)}</div>
+              <div className="w-[70px] px-3 py-1 text-[12px] text-white font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(sid)}</div>
               <div className="w-[160px] px-3 py-1 text-[12px] text-[color:var(--text-primary)] border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.group_name)}</div>
-              <div className="w-[110px] px-3 py-1 text-[12px] text-[#4ec9b0] font-mono border-r border-black/10 shrink-0 truncate flex items-center">
-                {row.symbol === '*' ? <span className="text-[#888]">* (all)</span> : fmt(row.symbol)}
+              <div className="w-[110px] px-3 py-1 text-[12px] text-white font-mono border-r border-black/10 shrink-0 truncate flex items-center">
+                {row.symbol === '*' ? <span className="text-white">* (all)</span> : fmt(row.symbol)}
               </div>
               <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.leverage_from)}</div>
               <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.leverage_to)}</div>
               <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.volume_min)}</div>
               <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.volume_max)}</div>
-              <div className="w-[160px] px-3 py-1 text-[11px] text-[#888] font-mono border-r border-black/10 shrink-0 truncate flex items-center">{fmtDate(row.effective_from)}</div>
-              <div className="w-[160px] px-3 py-1 text-[11px] text-[#888] font-mono border-r border-black/10 shrink-0 truncate flex items-center">{fmtDate(row.effective_to)}</div>
-              <div className="flex-1 px-3 py-1 text-[11px] text-[#666] font-mono flex items-center truncate">{fmtDate(row.created_at)}</div>
+              <div className="w-[160px] px-3 py-1 text-[11px] text-white font-mono border-r border-black/10 shrink-0 truncate flex items-center">{fmtDate(row.effective_from)}</div>
+              <div className="w-[160px] px-3 py-1 text-[11px] text-white font-mono border-r border-black/10 shrink-0 truncate flex items-center">{fmtDate(row.effective_to)}</div>
+              <div className="flex-1 px-3 py-1 text-[11px] text-white font-mono flex items-center truncate">{fmtDate(row.created_at)}</div>
             </div>
           );
         })}

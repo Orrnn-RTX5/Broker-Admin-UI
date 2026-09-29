@@ -1,11 +1,11 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { PaymentService } from '../../services/payment.service';
-import { Plus, RefreshCw, X, Settings, Edit2, Check } from 'lucide-react';
+import { Plus, RefreshCw, X, Edit2, Check } from 'lucide-react';
 
 const fmt = (v) => (v == null ? '—' : v);
 const fmtTs = (v) => { if (!v) return '—'; try { return new Date(v * 1000).toLocaleDateString(); } catch { return v; } };
 
-const STATUS_COLORS = { true: 'text-[#4ec9b0]', false: 'text-[#f48771]' };
+const STATUS_COLORS = { true: 'text-white', false: 'text-[#f48771]' };
 const TYPE_COLORS = { wire: '#9cdcfe', card: 'var(--success-500)', crypto: '#f4c96e', ewallet: '#ce9178' };
 
 // ── Add / Edit Popup ───────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ const MethodPopup = ({ initial, onClose, onSaved }) => {
   const inp = "w-full bg-[color:var(--bg-surface-2)] border border-[#555] text-[color:var(--text-primary)] text-[12px] px-2 py-1 rounded-[2px] focus:outline-none focus:border-[color:var(--accent-500)]";
   const Lbl = ({ t, req, children }) => (
     <div className="flex flex-col gap-0.5">
-      <label className="text-[10px] text-[#888] uppercase tracking-wider">{t}{req && <span className="text-[#f48771] ml-0.5">*</span>}</label>
+      <label className="text-[10px] text-white uppercase tracking-wider">{t}{req && <span className="text-[#f48771] ml-0.5">*</span>}</label>
       {children}
     </div>
   );
@@ -51,7 +51,7 @@ const MethodPopup = ({ initial, onClose, onSaved }) => {
       <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-[3px] shadow-2xl w-[460px]" onClick={e => e.stopPropagation()}>
         <div className="flex items-center h-9 px-4 border-b border-black/40 bg-[color:var(--bg-surface-1)]">
           <span className="text-[12px] font-semibold text-[color:var(--text-primary)] flex-1">{editing ? 'Edit Payment Method' : 'Add Payment Method'}</span>
-          <button onClick={onClose} className="text-[#555] hover:text-[#ccc]"><X size={14} /></button>
+          <button onClick={onClose} className="text-white hover:text-white"><X size={14} /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-3">
@@ -75,12 +75,12 @@ const MethodPopup = ({ initial, onClose, onSaved }) => {
           {editing && (
             <div className="flex items-center gap-2">
               <input type="checkbox" id="enabled" checked={!!form.enabled} onChange={e => set('enabled', e.target.checked)} className="accent-[color:var(--accent-500)]" />
-              <label htmlFor="enabled" className="text-[11px] text-[#ccc]">Enabled</label>
+              <label htmlFor="enabled" className="text-[11px] text-white">Enabled</label>
             </div>
           )}
           {error && <div className="text-[11px] text-[#f48771] bg-[color:var(--bg-surface-2)] px-3 py-1.5 rounded-[2px]">{error}</div>}
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] rounded-[2px]">Cancel</button>
+            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-white rounded-[2px]">Cancel</button>
             <button type="submit" disabled={loading} className="h-[26px] px-4 text-[11px] bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] disabled:opacity-50 text-white rounded-[2px]">{loading ? 'Saving…' : editing ? 'Update' : 'Create'}</button>
           </div>
         </form>
@@ -93,6 +93,7 @@ const MethodPopup = ({ initial, onClose, onSaved }) => {
 const PaymentMethodsView = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [filterEnabled, setFilterEnabled] = useState('');
   const [filterCurrency, setFilterCurrency] = useState('');
   const [popup, setPopup] = useState(null); // null | 'add' | row (edit)
@@ -100,13 +101,19 @@ const PaymentMethodsView = () => {
 
   const loadMethods = useCallback(async ({ enabled, currency }) => {
     setLoading(true);
+    setLoadError('');
     try {
       const params = {};
       if (enabled !== '') params.enabled = enabled === 'true';
       if (currency) params.currency = currency;
       const res = await PaymentService.getMethodList(params);
       setData(Array.isArray(res) ? res : res?.data ?? []);
-    } catch (err) { console.error(err); setData([]); }
+    } catch (err) {
+      setData([]);
+      setLoadError(err?.response?.status === 403
+        ? 'Access to payment methods was denied. Check this account’s permissions and try again.'
+        : 'Payment methods could not be loaded. Try refreshing this view.');
+    }
     finally { setLoading(false); }
   }, []);
 
@@ -143,14 +150,14 @@ const PaymentMethodsView = () => {
     <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative"
       onClick={() => setContextMenu({ visible: false })} onContextMenu={e => e.preventDefault()}>
       {/* Action Bar */}
-      <div className="flex items-center gap-2 px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0 select-none">
-        <button onClick={() => setPopup('add')}
-          className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] transition-colors">
+      <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] shrink-0 select-none">
+        <button type="button" onClick={() => setPopup('add')}
+          className="flex shrink-0 items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] transition-colors">
           <Plus size={12} /> Add Method
         </button>
-        <div className="flex items-center gap-1.5 ml-3">
+        <div className="flex shrink-0 items-center gap-1.5 sm:ml-3">
           <select value={filterEnabled} onChange={e => setFilterEnabled(e.target.value)}
-            className="h-[22px] bg-[color:var(--bg-surface-2)] border border-[#555] text-[#ccc] text-[11px] px-2 rounded-[2px] focus:outline-none focus:border-[color:var(--accent-500)]">
+            className="h-[22px] bg-[color:var(--bg-surface-2)] border border-[#555] text-white text-[11px] px-2 rounded-[2px] focus:outline-none focus:border-[color:var(--accent-500)]">
             <option value="">All status</option>
             <option value="true">Enabled</option>
             <option value="false">Disabled</option>
@@ -158,19 +165,20 @@ const PaymentMethodsView = () => {
           <input value={filterCurrency} onChange={e => setFilterCurrency(e.target.value)}
             placeholder="currency…" onKeyDown={e => e.key === 'Enter' && fetchData()}
             className="h-[22px] w-[100px] bg-[color:var(--bg-surface-2)] border border-[#555] text-[color:var(--text-primary)] text-[11px] px-2 rounded-[2px] focus:outline-none focus:border-[color:var(--accent-500)]" />
-          <button onClick={fetchData} className="h-[22px] px-2.5 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] text-[11px] rounded-[2px] border border-[#555]">Filter</button>
+          <button onClick={fetchData} className="h-[22px] px-2.5 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-white text-[11px] rounded-[2px] border border-[#555]">Filter</button>
         </div>
-        <div className="ml-auto flex items-center gap-2 pr-2">
-          <button onClick={fetchData} title="Refresh" className="text-[#999] hover:text-white"><RefreshCw size={13} /></button>
-          <Settings size={14} className="text-[#999] hover:text-white cursor-pointer" />
+        <div className="ml-auto flex shrink-0 items-center gap-2 pr-2">
+          <button type="button" onClick={fetchData} title="Refresh" aria-label="Refresh payment methods" className="text-[color:var(--text-secondary)] hover:text-white"><RefreshCw size={13} /></button>
         </div>
       </div>
-      {/* Header */}
-      <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 sticky top-0 z-10 select-none shrink-0">
+      <div className="flex-1 min-h-0 overflow-auto no-scrollbar" aria-busy={loading}>
+      <div className="w-full min-w-[1140px]">
+      {/* Header and rows share horizontal scrolling. */}
+      <div className="flex bg-[color:var(--bg-surface-2)] border-b border-[color:var(--border-default)] sticky top-0 z-10 select-none shrink-0">
         {cols.map(c => (
           <div
             key={c.label}
-            className={`${c.w} px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0 min-w-0 overflow-hidden`}
+            className={`${c.w} px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 min-w-0 overflow-hidden`}
             title={c.label}
           >
             <span className={clippedTextClassName}>{c.label}</span>
@@ -178,36 +186,57 @@ const PaymentMethodsView = () => {
         ))}
       </div>
       {/* Body */}
-      <div className="flex-1 overflow-auto no-scrollbar">
         {data.map((row, idx) => (
           <div key={row.id || idx} onContextMenu={e => { e.preventDefault(); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, row }); }}
-            className={`group flex border-b border-black/10 hover:bg-blue-600/20 transition-colors cursor-default ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
-            <div className="w-[60px] px-3 py-1 text-[12px] text-[#9cdcfe] font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.id)}</div>
+            className={`group flex border-b border-[color:var(--border-subtle)] hover:bg-[color:var(--bg-surface-3)] transition-colors cursor-default ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
+            <div className="w-[60px] px-3 py-1 text-[12px] text-white font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.id)}</div>
             <div className="w-[160px] px-3 py-1 text-[12px] text-[color:var(--text-primary)] border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.name)}</div>
             <div className="w-[120px] px-3 py-1 text-[12px] border-r border-black/10 shrink-0 flex items-center min-w-0 overflow-hidden" title={fmt(row.method_type)}>
               <span className={`${clippedTextClassName} font-mono text-[11px] px-1.5 py-0.5 rounded-[2px] bg-black/30`} style={{ color: TYPE_COLORS[row.method_type] || '#ccc' }}>{fmt(row.method_type)}</span>
             </div>
-            <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.currency)}</div>
-            <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.min_amount)}</div>
-            <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{row.max_amount === 0 ? '∞' : fmt(row.max_amount)}</div>
-            <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.fee_fixed)}</div>
-            <div className="w-[80px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{row.fee_percent != null ? `${row.fee_percent}%` : '—'}</div>
-            <div className="w-[120px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.processing_time)}</div>
+            <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-secondary)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.currency)}</div>
+            <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-secondary)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.min_amount)}</div>
+            <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-secondary)] border-r border-black/10 shrink-0 flex items-center">{row.max_amount === 0 ? '∞' : fmt(row.max_amount)}</div>
+            <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-secondary)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.fee_fixed)}</div>
+            <div className="w-[80px] px-3 py-1 text-[12px] text-[color:var(--text-secondary)] border-r border-black/10 shrink-0 flex items-center">{row.fee_percent != null ? `${row.fee_percent}%` : '—'}</div>
+            <div className="w-[120px] px-3 py-1 text-[12px] text-[color:var(--text-secondary)] border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.processing_time)}</div>
             <div className="w-[80px] px-3 py-1 text-[12px] border-r border-black/10 shrink-0 flex items-center">
               <span className={`text-[11px] font-semibold ${STATUS_COLORS[String(row.enabled)]}`}>{row.enabled ? 'Yes' : 'No'}</span>
             </div>
-            <div className="flex-1 px-3 py-1 text-[11px] text-[#666] font-mono flex items-center gap-2">
+            <div className="flex-1 px-3 py-1 text-[11px] text-[color:var(--text-secondary)] font-mono flex items-center gap-2">
               {fmtTs(row.created_at)}
               <button onClick={e => { e.stopPropagation(); setPopup(row); }} title="Edit"
-                className="ml-auto text-[#555] hover:text-[color:var(--accent-500)] opacity-0 group-hover:opacity-100 transition-colors">
+                className="ml-auto text-white hover:text-white opacity-0 group-hover:opacity-100 transition-colors">
                 <Edit2 size={11} />
               </button>
             </div>
           </div>
         ))}
-        {loading && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">Loading…</div>}
-        {!loading && data.length === 0 && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">No payment methods found.</div>}
-        {[...Array(15)].map((_, i) => <div key={i} className={`flex border-b border-black/5 opacity-30 h-6 ${i%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}></div>)}
+      </div>
+        {loading && data.length === 0 && (
+          <div role="status" className="flex min-h-40 items-center justify-center gap-2 px-6 text-[12px] text-[color:var(--text-secondary)]">
+            <RefreshCw size={14} className="animate-spin text-white" />
+            Loading payment methods…
+          </div>
+        )}
+        {!loading && loadError && (
+          <div role="alert" className="m-4 max-w-lg rounded-[var(--radius-md)] border border-[color:var(--danger-500)]/30 bg-[color:var(--danger-500)]/10 px-4 py-3 text-[12px] text-[color:var(--text-primary)]">
+            {loadError}
+            <button type="button" onClick={fetchData} className="ml-3 font-medium text-white hover:underline">Retry</button>
+          </div>
+        )}
+        {!loading && !loadError && data.length === 0 && (
+          <div className="flex min-h-44 flex-col items-center justify-center gap-2 px-6 text-center">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md border border-[color:var(--border-default)] bg-[color:var(--bg-surface-2)] text-white">
+              <Plus size={17} />
+            </div>
+            <p className="m-0 text-[13px] font-semibold text-[color:var(--text-primary)]">No payment methods found</p>
+            <p className="m-0 text-[12px] text-[color:var(--text-secondary)]">Adjust the filters or add a payment method.</p>
+            <button type="button" onClick={() => setPopup('add')} className="mt-2 inline-flex h-7 items-center gap-1.5 rounded-[3px] border border-[color:var(--border-strong)] bg-[color:var(--bg-surface-2)] px-3 text-[11px] text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)]">
+              <Plus size={12} /> Add Method
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Context Menu */}
@@ -223,8 +252,8 @@ const PaymentMethodsView = () => {
 
       {popup && <MethodPopup initial={popup === 'add' ? null : popup} onClose={() => setPopup(null)} onSaved={fetchData} />}
 
-      <div className="h-6 bg-[color:var(--accent-500)] text-white flex items-center px-4 text-[11px] select-none shrink-0 border-t border-[color:var(--accent-700)]">
-        <span>Total Methods: {data.length}</span>
+      <div className="h-7 bg-[color:var(--bg-surface-1)] text-[color:var(--text-secondary)] flex items-center px-4 text-[11px] select-none shrink-0 border-t border-[color:var(--border-default)]">
+        <span>Methods shown: <span className="font-semibold tabular-nums text-[color:var(--text-primary)]">{data.length}</span></span>
       </div>
     </div>
   );

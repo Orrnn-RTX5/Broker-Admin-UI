@@ -29,7 +29,7 @@ const OverviewMiniGraph = ({ type }) => {
        'Traffic': {
            labels: [
                { c: '#3b82f6', t: 'Traffic in: 892 Kbps', v: '728 Kbps', bg: '#b3c7f9' },
-               { c: '#4ade80', t: 'Traffic out: 409 Kbps', v: '330 Kbps', bg: '#bbf7d0' }
+               { c: '#4ade80', t: 'Traffic out: 409 Kbps', v: '330 Kbps', bg: 'color-mix(in srgb, var(--success-500) 40%, #ffffff)' }
            ],
            unit: 'Mbps',
            lines: [{ s: 'traffic-green', c: '#4ade80' }, { s: 'traffic-blue', c: '#3b82f6' }]
@@ -144,7 +144,7 @@ const OverviewMiniGraph = ({ type }) => {
     );
 };
 
-const DeviceRow = ({ indent = 0, expanded = false, expandable = false, icon: Icon, iconColor='text-[#60a5fa]', text, statBar }) => {
+const DeviceRow = ({ indent = 0, expanded = false, expandable = false, icon: Icon, iconColor='text-white', text, statBar }) => {
     return (
        <div className="flex flex-col">
           <div className="flex items-center gap-1.5 px-1 py-[3px] border-b border-[color:var(--bg-surface-1)] hover:bg-[color:var(--bg-surface-1)] cursor-pointer select-none">
@@ -173,13 +173,13 @@ const DeviceRow = ({ indent = 0, expanded = false, expandable = false, icon: Ico
                        <div className="flex gap-[18px]">
                            <div className="flex items-center gap-3">
                               <div className="w-[60px] flex items-center">
-                                 <div className="h-[3px] bg-[#ef4444] w-[30%]"/><div className="h-[3px] bg-[#22c55e] w-[70%] relative"><div className="absolute h-[7px] w-[2px] bg-[#4ade80] top-[-2px] shadow-[0_0_3px_#4ade80] left-[5px]"/></div>
+                                 <div className="h-[3px] bg-[#ef4444] w-[30%]"/><div className="h-[3px] bg-[#22c55e] w-[70%] relative"><div className="absolute h-[7px] w-[2px] bg-[#4ade80] top-[-2px] shadow-[0_0_3px_var(--success-500)] left-[5px]"/></div>
                               </div>
                               <span className="text-[11px] text-[color:var(--text-muted)] w-[45px] text-left">read: 543</span>
                            </div>
                            <div className="flex items-center gap-3">
                               <div className="w-[60px] flex items-center">
-                                 <div className="h-[3px] bg-[#ef4444] w-[30%]"/><div className="h-[3px] bg-[#22c55e] w-[70%] relative"><div className="absolute h-[7px] w-[2px] bg-[#4ade80] top-[-2px] shadow-[0_0_3px_#4ade80] left-[20px]"/></div>
+                                 <div className="h-[3px] bg-[#ef4444] w-[30%]"/><div className="h-[3px] bg-[#22c55e] w-[70%] relative"><div className="absolute h-[7px] w-[2px] bg-[#4ade80] top-[-2px] shadow-[0_0_3px_var(--success-500)] left-[20px]"/></div>
                               </div>
                               <span className="text-[11px] text-[color:var(--text-muted)] w-[30px]">write:</span>
                               <span className="text-[11.5px] text-white w-[50px] text-right">268 MB/s</span>
@@ -188,7 +188,7 @@ const DeviceRow = ({ indent = 0, expanded = false, expandable = false, icon: Ico
                    ) : (
                        <div className="flex items-center gap-3 w-[260px] justify-end">
                           <div className="w-[60px] flex items-center">
-                             <div className="h-[3px] bg-[#ef4444] w-[30%]"/><div className="h-[3px] bg-[#22c55e] w-[70%] relative"><div className="absolute h-[7px] w-[2px] bg-[#4ade80] top-[-2px] shadow-[0_0_3px_#4ade80] left-[40%]"/></div>
+                             <div className="h-[3px] bg-[#ef4444] w-[30%]"/><div className="h-[3px] bg-[#22c55e] w-[70%] relative"><div className="absolute h-[7px] w-[2px] bg-[#4ade80] top-[-2px] shadow-[0_0_3px_var(--success-500)] left-[40%]"/></div>
                           </div>
                           <span className="text-[11px] text-[color:var(--text-muted)] w-[60px] text-right">{statBar.label}</span>
                           <span className="text-[11.5px] text-white w-[60px] text-right">{statBar.val}</span>
@@ -474,14 +474,14 @@ const ServerStatusPanel = ({ serverName = "Main Trade Server", initialTab }) => 
                      <div>
                         <div className="flex items-center gap-2 mb-1.5">
                            <h1 className="text-xl font-medium text-white">{serverName}</h1>
-                           <Settings size={14} className="text-[#3b82f6] cursor-pointer hover:text-blue-400" />
+                           <Settings size={14} className="text-white cursor-pointer hover:text-white" />
                         </div>
                         <div className="text-[11px] text-[color:var(--text-muted)] tracking-wide">
                            Version: 5.00 build 5370 (17 Oct 2025), last boot 2026.03.29 03:57
                         </div>
                      </div>
                      <button className="flex items-center gap-2 px-3 py-1 border border-[#555] rounded-[3px] hover:bg-[#333] bg-transparent text-[11px] text-[color:var(--text-primary)] transition-colors mt-2">
-                        <RefreshCw size={12} className="text-[#4ade80]" />
+                        <RefreshCw size={12} className="text-white" />
                         Restart server
                      </button>
                   </div>
@@ -499,11 +499,11 @@ const ServerStatusPanel = ({ serverName = "Main Trade Server", initialTab }) => 
                         <div className="text-[11px] text-white">8 x Intel Xeon E-2234 @ 3.60GHz</div>
                      </div>
                      <div>
-                        <div className="text-[11px] text-[#3b82f6] mb-1 cursor-pointer hover:underline hover:text-blue-400">Memory</div>
+                        <div className="text-[11px] text-white mb-1 cursor-pointer hover:underline hover:text-white">Memory</div>
                         <div className="text-[11px] text-white">19 / 64 GB</div>
                      </div>
                      <div>
-                        <div className="text-[11px] text-[#3b82f6] mb-1 cursor-pointer hover:underline hover:text-blue-400">Disk</div>
+                        <div className="text-[11px] text-white mb-1 cursor-pointer hover:underline hover:text-white">Disk</div>
                         <div className="text-[11px] text-white">300 / 748 GB</div>
                      </div>
                   </div>
@@ -525,12 +525,12 @@ const ServerStatusPanel = ({ serverName = "Main Trade Server", initialTab }) => 
                   <div className="flex flex-col gap-3 mt-4">
                      <div className="text-[13px] text-[color:var(--text-primary)]">Maximum, last 24hrs</div>
                      <div className="grid grid-cols-6 gap-4 max-w-4xl">
-                        <div><div className="text-[11px] text-[#3b82f6] mb-1 cursor-pointer hover:underline hover:text-blue-400">Connections</div><div className="text-[11px] text-white">24</div></div>
-                        <div><div className="text-[11px] text-[#3b82f6] mb-1 cursor-pointer hover:underline hover:text-blue-400">Active Sockets</div><div className="text-[11px] text-white">161</div></div>
-                        <div><div className="text-[11px] text-[#3b82f6] mb-1 cursor-pointer hover:underline hover:text-blue-400">Network load</div><div className="text-[11px] text-white">0.8 Mbps</div></div>
-                        <div><div className="text-[11px] text-[#3b82f6] mb-1 cursor-pointer hover:underline hover:text-blue-400">CPU load</div><div className="text-[11px] text-[#ef4444]">73%</div></div>
-                        <div><div className="text-[11px] text-[#3b82f6] mb-1 cursor-pointer hover:underline hover:text-blue-400">Memory</div><div className="text-[11px] text-white">20 / 64 GB</div></div>
-                        <div><div className="text-[11px] text-[#3b82f6] mb-1 cursor-pointer hover:underline hover:text-blue-400">Disk speed</div><div className="text-[11px] text-white">read 533 / write 247</div></div>
+                        <div><div className="text-[11px] text-white mb-1 cursor-pointer hover:underline hover:text-white">Connections</div><div className="text-[11px] text-white">24</div></div>
+                        <div><div className="text-[11px] text-white mb-1 cursor-pointer hover:underline hover:text-white">Active Sockets</div><div className="text-[11px] text-white">161</div></div>
+                        <div><div className="text-[11px] text-white mb-1 cursor-pointer hover:underline hover:text-white">Network load</div><div className="text-[11px] text-white">0.8 Mbps</div></div>
+                        <div><div className="text-[11px] text-white mb-1 cursor-pointer hover:underline hover:text-white">CPU load</div><div className="text-[11px] text-[#ef4444]">73%</div></div>
+                        <div><div className="text-[11px] text-white mb-1 cursor-pointer hover:underline hover:text-white">Memory</div><div className="text-[11px] text-white">20 / 64 GB</div></div>
+                        <div><div className="text-[11px] text-white mb-1 cursor-pointer hover:underline hover:text-white">Disk speed</div><div className="text-[11px] text-white">read 533 / write 247</div></div>
                      </div>
                   </div>
 
@@ -560,7 +560,7 @@ const ServerStatusPanel = ({ serverName = "Main Trade Server", initialTab }) => 
                            <ChevronDown size={14} className="text-[color:var(--text-muted)]"/>
                            System
                         </div>
-                        <div className="text-[11px] text-[#3b82f6] ml-6 max-w-3xl leading-relaxed cursor-pointer hover:underline">
+                        <div className="text-[11px] text-white ml-6 max-w-3xl leading-relaxed cursor-pointer hover:underline">
                            We recommend replacing the hardware, since it was made in November 2019. It is undesirable to use hardware older than 5 years for trade servers
                         </div>
                      </div>
@@ -589,17 +589,17 @@ const ServerStatusPanel = ({ serverName = "Main Trade Server", initialTab }) => 
                         <div className="flex flex-col min-w-[900px] w-full">
                             <div className="flex items-center gap-1.5 px-0.5 py-[3px] border border-[#3b82f6] bg-[#1a2d48] cursor-pointer w-max mb-1.5 ml-1">
                                <div className="w-[10px] h-[10px] bg-transparent border border-[color:var(--text-muted)] flex items-center justify-center text-[color:var(--text-muted)] text-[8px] font-bold shrink-0 ml-[1px]">-</div>
-                               <Monitor size={14} className="text-[#4ade80] mx-0.5" />
+                               <Monitor size={14} className="text-white mx-0.5" />
                                <span className="text-[11.5px] text-[color:var(--text-primary)] pr-2 shadow-sm font-sans">ZLD-FLX-M5LP1 / Windows Server 2022 build 20348, AVX2/CLANG, Windows license activated</span>
                             </div>
          
                             {/* Children */}
                             <DeviceRow indent={1} icon={Settings} text="Platform: Supermicro SYS-5039MC-H12TRF" />
                             <DeviceRow indent={1} icon={Settings} text="Motherboard: Supermicro - X11SCE-F 1.02" />
-                            <DeviceRow indent={1} icon={Settings} iconColor="text-[#4ade80]" text="BIOS: SUPERM - 1072009, 1.2, date: 2019.11.21" />
+                            <DeviceRow indent={1} icon={Settings} iconColor="text-white" text="BIOS: SUPERM - 1072009, 1.2, date: 2019.11.21" />
                             <DeviceRow indent={1} icon={Cpu} text="CPU: Intel Xeon E-2234 @ 3.60GHz, 8 cores, 1 NUMA nodes" statBar={{type: 'normal', label: 'frequency:', val: '3 601 Mhz'}} />
                             <DeviceRow indent={1} icon={HardDrive} text="RAM: 64 GB, Large Pages ON" statBar={{type: 'normal', label: 'bandwidth:', val: '32 GB/s'}} />
-                            <DeviceRow indent={1} icon={Globe} iconColor="text-[#4ade80]" text="Network Speed: 922 Mbit/s" statBar={{type: 'normal', label: 'bandwidth:', val: '922 Mbit/s'}} />
+                            <DeviceRow indent={1} icon={Globe} iconColor="text-white" text="Network Speed: 922 Mbit/s" statBar={{type: 'normal', label: 'bandwidth:', val: '922 Mbit/s'}} />
                             
                             <DeviceRow indent={1} expandable expanded text="Disk Drives (1)" icon={HardDrive}>
                                <div className="flex flex-col">

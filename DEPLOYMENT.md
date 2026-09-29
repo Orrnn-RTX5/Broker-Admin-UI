@@ -1,5 +1,7 @@
 # Docker/GHCR Broker Deployment
 
+> Historical multi-broker deployment design. The active `.github/workflows/ci-cd.yml` builds `ghcr.io/orrnn-rtx5/broker-admin-ui` and deploys one `broker-admin-ui` container. It does not call `.github/scripts/deploy-brokers.sh` or read `brokers.json`. Use the workflow as the source of truth for current production deployments.
+
 This repo builds one Docker image and deploys the same image to every broker server. Per-broker URLs are injected at container startup through runtime environment variables, so the image does not need to be rebuilt for each broker.
 
 ## GitHub Secrets

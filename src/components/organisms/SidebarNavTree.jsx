@@ -40,7 +40,7 @@ const SidebarNavTree = ({ onNodeSelect, onNodeDoubleClick, onLockedDropdownClick
   }, []);
 
   return (
-    <div className="w-[280px] h-full bg-[color:var(--bg-surface-1)] flex flex-col border-r border-[color:var(--border-default)] overflow-y-auto no-scrollbar py-2 shadow-[var(--shadow-sm)]">
+    <div role="tree" aria-label="Navigator items" className="w-[280px] h-full bg-[color:var(--bg-surface-1)] flex flex-col border-r border-[color:var(--border-default)] overflow-y-auto no-scrollbar py-2 shadow-[var(--shadow-sm)]">
       {dynamicSidebarData.map((item, index) => {
         const Item = item.component || TreeItem;
         return <Item

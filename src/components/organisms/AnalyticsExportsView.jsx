@@ -17,7 +17,7 @@ const ExportCard = ({ icon, title, description, color, onExport, loading }) => (
       {React.createElement(icon, { size: 16, className: color })}
       <span className="text-[12px] font-semibold text-[color:var(--text-primary)]">{title}</span>
     </div>
-    <p className="text-[11px] text-[#888] leading-relaxed">{description}</p>
+    <p className="text-[11px] text-white leading-relaxed">{description}</p>
     <button onClick={onExport} disabled={loading}
       className="flex items-center justify-center gap-1.5 h-[26px] px-4 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] disabled:opacity-50 mt-1">
       <Download size={11} /> {loading ? 'Exporting…' : 'Export'}
@@ -52,7 +52,7 @@ const AnalyticsExportsView = () => {
   return (
     <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden">
       <div className="flex items-center px-3 h-[30px] bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0">
-        <span className="text-[11px] font-semibold text-[#9cdcfe]">Data Exports</span>
+        <span className="text-[11px] font-semibold text-white">Data Exports</span>
       </div>
       <div className="flex-1 overflow-auto p-6">
         <div className="flex gap-4 flex-wrap">
@@ -68,12 +68,12 @@ const AnalyticsExportsView = () => {
             icon={FileText}
             title="Report Export"
             description="Export a comprehensive platform report including trading summaries, account activity, and financial data."
-            color="text-[#4ec9b0]"
+            color="text-white"
             onExport={handleReportExport}
             loading={loadingReport}
           />
         </div>
-        <p className="text-[10px] text-[#555] mt-6">Files will be downloaded automatically as CSV to your browser's default download folder.</p>
+        <p className="text-[10px] text-white mt-6">Files will be downloaded automatically as CSV to your browser's default download folder.</p>
       </div>
     </div>
   );

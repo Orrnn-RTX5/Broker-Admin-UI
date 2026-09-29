@@ -57,24 +57,32 @@ test('Admin lists all API pages as group folders without fixed names or row limi
   assert.deepEqual(requested.map(({ page, limit }) => [page, limit]), [[1, 100], [2, 2]]);
 });
 
-test('opening a group fetches all its pages and excludes accounts from similarly named groups', async () => {
-  const calls = [];
-  const nodes = await loadGroupsExplorerNodes({ type: 'group', groupName: 'real' }, {
-    getAccounts: async params => {
-      calls.push(params);
-      return params.page === 1
-        ? { accounts: [{ login: 21, group: 'real' }, { login: 10, group: 'real-vip' }], total: 3 }
-        : { accounts: [{ Login: 22, Group: 'REAL', Balance: 0 }], total: 3 };
-    },
+test('opening a group picks its accounts from the full list, ignoring case and similarly named groups', async () => {
+  const nodes = await loadGroupsExplorerNodes({ type: 'group', groupName: 'Orrnn/demo-std' }, {
+    getAllAccounts: async () => [
+      { login: 21, group: 'orrnn/demo-std' },
+      { login: 10, group: 'orrnn/demo-std-vip' },
+      { Login: 22, Group: 'ORRNN/DEMO-STD', Balance: 0 },
+      { login: 30, group: 'dipannita' },
+    ],
   });
-  assert.deepEqual(nodes.map(node => [node.type, node.login]), [['group-account', '21'], ['group-account', '22']]);
-  assert.ok(calls.every(call => call.group === 'real'));
-  assert.deepEqual(calls.map(call => call.page), [1, 2]);
+  assert.deepEqual(nodes.map(node => [node.type, node.login, node.groupName]), [
+    ['group-account', '21', 'Orrnn/demo-std'], ['group-account', '22', 'Orrnn/demo-std'],
+  ]);
+});
+
+test('a folder listing subgroups and its own accounts uses the mixed columns', () => {
+  const nodes = [
+    { type: 'group', id: 'group:PREP\\real', label: 'PREP\\real', groupName: 'PREP\\real', group: { currency: 'USD' } },
+    { type: 'group-account', id: 'a', label: '7', login: '7', groupName: 'PREP', account: { name: 'Ann', balance: 5 } },
+  ];
+  assert.deepEqual(getGroupsExplorerColumns({ type: 'server-folder', path: 'PREP' }, nodes).map(column => column.key), ['group', 'name', 'balance', 'currency']);
+  assert.deepEqual(getGroupsExplorerColumns({ type: 'server-folder', path: 'PREP' }, nodes.slice(0, 1)).map(column => column.key), ['group', 'risk', 'margin', 'currency']);
 });
 
 test('empty responses stay empty and failed API requests remain retryable errors', async () => {
   assert.deepEqual(await loadGroupsExplorerNodes({ type: 'admin' }, { getGroups: async () => ({ groups: [] }) }), []);
-  await assert.rejects(loadGroupsExplorerNodes({ type: 'group', groupName: 'demo' }, { getAccounts: async () => { throw new Error('Offline'); } }), /Offline/);
+  await assert.rejects(loadGroupsExplorerNodes({ type: 'group', groupName: 'demo' }, { getAllAccounts: async () => { throw new Error('Offline'); } }), /Offline/);
 });
 
 test('display fields use API values and do not manufacture margin or currency defaults', () => {

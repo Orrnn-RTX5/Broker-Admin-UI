@@ -5,6 +5,7 @@ import {
   extractMarketTicks,
   extractStreamedSymbols,
   formatMarketPrice,
+  getMarketPriceDirection,
   getSymbolFriendlyDescription,
   isMarketQuoteFresh,
   mapFeedStatusRows,
@@ -12,6 +13,25 @@ import {
   seedMarketTickHistory,
   writeMarketWatchViewCache,
 } from './marketWatch.js';
+
+test('price direction follows each field independently and remains neutral without a prior live price', () => {
+  assert.equal(getMarketPriceDirection(1.101, null), null);
+  assert.equal(getMarketPriceDirection(1.101, 1.100), 'up');
+  assert.equal(getMarketPriceDirection(1.201, 1.202), 'down');
+  assert.equal(getMarketPriceDirection(1.101, 1.101, 'up'), 'up');
+  assert.equal(getMarketPriceDirection(1.201, 1.201, 'down'), 'down');
+  assert.equal(getMarketPriceDirection(1.101, 1.101), null);
+  assert.equal(getMarketPriceDirection('invalid', 1.1, 'up'), null);
+
+  const bidDir = getMarketPriceDirection(1.101, 1.100);
+  const askDir = getMarketPriceDirection(1.200, 1.201);
+  assert.equal(bidDir, 'up');
+  assert.equal(askDir, 'down');
+
+  // The last move still matters when a later quote returns to the frame's start price.
+  const firstMove = getMarketPriceDirection(1.101, 1.100);
+  assert.equal(getMarketPriceDirection(1.100, 1.101, firstMove), 'down');
+});
 
 test('accepts manager feed single ticks, envelopes, arrays, and JSON lines', () => {
   const tick = { symbol: 'EURUSD', bid: 1.12, ask: 1.13 };

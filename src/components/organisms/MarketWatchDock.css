@@ -1,22 +1,27 @@
-/* ============================================================
-   Market Watch Dock — Scoped Color Palette (VS Code Dark Modern)
-   Primary BG: #181818 | Alternate BG: #252526
-   Text: #cccccc | Up/Profit: #4ec9b0 | Down/Loss: #f14c4c | Accent: #0078d4
-   ============================================================ */
+@font-face {
+  font-family: 'RTX5 Admin Quote Mono';
+  src: url('@fontsource/jetbrains-mono/files/jetbrains-mono-latin-300-normal.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+}
+
+/* Market Watch colors follow the shared night palette. */
 .admin-market-dock {
-  /* --- Scoped color tokens (matching VS Code dark theme) --- */
-  --mw-bg-1: #181818;
-  --mw-bg-2: #252526;
-  --mw-bg-3: #2a2d2e;
-  --mw-border: #333333;
-  --mw-border-subtle: #2b2b2b;
-  --mw-text: #cccccc;
-  --mw-text-secondary: #9d9d9d;
-  --mw-text-muted: #6e6e6e;
-  --mw-accent: #0078d4;
-  --mw-accent-hover: #3794ff;
-  --mw-accent-soft: rgba(0, 120, 212, 0.22);
-  --mw-accent-soft-border: rgba(0, 120, 212, 0.4);
+  /* Keep Market Watch on the shared workspace palette. */
+  --mw-bg-1: var(--bg-app);
+  --mw-bg-2: var(--bg-surface-2);
+  --mw-bg-3: var(--bg-surface-3);
+  --mw-border: var(--border-default);
+  --mw-border-subtle: var(--border-subtle);
+  --mw-text: var(--text-primary);
+  --mw-text-secondary: var(--text-secondary);
+  --mw-text-muted: var(--text-muted);
+  --mw-line-muted: var(--border-strong);
+  --mw-accent: var(--accent-500);
+  --mw-accent-hover: var(--accent-600);
+  --mw-accent-soft: var(--accent-soft);
+  --mw-accent-soft-border: var(--accent-border);
   --mw-success: var(--success-500);
   --mw-danger: var(--danger-500);
   --mw-warning: var(--warning-500);
@@ -32,6 +37,23 @@
   color: var(--mw-text);
   position: relative;
   font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.admin-dock-mobile-trigger,
+.admin-dock-mobile-backdrop,
+.admin-dock-mobile-header {
+  display: none;
+}
+
+.admin-dock-mobile-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .admin-market-watch {
@@ -80,7 +102,7 @@
 .admin-dock-resizer:hover .admin-dock-resizer-line,
 .admin-dock-resizer.is-dragging .admin-dock-resizer-line {
   background: var(--mw-accent);
-  box-shadow: 0 0 6px rgba(0, 120, 212, 0.6);
+  box-shadow: 0 0 6px var(--mw-accent-soft);
 }
 
 .admin-dock-resizer-handle {
@@ -100,7 +122,7 @@
   width: 3px;
   height: 3px;
   border-radius: 50%;
-  background: var(--mw-text-muted);
+  background: var(--mw-line-muted);
   transition: background 0.15s ease;
 }
 
@@ -219,14 +241,14 @@
   background: transparent;
   border: 0;
   color: var(--mw-text);
-  font-size: 12px;
+  font-size: 11px;
   font-family: inherit;
   outline: none;
 }
 
 .admin-market-search input::placeholder {
   color: var(--mw-text-muted);
-  font-size: 11.5px;
+  font-size: 11px;
 }
 
 .admin-market-search:focus-within {
@@ -278,7 +300,7 @@
   table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 12px;
+  font-size: 11px;
   white-space: nowrap;
 }
 
@@ -295,7 +317,8 @@
   text-overflow: ellipsis;
 }
 
-.admin-market-table th {
+.admin-market-table th,
+#root .admin-market-dock .admin-market-table th {
   position: sticky;
   top: 0;
   z-index: 1;
@@ -320,20 +343,20 @@
   text-align: right;
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 400;
 }
 
 .admin-market-table td:not(:first-child) {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 400;
 }
 
 .admin-market-table td:first-child {
   text-align: left;
   font-family: var(--font-sans);
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 400;
 }
 
 /* ---- Row States ---- */
@@ -347,8 +370,8 @@
 }
 
 .market-table-row.is-selected {
-  background: #04395e !important;
-  color: #ffffff;
+  background: var(--mw-accent-soft) !important;
+  color: var(--mw-text);
 }
 
 .market-symbol-btn {
@@ -362,8 +385,8 @@
   padding: 0;
   color: var(--mw-text);
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 400;
   text-align: left;
 }
 
@@ -377,27 +400,52 @@
   white-space: nowrap;
 }
 
-/* ---- Quote Colors: reference green = up/profit, reference red = down/loss ---- */
-.admin-market-table .quote-up td:not(:first-child),
+/* Bid and Ask each follow their own latest price change. */
 .admin-market-table .quote-up svg {
   color: var(--mw-success);
 }
 
-.admin-market-table .quote-down td:not(:first-child),
 .admin-market-table .quote-down svg {
   color: var(--mw-danger);
 }
 
-.admin-market-table .quote-stale td:not(:first-child),
+.admin-market-table .quote-neutral svg,
 .admin-market-table .quote-stale svg {
   color: var(--mw-text-muted);
+}
+
+.admin-market-watch .market-quote-up {
+  color: var(--mw-success);
+}
+
+.admin-market-watch .market-quote-down {
+  color: var(--mw-danger);
+}
+
+.admin-market-watch .market-quote-neutral {
+  color: var(--mw-text-muted);
+}
+
+.admin-market-table td.market-bid-cell,
+.admin-market-table td.market-ask-cell {
+  font-weight: 300;
+}
+
+/* Match the manager's compact Bid/Ask figures without changing other admin text. */
+#root .admin-quote-value {
+  font-family: 'RTX5 Admin Quote Mono', var(--font-mono);
+  font-size: 11px;
+  font-weight: 300;
+  line-height: 1.35;
+  letter-spacing: normal;
+  font-variant-numeric: tabular-nums;
 }
 
 .admin-market-watch .market-watch-empty {
   margin: 0;
   white-space: normal;
   overflow-wrap: anywhere;
-  font: 12px/1.6 var(--font-sans);
+  font: 11px/1.5 var(--font-sans);
   color: var(--mw-text-muted);
   text-align: center;
   padding: 20px 14px;
@@ -444,14 +492,14 @@
 
 .admin-market-tabs button.is-active {
   background: var(--mw-bg-2);
-  color: var(--accent-600);
+  color: #ffffff;
   font-weight: 600;
   border-color: var(--mw-border);
   box-shadow: inset 0 -2px 0 0 var(--accent-500);
 }
 
 .admin-market-tabs button[aria-pressed="true"] {
-  color: var(--mw-accent);
+  color: #ffffff;
   border-bottom-color: var(--mw-accent);
   background: var(--mw-bg-3);
   font-weight: 600;
@@ -473,27 +521,27 @@
 
 .market-details-symbol {
   margin: 0;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--mw-text);
 }
 
 .market-details-category-badge {
   font-size: 9px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 2px 6px;
   border-radius: 3px;
   background: var(--mw-accent-soft);
-  color: var(--mw-accent);
+  color: #ffffff;
   border: 1px solid var(--mw-accent-soft-border);
 }
 
 .market-details-desc {
   margin: 4px 0 0;
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--mw-text-secondary);
   line-height: 1.35;
 }
@@ -514,16 +562,16 @@
 }
 
 .market-price-label {
-  font-size: 8.5px;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 600;
   color: var(--mw-text-muted);
   letter-spacing: 0.05em;
 }
 
 .market-price-val {
   font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
@@ -556,15 +604,15 @@
 
 .market-spec-row dt {
   color: var(--mw-text-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .market-spec-row dd {
   margin: 0;
   text-align: right;
-  font-weight: 500;
+  font-weight: 400;
   color: var(--mw-text);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 /* ---- Action Buttons ---- */
@@ -586,25 +634,26 @@
   border: 1px solid var(--mw-border);
   background: var(--mw-bg-2);
   color: var(--mw-text);
-  font-size: 10.5px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.12s ease;
 }
 
 .market-action-btn:hover {
   background: var(--mw-bg-3);
-  border-color: var(--mw-text-muted);
+  border-color: var(--mw-line-muted);
 }
 
 .market-action-btn--primary {
-  background: var(--mw-accent-soft);
-  border-color: var(--mw-accent-soft-border);
-  color: var(--mw-accent-hover);
+  background: var(--mw-accent);
+  border-color: var(--mw-accent);
+  color: #ffffff;
 }
 
 .market-action-btn--primary:hover {
-  background: rgba(85, 74, 232, 0.25);
+  background: var(--mw-accent-hover);
+  border-color: var(--mw-accent-hover);
 }
 
 /* Ticks View Header */
@@ -630,7 +679,7 @@
   border: 0;
   background: var(--mw-bg-2);
   color: var(--mw-text);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   text-align: left;
@@ -682,5 +731,157 @@
   .admin-market-dock {
     width: 245px;
     flex-basis: 245px;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-market-dock {
+    width: 0;
+    min-width: 0;
+    flex: 0 0 0;
+    overflow: visible;
+    border-right: 0;
+    z-index: 50;
+  }
+
+  .admin-dock-mobile-trigger {
+    position: fixed;
+    bottom: max(70px, calc(env(safe-area-inset-bottom) + 70px));
+    left: 12px;
+    z-index: 3;
+    display: inline-flex;
+    height: 38px;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    border: 1px solid var(--mw-accent-soft-border);
+    border-radius: 6px;
+    background: var(--mw-bg-2);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    color: var(--mw-text);
+    font: 600 12px var(--font-sans);
+    cursor: pointer;
+  }
+
+  .admin-dock-mobile-trigger svg {
+    color: var(--mw-accent-hover);
+  }
+
+  .admin-dock-mobile-trigger:hover {
+    background: var(--mw-bg-3);
+  }
+
+  .admin-market-dock.is-mobile-open .admin-dock-mobile-trigger {
+    visibility: hidden;
+  }
+
+  .admin-dock-mobile-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    display: block;
+    visibility: hidden;
+    background: rgba(0, 0, 0, 0.58);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 160ms ease;
+  }
+
+  .admin-dock-mobile-panel {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 2;
+    width: min(320px, calc(100vw - 40px));
+    height: 100dvh;
+    flex: none;
+    visibility: hidden;
+    border-right: 1px solid var(--mw-border);
+    background: var(--mw-bg-1);
+    box-shadow: 8px 0 28px rgba(0, 0, 0, 0.36);
+    pointer-events: none;
+    transform: translateX(-100%);
+    transition: transform 180ms ease;
+  }
+
+  .admin-market-dock.is-mobile-open .admin-dock-mobile-backdrop,
+  .admin-market-dock.is-mobile-open .admin-dock-mobile-panel {
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .admin-market-dock.is-mobile-open .admin-dock-mobile-backdrop {
+    opacity: 1;
+  }
+
+  .admin-market-dock.is-mobile-open .admin-dock-mobile-panel {
+    transform: translateX(0);
+  }
+
+  .admin-dock-mobile-header {
+    display: flex;
+    height: 44px;
+    flex: 0 0 44px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px 0 14px;
+    border-bottom: 1px solid var(--mw-border);
+    background: var(--mw-bg-2);
+    color: var(--mw-text);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .admin-dock-mobile-header button {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--mw-text-secondary);
+    cursor: pointer;
+  }
+
+  .admin-dock-mobile-header button:hover {
+    background: var(--mw-bg-3);
+    color: var(--mw-text);
+  }
+
+  .admin-dock-mobile-trigger:focus-visible,
+  .admin-dock-mobile-header button:focus-visible {
+    outline: 2px solid var(--mw-accent-hover);
+    outline-offset: 2px;
+  }
+
+  .admin-market-watch {
+    height: min(42dvh, 300px) !important;
+    min-height: 0;
+    flex: none !important;
+  }
+
+  .admin-market-dock.is-navigator-collapsed .admin-market-watch {
+    height: auto !important;
+    flex: 1 1 auto !important;
+  }
+
+  .admin-navigator-dock {
+    min-height: 0;
+  }
+
+  .admin-dock-resizer {
+    display: none;
+  }
+
+  .admin-navigator-content [role='treeitem'] {
+    min-height: 34px;
+    height: 34px;
+  }
+}
+
+@media (max-width: 640px) and (prefers-reduced-motion: reduce) {
+  .admin-dock-mobile-backdrop,
+  .admin-dock-mobile-panel {
+    transition: none;
   }
 }

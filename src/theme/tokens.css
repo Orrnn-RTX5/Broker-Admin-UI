@@ -1,46 +1,46 @@
-/* RTX5 Admin workspace — terminal-matched dark palette.
-   Primary BG: #1e1e1e (charcoal panel) | Deep BG: #141414 | Accent/Buy: #2196f3 (blue)
-   Sell/Loss: #e53935 (red) | Profit: #2ebd59 (green) | Text: #e8e8e8 */
+/* RTX5 Admin workspace — slate night palette.
+   Layered blue-graphite surfaces, restrained blue actions, and readable status colours. */
 
 :root,
 [data-theme="light"],
 [data-theme="dark"] {
-  /* Surfaces — VS Code Dark Modern palette */
-  --bg-app: #181818;
-  --bg-surface-1: #1e1e1e;
-  --bg-surface-2: #252526;
-  --bg-surface-3: #2a2d2e;
-  --bg-chrome: #181818;
-  --bg-toolbar: #252526;
-  --bg-overlay: rgba(0, 0, 0, 0.72);
+  /* Workspace, cards, controls, and application chrome. */
+  --bg-app: #10151d;
+  --bg-surface-1: #161d29;
+  --bg-surface-2: #1d2836;
+  --bg-surface-3: #263445;
+  --bg-chrome: #0d131c;
+  --bg-toolbar: #182330;
+  --bg-overlay: rgba(3, 9, 16, 0.78);
 
-  /* Borders — VS Code clean subtle dividers */
-  --border-subtle: #2b2b2b;
-  --border-default: #333333;
-  --border-strong: #454545;
+  /* Borders separate dense controls without bright outlines. */
+  --border-subtle: #2b3949;
+  --border-default: #344659;
+  --border-strong: #4a6177;
 
-  /* Text — VS Code exact foreground scale */
-  --text-primary: #cccccc;
-  --text-secondary: #9d9d9d;
-  --text-muted: #6e6e6e;
-  --text-tertiary: #555555;
-  --text-placeholder: #6e6e6e;
-  --text-inverse: #1e1e1e;
+  /* Main copy, supporting copy, and quiet labels on the dark workspace. */
+  --text-primary: #e7eff9;
+  --text-secondary: #b8c8d9;
+  --text-muted: #93a6bb;
+  --text-tertiary: #8497aa;
+  --text-placeholder: #93a6bb;
+  --line-muted: #74879b;
+  --text-inverse: #10151d;
 
-  /* Blue accent — VS Code signature blue (#0078d4 / #3794ff) */
-  --accent-50:  rgba(0, 120, 212, 0.10);
-  --accent-100: rgba(0, 120, 212, 0.18);
-  --accent-500: #0078d4;
-  --accent-600: #3794ff;
-  --accent-700: #0e639c;
+  /* Blue actions use a deep enough fill for white button text. */
+  --accent-50:  rgba(45, 108, 223, 0.10);
+  --accent-100: rgba(45, 108, 223, 0.18);
+  --accent-500: #2d6cdf;
+  --accent-600: #2563eb;
+  --accent-700: #1d4ed8;
   --accent-contrast: #ffffff;
-  --accent-soft: rgba(0, 120, 212, 0.22);
+  --accent-soft: rgba(45, 108, 223, 0.18);
 
-  /* Semantic — VS Code mint profit, red loss, amber warning */
-  --success-500: #4ec9b0;
-  --warning-500: #cca700;
-  --danger-500:  #f14c4c;
-  --info-500:    #3794ff;
+  /* Keep the market's blue positive convention; amber and coral stay distinct. */
+  --success-500: #6db3f2;
+  --warning-500: #f5c76b;
+  --danger-500:  #f27d86;
+  --info-500:    #76b8f8;
 
   /* Shadows — subtle dark elevation */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
@@ -64,7 +64,8 @@
   --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-mono: 'JetBrains Mono', Consolas, 'Courier New', monospace;
   --ui-font-small: 11px;
-  --ui-font-base: 12px;
+  --ui-font-base: 11px;
+  --ui-font-heading: 12px;
   --ui-weight-regular: 400;
   --ui-weight-medium: 500;
   --ui-weight-semibold: 600;
@@ -75,14 +76,14 @@
 /* ============================================================
    Density — compact (default) vs cozy. Applied via data-density on <html>.
    ============================================================ */
+:root,
+[data-density="compact"] {
+  --row-py: 4px;
+  --row-h:  26px;
+}
 [data-density="cozy"] {
   --row-py: 6px;
   --row-h:  30px;
-}
-[data-density="compact"],
-:root {
-  --row-py: 4px;
-  --row-h:  26px;
 }
 [data-density="cozy"] table td,
 [data-density="cozy"] table th { padding-top: 5px !important; padding-bottom: 5px !important; }

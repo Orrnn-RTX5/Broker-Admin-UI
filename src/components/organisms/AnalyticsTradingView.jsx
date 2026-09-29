@@ -136,7 +136,7 @@ const ResultTable = ({ data }) => {
         {Object.entries(data).map(([key, value]) => (
           <div key={key} className="flex items-center px-4 h-[32px]">
             <span className="text-[11px] text-[color:var(--text-muted)] flex-1">{formatHeader(key)}</span>
-            <span className="text-[12px] font-mono text-[color:var(--info-500)]">{fmt(key, value)}</span>
+            <span className="text-[12px] font-mono text-white">{fmt(key, value)}</span>
           </div>
         ))}
       </div>

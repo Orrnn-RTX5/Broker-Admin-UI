@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Folder, User } from 'lucide-react';
 import TreeItem from '../molecules/TreeItem';
 import { useDataFetch } from '../../hooks/useCore';
@@ -6,12 +6,14 @@ import { useAuthStore } from '../../store/authStore';
 import { ManagerService } from '../../services/manager.service';
 import { AccountsService } from '../../services/accounts.service';
 import { canAccessView } from '../../utils/permissions';
-import { loadGroupTreePages, normalizeNavigationGroups, normalizeNavigationAccounts } from '../../utils/groupTreeData';
+import { loadGroupTreePages, normalizeNavigationAccounts } from '../../utils/groupTreeData';
 import { getServerGroupFolderNodes } from '../../utils/groupsExplorerData';
+import { GROUP_LIST_ARRAY_KEYS, GROUP_LIST_FETCH_OPTIONS, loadGroupList, readGroupListSnapshot } from '../../utils/groupListCache';
 
-const loadGroups = async () => normalizeNavigationGroups(await loadGroupTreePages(
+// Same cached request as the explorer, so opening the tree never repeats the fetch.
+const loadGroups = () => loadGroupList(() => loadGroupTreePages(
   ManagerService.getGroupList,
-  { arrayKeys: ['answer', 'groups', 'data', 'items', 'rows'] },
+  { arrayKeys: GROUP_LIST_ARRAY_KEYS },
 ));
 
 const useGroupExpansion = (revealRevision) => {
@@ -27,29 +29,49 @@ const BranchStatus = ({ level, loading, error, empty, noun, onRetry }) => (
     {loading ? <span role="status">Loading {noun}…</span> : error ? (
       <div role="alert">
         Unable to load {noun}.{' '}
-        <button type="button" className="underline text-[color:var(--accent-600)]" onClick={onRetry}>Retry</button>
+        <button type="button" className="underline text-white" onClick={onRetry}>Retry</button>
       </div>
     ) : empty ? `No ${noun}` : null}
   </div>
 );
 
-const GroupFolder = ({ group, level, canLoadAccounts, refreshTrigger, ...treeProps }) => {
+// One group's accounts, picked from the account list loaded once for the whole tree.
+const useGroupAccounts = (accounts, groupName) => useMemo(
+  () => (accounts.rows && groupName ? normalizeNavigationAccounts(accounts.rows, groupName) : null),
+  [accounts.rows, groupName],
+);
+
+const GroupAccountItems = ({ accounts, groupAccounts, level, showEmpty, ...treeProps }) => {
+  if (!accounts.canLoad) {
+    return showEmpty ? (
+      <div style={{ paddingLeft: `${level * 14 + 26}px` }} className="py-1 text-[11px] text-[color:var(--text-muted)]">
+        Account access required
+      </div>
+    ) : null;
+  }
+  const empty = !groupAccounts?.length;
+  return (
+    <>
+      {(accounts.loading || accounts.error || (empty && showEmpty)) && (
+        <BranchStatus level={level} loading={accounts.loading} error={accounts.error} empty={empty} noun="accounts" onRetry={accounts.retry} />
+      )}
+      {groupAccounts?.map(account => (
+        <TreeItem
+          {...treeProps}
+          key={account.id}
+          level={level}
+          item={{ ...account, type: 'group-account', icon: User }}
+        />
+      ))}
+    </>
+  );
+};
+
+const GroupFolder = ({ group, level, accounts, ...treeProps }) => {
   const reveal = treeProps.groupExplorerReveal;
   const revealRevision = reveal?.type === 'group' && (reveal.id === group.id || reveal.groupName === group.groupName) ? reveal.revision : null;
   const [expanded, setExpanded] = useGroupExpansion(revealRevision);
-  const loadAccounts = useCallback(async (params) => normalizeNavigationAccounts(
-    await loadGroupTreePages(AccountsService.getAccounts, {
-      ...params,
-      arrayKeys: ['accounts', 'data', 'answer', 'items', 'rows'],
-    }),
-    group.groupName,
-  ), [group.groupName]);
-  const { data: accounts, loading, error, mutate } = useDataFetch(
-    loadAccounts,
-    { group: group.groupName },
-    [group.groupName, refreshTrigger],
-    expanded && canLoadAccounts,
-  );
+  const groupAccounts = useGroupAccounts(accounts, group.groupName);
 
   return (
     <TreeItem
@@ -61,27 +83,11 @@ const GroupFolder = ({ group, level, canLoadAccounts, refreshTrigger, ...treePro
         ...group,
         type: 'group',
         icon: Folder,
-        count: canLoadAccounts && !loading && !error ? accounts?.length : undefined,
+        count: groupAccounts?.length,
         countInParentheses: true,
         initiallyExpanded: false,
-        renderChildren: ({ level: childLevel }) => canLoadAccounts ? (
-          <>
-            {(loading || error || !accounts?.length) && (
-              <BranchStatus level={childLevel} loading={loading} error={error} empty={!accounts?.length} noun="accounts" onRetry={mutate} />
-            )}
-            {!loading && !error && accounts?.map(account => (
-              <TreeItem
-                {...treeProps}
-                key={account.id}
-                level={childLevel}
-                item={{ ...account, type: 'group-account', icon: User }}
-              />
-            ))}
-          </>
-        ) : (
-          <div style={{ paddingLeft: `${childLevel * 14 + 26}px` }} className="py-1 text-[11px] text-[color:var(--text-muted)]">
-            Account access required
-          </div>
+        renderChildren: ({ level: childLevel }) => (
+          <GroupAccountItems {...treeProps} accounts={accounts} groupAccounts={groupAccounts} level={childLevel} showEmpty />
         ),
       }}
     />
@@ -95,45 +101,74 @@ const asFolder = (node) => (node.type === 'server-folder'
   ? node
   : { ...node, id: `server-folder:${node.groupName}`, type: 'server-folder', path: node.groupName, label: groupLeafLabel(node.groupName) });
 
-const ServerFolderChildren = ({ groups, path, level, ...folderProps }) => (
-  getServerGroupFolderNodes(groups, path).map(node => (node.type === 'server-folder' || node.count > 0
+// Rows directly under Groups are main groups, so they are always folders.
+const ServerFolderChildren = ({ groups, path, level, ...folderProps }) => {
+  const nodes = useMemo(() => getServerGroupFolderNodes(groups, path), [groups, path]);
+  return nodes.map(node => (node.type === 'server-folder' || node.count > 0 || !path
     ? <ServerFolder key={node.id} node={asFolder(node)} groups={groups} level={level} {...folderProps} />
     : <GroupFolder key={node.id} group={{ ...node, label: groupLeafLabel(node.groupName) }} level={level} {...folderProps} />
-  ))
-);
+  ));
+};
 
-const ServerFolder = ({ node, groups, level, canLoadAccounts, refreshTrigger, ...treeProps }) => (
-  <TreeItem
-    {...treeProps}
-    level={level}
-    item={{
-      ...node,
-      icon: Folder,
-      countInParentheses: true,
-      initiallyExpanded: false,
-      renderChildren: ({ level: childLevel }) => (
-        <ServerFolderChildren
-          {...treeProps}
-          groups={groups}
-          path={node.path}
-          level={childLevel}
-          canLoadAccounts={canLoadAccounts}
-          refreshTrigger={refreshTrigger}
-        />
-      ),
-    }}
-  />
-);
+// A folder that is itself a server group (every main group) lists its own
+// accounts after its subgroups.
+const ServerFolder = ({ node, groups, level, accounts, ...treeProps }) => {
+  const groupAccounts = useGroupAccounts(accounts, node.groupName);
+  return (
+    <TreeItem
+      {...treeProps}
+      level={level}
+      item={{
+        ...node,
+        icon: Folder,
+        count: node.count + (groupAccounts?.length ?? 0),
+        countInParentheses: true,
+        initiallyExpanded: false,
+        renderChildren: ({ level: childLevel }) => (
+          <>
+            <ServerFolderChildren
+              {...treeProps}
+              groups={groups}
+              path={node.path}
+              level={childLevel}
+              accounts={accounts}
+            />
+            {node.groupName && (
+              <GroupAccountItems {...treeProps} accounts={accounts} groupAccounts={groupAccounts} level={childLevel} showEmpty={!node.count} />
+            )}
+          </>
+        ),
+      }}
+    />
+  );
+};
 
 const ServerGroupsNavigation = ({ item, level = 0, refreshTrigger, ...treeProps }) => {
   const [expanded, setExpanded] = useGroupExpansion(treeProps.groupExplorerReveal?.revision ?? null);
   const currentUser = useAuthStore(state => state.user);
   const canLoadGroups = canAccessView(currentUser, 'Groups');
   const canLoadAccounts = canLoadGroups && canAccessView(currentUser, 'Trading Accounts');
-  const { data: groups, loading, error, mutate } = useDataFetch(
-    loadGroups, null, [refreshTrigger], expanded && canLoadGroups,
+  const { data: liveGroups, loading: fetching, error, mutate } = useDataFetch(
+    loadGroups, null, [refreshTrigger], expanded && canLoadGroups, GROUP_LIST_FETCH_OPTIONS,
   );
+  const snapshot = useMemo(() => (liveGroups ? null : readGroupListSnapshot()), [liveGroups]);
+  const groups = liveGroups ?? snapshot;
+  const loading = fetching && !groups;
   const groupCount = canLoadGroups && !loading && !error ? groups?.length : undefined;
+  // One account list for the whole tree; every folder picks its own group's accounts from it.
+  const { data: accountRows, loading: accountsLoading, error: accountsError, mutate: retryAccounts } = useDataFetch(
+    AccountsService.getAllAccounts, null, [refreshTrigger], expanded && canLoadAccounts,
+  );
+  const accounts = useMemo(() => ({
+    canLoad: canLoadAccounts,
+    rows: accountsLoading ? null : accountRows,
+    loading: canLoadAccounts && accountsLoading,
+    error: canLoadAccounts && !accountsLoading ? accountsError : null,
+    retry: () => {
+      AccountsService.invalidateCache();
+      return retryAccounts();
+    },
+  }), [accountRows, accountsError, accountsLoading, canLoadAccounts, retryAccounts]);
 
   return (
     <TreeItem
@@ -161,8 +196,7 @@ const ServerGroupsNavigation = ({ item, level = 0, refreshTrigger, ...treeProps 
                 groups={groups}
                 path=""
                 level={groupLevel}
-                canLoadAccounts={canLoadAccounts}
-                refreshTrigger={refreshTrigger}
+                accounts={accounts}
               />
             )}
           </>

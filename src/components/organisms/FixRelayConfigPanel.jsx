@@ -71,7 +71,7 @@ export default function FixRelayConfigPanel() {
       {status?.feature_enabled && status?.selected === false && <p className="my-2 text-xs text-amber-400">This broker currently uses another price source. Your operator must select the separate FIX relay before you can connect.</p>}
       {status?.error && <p className="my-2 text-xs text-red-400">Connection: {status.error}</p>}
       {error && <p role="alert" className="my-2 text-xs text-red-400">{error}</p>}
-      {notice && <p role="status" className="my-2 text-xs text-green-400">{notice}</p>}
+      {notice && <p role="status" className="my-2 text-xs text-white">{notice}</p>}
       <form onSubmit={save}>
         <fieldset disabled={busy} className="grid gap-3 md:grid-cols-3">
           {['host', 'port', 'sender_comp_id', 'target_comp_id', 'username'].map((key) => (

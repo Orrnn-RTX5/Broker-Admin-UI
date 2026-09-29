@@ -17,7 +17,6 @@ import {
   loginSuperAdmin,
   checkSuperAdminHealth,
   getSuperAdminOrigin,
-  getSuperAdminBaseUrl,
 } from '../../services/superAdmin.service';
 
 export const SuperAdminAuthScreen = ({ navigate, onLoginSuccess, onSwitchToBrokerLogin }) => {
@@ -77,19 +76,19 @@ export const SuperAdminAuthScreen = ({ navigate, onLoginSuccess, onSwitchToBroke
   };
 
   return (
-    <div className="min-h-screen w-screen bg-[#070b12] flex items-center justify-center p-4 select-none font-sans relative overflow-hidden">
+    <div className="fixed inset-0 flex h-[100dvh] items-center justify-center overflow-y-auto bg-[#070b12] p-4 font-sans select-none">
       {/* Subtle Background Glows */}
       <div className="absolute top-1/4 -left-20 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-md bg-[#0f172a] border border-slate-800 rounded-2xl p-8 shadow-2xl z-10 space-y-6">
+      <div className="z-10 my-auto w-full max-w-md space-y-6 rounded-2xl border border-slate-800 bg-[#0f172a] p-6 shadow-2xl sm:p-8">
         {/* Header Branding */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 mb-1 shadow-inner">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-600/10 border border-indigo-500/20 text-white mb-1 shadow-inner">
             <ShieldCheck size={28} />
           </div>
           <h1 className="text-xl font-bold text-white tracking-tight">RTX5 Technology Admin</h1>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-white">
             Dedicated Super Admin Control Plane Authentication
           </p>
         </div>
@@ -97,19 +96,19 @@ export const SuperAdminAuthScreen = ({ navigate, onLoginSuccess, onSwitchToBroke
         {/* Backend Connectivity Status Bar */}
         <div className="p-3 rounded-lg bg-[#070b12] border border-slate-800/80 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
-            <Server size={13} className="text-slate-400" />
-            <span className="text-slate-400 truncate max-w-[200px]" title={backendOrigin}>
+            <Server size={13} className="text-white" />
+            <span className="text-white truncate max-w-[200px]" title={backendOrigin}>
               {backendOrigin}
             </span>
           </div>
-          <div className="flex items-center gap-1.5 font-mono text-[11px]">
+          <div className="flex items-center gap-1.5 font-mono text-[11px]" role="status" aria-live="polite">
             {healthStatus.loading ? (
-              <span className="text-slate-500 flex items-center gap-1">
+              <span className="text-white flex items-center gap-1">
                 <Loader2 size={11} className="animate-spin" />
                 <span>Checking...</span>
               </span>
             ) : healthStatus.ok ? (
-              <span className="text-emerald-400 flex items-center gap-1">
+              <span className="text-white flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 <span>Online</span>
               </span>
@@ -124,7 +123,7 @@ export const SuperAdminAuthScreen = ({ navigate, onLoginSuccess, onSwitchToBroke
 
         {/* Error Alert */}
         {error && (
-          <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-2 animate-in fade-in">
+          <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-2 animate-in fade-in" role="alert">
             <AlertCircle size={15} className="shrink-0 mt-0.5 text-rose-400" />
             <span className="break-words">{error}</span>
           </div>
@@ -133,39 +132,42 @@ export const SuperAdminAuthScreen = ({ navigate, onLoginSuccess, onSwitchToBroke
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
-              <span>Admin Username</span>
-              <span className="text-[10px] text-slate-500 font-mono">POST /api/v1/admin/auth/login</span>
-            </label>
+            <label htmlFor="super-admin-username" className="text-sm font-semibold text-white block">Admin Username</label>
             <div className="relative">
-              <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+              <User size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white" />
               <input
+                id="super-admin-username"
                 type="text"
                 required
+                autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="admin"
-                className="w-full bg-[#070b12] border border-slate-800 rounded-lg pl-9 pr-3 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors font-mono"
+                className="w-full rounded-lg border border-slate-600 bg-[#070b12] py-2.5 pl-9 pr-3 font-mono text-sm text-white placeholder-white transition-colors focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-300 block">Admin Password</label>
+            <label htmlFor="super-admin-password" className="text-sm font-semibold text-white block">Admin Password</label>
             <div className="relative">
-              <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+              <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white" />
               <input
+                id="super-admin-password"
                 type={showPassword ? 'text' : 'password'}
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="SuperAdmin password"
-                className="w-full bg-[#070b12] border border-slate-800 rounded-lg pl-9 pr-9 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition-colors font-mono"
+                className="w-full rounded-lg border border-slate-600 bg-[#070b12] py-2.5 pl-9 pr-10 font-mono text-sm text-white placeholder-white transition-colors focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-400/30"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-white hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
               >
                 {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
@@ -175,7 +177,7 @@ export const SuperAdminAuthScreen = ({ navigate, onLoginSuccess, onSwitchToBroke
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-600/25"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 transition-all hover:bg-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f172a] disabled:opacity-60"
           >
             {loading ? (
               <>
@@ -193,7 +195,7 @@ export const SuperAdminAuthScreen = ({ navigate, onLoginSuccess, onSwitchToBroke
 
         {/* Switch back to Broker Login */}
         <div className="pt-4 border-t border-slate-800/80 flex flex-col items-center gap-3 text-center">
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-white">
             Need to manage a specific broker trading group or client accounts?
           </p>
           <button
@@ -202,9 +204,9 @@ export const SuperAdminAuthScreen = ({ navigate, onLoginSuccess, onSwitchToBroke
               if (onSwitchToBrokerLogin) onSwitchToBrokerLogin();
               else if (navigate) navigate('/admin-login');
             }}
-            className="w-full py-2 rounded-lg bg-slate-800/80 hover:bg-slate-800 text-slate-300 border border-slate-700/80 text-xs font-medium flex items-center justify-center gap-2 transition-colors"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700/80 bg-slate-800/80 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f172a]"
           >
-            <Building2 size={14} className="text-slate-400" />
+            <Building2 size={14} className="text-white" />
             <span>Switch to Broker Admin Login</span>
           </button>
         </div>

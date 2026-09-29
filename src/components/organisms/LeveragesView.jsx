@@ -95,7 +95,7 @@ const LeveragesView = () => {
           <Plus size={12} /> Add Leverage Rule
         </button>
         <div className="ml-auto flex items-center pr-2">
-          <Settings size={14} className="text-[#999] hover:text-white cursor-pointer" />
+          <Settings size={14} className="text-white hover:text-white cursor-pointer" />
         </div>
       </div>
 
@@ -137,19 +137,19 @@ const LeveragesView = () => {
                     <span className="text-[color:var(--text-primary)] font-medium truncate">{rowId || '-'}</span>
                   </div>
                   <div className="w-[70px] px-3 py-1 text-[12px] border-r border-black/10 shrink-0 flex items-center">
-                    <span className={`text-[11px] font-semibold ${row.enabled ? 'text-[#4ec9b0]' : 'text-[#f48771]'}`}>
+                    <span className={`text-[11px] font-semibold ${row.enabled ? 'text-white' : 'text-[#f48771]'}`}>
                       {row.enabled ? 'Yes' : 'No'}
                     </span>
                   </div>
                   <div className="w-[180px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate flex items-center">{row.group_name}</div>
                   <div className="w-[120px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate flex items-center">{row.symbol}</div>
                   <div className="w-[80px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate flex items-center">{row.priority}</div>
-                  <div className="w-[100px] px-3 py-1 text-[12px] text-[#9cdcfe] font-semibold border-r border-black/10 shrink-0 truncate flex items-center">{row.leverage}</div>
+                  <div className="w-[100px] px-3 py-1 text-[12px] text-white font-semibold border-r border-black/10 shrink-0 truncate flex items-center">{row.leverage}</div>
                   <div className="w-[100px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate flex items-center">{row.margin_rate}</div>
                   <div className="w-[100px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate flex items-center">{row.volume_from}</div>
                   <div className="w-[100px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate flex items-center">{row.volume_to}</div>
                   <div className="flex-1 flex items-center justify-end pr-2">
-                    {isSelected && <ChevronRight size={12} className="text-[color:var(--accent-500)]" />}
+                    {isSelected && <ChevronRight size={12} className="text-white" />}
                   </div>
                 </div>
               );
@@ -171,11 +171,11 @@ const LeveragesView = () => {
           <div className="w-[340px] flex flex-col border-l border-black/40 bg-[color:var(--bg-app)] shrink-0">
             {/* Panel Header */}
             <div className="flex items-center px-3 h-[30px] bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0">
-              <span className="text-[11px] font-semibold text-[#9cdcfe] flex-1 truncate">
+              <span className="text-[11px] font-semibold text-white flex-1 truncate">
                 Schedule — {selectedRow.group_name || selectedRow.rule_id || selectedRow.id}
               </span>
               <button onClick={() => { setSelectedRow(null); setSchedule([]); }}
-                className="text-[#555] hover:text-[#ccc] transition-colors">
+                className="text-white hover:text-white transition-colors">
                 <X size={13} />
               </button>
             </div>
@@ -194,7 +194,7 @@ const LeveragesView = () => {
                   ['Vol To', selectedRow.volume_to],
                 ].map(([k, v]) => (
                   <div key={k} className="flex items-center h-[18px]">
-                    <span className="text-[10px] text-[#555] w-20 shrink-0">{k}</span>
+                    <span className="text-[10px] text-white w-20 shrink-0">{k}</span>
                     <span className="text-[10px] font-mono text-[color:var(--text-primary)]">{v ?? '—'}</span>
                   </div>
                 ))}
@@ -204,23 +204,23 @@ const LeveragesView = () => {
             {/* Schedule list header */}
             <div className="flex items-center px-3 h-[24px] bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0">
               {[['From','flex-1'],['To','flex-1'],['Leverage','w-20']].map(([l,w]) => (
-                <div key={l} className={`${w} text-[10px] font-semibold text-[#888] uppercase tracking-wider pr-2`}>{l}</div>
+                <div key={l} className={`${w} text-[10px] font-semibold text-white uppercase tracking-wider pr-2`}>{l}</div>
               ))}
             </div>
 
             {/* Schedule rows */}
             <div className="flex-1 overflow-auto">
               {scheduleLoading && (
-                <div className="flex items-center justify-center h-16 text-[#888] text-[11px]">Loading…</div>
+                <div className="flex items-center justify-center h-16 text-white text-[11px]">Loading…</div>
               )}
               {!scheduleLoading && schedule.length === 0 && (
-                <div className="flex items-center justify-center h-16 text-[#555] text-[11px]">No schedule entries.</div>
+                <div className="flex items-center justify-center h-16 text-white text-[11px]">No schedule entries.</div>
               )}
               {!scheduleLoading && schedule.map((s, i) => (
                 <div key={i} className={`flex items-center px-3 h-[22px] border-b border-black/20 ${i % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
                   <div className="flex-1 text-[11px] text-[color:var(--text-primary)] pr-2 font-mono truncate">{s.from ?? s.time_from ?? s.start ?? '—'}</div>
                   <div className="flex-1 text-[11px] text-[color:var(--text-primary)] pr-2 font-mono truncate">{s.to ?? s.time_to ?? s.end ?? '—'}</div>
-                  <div className="w-20 text-[11px] text-[#9cdcfe] font-semibold font-mono">{s.leverage ?? '—'}</div>
+                  <div className="w-20 text-[11px] text-white font-semibold font-mono">{s.leverage ?? '—'}</div>
                 </div>
               ))}
             </div>

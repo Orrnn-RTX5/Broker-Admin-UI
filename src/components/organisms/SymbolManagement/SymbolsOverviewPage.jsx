@@ -3,11 +3,11 @@ import { marketGroupCounts } from '../../../utils/marketCatalogue';
 
 const CATEGORY_META = {
   'Metals': { icon: TrendingUp, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-  'Forex': { icon: LayoutGrid, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+  'Forex': { icon: LayoutGrid, color: 'text-white', bg: 'bg-blue-500/10' },
   'Indices': { icon: BarChart3, color: 'text-purple-500', bg: 'bg-purple-500/10' },
   'Crypto': { icon: Coins, color: 'text-orange-500', bg: 'bg-orange-500/10' },
-  'Commodities': { icon: Droplets, color: 'text-green-500', bg: 'bg-green-500/10' },
-  'Others': { icon: Hash, color: 'text-gray-500', bg: 'bg-gray-500/10' },
+  'Commodities': { icon: Droplets, color: 'text-white', bg: 'bg-green-500/10' },
+  'Others': { icon: Hash, color: 'text-white', bg: 'bg-gray-500/10' },
 };
 
 const SymbolsOverviewPage = ({ onSelectCategory, catalogue = [] }) => {

@@ -17,7 +17,7 @@ import {
 const MenuTrigger = ({ label }) => (
   <DropdownMenuTrigger asChild>
     <button
-      className="px-2.5 h-full text-[12px] font-normal text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-2)] data-[state=open]:bg-[color:var(--bg-surface-2)] data-[state=open]:text-[color:var(--text-primary)] transition-colors focus:outline-none"
+      className="px-2 h-full text-[11px] font-semibold text-[color:var(--text-primary)] hover:text-[color:var(--accent-600)] hover:bg-[color:var(--bg-surface-2)] data-[state=open]:bg-[color:var(--accent-100)] data-[state=open]:text-[color:var(--text-primary)] transition-colors focus:outline-none"
     >
       {label}
     </button>
@@ -27,7 +27,7 @@ const MenuTrigger = ({ label }) => (
 const Item = ({ icon: Icon, label, shortcut, onClick, disabled, active }) => (
   <DropdownMenuItem disabled={disabled} shortcut={shortcut} onSelect={() => onClick && onClick(label)}>
     {Icon ? (
-      <Icon size={12} className={active ? 'text-[color:var(--accent-500)]' : 'text-[color:var(--text-muted)]'} />
+      <Icon size={12} className={active ? 'text-[color:var(--accent-600)]' : 'text-[color:var(--text-muted)]'} />
     ) : (
       <span className="w-3" />
     )}
@@ -50,7 +50,7 @@ const MenuBar = ({
   onMenuSelect, onThemeSelect, currentTheme,
   density, onDensityToggle,
   onUndo, onRedo, onRefresh, onExport, onExportCsv, onImport, onHelp, onAbout,
-  canUndo, canRedo,
+  canUndo, canRedo, children,
 }) => {
   const user = useAuthStore((state) => state.user);
   const adminName = String(user?.name || user?.login || 'Admin');
@@ -68,7 +68,8 @@ const MenuBar = ({
   };
 
   return (
-    <div className="admin-menu-bar" role="navigation" aria-label="Admin navigation">
+    <header className="admin-unified-header">
+      <nav className="admin-menu-bar" aria-label="Admin navigation">
       <button type="button" className="admin-menu-brand" onClick={onAbout} aria-label="About RTX5 Admin">
         <img src="./admin-symbol.png" alt="" />
         <span>Admin</span>
@@ -166,6 +167,9 @@ const MenuBar = ({
           <Item icon={Info} label="About RTX 5" onClick={onAbout} />
         </DropdownMenuContent>
       </DropdownMenu>
+      </nav>
+
+      {children}
 
       <div className="admin-menu-actions">
         <DropdownMenu>
@@ -174,8 +178,8 @@ const MenuBar = ({
 
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">
-            <div className="px-3 py-2 text-xs font-semibold">Notifications</div>
-            <div className="px-3 pb-3 text-xs text-[color:var(--text-muted)]">Check Mailbox and Journal for broker updates.</div>
+            <div className="px-3 py-2 text-[11px] font-semibold">Notifications</div>
+            <div className="px-3 pb-3 text-[11px] text-[color:var(--text-muted)]">Check Mailbox and Journal for broker updates.</div>
             <Item icon={Mail} label="Mailbox" onClick={onMenuSelect} />
             <Item icon={BookOpen} label="Journal" onClick={onMenuSelect} />
           </DropdownMenuContent>
@@ -201,16 +205,16 @@ const MenuBar = ({
           <DropdownMenuContent align="end" className="w-60">
             <div className="px-3 py-3">
               <div className="text-[10px] uppercase tracking-wider text-[color:var(--text-muted)]">Signed-in admin</div>
-              <div className="mt-1 break-words text-sm font-semibold">{adminName}</div>
-              {adminLogin && <div className="mt-1 text-xs text-[color:var(--text-muted)]">Login: {adminLogin}</div>}
-              {user?.broker_id && <div className="mt-1 text-xs text-[color:var(--text-muted)]">Broker: {user.broker_id}</div>}
+              <div className="mt-1 break-words text-[11px] font-semibold">{adminName}</div>
+              {adminLogin && <div className="mt-1 text-[11px] text-[color:var(--text-muted)]">Login: {adminLogin}</div>}
+              {user?.broker_id && <div className="mt-1 text-[11px] text-[color:var(--text-muted)]">Broker: {user.broker_id}</div>}
             </div>
             <DropdownMenuSeparator />
             <Item icon={LogOut} label="Logout" onClick={handleLogout} />
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </div>
+    </header>
   );
 };
 

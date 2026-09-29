@@ -4,8 +4,26 @@ import tailwindcss from '@tailwindcss/vite'
 import {
   DEV_PROXY_BACKEND_COOKIE,
   DEV_PROXY_EXT_COOKIE,
+  isLocalWebHostname,
 } from './src/config/devProxy.js'
 import { createBrokerProxy } from './src/config/devBrokerProxy.js'
+
+const isLocalSameOriginWsRequest = (req) => {
+  const origin = req.headers.origin
+  const host = req.headers.host
+  if (typeof origin !== 'string' || typeof host !== 'string') return false
+
+  try {
+    const originUrl = new URL(origin)
+    const appUrl = new URL(`${req.socket.encrypted ? 'https' : 'http'}://${host}`)
+    return isLocalWebHostname(originUrl.hostname)
+      && isLocalWebHostname(appUrl.hostname)
+      && originUrl.href === `${originUrl.origin}/`
+      && originUrl.origin === appUrl.origin
+  } catch {
+    return false
+  }
+}
 
 const ignoredWsProxyErrorCodes = new Set(['ECONNABORTED', 'ECONNRESET', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT'])
 const viteLogger = createLogger()
@@ -31,6 +49,18 @@ export default defineConfig(({ mode }) => {
   const wsFeedHost = env.VITE_FEED_WS_URL || env.VITE_WS_HOST || env.WS_HOST || 'wss://nexa.orrnn.com/ws/feed'
   const wsFeedUrl = new URL(wsFeedHost.replace(/^wss:/i, 'https:').replace(/^ws:/i, 'http:'))
   const wsTarget = wsFeedUrl.origin
+  const useFeedDevProxy = mode === 'development' && String(env.VITE_FEED_USE_DEV_PROXY || '').toLowerCase() === 'true'
+  const configuredFeedProxyOrigin = useFeedDevProxy ? String(env.VITE_FEED_WS_PROXY_ORIGIN || '').trim() : ''
+  let feedProxyOrigin = ''
+  if (configuredFeedProxyOrigin) {
+    const parsedOrigin = new URL(configuredFeedProxyOrigin)
+    if (!['http:', 'https:'].includes(parsedOrigin.protocol)
+      || !isLocalWebHostname(parsedOrigin.hostname)
+      || parsedOrigin.href !== `${parsedOrigin.origin}/`) {
+      throw new Error('VITE_FEED_WS_PROXY_ORIGIN must be a local HTTP origin without a path')
+    }
+    feedProxyOrigin = parsedOrigin.origin
+  }
 
   return {
     customLogger: viteLogger,
@@ -40,6 +70,8 @@ export default defineConfig(({ mode }) => {
     ],
     base: './',
     server: {
+      port: 5173,
+      strictPort: true,
       proxy: {
         // Market Feed WebSocket and HTTP Status
         '/ws/feed/status': {
@@ -52,7 +84,18 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
           ws: true,
-          rewriteWsOrigin: true,
+          rewriteWsOrigin: !feedProxyOrigin,
+          ...(feedProxyOrigin ? {
+            bypass: (req) => {
+              if (String(req.headers.upgrade || '').toLowerCase() !== 'websocket') return
+              if (!isLocalSameOriginWsRequest(req)) return false
+            },
+            configure: (proxy) => {
+              proxy.on('proxyReqWs', (proxyReq) => {
+                proxyReq.setHeader('Origin', feedProxyOrigin)
+              })
+            },
+          } : {}),
         },
         '/ws': {
           target: wsTarget,

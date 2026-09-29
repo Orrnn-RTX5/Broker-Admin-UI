@@ -93,7 +93,7 @@ const MarketDepthView = () => {
       <div className="flex flex-col border-b border-black/40 bg-[color:var(--bg-surface-1)] shrink-0 p-4 gap-4">
         
         <div className="flex items-center gap-2">
-            <Database size={16} className="text-blue-400" />
+            <Database size={16} className="text-white" />
             <h2 className="text-[color:var(--text-primary)] text-[14px] font-medium tracking-wide">Market Depth Configuration</h2>
         </div>
 
@@ -130,7 +130,7 @@ const MarketDepthView = () => {
         )}
         
         {success && (
-            <div className="flex items-start gap-2 bg-green-500/10 border border-green-500/30 p-2 rounded-sm text-green-400 text-[12px] max-w-[500px]">
+            <div className="flex items-start gap-2 bg-green-500/10 border border-green-500/30 p-2 rounded-sm text-white text-[12px] max-w-[500px]">
                 <Check size={14} className="mt-0.5 shrink-0" />
                 <span className="leading-tight">Configuration saved successfully!</span>
             </div>
@@ -139,20 +139,21 @@ const MarketDepthView = () => {
 
       {/* Configuration Form Body */}
       <div className="flex-1 overflow-auto bg-[color:var(--bg-app)] p-6">
-        
-        {!config && !notFound && !loading && (
-          <div className="flex flex-col items-center justify-center h-full opacity-30 select-none">
-              <Database size={64} className="mb-4 text-[#888]" />
-              <p className="text-[14px]">Search a symbol to view or edit its Market Depth configuration</p>
+        {loading && (
+          <div role="status" className="w-fit rounded-[4px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] px-4 py-3 text-[12px] text-[color:var(--text-secondary)]">
+            Loading market depth configuration...
+          </div>
+        )}
+
+        {!config && !notFound && !loading && !error && (
+          <div role="status" className="w-fit rounded-[4px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] px-4 py-3 text-[12px] text-[color:var(--text-secondary)]">
+            Search a symbol to view or edit its Market Depth configuration.
           </div>
         )}
 
         {notFound && !config && (
-          <div className="flex flex-col items-center justify-center h-full select-none gap-4">
-            <div className="flex flex-col items-center gap-2 opacity-50">
-              <Database size={48} className="text-[#888]" />
-              <p className="text-[13px] text-[color:var(--text-muted)]">No configuration found for <span className="text-white font-medium">{searchSymbol}</span></p>
-            </div>
+          <div className="flex w-fit flex-col items-start gap-3 rounded-[4px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] p-4">
+            <p role="status" className="text-[12px] text-[color:var(--text-secondary)]">No configuration found for <span className="text-[color:var(--text-primary)] font-medium">{searchSymbol}</span>.</p>
             <button 
               onClick={handleCreateNew}
               className="flex items-center gap-2 h-[28px] px-5 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[12px] rounded-[2px] transition-colors"
@@ -167,7 +168,7 @@ const MarketDepthView = () => {
           <div className="max-w-[600px] flex flex-col gap-6">
             <h3 className="text-[color:var(--text-secondary)] text-[13px] border-b border-[#333] pb-2 font-medium">
               Configuring: <span className="text-white">{config.symbol}</span>
-              {config.id && <span className="ml-2 text-[#666] text-[11px]">ID: {config.id}</span>}
+              {config.id && <span className="ml-2 text-white text-[11px]">ID: {config.id}</span>}
             </h3>
             
             <div className="grid grid-cols-2 gap-x-8 gap-y-5">
