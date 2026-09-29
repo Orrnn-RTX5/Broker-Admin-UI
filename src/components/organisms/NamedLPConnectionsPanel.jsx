@@ -145,9 +145,12 @@ function Workspace() {
       </fieldset>
       <div className="nfc-footer">
         <div className="nfc-actions">{!supplied && <button className={primaryButtonClass} type="submit" disabled={busy || conflict}>Save configuration</button>}
-          <button className={buttonClass} type="button" disabled={busy || conflict || !config.revision} onClick={() => { if (savedConfig && confirmDiscard()) run(() => enableLPConnection(savedConfig,!savedConfig.enabled)); }}>Toggle saved connection {savedConfig?.enabled ? 'off' : 'on'}</button>
+          <button className={buttonClass} type="button" disabled={busy || conflict || !config.revision} onClick={() => { if (!savedConfig) { setMessage(''); setError('The saved connection is not loaded in this page. Click Refresh at the top of this panel, then try again.'); return; } if (confirmDiscard()) run(() => enableLPConnection(savedConfig,!savedConfig.enabled)); }}>Toggle saved connection {savedConfig?.enabled ? 'off' : 'on'}</button>
           <button className={buttonClass} type="button" disabled={busy || conflict || !config.revision || !savedConfig?.enabled} onClick={() => { if (confirmTest()) run(() => testLPConnection(config.id)); }}>Test saved connection (logon only)</button>
           {busy && <span role="status" className="nfc-working">Working…</span>}</div>
+        {/* Repeat the result beside the buttons; the panel-level copy is off-screen here. */}
+        {error && <p className="nfc-msg is-error" aria-hidden="true">{error}</p>}
+        {message && <p className="nfc-msg is-ok" aria-hidden="true">{message}</p>}
         {!isNew && !savedConfig?.enabled && <p className="nfc-note">Enable the saved connection to run a logon test.</p>}
         <p className="nfc-note">Test uses saved settings and submits no orders. A successful logon does not establish execution capability.</p>
       </div>
