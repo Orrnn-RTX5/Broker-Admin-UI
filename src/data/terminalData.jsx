@@ -338,6 +338,7 @@ export const sidebarData = [
                 ]
               },
               { label: "Gateways", icon: Link },
+              { label: "Downstream access", icon: Network },
               { label: "Feed Tenants", icon: Rss },
               { label: "Utency Matching Engine", icon: Zap },
               { label: "Data Feeds", icon: Activity },

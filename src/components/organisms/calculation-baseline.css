@@ -1,0 +1,7 @@
+.calculation-baseline{margin:12px 0;padding:12px;border:1px solid var(--border-color,#d1d5db);border-radius:4px;overflow:auto}
+.calculation-baseline,.calculation-baseline *{font-size:11px;font-weight:400}
+.calculation-baseline h2{margin:0 0 8px}.calculation-baseline p{margin:6px 0}.calculation-baseline label{display:flex;flex-direction:column;gap:4px;margin:8px 0}
+.calculation-baseline input,.calculation-baseline textarea,.calculation-baseline button{padding:5px 8px}.calculation-baseline textarea{width:100%;box-sizing:border-box}
+.calculation-baseline table{width:100%;border-collapse:collapse;margin:8px 0}.calculation-baseline th,.calculation-baseline td{padding:5px;text-align:left;border-bottom:1px solid var(--border-color,#d1d5db)}
+.calculation-baseline .baseline-confirm{flex-direction:row;align-items:center}.calculation-baseline code{overflow-wrap:anywhere}.calculation-baseline [role=alert]{color:#b91c1c}
+.calculation-baseline pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;padding:8px;background:var(--background-secondary,#f3f4f6)}

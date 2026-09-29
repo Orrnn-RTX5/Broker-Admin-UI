@@ -7,7 +7,7 @@ const src = readFileSync(new URL('./AdminDataTable.jsx', import.meta.url), 'utf8
 test('Positions table maps live manager field variants into visible cells', () => {
   assert.match(src, /const getPositionRow = \(position, idx\) => \{/);
   assert.match(src, /raw:\s*position/);
-  assert.match(src, /pickDefined\(position, \['ticket', 'positionTicket', 'Position', 'position', 'id'\], idx\)/);
+  assert.match(src, /pickDefined\(position, \['position_ticket_text', 'ticket_text', 'ticket', 'positionTicket', 'Position', 'position', 'id'\], idx\)/);
   assert.match(src, /pickDefined\(position, \['login', 'Login', 'accountLogin', 'account_login'\]\)/);
   assert.match(src, /pickDefined\(position, \['symbol', 'Symbol'\]\)/);
   assert.match(src, /getTradeSideLabel\(pickDefined\(position, \['side', 'Side', 'action', 'Action', 'type', 'Type', 'cmd', 'Cmd'\]\)\)/);
@@ -35,5 +35,7 @@ test('Deals table maps live manager field variants into visible cells', () => {
 test('Positions and Deals renderer shows a dash for missing cells instead of blank rows', () => {
   assert.match(src, /const renderTableValue = \(value\) => \(/);
   assert.match(src, /value === undefined \|\| value === null \|\| value === '' \? '-' : value/);
-  assert.match(src, /\{renderTableValue\(val\)\}/);
+  assert.match(src, /\{renderTableValue\(displayVal\)\}/);
+  assert.match(src, /viewType === 'Deals' && col\.label === 'Action'\s*\? formatDealActionLabel\(val\)/);
+  assert.match(src, /viewType === 'Deals' && col\.label === 'Entry'\s*\? formatDealEntryLabel\(val\)/);
 });

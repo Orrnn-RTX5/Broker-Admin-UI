@@ -293,16 +293,24 @@ export const AccountsService = {
     return load.promise;
   },
 
+  // DEPRECATED (R15/R17 G23): deposit/withdraw/credit below hit the legacy
+  // Gateway routes without an idempotency key and have no UI caller. Admin
+  // funding goes through the ledger request workflow: FundingPopup ->
+  // AdminConfigApi.requestFunding -> Deposits / Withdrawals approval.
+  // Do not add new callers.
+  /** @deprecated Use AdminConfigApi.requestFunding('deposit', ...). */
   deposit: async (login, amount, comment) => {
     const res = await api.post(`/api/v2/accounts/${login}/deposit`, { amount, comment });
     return res.data;
   },
 
+  /** @deprecated Use AdminConfigApi.requestFunding('withdrawal', ...). */
   withdraw: async (login, amount, comment) => {
     const res = await api.post(`/api/v2/accounts/${login}/withdraw`, { amount, comment });
     return res.data;
   },
 
+  /** @deprecated Credit is not an Admin ledger operation here; see G23. */
   credit: async (login, amount, comment, expiration) => {
     const res = await api.post(`/api/v2/accounts/${login}/credit`, { amount, comment, expiration });
     return res.data;

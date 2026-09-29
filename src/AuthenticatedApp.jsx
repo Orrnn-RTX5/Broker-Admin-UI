@@ -10,6 +10,9 @@ import ManagerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ManagerProper
 import ServerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ServerPropertiesPopup';
 import CreateGroupPopup from './components/RIGHTCLICKJPOPUPS/CreateGroupPopup';
 import AccountEditPopup from './components/RIGHTCLICKJPOPUPS/AccountEditPopup';
+import AccountNativePendingDialog from './components/RIGHTCLICKJPOPUPS/AccountNativePendingDialog';
+import {nativePendingAccountTarget} from './utils/nativePendingAccountTarget';
+import {getManagerTradeScope} from './services/managerTradeApi';
 import TradeDetailsPopup from './components/RIGHTCLICKJPOPUPS/TradeDetailsPopup';
 import { HelpModal } from './components/organisms/HelpModal';
 import { AboutModal } from './components/organisms/AboutModal';
@@ -108,6 +111,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
   const [selectedEditTarget, setSelectedEditTarget] = React.useState(null);
   const [selectedSidebarNodeId, setSelectedSidebarNodeId] = React.useState(null);
   const [editingAccount, setEditingAccount] = React.useState(null);
+  const [nativePendingTargetKey,setNativePendingTargetKey]=React.useState(null);
   const [viewingTrade, setViewingTrade] = React.useState(null);
   const [serverPopupData, setServerPopupData] = React.useState(null);
   const [isCreatingGroup, setIsCreatingGroup] = React.useState(false);
@@ -302,6 +306,8 @@ const AuthenticatedAppInner = ({ navigate }) => {
   const activeViewPermission = requiredPermissionForView(activeNode);
   const isAccountEditView = ACCOUNT_EDIT_VIEW_TYPES.has(activeNode) || (activeNode === 'Groups' && groupExplorerLocation.type === 'group');
   const canEditAccounts = hasPermission(currentUser, PERMISSION_KEYS.EDIT_ACCOUNTS);
+  const nativePendingTarget=nativePendingAccountTarget({selected:selectedEditTarget,activeView:activeNode,accountView:isAccountEditView,canView:canViewActive,user:currentUser,scope:isAuthenticated?getManagerTradeScope():''});
+  React.useEffect(()=>{if(nativePendingTargetKey!==nativePendingTarget?.key)setNativePendingTargetKey(null);},[nativePendingTargetKey,nativePendingTarget?.key]);
   const canEditGroups = hasPermission(currentUser, PERMISSION_KEYS.MANAGE_GROUPS);
   const canEditSelectedTarget =
     (selectedEditTarget?.type === 'account' && selectedEditTarget.viewType === activeNode && isAccountEditView && canEditAccounts) ||
@@ -942,6 +948,8 @@ const AuthenticatedAppInner = ({ navigate }) => {
         canImport={canImport}
         onEditClick={handleToolbarEdit}
         canEdit={canEditSelectedTarget}
+        onNativePending={()=>{if(nativePendingTarget)setNativePendingTargetKey(nativePendingTarget.key);}}
+        canViewNativePending={Boolean(nativePendingTarget)}
         onDeleteClick={handleToolbarDelete}
         canDelete={canDeleteSelectedTarget}
         deleting={isDeletingTarget}
@@ -1044,6 +1052,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
       </div>
 
       <AnimatePresence>
+        {nativePendingTarget&&nativePendingTargetKey===nativePendingTarget.key&&<AccountNativePendingDialog target={nativePendingTarget} onClose={()=>setNativePendingTargetKey(null)}/>}
         {isPopupOpen && activeNode === 'Managers' && (
           <ManagerPropertiesPopup manager={selectedGroup} onClose={() => setIsPopupOpen(false)} />
         )}

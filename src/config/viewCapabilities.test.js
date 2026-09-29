@@ -46,11 +46,18 @@ test('working views do not show lock or warning toasts', () => {
 });
 
 test('partial views warn but remain navigable', () => {
-  for (const viewName of ['Positions', 'Deals', 'Gateways']) {
+  for (const viewName of ['Positions', 'Deals', 'Gateways', 'Downstream access']) {
     assert.equal(getViewCapability(viewName).status, VIEW_CAPABILITY_STATUS.PARTIAL);
     assert.equal(getViewCapabilityToast(viewName).tone, 'warning');
     assert.equal(shouldBlockViewNavigation(viewName), false);
   }
+});
+
+test('downstream access capability states the server gate and that saved access is not applied', () => {
+  const { description } = getViewCapability('Downstream access');
+  assert.match(description, /RTX5_C09_DOWNSTREAM_ADMIN_ENABLED=1/);
+  assert.match(description, /Broker Admin only/);
+  assert.match(description, /not applied, connected or verified/);
 });
 
 test('non-working options are locked behind an informational toast', () => {

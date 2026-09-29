@@ -21,6 +21,19 @@ const installWindow = (config = {}) => {
 
 const importFreshEndpoints = () => import(`./endpoints.js?case=${++importId}`);
 
+test('state feed uses an opaque ticket and the current direct manager route', async () => {
+  installWindow({ BACKEND_TARGET: 'direct', USE_DEV_PROXY: 'false' });
+  window.location.href = 'http://127.0.0.1:5173/';
+  window.location.protocol = 'http:';
+  installStorage({ broker_info: JSON.stringify({backend_url:'http://127.0.0.1:8091',direct_manager_paths:true}) });
+  const endpoints = await importFreshEndpoints();
+  const url = new URL(endpoints.buildAdminStateWsUrl('opaque-ticket'));
+  assert.equal(url.protocol,'ws:');
+  assert.equal(url.pathname,'/OnPositionUpdate');
+  assert.equal(url.search,'?ticket=opaque-ticket');
+  assert.throws(()=>endpoints.buildAdminStateWsUrl(''));
+});
+
 test('configured direct broker keeps login and flat manager paths inside the local proxy namespace', async () => {
   installWindow({ BACKEND_TARGET: 'web', USE_DEV_PROXY: 'true', DIRECT_MANAGER_ORIGINS: 'https://broker.example' });
   installStorage({ broker_info: JSON.stringify({ broker_id: 'demo', backend_url: 'https://broker.example' }) });

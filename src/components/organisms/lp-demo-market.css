@@ -1,0 +1,11 @@
+.lp-demo-market{margin:12px 0;padding:12px;border:1px solid var(--border,#536070);border-radius:6px;color:var(--text,inherit)}
+.lp-demo-market,.lp-demo-market *{font-size:11px;font-weight:400}
+.lp-demo-market h2,.lp-demo-market h3{margin:0 0 8px}
+.lp-demo-market fieldset{border:1px solid var(--border,#536070);padding:10px;margin:8px 0}
+.lp-demo-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:8px}
+.lp-demo-fields label{display:flex;flex-direction:column;gap:4px}
+.lp-demo-fields input,.lp-demo-fields select{padding:6px;background:var(--surface,#202936);color:inherit;border:1px solid var(--border,#536070);border-radius:3px;min-width:0}
+.lp-demo-market button{padding:6px 10px;margin:4px 8px 4px 0;border:1px solid var(--border,#536070);border-radius:3px;background:var(--surface,#202936);color:inherit;cursor:pointer}
+.lp-demo-market button:disabled{opacity:.5;cursor:default}
+.lp-demo-market dl>div{display:flex;gap:12px;margin:4px 0;overflow-wrap:anywhere}
+.lp-demo-market dt{min-width:120px}.lp-demo-market dd{margin:0}.lp-demo-market [role=alert]{color:var(--error,#e87979)}

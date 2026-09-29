@@ -52,6 +52,7 @@ const ActionToolBar = ({
   onDisconnect, onAddClick, canAdd = false,
   onRefresh, onSync, onExport, onExportCsv, onImport, canImport = false,
   onEditClick, canEdit = false, onDeleteClick, canDelete = false, deleting = false,
+  onNativePending, canViewNativePending = false,
   onSort, canSort = false, sortDirection = '', autoRefresh = false, onStart, onPause,
   searchQuery = '', onSearchChange, searchInputRef,
   activeNode = 'Groups', onNodeSelect, density = 'compact', onDensityToggle, onHelp, connStatus = 'connected',
@@ -134,6 +135,7 @@ const ActionToolBar = ({
             variant="add"
           />
           <Tool icon={Pencil} label="Edit" onClick={onEditClick} disabled={!canEdit} />
+          <Tool icon={BookOpen} label="Native pending orders" reason="Select an account you can view" onClick={onNativePending} disabled={!canViewNativePending} />
           <Tool
             icon={Settings}
             label="Server Options & Properties (Ctrl+O)"

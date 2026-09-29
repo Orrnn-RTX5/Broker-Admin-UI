@@ -279,6 +279,20 @@ export const buildExtApiUrl = (endpoint = '') => {
 
 const getBaseWsHost = () => trimTrailingSlash(WS_HOST || buildWsHost(API_HOST));
 
+export const buildAdminStateWsUrl = (ticket) => {
+  if (!ticket) throw new Error('A one-time websocket ticket is required.');
+  const url = new URL(buildManagerApiUrl('/OnPositionUpdate'), typeof window !== 'undefined' ? window.location.href : 'http://localhost');
+  if (!shouldUseLocalDevProxy() && WS_HOST) {
+    const host = new URL(WS_HOST);
+    url.host = host.host;
+    url.protocol = host.protocol;
+  }
+  if (url.protocol === 'http:') url.protocol = 'ws:';
+  if (url.protocol === 'https:') url.protocol = 'wss:';
+  url.searchParams.set('ticket', String(ticket));
+  return url.toString();
+};
+
 const isLocalFeedDevFlagOn = (runtimeKey, viteKey) => {
   const isDev = viteEnv.DEV === true || viteEnv.MODE === 'development';
   if (!isDev || typeof window === 'undefined') return false;

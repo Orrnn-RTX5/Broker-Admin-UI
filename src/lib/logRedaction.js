@@ -1,4 +1,4 @@
-const SECRET_KEY_RE = /(authorization|password|token|secret|api[_-]?key|session|licen[cs]e[_-]?(key|secret))/i;
+const SECRET_KEY_RE = /(authorization|password|credential|token|secret|api[_-]?key|session|licen[cs]e[_-]?(key|secret))/i;
 const URL_SECRET_PARAM_RE = /^(id|token|access_token|refresh_token|session|session_token|auth|authorization|jwt|licen[cs]e[_-]?(key|secret))$/i;
 const BEARER_VALUE_RE = /\bBearer\s+[-._~+/=A-Za-z0-9]+/gi;
 const SECRET_QUERY_RE = /([?&](?:id|token|access_token|refresh_token|session|session_token|auth|authorization|jwt|licen[cs]e[_-]?(?:key|secret))=)[^&#\s]+/gi;

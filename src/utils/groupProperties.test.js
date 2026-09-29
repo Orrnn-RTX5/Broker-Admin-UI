@@ -21,6 +21,7 @@ import {
   isMarginFormDirty,
   moveGroupSymbolRow,
   normalizeGroupSymbolsResponse,
+  rebaseMarginForm,
   removeGroupSymbolRow,
   updateGroupSymbolRow,
   validateGroupSymbolEdit,
@@ -83,6 +84,19 @@ test('isMarginFormDirty compares the raw form', () => {
   assert.equal(isMarginFormDirty(initial, { ...initial }), false);
   assert.equal(isMarginFormDirty(initial, { ...initial, executionMode: 'instant' }), true);
   assert.equal(isMarginFormDirty(initial, { ...initial, negativeBalanceProtection: false }), true);
+});
+
+test('rebaseMarginForm keeps the admin edits and takes fresh values for untouched fields', () => {
+  const before = buildMarginForm(GROUP);
+  const edited = { ...before, stopOutLevel: '30' };
+  // Someone else changed the margin call level and execution mode meanwhile.
+  const fresh = buildMarginForm({ ...GROUP, marginCallLevel: 120, executionMode: 'instant' });
+  const rebased = rebaseMarginForm(before, edited, fresh);
+  assert.deepEqual(rebased, { executionMode: 'instant', marginCallLevel: '120', stopOutLevel: '30', negativeBalanceProtection: true });
+  // Only the admin's own edit is sent on the next OK.
+  assert.deepEqual(buildMarginChanges(fresh, rebased).changes, { stopOutLevel: 30 });
+  // No edits: the form simply becomes the fresh group.
+  assert.deepEqual(rebaseMarginForm(before, before, fresh), fresh);
 });
 
 test('describeAccountsUpdated reports accounts_updated when present', () => {

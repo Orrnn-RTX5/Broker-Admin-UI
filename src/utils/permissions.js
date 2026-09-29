@@ -127,6 +127,17 @@ const hasAdminRole = (user) => {
   return Boolean(user?.is_admin || role === 'admin' || role === 'super_admin');
 };
 
+// ADMIN_ONLY_VIEW marks views that only the broker's own Admin may open. No
+// manager permission or wildcard grants them, and SuperAdmin is excluded
+// (C09 downstream access: the backend refuses both as well).
+export const ADMIN_ONLY_VIEW = 'broker_admin';
+
+export const isBrokerAdmin = (user) => {
+  const role = String(user?.role || user?.role_name || '').trim().toLowerCase();
+  if (role === 'super_admin' || role === 'superadmin' || user?.is_super_admin === true) return false;
+  return user?.is_admin === true || role === 'admin';
+};
+
 export const hasPermissionWildcard = (user) => {
   const granted = getUserPermissionSet(user);
   return Boolean(granted?.has(WILDCARD_PERMISSION) || hasAdminRole(user));
@@ -182,6 +193,7 @@ export const VIEW_PERMISSIONS = Object.freeze({
   'LP Routing': PERMISSION_KEYS.MANAGE_GROUPS,
   'Gateways': PERMISSION_KEYS.SERVER_ADMIN,
   'Feed Tenants': PERMISSION_KEYS.SERVER_ADMIN,
+  'Downstream access': ADMIN_ONLY_VIEW,
   'Managers': PERMISSION_KEYS.MANAGE_MANAGERS,
 
   // Order and position surfaces
@@ -234,5 +246,8 @@ export const VIEW_PERMISSIONS = Object.freeze({
 export const requiredPermissionForView = (viewLabel) =>
   VIEW_PERMISSIONS[viewLabel] ?? null;
 
-export const canAccessView = (user, viewLabel) =>
-  hasPermission(user, requiredPermissionForView(viewLabel));
+export const canAccessView = (user, viewLabel) => {
+  const required = requiredPermissionForView(viewLabel);
+  if (required === ADMIN_ONLY_VIEW) return isBrokerAdmin(user);
+  return hasPermission(user, required);
+};

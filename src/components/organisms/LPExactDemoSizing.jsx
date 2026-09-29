@@ -1,0 +1,29 @@
+import {useState} from 'react';
+import {planExactDemoSplit,EXACT_DEMO_UNVERIFIED_GRID_BASIS,exactDemoHybridNotice,expectedUnverifiedUnitsPerLot} from '../../services/lpExactDemoSizing.js';
+
+const contractFields=[['contract_id','Unverified grid contract ID'],['coverage_percent','External coverage % (above 0, below 100)'],['min_lots','Expected minimum LP lots (unverified)'],['step_lots','Expected LP lot step (unverified)'],['max_lots','Expected maximum LP lots (unverified)'],['grid_origin_lots','Expected grid origin lots (unverified)']];
+const derivedFields=[['requested_lp_lots','Requested LP lots (customer x coverage)'],['external_lots','External LP leg (rounded up)'],['b_book_lots','Private B-book remainder'],['excess_lots','Broker-owned excess']];
+const emptySplit=()=>({provider_grid_unverified:true,grid_basis:EXACT_DEMO_UNVERIFIED_GRID_BASIS,contract_id:'',min_lots:'',step_lots:'',max_lots:'',grid_origin_lots:'0',coverage_percent:'',requested_lp_lots:'',external_lots:'',b_book_lots:'',excess_lots:''});
+
+// Recompute the derived legs and wire from operator input. A refused split
+// keeps the operator's input but blanks every derived quantity, so the save
+// validation (client and server) refuses it instead of rounding.
+function withSplit(next){
+ try{const planned=planExactDemoSplit(next.customer_lots,next.units_per_lot,next.hybrid_split);return [{...next,hybrid_split:planned.split,wire_quantity:planned.wire_quantity},''];}
+ catch(e){return [{...next,hybrid_split:{...next.hybrid_split,requested_lp_lots:'',external_lots:'',b_book_lots:'',excess_lots:''},wire_quantity:''},e.message];}
+}
+
+export default function LPExactDemoSizing({value,onChange,evidence}) {
+ const [splitError,setSplitError]=useState('');
+ const fields=[['id','Authorization reference'],['tenant_id','Tenant ID'],['broker_id','Broker ID'],['account_id','Dedicated demo account UUID'],['account_login','Dedicated demo account login'],['connection_id','Connection ID'],['connection_revision','Connection revision'],['symbol','Customer symbol'],['provider_symbol_id','Provider symbol ID'],['mapping_version','Mapping version'],['customer_lots','Exact customer lots'],['wire_quantity','Exact provider wire quantity'],['units_per_lot','Operator-selected units per lot'],['authorized_at','Authorized at (UTC RFC3339)'],['opening_valid_until','Opening valid until (UTC RFC3339)']];
+ const split=value?.hybrid_split||null;
+ const update=next=>{if(!next.hybrid_split){setSplitError('');onChange(next);return;}const [out,error]=withSplit(next);setSplitError(error);onChange(out);};
+ const expectedUnits=value?expectedUnverifiedUnitsPerLot[value.symbol]:undefined;
+ return <fieldset><legend>Optional exact demo sizing</legend><p>Operator-selected exact demo size; provider quantity grid unverified. This is limited to the dedicated demo account and 100% external market preview. No rounding, increase, excess exposure, ordinary order or pending authority is granted. Capability and cleanup/close evidence remain separate requirements.</p><label className="lpr-check"><input type="checkbox" checked={!!value} onChange={e=>{setSplitError('');onChange(e.target.checked?Object.fromEntries(fields.map(([key])=>[key,({connection_id:evidence.connection_id,connection_revision:evidence.connection_revision,symbol:evidence.symbol,provider_symbol_id:evidence.trade?.provider_symbol_id,mapping_version:evidence.trade?.symbol_mapping_version})[key]||''])):null);}}/>Use operator-selected exact demo sizing (clears the provider quantity grid)</label>{value&&<div className="lpr-fields">{fields.map(([key,label])=><label key={key}>{label}<input required readOnly={key==='wire_quantity'&&!!split} value={value[key]||''} onChange={e=>update({...value,[key]:e.target.value})}/></label>)}</div>}
+ {value&&expectedUnits&&<p>Expected provider wire for {value.symbol} (user decision 2026-09-28, UNVERIFIED): {expectedUnits} units per lot, i.e. {value.symbol==='XAUUSD'?'1':value.symbol==='EURUSD'?'1000':'0.01'} per 0.01 lot. <button type="button" onClick={()=>update({...value,units_per_lot:expectedUnits})}>Use expected unverified units per lot</button></p>}
+ {value&&<fieldset><legend>Optional hybrid split (UNVERIFIED provider grid)</legend><p>{exactDemoHybridNotice} The external leg is rounded up to this expected grid; the remainder is booked as private B-book. The split is refused, never rounded, when a leg would leave the grid, exceed the maximum, create broker-owned excess or leave no B-book remainder. Keeping the contract ID on a later save is a same-contract renewal and must keep the grid, conversion and scope unchanged. The hybrid market runtime must also be enabled separately.</p><label className="lpr-check"><input type="checkbox" checked={!!split} onChange={e=>update(e.target.checked?{...value,hybrid_split:emptySplit()}:Object.fromEntries(Object.entries(value).filter(([k])=>k!=='hybrid_split')))}/>Approve a hybrid split against an expected, UNVERIFIED provider grid</label>
+ {split&&<><label className="lpr-check"><input type="checkbox" checked readOnly disabled/>Provider grid UNVERIFIED (recorded as provider_grid_unverified=true)</label><div className="lpr-fields">{contractFields.map(([key,label])=><label key={key}>{label}<input required inputMode={key==='contract_id'?'text':'decimal'} value={split[key]||''} onChange={e=>update({...value,hybrid_split:{...split,[key]:e.target.value}})}/></label>)}{derivedFields.map(([key,label])=><label key={key}>{label}<input readOnly value={split[key]||''}/></label>)}</div>
+ {splitError?<p role="alert" className="lpr-error">{splitError}</p>:split.external_lots&&<p role="status">Customer {value.customer_lots} lots = external {split.external_lots} lots (wire {value.wire_quantity}, UNVERIFIED grid) + private B-book {split.b_book_lots} lots; requested {split.requested_lp_lots}, broker-owned excess {split.excess_lots}.</p>}</>}
+ </fieldset>}
+ </fieldset>;
+}
