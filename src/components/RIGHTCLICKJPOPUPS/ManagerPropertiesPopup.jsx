@@ -1,3 +1,5 @@
+import GroupAccessFields from '../organisms/GroupAccessFields';
+import { validateGroupAssignment } from '../../utils/groupAccess';
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Check } from 'lucide-react';
@@ -33,6 +35,8 @@ const CheckboxIcon = ({ checked, indeterminate, isRedCross }) => {
 
 const ManagerPropertiesPopup = ({ manager, onClose }) => {
   const [activeTab, setActiveTab] = useState('Common');
+ const [groupMode,setGroupMode]=useState(manager?.group_access_mode || 'none');
+ const [assignedGroups,setAssignedGroups]=useState(manager?.allowed_groups || []);
   const [roleId, setRoleId] = useState(() => manager?.role_id || '');
 
   const { data: rolesResponse } = useRoles();
@@ -43,16 +47,19 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
       if (roleId && roleId !== manager?.role_id) {
         await ManagerService.updateManagerRole(manager.login, roleId);
       }
+      validateGroupAssignment(groupMode,assignedGroups);
+      await ManagerService.updateManagerGroupAccess(manager.login,groupMode,assignedGroups);
       onClose();
     } catch (err) {
       alert("Failed to update manager settings: " + err.message);
     }
   };
 
-  const tabs = ['Common', 'Permissions', 'Reports', 'IP Access List'];
+  const tabs = ['Common', 'Permissions', 'Group Access', 'Reports', 'IP Access List'];
 
   const renderContent = () => {
     switch (activeTab) {
+      case 'Group Access': return <GroupAccessFields mode={groupMode} groups={assignedGroups} onChange={(mode,groups)=>{setGroupMode(mode);setAssignedGroups(groups);}} />;
       case 'Common':
         return (
           <div className="flex-1 flex flex-col overflow-hidden pt-2 text-[color:var(--text-secondary)]">

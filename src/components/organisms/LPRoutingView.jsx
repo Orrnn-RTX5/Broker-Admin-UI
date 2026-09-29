@@ -1,3 +1,5 @@
+import { useAuthStore } from '../../store/authStore';
+import { canEditGroup, canEditGroups, canManageGroupLifecycle } from '../../utils/groupAccess';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Plus, RefreshCw, X, Edit2, Trash2, GitBranch, Network, Loader2, ChevronUp, ChevronDown, ArrowLeft } from 'lucide-react';
 import { RoutingService } from '../../services/routing.service';
@@ -330,6 +332,8 @@ const GroupDashboardPanel = ({ groupName, onClose }) => {
 };
 
 const LPRoutingView = () => {
+ const currentUser=useAuthStore(state=>state.user);
+ const canWrite=canEditGroups(currentUser);
   const [data, setData]               = useState([]);
   const [loading, setLoading]         = useState(true);
   const [selectedRow, setSelectedRow] = useState(null);
@@ -382,7 +386,7 @@ const LPRoutingView = () => {
 
   const handleDelete = async (row) => {
     const r = row || contextMenu.row;
-    if (!r) return;
+    if (!r || !canEditGroup(currentUser,r.group_name)) return;
     if (!window.confirm(`Delete route #${r.route_id ?? r.id} — ${r.group_name} / ${r.symbol_pattern}?`)) { closeCtx(); return; }
     try {
       await RoutingService.deleteRoute(r.route_id ?? r.id);
@@ -395,12 +399,14 @@ const LPRoutingView = () => {
   };
 
   const handleEdit = (row) => {
+ if (!canEditGroup(currentUser,(row || contextMenu.row)?.group_name)) return;
     setEditRoute(row || contextMenu.row);
     setFormOpen(true);
     closeCtx();
   };
 
   const openCreate = () => {
+ if(!canWrite) return;
     setEditRoute(null);
     setFormOpen(true);
   };
@@ -423,7 +429,7 @@ const LPRoutingView = () => {
           {/* ── Top Bar ─────────────────────────────────────────────────────────── */}
           <div className="flex items-center gap-2 px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] shrink-0 select-none flex-wrap">
         <button
-          onClick={openCreate}
+          hidden={!canWrite} onClick={openCreate}
           className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:opacity-90 text-white text-[11px] rounded-[2px] transition-colors"
         >
           <Plus size={12} /> Add Route
@@ -474,7 +480,7 @@ const LPRoutingView = () => {
       {/* ── Split: Table + Detail Panel ─────────────────────────────────────── */}
       <div className="flex flex-col flex-1 overflow-hidden p-4 gap-4">
         
-        <LpRoutingOptionsPanel />
+        {canManageGroupLifecycle(currentUser) && <LpRoutingOptionsPanel />}
 
         {/* Table */}
         <div className="flex overflow-hidden flex-1 border border-[color:var(--border-default)] rounded-md">
@@ -515,6 +521,7 @@ const LPRoutingView = () => {
                 </p>
                 {data.length === 0 && (
                   <button
+                    hidden={!canWrite}
                     onClick={openCreate}
                     className="mt-2 inline-flex h-7 items-center gap-1.5 rounded-[3px] border border-[color:var(--border-strong)] bg-[color:var(--bg-surface-2)] px-3 text-[11px] text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)]"
                   >
@@ -583,6 +590,7 @@ const LPRoutingView = () => {
                   </div>
                   <div className="flex-1 flex items-center justify-end pr-2 gap-1">
                     <button
+                      hidden={!canEditGroup(currentUser, row.group_name)}
                       onClick={(e) => { e.stopPropagation(); handleEdit(row); }}
                       className="opacity-0 group-hover:opacity-100 text-white hover:text-white transition-colors p-0.5"
                       title="Edit"
@@ -642,13 +650,14 @@ const LPRoutingView = () => {
             <div className="px-3 py-2.5 flex flex-col gap-2 shrink-0">
               <p className="text-[10px] uppercase tracking-widest text-white font-semibold">Actions</p>
               <button
+                hidden={!canEditGroup(currentUser, selectedRow?.group_name)}
                 onClick={() => handleEdit(selectedRow)}
                 className="flex items-center gap-2 h-[26px] px-3 bg-[#2a3a4a] hover:bg-[#3a4a5a] text-white text-[11px] rounded-[2px] transition-colors w-full"
               >
                 <Edit2 size={12} /> Edit Route
               </button>
               <button
-                onClick={() => handleDelete(selectedRow)}
+                hidden={!canEditGroup(currentUser,selectedRow?.group_name)} onClick={() => handleDelete(selectedRow)}
                 className="flex items-center gap-2 h-[26px] px-3 bg-[#3a2a2a] hover:bg-[#4a3a3a] text-[#f48771] text-[11px] rounded-[2px] transition-colors w-full"
               >
                 <Trash2 size={12} /> Delete Route
@@ -690,14 +699,14 @@ const LPRoutingView = () => {
           onClick={(e) => e.stopPropagation()}
         >
           <button
-            onClick={() => handleEdit()}
+            hidden={!canWrite} onClick={() => handleEdit()}
             className="flex items-center gap-2.5 w-full px-3 py-1.5 text-left text-[color:var(--text-primary)] hover:bg-[color:var(--accent-700)] transition-colors"
           >
             <Edit2 size={12} className="text-white" /> Edit Route
           </button>
           <div className="border-t border-[#333] my-0.5" />
           <button
-            onClick={() => handleDelete()}
+            hidden={!canWrite} onClick={() => handleDelete()}
             className="flex items-center gap-2.5 w-full px-3 py-1.5 text-left text-[#f48771] hover:bg-[color:var(--accent-700)] transition-colors"
           >
             <Trash2 size={12} /> Delete Route
@@ -706,7 +715,7 @@ const LPRoutingView = () => {
       )}
 
       {/* ── Form Popup ──────────────────────────────────────────────────────── */}
-      {formOpen && (
+      {formOpen && canWrite && (
         <LPRouteFormPopup
           initialData={editRoute}
           onClose={() => { setFormOpen(false); setEditRoute(null); }}

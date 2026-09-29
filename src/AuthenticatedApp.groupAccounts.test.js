@@ -14,7 +14,7 @@ const readHandler = (name) => {
 
 const createHandlers = ({
   activeNode = 'Groups',
-  permissions = ['manage_groups', 'view_accounts', 'edit_accounts'],
+  permissions = ['view_groups', 'manage_groups', 'view_accounts', 'edit_accounts'],
   location = resolveGroupExplorerNode('Groups'),
   history = [activeNode],
   currentIndex = 0,
@@ -40,7 +40,7 @@ const createHandlers = ({
     groupExplorerLocation: state.location,
     currentIndex: state.currentIndex,
     history: state.history,
-    currentUser: { permissions },
+    currentUser: { permissions, group_access_mode: 'all_within_broker' },
     canEditAccounts: hasPermission({ permissions }, PERMISSION_KEYS.EDIT_ACCOUNTS),
     canAccessView,
     PERMISSION_KEYS,
@@ -158,8 +158,8 @@ test('reopening a folder and selecting sibling accounts does not duplicate navig
 
 test('group and account view permissions fail closed before changing the visible folder or selection', () => {
   for (const [permissions, required] of [
-    [['manage_groups', 'edit_accounts'], 'view_accounts'],
-    [['view_accounts', 'edit_accounts'], 'manage_groups'],
+    [['view_groups', 'manage_groups', 'edit_accounts'], 'view_accounts'],
+    [['view_accounts', 'edit_accounts'], 'view_groups'],
     [[], 'view_accounts'],
   ]) {
     for (const action of ['select', 'doubleClick']) {
@@ -177,7 +177,7 @@ test('group and account view permissions fail closed before changing the visible
   const denied = createHandlers({ permissions: ['view_accounts'] });
   denied.select(realFolder);
   assert.equal(denied.state.location.type, 'root');
-  assert.match(denied.state.notices[0].description, /manage_groups/);
+  assert.match(denied.state.notices[0].description, /view_groups/);
 });
 
 test('account double-click opens the existing editor over the group directory and retains raw account data', () => {
@@ -189,7 +189,7 @@ test('account double-click opens the existing editor over the group directory an
   assert.equal(state.activeNode, 'Groups');
   assert.equal(state.location.groupName, 'real');
   assert.deepEqual(state.selectedTarget, { type: 'account', row: account, viewType: 'Groups', id: 990701 });
-  const readOnly = createHandlers({ permissions: ['manage_groups', 'view_accounts'] });
+  const readOnly = createHandlers({ permissions: ['view_groups', 'manage_groups', 'view_accounts'] });
   readOnly.doubleClick(node);
   assert.equal(readOnly.state.activeNode, 'Groups');
   assert.deepEqual(readOnly.state.editors, []);

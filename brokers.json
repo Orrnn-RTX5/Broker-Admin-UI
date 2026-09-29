@@ -67,7 +67,7 @@
             "port": 40111,
             "channel": "canary",
             "enabled": true,
-            "domain": "nexa.orrnn.com",
+            "domain": "nexa-admin.orrnn.com",
             "https": true,
             "backend_url": "https://nexa.orrnn.com",
             "server_ip": "100.119.182.26",

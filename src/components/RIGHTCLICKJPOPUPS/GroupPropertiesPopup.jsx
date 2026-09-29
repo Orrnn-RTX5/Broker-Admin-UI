@@ -1,3 +1,5 @@
+import { useAuthStore } from '../../store/authStore';
+import { canEditGroup } from '../../utils/groupAccess';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { X, HelpCircle, Users, ChevronUp, ChevronDown, ChevronRight, Plus, Pencil, Trash2, Save, Info, AlertTriangle } from 'lucide-react';
@@ -269,6 +271,8 @@ const GroupPropertiesPopup = ({
   showAccountsTab = true,
 }) => {
   const currentGroupName = getGroupName(group);
+  const user = useAuthStore((state) => state.user);
+  const readOnly = !canEditGroup(user, currentGroupName);
   const dragControls = useDragControls();
   const { notify } = useToast();
   const tabs = showAccountsTab ? TABS : TABS.filter((tab) => tab !== 'Accounts');
@@ -426,6 +430,7 @@ const GroupPropertiesPopup = ({
 
   // --- Symbols tab actions ---
   const startAddSymbol = () => {
+    if (readOnly) return;
     if (!symbolsLoaded) return;
     setAddSymbolError('');
     setIsAddingSymbol(true);
@@ -437,6 +442,7 @@ const GroupPropertiesPopup = ({
   };
 
   const handleAddSymbol = (symbol, options) => {
+    if (readOnly) return;
     try {
       const next = addGroupSymbolRow(symbolRows, symbol, options);
       setSymbolRows(next);
@@ -449,6 +455,7 @@ const GroupPropertiesPopup = ({
   };
 
   const handleAddSymbols = (items) => {
+    if (readOnly) return;
     const { rows, added } = addGroupSymbolRows(symbolRows, items);
     if (added === 0) {
       setAddSymbolError('Every symbol in this category is already in the list.');
@@ -461,12 +468,14 @@ const GroupPropertiesPopup = ({
   };
 
   const moveSelectedSymbol = (delta) => {
+    if (readOnly) return;
     const { rows, index } = moveGroupSymbolRow(symbolRows, selectedSymbolIndex, delta);
     setSymbolRows(rows);
     setSelectedSymbolIndex(index);
   };
 
   const deleteSelectedSymbol = () => {
+    if (readOnly) return;
     const row = selectedSymbolRow;
     if (!row) return;
     if (row.persisted && !window.confirm(`Remove ${row.symbol} from group "${currentGroupName}"?\n\nThe change is saved when you press OK.`)) return;
@@ -476,6 +485,7 @@ const GroupPropertiesPopup = ({
   };
 
   const openSymbolEditor = (index) => {
+    if (readOnly) return;
     const row = symbolRows[index];
     if (!row) return;
     setSelectedSymbolIndex(index);
@@ -488,6 +498,7 @@ const GroupPropertiesPopup = ({
   };
 
   const applySymbolEdit = () => {
+    if (readOnly) return;
     const { values, errors } = validateGroupSymbolEdit(symbolEditor.form);
     if (Object.keys(errors).length > 0) {
       setSymbolEditor((current) => ({ ...current, errors }));
@@ -499,10 +510,12 @@ const GroupPropertiesPopup = ({
 
   // --- Commissions tab actions ---
   const openCreateCommission = () => {
+    if (readOnly) return;
     setCommissionEditor({ mode: 'create', id: null, form: emptyCommissionForm(), error: '' });
   };
 
   const openEditCommission = (row) => {
+    if (readOnly) return;
     const target = row || selectedCommission;
     if (!target) return;
     setSelectedCommissionId(getScheduleId(target));
@@ -515,6 +528,7 @@ const GroupPropertiesPopup = ({
   };
 
   const submitCommission = async () => {
+    if (readOnly) return;
     if (!commissionEditor || isSubmittingCommission) return;
     const isEdit = commissionEditor.mode === 'edit';
     let payload;
@@ -541,6 +555,7 @@ const GroupPropertiesPopup = ({
   };
 
   const deleteSelectedCommission = async () => {
+    if (readOnly) return;
     const row = selectedCommission;
     if (!row || isDeletingCommission) return;
     if (!window.confirm(`Delete commission schedule "${row.name}" (${row.symbol})?\n\nThis takes effect immediately.`)) return;
@@ -569,6 +584,7 @@ const GroupPropertiesPopup = ({
   };
 
   const handleOk = async () => {
+    if (readOnly) return;
     if (isSaving) return;
     setSaveError(null);
 
@@ -708,7 +724,7 @@ const GroupPropertiesPopup = ({
         </div>
 
         {/* Content */}
-        <div className="gpp-body" role="tabpanel" aria-label={activeTab}>
+        <fieldset disabled={readOnly && activeTab !== 'Accounts'} className="gpp-body" role="tabpanel" aria-label={activeTab}>
           <p className="gpp-intro">{TAB_INTRO[activeTab]}</p>
 
           {showHelp && (
@@ -1051,7 +1067,7 @@ const GroupPropertiesPopup = ({
               )}
             </MotionDiv>
           </AnimatePresence>
-        </div>
+        </fieldset>
 
         {/* Footer */}
         <div className="gpp-footer">
@@ -1066,13 +1082,13 @@ const GroupPropertiesPopup = ({
             ) : null}
           </div>
           <button type="button" onClick={closeDialog} disabled={isSaving} className="gpp-btn">Cancel</button>
-          <button type="button" onClick={handleOk} disabled={isSaving} className="gpp-btn is-primary">{isSaving ? 'Saving…' : 'OK'}</button>
+          <button type="button" onClick={handleOk} hidden={readOnly} disabled={isSaving || readOnly} className="gpp-btn is-primary">{isSaving ? 'Saving…' : 'OK'}</button>
         </div>
       </MotionDiv>
 
       {/* Symbol settings editor */}
       <AnimatePresence>
-        {symbolEditor && (
+        {!readOnly && symbolEditor && (
           <ModalShell
             title={`Symbol settings · ${symbolEditor.symbol}`}
             narrow
@@ -1106,7 +1122,7 @@ const GroupPropertiesPopup = ({
 
       {/* Commission schedule create / edit */}
       <AnimatePresence>
-        {commissionEditor && (
+        {!readOnly && commissionEditor && (
           <ModalShell
             title={commissionEditor.mode === 'edit' ? 'Edit commission schedule' : 'New commission schedule'}
             onClose={() => setCommissionEditor(null)}

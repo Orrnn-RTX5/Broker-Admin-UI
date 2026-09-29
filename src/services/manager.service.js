@@ -5,6 +5,10 @@ const cleanParams = (params = {}) => Object.fromEntries(
 );
 
 export const ManagerService = {
+  updateManagerGroupAccess: async (login, mode, groups) => {
+    const res=await api.post('/manager/ManagerUpdate',{manager_login:login,group_access_mode:mode,...(groups.length ? {'allowed_groups[]':groups}: {})});
+    return res.data;
+  },
   getGroupList: async (params = {}) => {
     const res = await api.get('/manager/GroupList', {
       params: cleanParams(params),

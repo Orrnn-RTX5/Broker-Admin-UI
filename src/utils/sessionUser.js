@@ -26,6 +26,12 @@ export const buildUserFromAuthPayload = (payload = {}) => {
     name: firstValue(payload.name, payload.display_name, payload.username, `Agent ${login || ''}`.trim()),
     role: firstValue(payload.role, payload.role_name, isAdmin ? 'admin' : 'manager'),
     is_admin: isAdmin,
+    group_config_admin: payload.is_admin === true,
+    authorization_version: Number(payload.authorization_version || 1),
+    operational_ready: payload.operational_ready !== false,
+    group_access_mode: payload.group_access_mode || 'none',
+    allowed_groups: Array.isArray(payload.allowed_groups) ? payload.allowed_groups : [],
+    access_fingerprint: payload.access_fingerprint || null,
     permissions,
     broker_id: firstValue(payload.broker_id, payload.brokerId),
   };

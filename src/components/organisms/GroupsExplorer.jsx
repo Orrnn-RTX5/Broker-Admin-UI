@@ -1,3 +1,4 @@
+import { canManageGroupLifecycle } from '../../utils/groupAccess';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowUp, ChevronRight, Folder, Info, Pencil, Plus, Search, Trash2, User, Users, X } from 'lucide-react';
 import * as ContextMenu from '@radix-ui/react-context-menu';
@@ -79,6 +80,7 @@ const ServerGroupsExplorer = ({
   const user = useAuthStore(state => state.user);
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const canLoadGroups = isAuthenticated && canAccessView(user, 'Groups');
+  const canLifecycle=canManageGroupLifecycle(user);
   const canLoadAccounts = canLoadGroups && canAccessView(user, 'Trading Accounts');
   const isAccountFolder = location.type === 'group';
   // Main groups sit directly under Groups; the old "Admin" location is just the root.
@@ -205,7 +207,7 @@ const ServerGroupsExplorer = ({
   const branchNames = (path) => groupNodes
     .filter(group => group.groupName.toLowerCase() === path.toLowerCase() || group.groupName.toLowerCase().startsWith(`${path.toLowerCase()}${SEPARATOR}`))
     .map(group => group.groupName);
-  const canDelete = (node) => Boolean(node) && (node.type === 'group' || node.type === 'server-folder');
+  const canDelete = (node) => canLifecycle && Boolean(node) && (node.type === 'group' || node.type === 'server-folder');
   const deleteGroup = (node) => {
     if (!canDelete(node)) return;
     if (isBranch(node)) {
@@ -252,8 +254,8 @@ const ServerGroupsExplorer = ({
         )}
         {node.type === 'group' && rowIsBranch(node) && !allGroups && <ContextMenu.Item onSelect={() => openSettings(node)}>Settings</ContextMenu.Item>}
         {node.type === 'group' && !allGroups && <ContextMenu.Item onSelect={() => navigate(node)}>Open accounts</ContextMenu.Item>}
-        {node.type !== 'group-account' && <ContextMenu.Item disabled={!canLoadGroups} onSelect={() => addGroup(containerOf(node))}>Add group</ContextMenu.Item>}
-        {node.type !== 'group-account' && <ContextMenu.Item disabled={!canLoadGroups} onSelect={() => askSubgroup(containerOf(node))}>Add subgroup</ContextMenu.Item>}
+        {canLifecycle && node.type !== 'group-account' && <ContextMenu.Item hidden={!canLifecycle} disabled={!canLoadGroups || !canLifecycle} onSelect={() => addGroup(containerOf(node))}>Add group</ContextMenu.Item>}
+        {node.type !== 'group-account' && <ContextMenu.Item hidden={!canLifecycle} disabled={!canLoadGroups || !canLifecycle} onSelect={() => askSubgroup(containerOf(node))}>Add subgroup</ContextMenu.Item>}
         {canDelete(node) && (
           <>
             <ContextMenu.Separator />
@@ -309,7 +311,7 @@ const ServerGroupsExplorer = ({
           <button
             type="button"
             className="dummy-btn-action dummy-btn-primary"
-            disabled={!canLoadGroups}
+            hidden={!canLifecycle} disabled={!canLoadGroups || !canLifecycle}
             onClick={() => addGroup(targetContainer)}
           >
             <Plus size={13} strokeWidth={2.4} />
@@ -318,7 +320,7 @@ const ServerGroupsExplorer = ({
           <button
             type="button"
             className="dummy-btn-action dummy-btn-secondary"
-            disabled={!canLoadGroups}
+            hidden={!canLifecycle} disabled={!canLoadGroups || !canLifecycle}
             onClick={() => askSubgroup()}
           >
             <YellowFolderIcon />
@@ -337,7 +339,7 @@ const ServerGroupsExplorer = ({
             type="button"
             className="dummy-btn-action dummy-btn-danger"
             disabled={!canDelete(selectedNode) || deleting}
-            onClick={() => deleteGroup(selectedNode)}
+            hidden={!canLifecycle} onClick={() => deleteGroup(selectedNode)}
           >
             <Trash2 size={12} strokeWidth={2} />
             <span>{deleting ? 'Deleting...' : 'Delete'}</span>

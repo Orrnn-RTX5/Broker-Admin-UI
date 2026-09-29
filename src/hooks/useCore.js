@@ -1,3 +1,4 @@
+import { groupAccessKey } from '../utils/groupAccess.js';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuthStore } from '../store/authStore';
 
@@ -59,7 +60,8 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true, 
   const paramsKey = JSON.stringify(params);
   const depsKey = JSON.stringify(deps);
   const cacheTtlMs = getPositiveNumber(options.cacheTtlMs);
-  const fetchCacheKey = buildFetchCacheKey(options.requestKey, paramsKey, depsKey);
+  const accessIdentity=useAuthStore(state => String(state.accessToken || '')+groupAccessKey(state.user));
+  const fetchCacheKey = buildFetchCacheKey(options.requestKey ? accessIdentity+'|'+options.requestKey : null, paramsKey, depsKey);
   
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
@@ -72,18 +74,22 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true, 
   }, [paramsKey, params]);
 
   const execute = useCallback(async ({ force = false } = {}) => {
+    const isCurrentAccess = () => {
+      const state=useAuthStore.getState();
+      return String(state.accessToken || '')+groupAccessKey(state.user)===accessIdentity;
+    };
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
 
     if (!isAuthenticated || !enabled) {
-      if (requestIdRef.current === requestId) setLoading(false);
+      if (requestIdRef.current === requestId && isCurrentAccess()) {setLoading(false);setData(null);}
       return null;
     }
 
     if (!force) {
       const cachedResult = readCachedResponse(fetchCacheKey);
       if (cachedResult !== undefined) {
-        if (requestIdRef.current === requestId) {
+        if (requestIdRef.current === requestId && isCurrentAccess()) {
           setData(cachedResult);
           setError(null);
           setLoading(false);
@@ -105,14 +111,15 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true, 
       }
 
       const result = await requestPromise;
-      writeCachedResponse(fetchCacheKey, result, cacheTtlMs);
+      if(!isCurrentAccess()) return null;
+      if (requestIdRef.current === requestId && isCurrentAccess()) writeCachedResponse(fetchCacheKey, result, cacheTtlMs);
 
-      if (requestIdRef.current === requestId) {
+      if (requestIdRef.current === requestId && isCurrentAccess()) {
         setData(result);
       }
       return result;
     } catch (err) {
-      if (requestIdRef.current === requestId) {
+      if (requestIdRef.current === requestId && isCurrentAccess()) {
         setError(err);
         if (!shouldSuppressFetchErrorLog(err)) {
           console.error('Fetch error:', err);
@@ -123,17 +130,21 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true, 
       if (fetchCacheKey) {
         pendingFetches.delete(fetchCacheKey);
       }
-      if (requestIdRef.current === requestId) {
+      if (requestIdRef.current === requestId && isCurrentAccess()) {
         setLoading(false);
       }
     }
-  }, [cacheTtlMs, fetchCacheKey, isAuthenticated, enabled]);
+  }, [accessIdentity, cacheTtlMs, fetchCacheKey, isAuthenticated, enabled]);
 
   useEffect(() => {
+    setData(null);
     execute();
+    return () => { requestIdRef.current += 1; };
   }, [execute, paramsKey, depsKey]);
 
   const mutate = useCallback(() => execute({ force: true }), [execute]);
 
   return { data, loading, error, mutate };
 }
+
+useAuthStore.subscribe((state,previous)=>{if(state.accessToken!==previous.accessToken || groupAccessKey(state.user)!==groupAccessKey(previous.user)){pendingFetches.clear();responseCache.clear();}});

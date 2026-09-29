@@ -1,3 +1,5 @@
+import { useAuthStore } from '../../store/authStore';
+import { canEditGroup, canEditGroups } from '../../utils/groupAccess';
 import React, { useState, useEffect } from 'react';
 import { ManagerService } from '../../services/manager.service';
 import { Plus, Trash2, Settings } from 'lucide-react';
@@ -11,6 +13,8 @@ const GearIcon = (props) => (
 );
 
 const SwapFreeGroupsView = () => {
+ const currentUser=useAuthStore(state=>state.user);
+ const canWrite=canEditGroups(currentUser);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isAddPopupOpen, setIsAddPopupOpen] = useState(false);
@@ -47,7 +51,7 @@ const SwapFreeGroupsView = () => {
   };
 
   const handleDelete = async () => {
-    if (!contextMenu.selectedRecord) return;
+    if (!contextMenu.selectedRecord || !canEditGroup(currentUser,contextMenu.selectedRecord.group_name)) return;
     
     if (window.confirm(`Are you sure you want to delete Swap-Free config for group "${contextMenu.selectedRecord.group_name}"?`)) {
       try {
@@ -66,7 +70,7 @@ const SwapFreeGroupsView = () => {
       {/* Top Action Bar */}
       <div className="flex items-center px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0 select-none">
         <button 
-          onClick={() => setIsAddPopupOpen(true)}
+          hidden={!canWrite} onClick={() => canWrite && setIsAddPopupOpen(true)}
           className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] transition-colors"
         >
           <Plus size={12} />
@@ -125,7 +129,7 @@ const SwapFreeGroupsView = () => {
         ))}
       </div>
 
-      {isAddPopupOpen && (
+      {isAddPopupOpen && canWrite && (
         <AddSwapFreeGroupPopup 
           onClose={() => setIsAddPopupOpen(false)} 
           onCreated={fetchGroups} 
@@ -138,11 +142,11 @@ const SwapFreeGroupsView = () => {
           className="fixed z-[9999] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] shadow-2xl py-1 min-w-[200px] text-[12px] text-[color:var(--text-secondary)] font-sans rounded-[2px]"
           style={{ top: contextMenu.y, left: contextMenu.x }}
         >
-          <div className="px-6 py-1 hover:bg-[color:var(--accent-500)] hover:text-white cursor-pointer select-none" onClick={() => setIsAddPopupOpen(true)}>Add Config</div>
+          <div className="px-6 py-1 hover:bg-[color:var(--accent-500)] hover:text-white cursor-pointer select-none" hidden={!canWrite} onClick={() => canWrite && setIsAddPopupOpen(true)}>Add Config</div>
           <div className="h-[1px] bg-[color:var(--border-default)] my-1 mx-2"></div>
           <div 
             className="px-6 py-1 hover:bg-[color:var(--accent-500)] hover:text-white cursor-pointer select-none text-red-400 hover:text-white"
-            onClick={handleDelete}
+            hidden={!canWrite} onClick={handleDelete}
           >
             Delete
           </div>

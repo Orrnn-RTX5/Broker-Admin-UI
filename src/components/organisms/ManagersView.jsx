@@ -1,3 +1,5 @@
+import GroupAccessFields from './GroupAccessFields';
+import { toggleRolePermission } from '../../utils/groupAccess';
 import { sortToolbarRows } from '../../utils/toolbarActions';
 import React, { useState, useEffect, useCallback } from 'react';
 import { ManagerService } from '../../services/manager.service';
@@ -134,7 +136,7 @@ const CreateRoleModal = ({ onClose, onCreated }) => {
   const [error, setError] = useState(null);
 
   const togglePerm = (key) =>
-    setForm(p => ({ ...p, permissions: { ...p.permissions, [key]: !p.permissions[key] } }));
+    setForm(p => ({ ...p, permissions: toggleRolePermission(p.permissions, key) }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -260,7 +262,7 @@ const GroupPicker = ({ value, onChange }) => {
 const NEW_ROLE_OPTION = '__new_role__';
 
 const CreateManagerModal = ({ roles, onClose, onCreated, onCreateRole }) => {
-  const [form, setForm] = useState({ login: '', name: '', password: '', is_admin: false, role_id: '', allowed_groups: '', ip_whitelist: '' });
+  const [form, setForm] = useState({ login: '', name: '', password: '', is_admin: false, role_id: '', group_access_mode: 'none', allowed_groups: '', ip_whitelist: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const currentUser = useAuthStore((state) => state.user);
@@ -318,8 +320,9 @@ const CreateManagerModal = ({ roles, onClose, onCreated, onCreateRole }) => {
             <input required value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
           <div className="flex flex-col gap-1"><label className="text-white">Password *</label>
             <input required type="password" value={form.password} onChange={e=>setForm(p=>({...p,password:e.target.value}))} className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
-          <div className="flex flex-col gap-1"><label className="text-white">Allowed Groups</label>
-            <GroupPicker value={form.allowed_groups} onChange={v=>setForm(p=>({...p,allowed_groups:v}))}/></div>
+          <GroupAccessFields mode={form.group_access_mode} groups={form.allowed_groups} onChange={(mode, groups) => setForm(p => ({ ...p, group_access_mode: mode, allowed_groups: groups.join(', ') }))}>
+            <GroupPicker value={form.allowed_groups} onChange={v=>setForm(p=>({...p,allowed_groups:v}))}/>
+          </GroupAccessFields>
           <div className="flex flex-col gap-1"><label className="text-white">IP Whitelist (comma-sep)</label>
             <input value={form.ip_whitelist} onChange={e=>setForm(p=>({...p,ip_whitelist:e.target.value}))} placeholder="192.168.1.10" className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
           <div className="flex items-center gap-2 mt-1">
@@ -347,6 +350,7 @@ const EditManagerModal = ({ manager, roles, onClose, onSaved }) => {
     name: manager.name || '',
     role_id: manager.role_id != null ? String(manager.role_id) : '',
     enabled: manager.enabled !== false,
+    group_access_mode: manager.group_access_mode || (manager.allowed_groups?.length ? 'restricted' : 'none'),
     allowed_groups: joinList(manager.allowed_groups),
     ip_whitelist: joinList(manager.ip_whitelist),
   });
@@ -363,6 +367,7 @@ const EditManagerModal = ({ manager, roles, onClose, onSaved }) => {
         name: detail.name || '',
         role_id: detail.role_id != null ? String(detail.role_id) : '',
         enabled: detail.enabled !== false,
+        group_access_mode: detail.group_access_mode || (detail.allowed_groups?.length ? 'restricted' : 'none'),
         allowed_groups: joinList(detail.allowed_groups),
         ip_whitelist: joinList(detail.ip_whitelist),
       });
@@ -401,8 +406,9 @@ const EditManagerModal = ({ manager, roles, onClose, onSaved }) => {
           </div>
           <div className="flex flex-col gap-1"><label className="text-white">Name *</label>
             <input required value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
-          <div className="flex flex-col gap-1"><label className="text-white">Allowed Groups (none selected = none)</label>
-            <GroupPicker value={form.allowed_groups} onChange={v=>setForm(p=>({...p,allowed_groups:v}))}/></div>
+          <GroupAccessFields mode={form.group_access_mode} groups={form.allowed_groups} onChange={(mode, groups) => setForm(p => ({ ...p, group_access_mode: mode, allowed_groups: groups.join(', ') }))}>
+            <GroupPicker value={form.allowed_groups} onChange={v=>setForm(p=>({...p,allowed_groups:v}))}/>
+          </GroupAccessFields>
           <div className="flex flex-col gap-1"><label className="text-white">IP Whitelist (comma-sep, empty = none)</label>
             <input value={form.ip_whitelist} onChange={e=>setForm(p=>({...p,ip_whitelist:e.target.value}))} placeholder="192.168.1.10" className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 rounded-sm focus:border-[color:var(--accent-500)] outline-none"/></div>
           <div className="flex items-center gap-2 mt-1">
@@ -484,7 +490,7 @@ const EditRoleModal = ({ role, onClose, onSaved }) => {
   const [error, setError] = useState(null);
 
   const togglePerm = (key) =>
-    setForm(p => ({ ...p, permissions: { ...p.permissions, [key]: !p.permissions[key] } }));
+    setForm(p => ({ ...p, permissions: toggleRolePermission(p.permissions, key) }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();

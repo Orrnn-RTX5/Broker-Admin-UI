@@ -1,3 +1,5 @@
+import { startManagerAccessFeed } from './services/managerAccessFeed';
+import { canViewGroup, canViewGroups, canManageGroupLifecycle, groupAccessKey } from './utils/groupAccess';
 import React from 'react';
 import MenuBar from './components/organisms/MenuBar';
 import ActionToolBar from './components/organisms/ActionToolBar';
@@ -12,6 +14,7 @@ import CreateGroupPopup from './components/RIGHTCLICKJPOPUPS/CreateGroupPopup';
 import AccountEditPopup from './components/RIGHTCLICKJPOPUPS/AccountEditPopup';
 import TradeDetailsPopup from './components/RIGHTCLICKJPOPUPS/TradeDetailsPopup';
 import { HelpModal } from './components/organisms/HelpModal';
+import BugReportDialog from './components/BugReportDialog';
 import { AboutModal } from './components/organisms/AboutModal';
 import { SuperAdminConsole } from './components/organisms/SuperAdminConsole';
 
@@ -113,6 +116,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
   const [isCreatingGroup, setIsCreatingGroup] = React.useState(false);
   const [refreshKey, setRefreshKey] = React.useState(0);
   const [helpOpen, setHelpOpen] = React.useState(false);
+  const [bugReportOpen, setBugReportOpen] = React.useState(false);
   const [aboutOpen, setAboutOpen] = React.useState(false);
   const [isSuperAdminOpen, setIsSuperAdminOpen] = React.useState(false);
   const [rowCount, setRowCount] = React.useState({ total: 0, filtered: 0, visible: 0, bytes: 0 });
@@ -156,20 +160,31 @@ const AuthenticatedAppInner = ({ navigate }) => {
     setSavedSearches((prev) => ({ ...prev, [activeNode]: q }));
   };
 
+
+  const groupIdentity=groupAccessKey(currentUser);
+  React.useEffect(()=>{
+    setSelectedGroup(null);setIsPopupOpen(false);setIsCreatingGroup(false);
+    setSelectedEditTarget(target=>target?.type==='group'?null:target);
+    setRefreshKey(value=>value+1);
+  },[groupIdentity]);
+
   const searchInputRef = React.useRef(null);
   React.useEffect(() => {
     if (!isAuthenticated || !accessToken) return undefined;
 
     let cancelled = false;
-    AuthService.getMe().catch(() => {
+    const refreshAccess=()=>AuthService.getMe().catch(() => {
       if (!cancelled && currentUser) {
-        setUser({ ...currentUser, permissions: null });
+        const latest=useAuthStore.getState();
+        if(latest.accessToken===accessToken) setUser({...latest.user,group_config_admin:false,group_access_mode:'none',permissions:null});
       }
     });
 
-    return () => {
-      cancelled = true;
-    };
+    refreshAccess();
+    const timer=window.setInterval(refreshAccess,5000);
+    const stopAccessFeed=startManagerAccessFeed(refreshAccess);
+    window.addEventListener('focus',refreshAccess);
+    return () => { cancelled=true;stopAccessFeed();window.clearInterval(timer);window.removeEventListener('focus',refreshAccess); };
     // Hydrate when the access token changes. currentUser is intentionally not
     // a dependency; getMe updates it and would otherwise loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -302,7 +317,8 @@ const AuthenticatedAppInner = ({ navigate }) => {
   const activeViewPermission = requiredPermissionForView(activeNode);
   const isAccountEditView = ACCOUNT_EDIT_VIEW_TYPES.has(activeNode) || (activeNode === 'Groups' && groupExplorerLocation.type === 'group');
   const canEditAccounts = hasPermission(currentUser, PERMISSION_KEYS.EDIT_ACCOUNTS);
-  const canEditGroups = hasPermission(currentUser, PERMISSION_KEYS.MANAGE_GROUPS);
+  const canEditGroups = canViewGroups(currentUser);
+  const canCreateDeleteGroups=canManageGroupLifecycle(currentUser);
   const canEditSelectedTarget =
     (selectedEditTarget?.type === 'account' && selectedEditTarget.viewType === activeNode && isAccountEditView && canEditAccounts) ||
     (selectedEditTarget?.type === 'group' && selectedEditTarget.viewType === activeNode && canEditGroups) ||
@@ -342,7 +358,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
     const location = resolveGroupExplorerNode(node);
     if (!location) return false;
     if (!canAccessView(currentUser, 'Groups')) {
-      notify({ title: 'Groups unavailable', description: `Requires ${PERMISSION_KEYS.MANAGE_GROUPS} permission.`, tone: 'warning' });
+      notify({ title: 'Groups unavailable', description: `Requires ${PERMISSION_KEYS.VIEW_GROUPS} permission and assigned groups.`, tone: 'warning' });
       return false;
     }
     setGroupExplorerLocation(location);
@@ -514,6 +530,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
     }
 
     if (target.type === 'group') {
+      if(!canViewGroup(currentUser,target.row?.name || target.row?.group)) return false;
       setSelectedGroup(target.row);
       setGroupPopupFromAccount(false);
       setIsPopupOpen(true);
@@ -531,7 +548,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
     }
 
     return false;
-  }, [openAccountEditor]);
+  }, [openAccountEditor,currentUser]);
 
   const handleToolbarEdit = React.useCallback(() => {
     openEditTarget(selectedEditTarget);
@@ -562,6 +579,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
   const handleAddClick = () => {
     if (activeNode === 'Groups') {
+      if(!canCreateDeleteGroups) return;
       setIsCreatingGroup(true);
       return;
     }
@@ -741,10 +759,10 @@ const AuthenticatedAppInner = ({ navigate }) => {
     });
   }, [notify]);
 
-  const canDeleteSelectedTarget = Boolean(selectedEditTarget?.type === 'group' && canEditGroups);
+  const canDeleteSelectedTarget = Boolean(selectedEditTarget?.type === 'group' && canCreateDeleteGroups);
   const handleToolbarDelete = React.useCallback(async (explicitTarget) => {
     const target = explicitTarget?.type === 'group' || explicitTarget?.type === 'group-branch' ? explicitTarget : selectedEditTarget;
-    if (!target) return;
+    if (!target || !canCreateDeleteGroups) return;
     if (target.type === 'group-branch') {
       // Deepest names first, so a parent group never outlives its subgroups.
       const names = [...target.names].sort((left, right) => right.length - left.length);
@@ -785,10 +803,10 @@ const AuthenticatedAppInner = ({ navigate }) => {
     } else {
       notify({ title: 'Delete unavailable', description: `Deleting ${target.type} is not supported from the toolbar.`, tone: 'warning' });
     }
-  }, [selectedEditTarget, notify]);
+  }, [selectedEditTarget, canCreateDeleteGroups, notify]);
 
-  const canAdd = Boolean(canEditGroups || activeNode === 'Groups' || activeNode === 'Trading Accounts' || activeNode === 'Clients' || activeNode === 'Managers');
-  const canImport = Boolean(canEditGroups || activeNode === 'Groups');
+  const canAdd = Boolean((activeNode === 'Groups' && canCreateDeleteGroups) || activeNode === 'Trading Accounts' || activeNode === 'Clients' || activeNode === 'Managers');
+  const canImport = activeNode === 'Groups' && canCreateDeleteGroups;
   const canSort = true;
 
   const handleCheckForUpdates = React.useCallback(() => {
@@ -921,6 +939,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
         onExportCsv={handleExportCsv}
         onImport={handleImport}
         onHelp={() => setHelpOpen(true)}
+        onReportBug={() => setBugReportOpen(true)}
         onAbout={() => setAboutOpen(true)}
         canUndo={currentIndex > 0}
         canRedo={currentIndex < history.length - 1}
@@ -959,6 +978,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
         density={density}
         onDensityToggle={() => setDensity((d) => (d === 'compact' ? 'cozy' : 'compact'))}
         onHelp={() => setHelpOpen(true)}
+        onReportBug={() => setBugReportOpen(true)}
         connStatus={connStatus}
       />
       </MenuBar>
@@ -1005,6 +1025,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
           {canViewActive && activeNode === 'Groups' ? (
             <GroupsExplorer
               dummyActionsRef={dummyGroupsRef}
+              key={`${groupIdentity}:${groupExplorerLocation.id}`}
               location={groupExplorerLocation}
               onNavigate={navigateGroupExplorer}
               onAccountOpen={handleNodeDoubleClick}
@@ -1012,7 +1033,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
               onSelectionChange={handleEditableTargetSelect}
               selectedNodeId={selectedSidebarNodeId}
               onGroupEdit={(node) => openEditTarget({ type: 'group', row: node.group, viewType: 'Groups', id: node.groupName })}
-              onGroupCreate={(draft) => setIsCreatingGroup(draft ? { draft } : true)}
+              onGroupCreate={canCreateDeleteGroups ? (draft) => setIsCreatingGroup(draft ? { draft } : true) : undefined}
               onGroupDelete={handleToolbarDelete}
               deleting={isDeletingTarget}
               refreshTrigger={refreshKey}
@@ -1022,7 +1043,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
               onRowsChange={handleRowsChange}
             />
           ) : canViewActive ? (
-            <AdminDataTable
+            <AdminDataTable key={groupIdentity}
               onRowDoubleClick={handleRowDoubleClick}
               viewType={activeNode}
               onAddClick={handleAddClick}
@@ -1072,7 +1093,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
             onClose={() => setViewingTrade(null)}
           />
         )}
-        {isCreatingGroup && (
+        {isCreatingGroup && canCreateDeleteGroups && (
           <CreateGroupPopup
             draftData={isCreatingGroup?.draft}
             onClose={() => setIsCreatingGroup(false)}
@@ -1090,6 +1111,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
       </AnimatePresence>
 
       <HelpModal open={helpOpen} onOpenChange={setHelpOpen} />
+      {bugReportOpen && <BugReportDialog onClose={() => setBugReportOpen(false)} />}
       <AboutModal open={aboutOpen} onOpenChange={setAboutOpen} />
       {isSuperAdminOpen && (
         <div className="fixed inset-0 z-[10000]">
