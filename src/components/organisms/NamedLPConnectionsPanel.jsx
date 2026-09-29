@@ -75,8 +75,10 @@ function Workspace() {
   const isNew = !config.revision;
   const hasCredentialEdits = Object.values(credentials).some(role => Object.values(role).some(Boolean));
   const hasUnsavedChanges = (isNew ? JSON.stringify(config) !== JSON.stringify(emptyConnection()) : Boolean(savedConfig && JSON.stringify(config) !== JSON.stringify(savedConfig))) || hasCredentialEdits;
-  const confirmDiscard = () => !hasUnsavedChanges || window.confirm('Discard unsaved connection changes?');
-  const confirmTest = () => !hasCredentialEdits || window.confirm('Test uses saved settings and will clear the credentials entered here. Continue?');
+  // A declined (or browser-blocked) confirm must never look like a dead button.
+  const declined = () => { setError(''); setMessage('Nothing was changed because this form has unsaved edits. Reload the page (F5) to discard them, then try again.'); return false; };
+  const confirmDiscard = () => !hasUnsavedChanges || window.confirm('Discard unsaved connection changes?') || declined();
+  const confirmTest = () => !hasCredentialEdits || window.confirm('Test uses saved settings and will clear the credentials entered here. Continue?') || declined();
   const chooseConnection = record => { if (confirmDiscard()) select(record); };
   const refreshSelection = () => { if (confirmDiscard()) refresh(); };
   const runtimeRevision = status?.revision;
