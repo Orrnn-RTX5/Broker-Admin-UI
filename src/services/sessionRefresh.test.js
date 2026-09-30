@@ -18,6 +18,7 @@ const local = createStorage();
 const session = createStorage();
 const events = [];
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
 
 // Mirrors the manager backend: 1 h access tokens, single-use refresh tokens,
 // and 403 "Not authenticated" for an expired or unknown access token.
@@ -81,6 +82,9 @@ let authStore;
 let scheduler;
 
 before(async () => {
+  // This fixture models the localStorage fallback, including the other tab's
+  // storage lock. Node's native Web Locks belong to a different mechanism.
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: {} });
   globalThis.localStorage = local;
   globalThis.sessionStorage = session;
   globalThis.window = {
@@ -102,6 +106,8 @@ before(async () => {
 });
 
 after(() => {
+  if (navigatorDescriptor) Object.defineProperty(globalThis, 'navigator', navigatorDescriptor);
+  else delete globalThis.navigator;
   delete globalThis.window;
   delete globalThis.localStorage;
   delete globalThis.sessionStorage;

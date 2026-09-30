@@ -9,7 +9,7 @@
 export const GROUP_SYMBOL_STATUS = {
   global: { label: 'Global', hint: 'No group override; follows the global symbol setting.' },
   override_off: { label: 'Override: OFF', hint: 'Turned off for this group only.' },
-  not_in_allow_list: { label: 'Not in allow-list', hint: "Not in this group's legacy allowed-symbols list (Symbol List tab)." },
+  not_in_allow_list: { label: 'Not in allow-list', hint: "Not in this group's legacy allowed-symbols list." },
   blocked_list: { label: 'Blocked list', hint: "In this group's blocked symbols." },
   outside_feed_scope: { label: 'Outside feed', hint: "Not in the broker's feed symbol scope." },
   disabled_globally: { label: 'Disabled globally', hint: 'Disabled in Symbol Management — a group cannot enable it.' },

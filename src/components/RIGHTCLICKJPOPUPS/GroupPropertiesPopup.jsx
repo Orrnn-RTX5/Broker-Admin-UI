@@ -55,7 +55,7 @@ import './GroupPropertiesPopup.css';
 
 const MotionDiv = motion.div;
 
-const TABS = ['Accounts', 'Margin', 'Symbols', 'Symbol List', 'Commissions'];
+const TABS = ['Accounts', 'Margin', 'Symbols', 'Commissions'];
 
 const TAB_INTRO = {
   Accounts: 'Trading accounts that belong to this group, loaded from the server. Double-click an account to open it.',
@@ -831,7 +831,7 @@ const GroupPropertiesPopup = ({
                   {overridesView?.legacyAllowList && (
                     <div className="px-3 py-2 border border-amber-500/40 bg-amber-500/5 rounded-sm text-[11px] text-amber-300" role="note">
                       This group has a legacy allowed-symbols list ({overridesView.allowListCount} symbols). Symbols outside it stay blocked
-                      (&quot;Not in allow-list&quot;). Clear it on the Symbol List tab to let the group follow Symbol Management.
+                      (&quot;Not in allow-list&quot;).
                     </div>
                   )}
                   <div className="flex items-center gap-2">
@@ -841,13 +841,13 @@ const GroupPropertiesPopup = ({
                       onChange={(event) => setOverrideQuery(event.target.value)}
                       placeholder="Search symbol or category"
                       aria-label="Search symbols"
-                      className={`flex-1 min-w-0 ${inputClass}`}
+                      className="gpp-input flex-1 min-w-0"
                     />
                     <select
                       value={overrideFilter}
                       onChange={(event) => setOverrideFilter(event.target.value)}
                       aria-label="Filter symbols"
-                      className={`w-40 ${inputClass}`}
+                      className="gpp-select w-40"
                     >
                       {GROUP_SYMBOL_FILTERS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                     </select>

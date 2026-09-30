@@ -61,7 +61,7 @@ test('Commissions: scoped to the group, editable, no alert()', () => {
 });
 
 test('Dialog chrome: Help works, dead tabs and window buttons are gone', () => {
-  assert.match(src, /const TABS = \['Accounts', 'Margin', 'Symbols', 'Symbol List', 'Commissions'\];/);
+  assert.match(src, /const TABS = \['Accounts', 'Margin', 'Symbols', 'Commissions'\];/);
   assert.match(src, /onClick=\{\(\) => setShowHelp\(\(value\) => !value\)\}/);
   for (const dead of ["'Statistics'", "'Company'", "'Reports'", "'News & Mail'", "'Permissions'", "'Common'"]) {
     assert.equal(src.includes(`activeTab === ${dead}`), false, `unreachable tab body ${dead} removed`);
@@ -76,7 +76,7 @@ test('GroupPropertiesPopup opens on an Accounts tab that lists every account of 
   const tab = readFileSync(join(here, 'GroupAccountsTab.jsx'), 'utf8');
 
   assert.match(src, /initialTab = 'Accounts',/);
-  assert.match(src, /const TABS = \['Accounts', 'Margin', 'Symbols', 'Symbol List', 'Commissions'\];/);
+  assert.match(src, /const TABS = \['Accounts', 'Margin', 'Symbols', 'Commissions'\];/);
   assert.match(src, /<GroupAccountsTab groupName=\{currentGroupName\} onOpenAccount=\{onOpenAccount\} \/>/);
   assert.match(tab, /loadGroupsExplorerNodes\(\s*\{ type: 'group', groupName \}/, 'accounts come from the paged, exact-group loader');
 });
