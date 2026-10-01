@@ -92,6 +92,18 @@ test('Actions preparation fails before writing env when required secret is absen
   assert.equal(readFileSync(githubEnv, 'utf8'), 'EXISTING=value\n');
 });
 
+test('runtime entrypoint preserves the dedicated browser feed credential when configured', (t) => {
+  const dir = temporary(t);
+  const result = spawnSync(bash, [path.join(root, 'docker-entrypoint.sh').replaceAll('\\', '/'), 'true'], {
+    cwd: root,
+    env: { ...process.env, DIST_DIR: dir.replaceAll('\\', '/'), FEED_BROKER_TOKEN: '', VITE_FEED_BROKER_TOKEN: 'browser-feed-fixture' },
+    encoding: 'utf8',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(readFileSync(path.join(dir, 'runtime-config.js'), 'utf8'), /FEED_BROKER_TOKEN: "browser-feed-fixture"/);
+  assert.throws(() => normalizeAdminEnv(`${valid}\nFEED_BROKER_TOKEN=one\nVITE_FEED_BROKER_TOKEN=two`), /conflicting FEED_BROKER_TOKEN/);
+});
+
 function deploymentScript() {
   const workflow = yaml.load(readFileSync(path.join(root, '.github/workflows/ci-cd.yml'), 'utf8'));
   const deploy = Object.values(workflow.jobs).flatMap((job) => job.steps ?? []).find((step) => step.name === 'Deploy to server');

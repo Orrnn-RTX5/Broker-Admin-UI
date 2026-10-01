@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 const publicFields = ['BACKEND_TARGET', 'BROKER_ID', 'BROKER_NAME', 'API_HOST',
   'API_HOST_EXT', 'WS_HOST', 'FEED_WS_URL', 'FEED_STATUS_URL', 'DEFAULT_MT5_SERVER',
   'DISCOVERY_BASE_URL', 'DEFAULT_DISCOVERY_BASE_URL', 'SUPER_ADMIN_API_HOST',
-  'USE_MOCK_DISCOVERY', 'FEED_SEND_TOKEN', 'FEED_BROKER_ID'];
+  'USE_MOCK_DISCOVERY', 'FEED_SEND_TOKEN', 'FEED_BROKER_ID', 'FEED_BROKER_TOKEN'];
 
 export function normalizeAdminEnv(raw) {
   if (typeof raw !== 'string' || !raw.trim()) throw new Error('ADMIN_UI_ENV is missing or empty.');

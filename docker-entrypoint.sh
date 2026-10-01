@@ -22,6 +22,7 @@ feed_broker_id="${FEED_BROKER_ID:-${VITE_FEED_BROKER_ID:-}}"
 feed_ws_url="${FEED_WS_URL:-${VITE_FEED_WS_URL:-}}"
 feed_status_url="${FEED_STATUS_URL:-${VITE_FEED_STATUS_URL:-}}"
 feed_send_token="${FEED_SEND_TOKEN:-${VITE_FEED_SEND_TOKEN:-true}}"
+feed_broker_token="${FEED_BROKER_TOKEN:-${VITE_FEED_BROKER_TOKEN:-}}"
 direct_manager_origins="${DIRECT_MANAGER_ORIGINS:-${VITE_DIRECT_MANAGER_ORIGINS:-}}"
 super_admin_api_host="${SUPER_ADMIN_API_HOST:-${VITE_SUPER_ADMIN_API_HOST:-https://superbackend.orrnn.com}}"
 
@@ -47,6 +48,7 @@ window.__RTX5_RUNTIME_CONFIG__ = {
   FEED_WS_URL: "$(js_escape "$feed_ws_url")",
   FEED_STATUS_URL: "$(js_escape "$feed_status_url")",
   FEED_SEND_TOKEN: "$(js_escape "$feed_send_token")",
+  FEED_BROKER_TOKEN: "$(js_escape "$feed_broker_token")",
   DIRECT_MANAGER_ORIGINS: "$(js_escape "$direct_manager_origins")",
   SUPER_ADMIN_API_HOST: "$(js_escape "$super_admin_api_host")",
   API_HOST: "$(js_escape "$api_host")",

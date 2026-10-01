@@ -134,8 +134,9 @@ docker exec "$CONTAINER_NAME" node -e '
   const filename = path.join(process.env.DIST_DIR || "/app/dist", "runtime-config.js");
   vm.runInNewContext(fs.readFileSync(filename, "utf8"), sandbox, { timeout: 1000 });
   const config = sandbox.window.__RTX5_RUNTIME_CONFIG__ || {};
-  for (const key of ["BROKER_ID", "API_HOST", "FEED_WS_URL", "FEED_STATUS_URL"]) {
+  for (const key of ["BROKER_ID", "API_HOST", "FEED_WS_URL", "FEED_STATUS_URL", "FEED_BROKER_TOKEN"]) {
     const expected = process.env[key] || process.env["VITE_" + key];
+    if (key === "FEED_BROKER_TOKEN" && !expected) continue;
     if (!expected || config[key] !== expected) {
       console.error("Generated runtime configuration does not match " + key + ".");
       process.exit(1);
