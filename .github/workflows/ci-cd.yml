@@ -180,6 +180,24 @@ jobs:
             echo "\`\`\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Export candidate image for Nexa
+        if: startsWith(github.ref, 'refs/heads/release-candidate/')
+        env:
+          CANDIDATE_IMAGE: ${{ steps.release_record.outputs.image_ref }}
+        run: |
+          set -eu
+          docker pull "$CANDIDATE_IMAGE"
+          docker save "$CANDIDATE_IMAGE" -o "$RUNNER_TEMP/admin-candidate-image.tar"
+
+      - name: Upload candidate image for Nexa
+        if: startsWith(github.ref, 'refs/heads/release-candidate/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-candidate-image-${{ github.sha }}
+          path: ${{ runner.temp }}/admin-candidate-image.tar
+          compression-level: 0
+          retention-days: 7
+
       - name: Deploy to server
         if: github.ref == 'refs/heads/main'
         uses: appleboy/ssh-action@v1.2.0
