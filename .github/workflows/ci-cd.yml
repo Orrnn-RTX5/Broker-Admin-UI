@@ -16,7 +16,7 @@ env:
 
 concurrency:
   group: ui-image-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   validate:
@@ -57,6 +57,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Prepare admin runtime environment
+        env:
+          ADMIN_UI_ENV: ${{ secrets.ADMIN_UI_ENV }}
+        run: node scripts/prepare-admin-env.mjs
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -100,99 +105,16 @@ jobs:
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          NEW_IMAGE: ${{ steps.release_record.outputs.image_ref }}
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          ADMIN_CONTAINER_NAME: ${{ vars.ADMIN_CONTAINER_NAME }}
+          ADMIN_PORT_MAPPING: ${{ vars.ADMIN_PORT_MAPPING }}
+          ADMIN_UI_ENV_FILE: ${{ vars.ADMIN_UI_ENV_FILE }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            set -e
-
-            CONTAINER_NAME="broker-admin-ui"
-            NEW_IMAGE="${{ env.IMAGE_NAME }}:${{ github.sha }}"
-            PREVIOUS_IMAGE=""
-            # The server-owned file is the source of truth for runtime broker config.
-            ENV_FILE="$HOME/broker-admin-ui.env"
-            if [ ! -f "$ENV_FILE" ] || [ ! -s "$ENV_FILE" ]; then
-              echo "Missing or empty runtime env file: $ENV_FILE" >&2
-              echo "Place the broker's production .env there before deploying." >&2
-              exit 1
-            fi
-            if ! grep -Eq '^(BROKER_ID|VITE_BROKER_ID)=[[:space:]]*[^[:space:]]' "$ENV_FILE"; then
-              echo "Runtime env file must set BROKER_ID (or VITE_BROKER_ID): $ENV_FILE" >&2
-              exit 1
-            fi
-            if ! grep -Eq '^(API_HOST|VITE_API_HOST)=[[:space:]]*[^[:space:]]' "$ENV_FILE"; then
-              echo "Runtime env file must set API_HOST (or VITE_API_HOST): $ENV_FILE" >&2
-              exit 1
-            fi
-
-            rollback() {
-              echo "Deployment failed. Starting rollback..."
-
-              if [ -n "$PREVIOUS_IMAGE" ]; then
-                echo "Rolling back to: $PREVIOUS_IMAGE"
-
-                docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
-
-                docker run -d \
-                  --name "$CONTAINER_NAME" \
-                  --restart unless-stopped \
-                  --env-file "$ENV_FILE" \
-                  -p 8080:80 \
-                  "$PREVIOUS_IMAGE"
-
-                echo "Rollback completed successfully."
-              else
-                echo "No previous image found. Nothing to roll back to."
-              fi
-            }
-
-            # Capture the currently deployed image before changing anything.
-            if docker inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
-              PREVIOUS_IMAGE=$(docker inspect \
-                --format '{{.Config.Image}}' \
-                "$CONTAINER_NAME")
-
-              echo "Current image: $PREVIOUS_IMAGE"
-            else
-              echo "No existing deployment found."
-            fi
-
-            # Roll back if anything after this point fails.
-            trap rollback ERR
-
-            echo "Logging in to GHCR..."
-            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io \
-              -u "${{ secrets.GHCR_USERNAME }}" \
-              --password-stdin
-
-            echo "Pulling new image: $NEW_IMAGE"
-            docker pull "$NEW_IMAGE"
-
-            echo "Stopping current container..."
-            docker stop "$CONTAINER_NAME" 2>/dev/null || true
-            docker rm "$CONTAINER_NAME" 2>/dev/null || true
-
-            echo "Starting new container..."
-            docker run -d \
-              --name "$CONTAINER_NAME" \
-              --restart unless-stopped \
-              --env-file "$ENV_FILE" \
-              -p 8080:80 \
-              "$NEW_IMAGE"
-
-            # Verify that the new container is actually running.
-            echo "Verifying deployment..."
-            sleep 5
-
-            if [ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER_NAME")" != "true" ]; then
-              echo "New container is not running."
-              exit 1
-            fi
-
-            # Deployment succeeded, so disable automatic rollback.
-            trap - ERR
-
-            echo "Deployment successful: $NEW_IMAGE"
-
-            docker image prune -af
+          envs: ADMIN_UI_ENV_B64,NEW_IMAGE,GHCR_TOKEN,GHCR_USERNAME,ADMIN_CONTAINER_NAME,ADMIN_PORT_MAPPING,ADMIN_UI_ENV_FILE
+          script_path: scripts/deploy-admin-runtime.sh

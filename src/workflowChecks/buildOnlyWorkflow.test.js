@@ -25,9 +25,16 @@ test('admin workflow publishes an immutable image before deploying it', async ()
   assert.match(workflow, /steps\.build\.outputs\.digest/);
   assert.match(workflow, /source_sha/);
   assert.match(workflow, /image_ref/);
-  // The deploy runs after the release record and pins the image by commit SHA.
+  // The deploy uses the digest recorded for the exact image that was published.
   assert.match(workflow, /Record immutable image release[\s\S]*Deploy to server/);
-  assert.match(workflow, /NEW_IMAGE="\$\{\{ env\.IMAGE_NAME \}\}:\$\{\{ github\.sha \}\}"/);
-  // Runtime config must survive container replacement.
-  assert.match(workflow, /docker run[\s\S]*--env-file "\$ENV_FILE"[\s\S]*"\$NEW_IMAGE"/);
+  assert.match(workflow, /NEW_IMAGE: \$\{\{ steps\.release_record\.outputs\.image_ref \}\}/);
+  assert.match(workflow, /ADMIN_UI_ENV: \$\{\{ secrets\.ADMIN_UI_ENV \}\}/);
+  assert.match(workflow, /Prepare admin runtime environment[\s\S]*Build and push image/);
+  assert.match(workflow, /envs: ADMIN_UI_ENV_B64,NEW_IMAGE,GHCR_TOKEN,GHCR_USERNAME/);
+  assert.match(workflow, /script_path: scripts\/deploy-admin-runtime\.sh/);
+  assert.match(workflow, /cancel-in-progress: false/);
+
+  const deployment = await readFile(new URL('../../scripts/deploy-admin-runtime.sh', import.meta.url), 'utf8');
+  assert.match(deployment, /docker run[\s\S]*--env-file "\$ENV_FILE"[\s\S]*"\$NEW_IMAGE"/);
+  assert.doesNotMatch(deployment, /\$\{\{ secrets\./);
 });
