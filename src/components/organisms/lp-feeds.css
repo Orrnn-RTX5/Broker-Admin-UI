@@ -19,3 +19,45 @@
 .lp-feeds-panel:not(.is-compact) .lp-feed-table th,.lp-feeds-panel:not(.is-compact) .lp-feed-table td{padding:7px 9px}
 .lp-feeds-panel.is-compact .lp-feeds-intro{line-height:1.4}.lp-feeds-panel.is-compact select{width:100%}
 @media(max-width:560px){.lp-feeds-panel:not(.is-compact){padding:10px}.lp-feeds-panel:not(.is-compact) select,.lp-feeds-panel:not(.is-compact) input{width:100%;box-sizing:border-box}}
+
+/* Quote inspection and account assignment are separate tasks. */
+.lp-feeds-panel:not(.is-compact){display:flex;flex-direction:column;gap:14px;padding:0;color:var(--text-primary,#d4d4d4)}
+.lp-feeds-panel:not(.is-compact) > header{align-items:flex-start;gap:12px}
+.lp-feeds-panel:not(.is-compact) .lp-feeds-title{margin:0;font-size:15px;font-weight:600;color:var(--text-primary,#fff)}
+.lp-feeds-panel:not(.is-compact) .lp-feeds-intro{max-width:680px;margin:3px 0 0;color:var(--text-secondary,#9d9d9d)}
+.lp-feeds-panel:not(.is-compact) .lp-feeds-preview,
+.lp-feeds-panel:not(.is-compact) > fieldset{min-width:0;margin:0;padding:14px;border:1px solid var(--border-default,#454545);border-radius:var(--radius-lg,8px);background:var(--bg-surface-1,#1e1e1e)}
+.lp-feeds-panel:not(.is-compact) > fieldset > legend{padding:0 5px;font-size:13px;font-weight:600;color:var(--text-primary,#fff)}
+.lp-feeds-panel:not(.is-compact) .lp-feeds-preview > :first-child{margin-top:0}
+.lp-feeds-panel:not(.is-compact) .lp-feeds-source{max-width:440px;font-weight:600;color:var(--text-primary,#fff)}
+.lp-feeds-panel:not(.is-compact) .lp-feeds-source select{width:100%;font-weight:400}
+.lp-feeds-panel:not(.is-compact) .lp-feed-status{width:fit-content;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere}
+.lp-feeds-panel:not(.is-compact) .lp-feeds-empty{padding:10px 12px;border:1px dashed var(--border-strong,#657080);border-radius:6px;color:var(--text-secondary,#9d9d9d)}
+.lp-feeds-panel:not(.is-compact) .lp-feed-filter-label{max-width:400px;font-weight:600}
+.lp-feeds-panel:not(.is-compact) .lp-feed-filter{width:100%;margin:0;font-weight:400}
+.lp-feeds-panel:not(.is-compact) .lp-feeds-load{display:flex;flex-wrap:wrap;align-items:end;gap:8px 12px;margin:12px 0}
+.lp-feeds-panel:not(.is-compact) .lp-feeds-load label{flex:1 1 320px;max-width:440px;margin:0}
+.lp-feeds-panel:not(.is-compact) .lp-feeds-load input{width:100%;box-sizing:border-box}
+.lp-feeds-panel:not(.is-compact) .lp-feeds-account-current{padding:10px 12px;margin:12px 0;border:1px solid var(--border-default,#454545);border-radius:6px;background:var(--bg-surface-2,#252526);overflow-wrap:anywhere}
+.lp-feeds-panel:not(.is-compact) .lp-feeds-account-current strong{font-weight:600;color:var(--text-primary,#fff)}
+.lp-feeds-panel:not(.is-compact) .lp-feeds-account-current p{margin:3px 0}
+.lp-feeds-panel:not(.is-compact) .lp-feeds-account-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px;max-width:880px}
+.lp-feeds-panel:not(.is-compact) .lp-feeds-account-fields label{min-width:0;margin:0}
+.lp-feeds-panel:not(.is-compact) .lp-feeds-account-fields select{width:100%}
+.lp-feeds-panel:not(.is-compact) .lp-feeds-account-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:12px 0}
+.lp-feeds-panel:not(.is-compact) .lp-feeds-account-actions .lp-feeds-note{margin:0}
+.lp-feeds-panel:not(.is-compact) .lp-feed-success{padding:8px 10px;border:1px solid var(--ok-border,#347d52);border-radius:5px;background:var(--ok-soft,#173324);color:var(--ok-text,#98d8b2)}
+.lp-feeds-panel:not(.is-compact) :is(select,input,button){font:inherit}
+.lp-feeds-panel:not(.is-compact) button{padding:6px 10px;min-height:34px}
+.lp-feeds-panel:not(.is-compact) .lp-feed-table{max-height:420px}
+.lp-feeds-panel:not(.is-compact) .lp-feed-table td,
+.lp-feeds-panel:not(.is-compact) .lp-feed-table th{font-variant-numeric:tabular-nums}
+@media(max-width:700px){
+  .lp-feeds-panel:not(.is-compact) .lp-feeds-account-fields{grid-template-columns:minmax(0,1fr)}
+  .lp-feeds-panel:not(.is-compact) .lp-feeds-load button{width:100%}
+}
+.lp-feeds-panel:not(.is-compact) :is(select,input,button){min-height:38px;padding:7px 10px;font-size:12px}
+.lp-feeds-panel:not(.is-compact) > fieldset > legend{font-size:14px}
+@media(max-width:560px){
+  .lp-feeds-panel:not(.is-compact) :is(select,input,button){min-height:44px}
+}

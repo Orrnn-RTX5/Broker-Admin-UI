@@ -1,15 +1,18 @@
 import { api } from '../lib/api.js';
 import { useAuthStore } from '../store/authStore.js';
-import { buildFeedWsUrl } from '../config/endpoints.js';
+import { API_HOST, buildFeedWsUrl } from '../config/endpoints.js';
 import { createManagerTradeSocket } from './managerTradeSocket.js';
 const authenticated=()=>useAuthStore.getState().accessToken;
-const requestTicket=async login=>{const response=await api.request({url:'/api/v1/manager/trade-ws-ticket',method:'POST',data:{account_login:login},_noRetry:true});return response.data;};
+const requestTicket=async(login,{signal}={})=>{const response=await api.request({url:'/api/v1/manager/trade-ws-ticket',method:'POST',data:{account_login:login},_noRetry:true,signal});return response.data;};
 const getScope=()=>{if(!authenticated())return '';try{const value=JSON.parse(globalThis.sessionStorage?.getItem('auth')||'{}');if(!value.login||typeof value.broker_id!=='string')return '';return JSON.stringify([String(value.login),value.broker_id,value.session_scope||value.created_at||'manager']);}catch{return '';}};
+const getTransportScope=()=>{const url=new URL(buildFeedWsUrl());url.search='';url.hash='';url.username='';url.password='';return JSON.stringify([API_HOST,url.origin,url.pathname]);};
 export function managerTradeSocketURL(response){
  if(response?.ws_path!=='/ws/manager-trade'||typeof response.ticket!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(response.ticket))throw new Error('Invalid trade socket authorization.');
  const url=new URL(buildFeedWsUrl());url.pathname=response.ws_path;url.search='';url.hash='';url.username='';url.password='';url.searchParams.set('ticket',response.ticket);return url.toString();
 }
-const client=createManagerTradeSocket({requestTicket,buildUrl:managerTradeSocketURL,getScope});
+const client=createManagerTradeSocket({requestTicket,buildUrl:managerTradeSocketURL,getScope,getTransportScope});
+// Optional read-only connection preflight. Call before latency-sensitive commands and report its timing separately.
+export const warmupManagerTradeSocket=login=>client.warmup(login);
 export const placeManagerOrder=payload=>client.place(payload);
 export const closeManagerDemoPosition=(ticket,options={})=>client.closeDemo({...options,position_ticket:ticket});
 export const listManagerDemoCloses=login=>client.listDemoCloses(login);

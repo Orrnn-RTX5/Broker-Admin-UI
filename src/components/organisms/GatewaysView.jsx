@@ -13,14 +13,18 @@ import {
   BookOpen,
   CheckCircle2,
   ChevronDown,
+  Eye,
+  EyeOff,
   GitBranch,
   ListChecks,
   Loader2,
   Plug,
   RefreshCw,
   Save,
+  Search,
   ShieldCheck,
   Zap,
+  X,
 } from 'lucide-react';
 import {
   gatewayApplyFeedConfig,
@@ -39,7 +43,7 @@ import LPDemoMarketWorkspace from './LPDemoMarketWorkspace.jsx';
 import CalculationBaselineWorkspace from './CalculationBaselineWorkspace.jsx';
 import './gateways-view.css';
 
-// Page sections, in scroll order. Every section stays mounted; the nav only scrolls.
+// Keep every workspace mounted so navigation preserves unsaved form drafts.
 const GATEWAY_SECTIONS = [
   {
     id: 'connections',
@@ -88,11 +92,11 @@ const GATEWAY_SECTIONS = [
 
 const sectionDomId = (id) => `gw-section-${id}`;
 
-const GatewaySection = ({ section, children }) => {
+const GatewaySection = ({ section, active, children }) => {
   const Icon = section.icon;
   const headingId = `${sectionDomId(section.id)}-title`;
   return (
-    <div id={sectionDomId(section.id)} data-gw-section={section.id} role="region" aria-labelledby={headingId} className="gw-section">
+    <div id={sectionDomId(section.id)} data-gw-section={section.id} role="region" aria-labelledby={headingId} className="gw-section" hidden={!active}>
       <div className="gw-section-head">
         <span className="gw-section-icon" aria-hidden="true"><Icon size={15} /></span>
         <div className="min-w-0">
@@ -114,9 +118,26 @@ const SETUP_STEPS = [
   { id: 'routing', title: 'Set up order routing', description: 'Choose where client orders go.' },
 ];
 
+const GATEWAY_TOOLS = [
+  { section: 'connections', title: 'Provider connections', description: 'FIX sessions, credentials, connect and disconnect' },
+  { section: 'quotes', title: 'Price sources & quotes', description: 'Symbol mappings, live prices and feed health' },
+  { section: 'routing', title: 'Order routing', description: 'Execution routes, groups and symbol rules' },
+  { section: 'routing', id: 'cleanup', title: 'Rejected-order cleanup', description: 'Partial execution and cleanup limits' },
+  { section: 'routing', id: 'recovery', title: 'Recovery policies', description: 'Interrupted processing and FIX read limits' },
+  { section: 'routing', id: 'pending-modify', title: 'Pending-order changes', description: 'Admission settings for pending modifications' },
+  { section: 'routing', id: 'native-pending', title: 'Native pending orders', description: 'Provider pending orders and enablement' },
+  { section: 'journal', title: 'Journal & exposure', description: 'Provider requests, history, positions and exposure' },
+  { section: 'journal', id: 'demo', title: 'Demo order workspace', description: 'Demo market orders and execution' },
+  { section: 'journal', id: 'baselines', title: 'Calculation baselines', description: 'Broker calculation settings and revisions' },
+  { section: 'permissions', title: 'Manager permissions', description: 'Manager access, configuration and grants' },
+  { section: 'readiness', title: 'Gateway readiness', description: 'B-book private FIX session health and capabilities' },
+  ...(import.meta.env.VITE_FIX_RELAY_ENABLED === 'true' ? [{ section: 'readiness', id: 'relay', title: 'Superadmin FIX relay', description: 'Relay credentials, subscriptions and connection status' }] : []),
+  { section: 'legacy', title: 'Legacy price feed', description: 'Single provider, market data credentials and SSL' },
+];
+
 // Native disclosures keep form drafts mounted while reducing the initial page length.
-const GatewayDetails = ({ title, description, children }) => (
-  <details className="gw-details">
+const GatewayDetails = ({ id, title, description, children }) => (
+  <details id={`gw-tool-${id}`} className="gw-details">
     <summary>
       <span><span className="gw-details-title">{title}</span><span className="gw-details-desc">{description}</span></span>
       <ChevronDown size={16} aria-hidden="true" />
@@ -172,15 +193,17 @@ const formFromSavedConfig = (config) => {
   };
 };
 
-const Field = ({ label, required, hint, children }) => (
-  <label className="flex flex-col gap-1.5">
-    <span className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--text-muted)]">
+const Field = ({ label, required, hint, inputId, children }) => {
+  const Wrapper = inputId ? 'div' : 'label';
+  const Label = inputId ? 'label' : 'span';
+  return <Wrapper className="flex flex-col gap-1.5">
+    <Label htmlFor={inputId} className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--text-muted)]">
       {label}{required && <span className="ml-0.5 text-red-400">*</span>}
-    </span>
+    </Label>
     {children}
     {hint && <span className="gw-field-hint">{hint}</span>}
-  </label>
-);
+  </Wrapper>;
+};
 
 const Input = ({ type = 'text', value, onChange, placeholder, required, disabled, ...props }) => (
   <input
@@ -222,6 +245,8 @@ const Notice = ({ tone = 'info', children }) => {
 const GatewaysView = () => {
   const { notify } = useToast();
   const [form, setForm] = useState(DEFAULT_FORM);
+  const [savedForm, setSavedForm] = useState(DEFAULT_FORM);
+  const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [applying, setApplying] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(true);
@@ -232,86 +257,39 @@ const GatewaysView = () => {
   const [notice, setNotice] = useState('');
 
   const disabled = saving || applying || loadingConfig || Boolean(loadError);
+  const dirty = JSON.stringify(form) !== JSON.stringify(savedForm);
 
   const scrollRef = useRef(null);
-  const navRef = useRef(null);
-  const navLockUntil = useRef(0);
+  const legacyFormRef = useRef(null);
+  const searchRef = useRef(null);
+  const focusFrame = useRef(0);
   const [activeSection, setActiveSection] = useState(GATEWAY_SECTIONS[0].id);
+  const [search, setSearch] = useState('');
+  const searchTerms = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const searchResults = searchTerms.length ? GATEWAY_TOOLS.filter((tool) => {
+    const text = `${tool.title} ${tool.description} ${SECTION_BY_ID[tool.section].label}`.toLowerCase();
+    return searchTerms.every((term) => text.includes(term));
+  }) : [];
 
-  // Track scrolling and expanding panels without unmounting any unsaved forms.
-  useEffect(() => {
-    const root = scrollRef.current;
-    if (!root) return undefined;
+  useEffect(() => () => cancelAnimationFrame(focusFrame.current), []);
 
-    const nodes = GATEWAY_SECTIONS
-      .map((section) => root.querySelector(`#${sectionDomId(section.id)}`))
-      .filter(Boolean);
-
-    const pick = () => {
-      if (Date.now() < navLockUntil.current) return;
-      const rootTop = root.getBoundingClientRect().top;
-      const navHeight = navRef.current?.offsetHeight || 0;
-      const line = rootTop + navHeight + Math.min(160, root.clientHeight * 0.25);
-      const atBottom = root.scrollTop > 0 && root.scrollTop + root.clientHeight >= root.scrollHeight - 4;
-      let next = GATEWAY_SECTIONS[0].id;
-      if (atBottom) {
-        next = nodes[nodes.length - 1]?.dataset.gwSection || next;
-      } else {
-        nodes.forEach((node) => {
-          if (node.getBoundingClientRect().top <= line) next = node.dataset.gwSection;
-        });
-      }
-      setActiveSection((current) => (current === next ? current : next));
-    };
-
-    let frame = 0;
-    const schedule = () => {
-      if (frame) return;
-      frame = requestAnimationFrame(() => {
-        frame = 0;
-        pick();
-      });
-    };
-
-    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => {
-      root.style.setProperty('--gw-nav-offset', `${(navRef.current?.offsetHeight || 0) + 16}px`);
-      schedule();
-    }) : null;
-    [root, navRef.current, ...nodes].filter(Boolean).forEach((node) => observer?.observe(node));
-    root.addEventListener('scroll', schedule, { passive: true });
-    schedule();
-
-    return () => {
-      observer?.disconnect();
-      root.removeEventListener('scroll', schedule);
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, []);
-
-  // Keep the active pill visible when the nav is scrolled sideways on narrow screens.
-  useEffect(() => {
-    const list = navRef.current?.querySelector('.gw-nav-list');
-    const link = list?.querySelector(`[data-gw-target="${activeSection}"]`);
-    if (!list || !link || list.scrollWidth <= list.clientWidth) return;
-    const left = link.offsetLeft - list.offsetLeft;
-    if (left < list.scrollLeft || left + link.offsetWidth > list.scrollLeft + list.clientWidth) {
-      list.scrollLeft = Math.max(0, left - 16);
-    }
-  }, [activeSection]);
-
-  const jumpToSection = (id) => (event) => {
+  const jumpToSection = (id, toolId) => (event) => {
     event.preventDefault();
-    const node = scrollRef.current?.querySelector(`#${sectionDomId(id)}`);
-    if (!node) return;
-    const reduceMotion = typeof window !== 'undefined'
-      && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    navLockUntil.current = Date.now() + (reduceMotion ? 100 : 800);
     setActiveSection(id);
-    const root = scrollRef.current;
-    const top = root.scrollTop + node.getBoundingClientRect().top - root.getBoundingClientRect().top
-      - (navRef.current?.offsetHeight || 0) - 16;
-    root.scrollTo({ top: Math.max(0, top), behavior: reduceMotion ? 'auto' : 'smooth' });
-    node.querySelector('.gw-section-title')?.focus({ preventScroll: true });
+    setSearch('');
+    setShowPassword(false);
+    cancelAnimationFrame(focusFrame.current);
+    focusFrame.current = requestAnimationFrame(() => {
+      const root = scrollRef.current;
+      const node = root?.querySelector(`#${sectionDomId(id)}`);
+      if (!node) return;
+      const tool = toolId ? node.querySelector(`#gw-tool-${toolId}`) : null;
+      if (tool) tool.open = true;
+      const target = tool || node;
+      const top = root.scrollTop + target.getBoundingClientRect().top - root.getBoundingClientRect().top - 16;
+      root.scrollTo({ top: Math.max(0, top), behavior: 'instant' });
+      (tool?.querySelector('summary') || node.querySelector('.gw-section-title'))?.focus({ preventScroll: true });
+    });
   };
 
   useEffect(() => {
@@ -322,7 +300,9 @@ const GatewaysView = () => {
     gatewayGetFeedConfig()
       .then((config) => {
         if (!mounted) return;
-        setForm(formFromSavedConfig(config));
+        const loaded = formFromSavedConfig(config);
+        setForm(loaded);
+        setSavedForm(loaded);
         setPasswordSet(Boolean(config?.password_set));
       })
       .catch((err) => {
@@ -372,19 +352,30 @@ const GatewaysView = () => {
       return 'Port must be between 1 and 65535.';
     }
 
+    if (form.enabled && !form.all_symbols && !form.symbols.trim()) {
+      return 'Enter at least one symbol, or turn on “Subscribe to all symbols”.';
+    }
+
     return '';
   };
 
-  const saveCurrentCredentials = async ({ announce = true } = {}) => {
+  const validateBeforeSave = () => {
     const validationError = validateForm();
     if (validationError) {
       setError(validationError);
-      return null;
+      const inputs = Array.from(legacyFormRef.current?.querySelectorAll('input[required], input[type="number"]') || []);
+      inputs.find((input) => !input.disabled && (!input.validity.valid || (input.required && !input.value.trim())))?.focus();
+      return false;
     }
+    return true;
+  };
 
+  const saveCurrentCredentials = async ({ announce = true } = {}) => {
     const payload = buildFeedConfigPayload(form);
     await gatewaySaveFeedConfig(payload);
-    setForm((current) => ({ ...current, password: '' }));
+    const saved = { ...form, password: '' };
+    setForm(saved);
+    setSavedForm(saved);
     setPasswordSet(Boolean(payload.password || passwordSet));
     if (announce) {
       setNotice(`${providerLabel(payload.feed_provider)} LP credentials saved.`);
@@ -395,8 +386,10 @@ const GatewaysView = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (disabled) return;
     setError('');
     setNotice('');
+    if (!validateBeforeSave()) return;
     setSaving(true);
     try {
       await saveCurrentCredentials();
@@ -410,19 +403,25 @@ const GatewaysView = () => {
   };
 
   const handleApply = async () => {
+    if (disabled) return;
     setError('');
     setNotice('');
+    if (!validateBeforeSave()) return;
     setApplying(true);
+    let credentialsSaved = false;
 
     try {
       const payload = await saveCurrentCredentials({ announce: false });
-      if (!payload) return;
+      credentialsSaved = true;
+      setNotice('Settings saved. Activating the feed…');
       const result = await gatewayApplyFeedConfig();
       const activeProvider = result?.feed_provider || result?.provider || form.feed_provider;
       setNotice(`${providerLabel(payload.feed_provider)} LP credentials saved and applied.`);
       notify({ title: 'LP credentials applied', description: providerLabel(activeProvider), tone: 'success' });
     } catch (err) {
-      const message = err.message || 'Failed to apply LP credentials.';
+      const detail = err.message || 'Failed to apply LP credentials.';
+      const message = credentialsSaved ? `Settings were saved, but the feed could not be activated. ${detail}` : detail;
+      setNotice('');
       setError(message);
       notify({ title: 'Apply failed', description: message, tone: 'danger' });
     } finally {
@@ -460,8 +459,26 @@ const GatewaysView = () => {
         </div>
       </header>
 
-      <nav ref={navRef} className="gw-nav" aria-label="Gateway sections">
-        <div className="gw-shell">
+      <div className="gw-shell gw-workspace">
+      <aside className="gw-sidebar">
+        <div className="gw-search">
+          <label htmlFor="gw-search">Find a gateway tool</label>
+          <div className="gw-search-input">
+            <Search size={16} aria-hidden="true" />
+            <input ref={searchRef} id="gw-search" type="search" placeholder="Search tools…" value={search} onChange={(event) => setSearch(event.target.value)} autoComplete="off" aria-describedby={searchTerms.length ? 'gw-search-count' : undefined} />
+            {search && <button type="button" aria-label="Clear tool search" onClick={() => { setSearch(''); searchRef.current?.focus(); }}><X size={14} /></button>}
+          </div>
+        </div>
+        {searchTerms.length > 0 && <div className="gw-search-results">
+          <p id="gw-search-count" role="status">{searchResults.length ? `${searchResults.length} tool${searchResults.length === 1 ? '' : 's'} found` : 'No tools found. Try “quotes”, “routing” or “permissions”.'}</p>
+          <ul>{searchResults.map((tool) => <li key={tool.id || tool.section}>
+            <a href={`#${tool.id ? `gw-tool-${tool.id}` : sectionDomId(tool.section)}`} onClick={jumpToSection(tool.section, tool.id)}>
+              <strong>{tool.title}</strong><span>{SECTION_BY_ID[tool.section].label}</span>
+            </a>
+          </li>)}</ul>
+        </div>}
+        <nav className="gw-nav" aria-label="Gateway sections">
+          <p className="gw-nav-label">Workspace</p>
           <ul className="gw-nav-list">
             {GATEWAY_SECTIONS.map((section) => {
               const Icon = section.icon;
@@ -475,63 +492,67 @@ const GatewaysView = () => {
                     aria-current={active ? 'location' : undefined}
                     onClick={jumpToSection(section.id)}
                   >
-                    <Icon size={13} aria-hidden="true" />
-                    {section.label}
+                    <Icon size={17} aria-hidden="true" />
+                    <span>{section.label}</span>
+                    {section.id === 'legacy' && dirty && <span className="gw-draft-dot" aria-label="Unsaved changes" />}
                   </a>
                 </li>
               );
             })}
           </ul>
-        </div>
-      </nav>
+        </nav>
+        <p className="gw-sidebar-help">Switch sections freely. Your form drafts stay here until you save them or leave Gateways.</p>
+      </aside>
 
-      <div className="gw-shell gw-body">
-        <GatewaySection section={SECTION_BY_ID.connections}>
+      <div className="gw-body">
+        <GatewaySection section={SECTION_BY_ID.connections} active={activeSection === 'connections'}>
           <NamedLPConnectionsPanel />
         </GatewaySection>
 
-        <GatewaySection section={SECTION_BY_ID.quotes}>
+        <GatewaySection section={SECTION_BY_ID.quotes} active={activeSection === 'quotes'}>
           <LPFeedsPanel />
         </GatewaySection>
 
-        <GatewaySection section={SECTION_BY_ID.routing}>
+        <GatewaySection section={SECTION_BY_ID.routing} active={activeSection === 'routing'}>
           <NamedLPRoutingPanel />
           <div className="gw-tools-label">Advanced execution settings</div>
-          <GatewayDetails title="Rejected-order cleanup" description="Set limits for cleaning up partial execution of rejected orders.">
+          <GatewayDetails id="cleanup" title="Rejected-order cleanup" description="Set limits for cleaning up partial execution of rejected orders.">
             <LPCleanupPolicyPanel />
           </GatewayDetails>
-          <GatewayDetails title="Recovery policies" description="Configure how interrupted order processing can recover.">
+          <GatewayDetails id="recovery" title="Recovery policies" description="Configure how interrupted order processing can recover.">
             <LPRecoveryPolicyPanel />
           </GatewayDetails>
-          <GatewayDetails title="Pending-order changes" description="Review admission settings for exact pending-order modifications.">
+          <GatewayDetails id="pending-modify" title="Pending-order changes" description="Review admission settings for exact pending-order modifications.">
             <LPExactPendingModifyAdmissionPanel />
           </GatewayDetails>
-          <GatewayDetails title="Native pending orders" description="Review provider-side pending-order enablement and readiness.">
+          <GatewayDetails id="native-pending" title="Native pending orders" description="Review provider-side pending-order enablement and readiness.">
             <LPNativePendingEnablementPanel />
           </GatewayDetails>
         </GatewaySection>
 
-        <GatewaySection section={SECTION_BY_ID.journal}>
+        <GatewaySection section={SECTION_BY_ID.journal} active={activeSection === 'journal'}>
           <LPJournalPanel />
-          <GatewayDetails title="Demo order workspace" description="Inspect demo execution and place demo market orders.">
+          <GatewayDetails id="demo" title="Demo order workspace" description="Inspect demo execution and place demo market orders.">
             <LPDemoMarketWorkspace />
           </GatewayDetails>
-          <GatewayDetails title="Calculation baselines" description="Review and manage the calculation baseline used by the broker.">
+          <GatewayDetails id="baselines" title="Calculation baselines" description="Review and manage the calculation baseline used by the broker.">
             <CalculationBaselineWorkspace />
           </GatewayDetails>
         </GatewaySection>
 
-        <GatewaySection section={SECTION_BY_ID.permissions}>
+        <GatewaySection section={SECTION_BY_ID.permissions} active={activeSection === 'permissions'}>
           <LPManagerPermissionsPanel />
         </GatewaySection>
 
-        <GatewaySection section={SECTION_BY_ID.readiness}>
+        <GatewaySection section={SECTION_BY_ID.readiness} active={activeSection === 'readiness'}>
           <PrivateFIXReadinessPanel /><BrokerCapabilitiesPanel />
-          {import.meta.env.VITE_FIX_RELAY_ENABLED === 'true' && <FixRelayConfigPanel />}
+          {import.meta.env.VITE_FIX_RELAY_ENABLED === 'true' && <GatewayDetails id="relay" title="Superadmin FIX relay" description="Configure the separate FIX relay and inspect its connection status."><FixRelayConfigPanel /></GatewayDetails>}
         </GatewaySection>
 
-        <GatewaySection section={SECTION_BY_ID.legacy}>
+        <GatewaySection section={SECTION_BY_ID.legacy} active={activeSection === 'legacy'}>
           <form
+            ref={legacyFormRef}
+            noValidate
             onSubmit={handleSubmit}
             className="gw-legacy-form flex w-full flex-col gap-4 rounded-lg border p-4"
             style={{ borderColor: 'var(--border)', background: 'var(--bg-surface-2, var(--surface))' }}
@@ -553,6 +574,7 @@ const GatewaysView = () => {
 
             <Notice tone="error">{error}</Notice>
             <Notice>{notice}</Notice>
+            {!loadingConfig && !loadError && <p className={`gw-draft-status${dirty ? ' is-dirty' : ''}`} role="status">{dirty ? 'You have unsaved feed settings.' : 'Showing saved feed settings.'}</p>}
             {loadingConfig && <p className="gw-loading" role="status"><Loader2 size={15} className="animate-spin" /> Loading saved feed settings…</p>}
             {loadError && <div className="gw-load-error"><Notice tone="error">{loadError}</Notice><button type="button" className="ui-btn ui-btn-secondary" onClick={() => setConfigRefresh((value) => value + 1)}><RefreshCw size={14} /> Retry loading settings</button></div>}
 
@@ -584,34 +606,36 @@ const GatewaysView = () => {
               <div className="gw-form-grid">
 
               <Field label="Host" required={form.enabled}>
-                <Input value={form.host} onChange={setField('host')} placeholder="Enter LP host" disabled={disabled} />
+                <Input required={form.enabled} value={form.host} onChange={setField('host')} placeholder="Enter LP host" disabled={disabled} />
               </Field>
 
               <Field label="Port" required={form.enabled}>
-                <Input type="number" min={1} max={65535} step={1} value={form.port} onChange={setField('port')} placeholder="Enter LP port" disabled={disabled} />
+                <Input required={form.enabled} type="number" min={1} max={65535} step={1} value={form.port} onChange={setField('port')} placeholder="Enter LP port" disabled={disabled} />
               </Field>
 
               <Field label="Sender CompID" required={form.enabled}>
-                <Input value={form.sender_comp_id} onChange={setField('sender_comp_id')} placeholder="Enter sender CompID" disabled={disabled} />
+                <Input required={form.enabled} value={form.sender_comp_id} onChange={setField('sender_comp_id')} placeholder="Enter sender CompID" disabled={disabled} />
               </Field>
 
               <Field label="Target CompID" required={form.enabled}>
-                <Input value={form.target_comp_id} onChange={setField('target_comp_id')} placeholder="Enter target CompID" disabled={disabled} />
+                <Input required={form.enabled} value={form.target_comp_id} onChange={setField('target_comp_id')} placeholder="Enter target CompID" disabled={disabled} />
               </Field>
 
               <Field label="Username" required={form.enabled}>
-                <Input value={form.username} onChange={setField('username')} placeholder="Enter LP username" disabled={disabled} />
+                <Input required={form.enabled} value={form.username} onChange={setField('username')} placeholder="Enter LP username" disabled={disabled} />
               </Field>
 
-              <Field label="Password" required={form.enabled && !passwordSet} hint={passwordSet ? 'A password is saved. Leave this blank to keep it.' : 'Enter the password supplied by your provider.'}>
-                <Input
-                  type="password"
+              <Field label="Password" inputId="gw-feed-password" required={form.enabled && !passwordSet} hint={passwordSet ? 'A password is saved. Leave this blank to keep it.' : 'Enter the password supplied by your provider.'}>
+                <span className="gw-password-input"><Input
+                  id="gw-feed-password"
+                  type={showPassword ? 'text' : 'password'}
+                  required={form.enabled && !passwordSet}
                   value={form.password}
                   onChange={setField('password')}
                   placeholder={passwordSet ? 'Keep saved password' : 'Enter LP password'}
                   autoComplete="new-password"
                   disabled={disabled}
-                />
+                /><button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} disabled={disabled} onClick={() => setShowPassword((value) => !value)}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></span>
               </Field>
               </div>
             </fieldset>
@@ -627,6 +651,7 @@ const GatewaysView = () => {
               <Field label="Selected symbols" hint="Turn off “all symbols” to enter a comma-separated list.">
                 <Input
                   value={form.symbols}
+                  required={form.enabled && !form.all_symbols}
                   onChange={setField('symbols')}
                   placeholder="EURUSD, GBPUSD, XAUUSD"
                   disabled={disabled || form.all_symbols}
@@ -641,15 +666,17 @@ const GatewaysView = () => {
 
             <div className="gw-save-help"><strong>Save</strong> stores these settings. <strong>Save & Apply</strong> also activates them on the running feed.</div>
             <div className="gw-form-actions">
+              <button type="button" disabled={disabled || !dirty} className="ui-btn ui-btn-secondary" onClick={() => { setForm(savedForm); setShowPassword(false); setError(''); setNotice('Draft discarded. Showing saved feed settings.'); }}>Discard changes</button>
               <button type="button" onClick={handleApply} disabled={disabled} className="ui-btn ui-btn-secondary ui-btn-sm gap-1.5">
                 {applying ? <><Loader2 size={12} className="animate-spin" /> Applying</> : <><Zap size={12} /> Save & Apply</>}
               </button>
               <button type="submit" disabled={disabled} className="ui-btn ui-btn-primary ui-btn-sm gap-1.5">
-                {saving || loadingConfig ? <><Loader2 size={12} className="animate-spin" /> {loadingConfig ? 'Loading' : 'Saving'}</> : <><Save size={12} /> Save LP Credentials</>}
+                {saving || loadingConfig ? <><Loader2 size={12} className="animate-spin" /> {loadingConfig ? 'Loading' : 'Saving'}</> : <><Save size={12} /> Save settings</>}
               </button>
             </div>
           </form>
         </GatewaySection>
+      </div>
       </div>
     </div>
   );

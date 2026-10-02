@@ -26,8 +26,8 @@ test('grant editor offers every backend action including cleanup_recovery and no
  const panel=await readFile(new URL('../components/organisms/LPManagerPermissionsPanel.jsx',import.meta.url),'utf8');
  assert.match(source,/LP_GRANT_ACTIONS=\['view','connection_test','configuration','trade_test','cleanup_recovery'\]/);
  assert.match(panel,/LP_GRANT_ACTIONS\.map/);
- assert.match(panel,/cleanup_recovery:'D01 cleanup recovery requests/);
- assert.match(panel,/never implied by other actions/);
+ assert.match(panel,/cleanup_recovery:\s*\['Request D01 cleanup recovery'/);
+ assert.match(panel,/Never implied by other actions/);
  assert.match(panel,/a platform SuperAdmin cannot/);
  assert.doesNotMatch(panel,/execution unavailable|no trade-test endpoint/);
 });

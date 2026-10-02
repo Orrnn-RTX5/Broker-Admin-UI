@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { getHistoryEntryView, resolveGroupExplorerNode, sameGroupExplorerLocation } from './groupExplorerNavigation.js';
+import { getHistoryEntryView, resolveGroupExplorerNode, sameGroupExplorerLocation, retireGroupHistory } from './groupExplorerNavigation.js';
 
 test('group explorer accepts only explicit navigator folder identities', () => {
   const root = { type: 'root', id: 'groups', label: 'Groups' };
@@ -95,4 +95,15 @@ test('dummy folder identity distinguishes parents, siblings and server-data loca
   const historyEntry = { view: 'Groups', groupExplorerLocation: resolveGroupExplorerNode(folder) };
   assert.equal(getHistoryEntryView(historyEntry), 'Groups');
   assert.deepEqual(resolveGroupExplorerNode(historyEntry.groupExplorerLocation), resolveGroupExplorerNode(folder));
+});
+
+test('retired source folders leave history and selection targeting the exact destination', () => {
+ const old={view:'Groups',groupExplorerLocation:resolveGroupExplorerNode({type:'group',groupName:'real\\old'})};
+ const unrelated={view:'Groups',groupExplorerLocation:resolveGroupExplorerNode({type:'group',groupName:'real\\OLD'})};
+ const history=['Trading Accounts',old,unrelated];
+ const next=retireGroupHistory(history,'real\\old','real\\new');
+ assert.equal(next[1].groupExplorerLocation.groupName,'real\\new');
+ assert.strictEqual(next[2],unrelated);assert.strictEqual(next[0],history[0]);
+ assert.equal(old.groupExplorerLocation.groupName,'real\\old');
+ assert.equal(retireGroupHistory(history,'real\\old','')[1].groupExplorerLocation.type,'root');
 });

@@ -24,10 +24,10 @@ const fakeClient = (data) => {
 test('account trading goes through the guarded canonical PATCH with expected_revision', async () => {
   const client = fakeClient({ Login: 1001, Leverage: 500, AccountMode: 'netting', revision: REV });
   const api = createAdminConfigApi(client, {});
-  const saved = await api.updateAccountTrading(1001, { leverage: 500, account_mode: 'netting' }, REV, 'client request');
+  const saved = await api.updateAccountTrading(1001, { leverage: 500 }, REV, 'client request');
   assert.equal(client.calls[0].method, 'patch');
   assert.equal(client.calls[0].url, '/api/v1/manager/accounts/1001');
-  assert.deepEqual(client.calls[0].body, { leverage: 500, account_mode: 'netting', expected_revision: REV, reason: 'client request' });
+  assert.deepEqual(client.calls[0].body, { leverage: 500, expected_revision: REV, reason: 'client request' });
   assert.equal(client.calls[0].config._noRetry, true, 'a guarded write is never retried blindly');
   assert.equal(saved.revision, REV);
   assert.equal(saved.accountMode, 'netting');
@@ -62,3 +62,5 @@ test('funding creates deposit / withdrawal requests through PaymentService only'
   assert.deepEqual(seen.map(([kind]) => kind), ['deposit', 'withdrawal']);
   assert.equal(client.calls.length, 0, 'no direct balance route is called');
 });
+
+test('account mode edits are rejected locally without a write', async()=> { const client=fakeClient({}); const api=createAdminConfigApi(client,{}); for(const key of ['AccountMode','accountMode','account_mode','marginMode','margin_mode']) await assert.rejects(api.updateAccountTrading(1,{[key]:'netting'},REV),/fixed at creation/); assert.equal(client.calls.length,0); });

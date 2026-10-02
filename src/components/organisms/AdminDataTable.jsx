@@ -1,3 +1,4 @@
+import { refreshGroupMembership } from '../../services/groupMembershipRefresh.js';
 import { sortToolbarRows } from '../../utils/toolbarActions';
 import { formatDealActionLabel, formatDealEntryLabel } from '../../utils/dealDisplayLabels';
 import React, { useState } from 'react';
@@ -45,7 +46,7 @@ import GatewaysView from './GatewaysView';
 import DownstreamAccessView from './DownstreamAccessView';
 import ServerStatusPanel from './ServerStatusPanel';
 import ServerPropertiesPopup from '../RIGHTCLICKJPOPUPS/ServerPropertiesPopup';
-import CreateGroupPopup from '../RIGHTCLICKJPOPUPS/CreateGroupPopup';
+import GroupPropertiesPopup from '../RIGHTCLICKJPOPUPS/GroupPropertiesPopup';
 
 import FeedTenantsView from './FeedTenantsView';
 import IntegrationsView from './IntegrationsView';
@@ -940,17 +941,9 @@ const AdminDataTable = ({
     }
   };
 
-  const handleDeleteGroup = async () => {
+  const handleDeleteGroup = () => {
     if (!contextMenu.selectedGroup) return;
-    if (window.confirm(`Are you sure you want to delete group ${contextMenu.selectedGroup.name}?`)) {
-      try {
-        await ManagerService.deleteGroup(contextMenu.selectedGroup.name);
-        refetchGroups();
-        onGroupsChanged?.();
-      } catch (err) {
-        alert(err.message || 'Error deleting group');
-      }
-    }
+    setEditingGroup({ ...contextMenu.selectedGroup, initialTab: 'Migration' });
     setContextMenu({ ...contextMenu, visible: false });
   };
 
@@ -2154,10 +2147,11 @@ const AdminDataTable = ({
         />
       )}
       {editingGroup && (
-        <CreateGroupPopup
-          initialData={editingGroup}
+        <GroupPropertiesPopup
+          group={editingGroup}
+          initialTab={editingGroup.initialTab}
           onClose={() => setEditingGroup(null)}
-          onCreated={() => { setEditingGroup(null); refetchGroups(); onGroupsChanged?.(); }}
+          onSaved={result => { if (result?.action) { if (!onGroupsChanged) refreshGroupMembership(result); onEditableTargetSelect?.(null); setContextMenu({ visible: false }); } else refetchGroups(); onGroupsChanged?.(result); }}
         />
       )}
     </div>

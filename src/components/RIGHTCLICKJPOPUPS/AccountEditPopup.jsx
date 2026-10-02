@@ -257,13 +257,13 @@ const AccountEditPopup = ({ account, onClose, onSaved }) => {
               <input type="number" min="1" max="10000" step="1" value={form.leverage} onChange={setField('leverage')} aria-label="Leverage" className={inputClassName} />
             </Field>
             <Field label="Account mode:">
-              <select value={form.accountMode} onChange={setField('accountMode')} aria-label="Account mode" className={selectClassName}>
+              <select value={form.accountMode} disabled title="Account mode is fixed at creation" aria-label="Account mode" className={selectClassName}>
                 {ACCOUNT_MODE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
             </Field>
           </div>
           <div className="text-[10px] text-[color:var(--text-muted)] pl-[108px] -mt-1">
-            Group, currency, leverage and account mode cannot change while the account has open positions, pending orders or unfinished orders.
+            Account mode is fixed at creation. Use verified group migration to move accounts with active trades; existing execution owners are preserved.
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">

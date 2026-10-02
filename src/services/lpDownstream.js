@@ -28,6 +28,26 @@ export const EMERGENCY_CONFIRM_TEXT = 'Emergency revoke stops new orders; open t
 export const EMERGENCY_REASON_MIN = 10;
 export const EMERGENCY_REASON_MAX = 500;
 
+export function validateDownstreamStatus(value) {
+  if (!value || typeof value.admin_enabled !== 'boolean' || typeof value.schema_ready !== 'boolean' ||
+    typeof value.ready !== 'boolean' || value.ready !== (value.admin_enabled && value.schema_ready) ||
+    !Array.isArray(value.missing_migrations) || value.missing_migrations.length > 64 ||
+    !value.missing_migrations.every(item => typeof item === 'string' && item.length > 0 && item.length <= 160) ||
+    !Array.isArray(value.missing_relations) || value.missing_relations.length > 64 ||
+    !value.missing_relations.every(item => typeof item === 'string' && item.length > 0 && item.length <= 160) ||
+    (value.schema_ready && (value.missing_migrations.length > 0 || value.missing_relations.length > 0)) ||
+    !noSecret(value)) {
+    throw new Error('Invalid downstream deployment status.');
+  }
+  return {
+    admin_enabled: value.admin_enabled,
+    schema_ready: value.schema_ready,
+    ready: value.ready,
+    missing_migrations: value.missing_migrations,
+    missing_relations: value.missing_relations,
+  };
+}
+
 // What the downstream owner admits today (C09 slice 3): B-book market create
 // (FOK/IOC), full and partial close, and order status. Everything else is shown
 // disabled as "not supported downstream".
@@ -158,10 +178,12 @@ export const draftFromAuthority = authority => buildDraft(authority, {strict: fa
 
 export function validateCounterparty(value) {
   if (!value || !counterpartyIdOK(value.counterparty_id) || !textOK(value.display_name, 120, true) ||
-    (value.status !== 'active' && value.status !== 'suspended') || !revisionOK(value.revision)) {
+    (value.status !== 'active' && value.status !== 'suspended') || !revisionOK(value.revision) ||
+    (value.deleted !== undefined && typeof value.deleted !== 'boolean') ||
+    (value.deleted === true && value.status !== 'suspended') || !noSecret(value)) {
     throw new Error('Invalid counterparty response.');
   }
-  return {counterparty_id: value.counterparty_id, display_name: value.display_name, status: value.status, revision: value.revision};
+  return {counterparty_id: value.counterparty_id, display_name: value.display_name, status: value.status, revision: value.revision, deleted: value.deleted === true};
 }
 
 const validCredential = value => value && revisionOK(value.revision, true) && ['none', 'active', 'retired'].includes(value.state) &&
@@ -171,7 +193,8 @@ export function validateGrant(value) {
   const a = value?.authority;
   if (!value || !accessIdOK(value.access_id) || !revisionOK(value.revision) || typeof value.enabled !== 'boolean' || !a ||
     !counterpartyIdOK(a.counterparty_id) || !uuidOK(a.coverage_account_id) || !loginOK(a.coverage_login) ||
-    !Array.isArray(a.symbols) || !a.quote || !a.trade || typeof value.application_state !== 'string') {
+    !Array.isArray(a.symbols) || !a.quote || !a.trade || typeof value.application_state !== 'string' ||
+    (value.deleted !== undefined && typeof value.deleted !== 'boolean') || (value.deleted === true && value.enabled)) {
     throw new Error('Invalid downstream access response.');
   }
   for (const role of DOWNSTREAM_ROLES) {
@@ -179,9 +202,12 @@ export function validateGrant(value) {
     if (!session || session.role !== role || !sessionIdOK(session.session_id) || !validCredential(value[role + '_credential'])) {
       throw new Error('Invalid downstream session or credential status.');
     }
+    if (value.deleted === true && value[role + '_credential'].state === 'active') {
+      throw new Error('Deleted downstream access must have retired credentials.');
+    }
   }
   if (!noSecret(value)) throw new Error('A downstream access read must never carry credential material.');
-  return value;
+  return {...value, deleted: value.deleted === true};
 }
 
 const ENDPOINT_FIELDS = ['begin_string', 'host', 'port', 'tls_mode', 'certificate_sha256', 'sender_comp_id', 'target_comp_id', 'username', 'heartbeat_seconds', 'reset_seq_num_flag', 'sequence_policy', 'listener_observed_at'];
@@ -358,6 +384,7 @@ export function createLPDownstreamAPI(request = defaultRequest) {
     return data;
   };
   return {
+    status: async () => validateDownstreamStatus(await call(`${DOWNSTREAM_BASE}/status`)),
     counterparties: async () => {
       const value = await call(`${DOWNSTREAM_BASE}/counterparties`);
       if (!Array.isArray(value.counterparties)) throw new Error('Invalid counterparty list.');
@@ -370,6 +397,12 @@ export function createLPDownstreamAPI(request = defaultRequest) {
       const body = {display_name, status, expected_revision: expected(expected_revision, true)};
       return validateCounterparty(await call(`${DOWNSTREAM_BASE}/counterparties/${id}`, 'PUT', body));
     },
+    deleteCounterparty: async (id, {expected_revision}) => {
+      if (!counterpartyIdOK(id)) throw invalid('Select a receiving broker.');
+      const result = validateCounterparty(await call(`${DOWNSTREAM_BASE}/counterparties/${id}`, 'DELETE', {expected_revision: expected(expected_revision)}));
+      if (!result.deleted) throw new Error('The receiving broker was not deleted. Reload before retrying.');
+      return result;
+    },
     grants: async () => {
       const value = await call(`${DOWNSTREAM_BASE}/access`);
       if (!Array.isArray(value.access)) throw new Error('Invalid downstream access list.');
@@ -381,6 +414,11 @@ export function createLPDownstreamAPI(request = defaultRequest) {
       if (typeof enabled !== 'boolean') throw invalid('Choose whether the access is enabled.');
       const body = {draft: buildDraft(draft, {strict}), enabled, expected_revision: expected(expected_revision)};
       return validateGrant(await call(accessPath(access), 'PUT', body));
+    },
+    deleteGrant: async (access, {expected_revision}) => {
+      const result = validateGrant(await call(accessPath(access), 'DELETE', {expected_revision: expected(expected_revision)}));
+      if (!result.deleted) throw new Error('The access was not deleted. Reload before retrying.');
+      return result;
     },
     history: async access => validateHistory(await call(accessPath(access) + '/history')),
     profile: async (access, role) => validateProfile(await call(`${accessPath(access)}/profiles/${rolePath(role)}`), access, role),

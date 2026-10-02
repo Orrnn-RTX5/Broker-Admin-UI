@@ -34,7 +34,7 @@ function ErrorBanner({error}) {
       <div role="alert" className="lp-downstream-banner">
         <strong>Trading is running on the coverage account.</strong> The {error.changeClass || 'requested'} change was refused
         {error.reasons?.length ? <> because of: {error.reasons.map(inUseReasonLabel).join(', ')}</> : null}.
-        Ordinary disable, edit, rotation and revocation stay locked while trading. Emergency revoke remains available.
+        Ordinary disable, edit, deletion, rotation and revocation stay locked while trading. Emergency revoke remains available for current access.
       </div>
     );
   }
@@ -50,6 +50,8 @@ function DownstreamWorkspace({api}) {
   const [counterparties, setCounterparties] = useState([]);
   const [grants, setGrants] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [selectedParty, setSelectedParty] = useState(null);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [detail, setDetail] = useState(null);
   const [editor, setEditor] = useState(null);
   const [partyForm, setPartyForm] = useState(null);
@@ -60,30 +62,77 @@ function DownstreamWorkspace({api}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState('');
+  const [availability, setAvailability] = useState('loading');
+  const [deploymentStatus, setDeploymentStatus] = useState(null);
   const generation = useRef(0);
+  const listGeneration = useRef(0);
 
   const loadLists = useCallback(async () => {
-    const token = ++generation.current;
+    const token = ++listGeneration.current;
     setBusy(true);
+    setAvailability('loading');
+    setDeploymentStatus(null);
     try {
+      const deployment = await api.status();
+      if (token !== listGeneration.current) return;
+      setDeploymentStatus(deployment);
+      if (!deployment.ready) {
+        setCounterparties([]);
+        setGrants([]);
+        setSelected(null);
+        setSelectedParty(null);
+        setDetail(null);
+        setEditor(null);
+        setPartyForm(null);
+        setConfirm(null);
+        setEmergency(null);
+        setAvailability('unavailable');
+        return false;
+      }
       const [parties, access] = await Promise.all([api.counterparties(), api.grants()]);
-      if (token !== generation.current) return;
+      if (token !== listGeneration.current) return;
       setCounterparties(parties);
       setGrants(access);
+      setAvailability('ready');
+      return true;
     } catch (e) {
-      if (token === generation.current) setError(e);
+      if (token === listGeneration.current) {
+        setCounterparties([]);
+        setGrants([]);
+        setSelected(null);
+        setSelectedParty(null);
+        setDetail(null);
+        setEditor(null);
+        setPartyForm(null);
+        setConfirm(null);
+        setEmergency(null);
+        setAvailability(e.status === 404 || e.code === 'DOWNSTREAM_ADMIN_UNAVAILABLE' ? 'unavailable' : 'error');
+        setError(e);
+      }
+      return false;
     } finally {
-      if (token === generation.current) setBusy(false);
+      if (token === listGeneration.current) setBusy(false);
     }
   }, [api]);
 
-  const loadDetail = useCallback(async access => {
+  const loadDetail = useCallback(async (access, editAfterLoad = false) => {
     const token = ++generation.current;
     setBusy(true);
     try {
       const grant = await api.grant(access);
-      const [quote, trade, history] = await Promise.allSettled([api.profile(access, 'quote'), api.profile(access, 'trade'), api.history(access)]);
+      const [quote, trade, history] = await Promise.allSettled([
+        grant.deleted ? Promise.resolve(null) : api.profile(access, 'quote'),
+        grant.deleted ? Promise.resolve(null) : api.profile(access, 'trade'),
+        api.history(access),
+      ]);
       if (token !== generation.current) return;
+      const missingRoute = [quote, trade, history].find(result => result.status === 'rejected' && result.reason?.status === 404);
+      if (missingRoute) {
+        setDetail(null);
+        setError(missingRoute.reason);
+        setAvailability('unavailable');
+        return;
+      }
       setDetail({
         grant,
         profiles: {quote: quote.status === 'fulfilled' ? quote.value : null, trade: trade.status === 'fulfilled' ? trade.value : null},
@@ -92,10 +141,12 @@ function DownstreamWorkspace({api}) {
         historyError: history.status === 'rejected' ? history.reason.message : '',
       });
       setGrants(old => old.map(row => (row.access_id === grant.access_id ? grant : row)));
+      if (editAfterLoad && !grant.deleted) setEditor({mode: 'edit'});
     } catch (e) {
       if (token === generation.current) {
         setDetail(null);
         setError(e);
+        if (e.code === 'DOWNSTREAM_ADMIN_UNAVAILABLE') setAvailability('unavailable');
       }
     } finally {
       if (token === generation.current) setBusy(false);
@@ -105,16 +156,19 @@ function DownstreamWorkspace({api}) {
   useEffect(() => {
     loadLists();
     const pending = generation;
-    return () => { pending.current++; };
+    const pendingLists = listGeneration;
+    return () => { pending.current++; pendingLists.current++; };
   }, [loadLists]);
 
-  const select = access => {
+  const select = (access, mode = 'view') => {
     setError(null);
     setNotice('');
     setEditor(null);
+    setDetail(null);
+    setSelectedParty(null);
     setEmergencyResults([]);
     setSelected(access);
-    loadDetail(access);
+    loadDetail(access, mode === 'edit');
   };
 
   async function run(action, onDone) {
@@ -126,7 +180,10 @@ function DownstreamWorkspace({api}) {
       const value = await action();
       if (token === generation.current) onDone(value);
     } catch (e) {
-      if (token === generation.current) setError(e);
+      if (token === generation.current) {
+        setError(e);
+        if (e.code === 'DOWNSTREAM_ADMIN_UNAVAILABLE') setAvailability('unavailable');
+      }
     } finally {
       if (token === generation.current) setBusy(false);
     }
@@ -137,15 +194,33 @@ function DownstreamWorkspace({api}) {
     const {counterparty_id, display_name, status, revision} = partyForm;
     run(() => api.saveCounterparty(counterparty_id.trim(), {display_name, status, expected_revision: revision}), saved => {
       setPartyForm(null);
+      setSelectedParty(saved.counterparty_id);
       setNotice(`Counterparty ${saved.counterparty_id} saved at revision ${saved.revision}.`);
       loadLists();
     });
   }
 
   function confirmAction() {
-    const grant = detail.grant;
-    const {kind, role, requestId} = confirm;
+    const {kind, role, requestId, party, access} = confirm;
     setConfirm(null);
+    if (kind === 'deleteParty') {
+      run(() => api.deleteCounterparty(party.counterparty_id, {expected_revision: party.revision}), () => {
+        setSelectedParty(null);
+        setNotice(`Receiving broker ${party.counterparty_id} archived. Its history is retained.`);
+        loadLists();
+      });
+      return;
+    }
+    if (kind === 'deleteGrant') {
+      run(() => api.deleteGrant(access.access_id, {expected_revision: access.revision}), () => {
+        setSelected(null);
+        setDetail(null);
+        setNotice(`Access ${access.access_id} archived. Credentials were retired and history is retained.`);
+        loadLists();
+      });
+      return;
+    }
+    const grant = detail.grant;
     if (kind === 'toggle') {
       run(() => api.updateGrant(grant.access_id, {draft: draftFromAuthority(grant.authority), enabled: !grant.enabled, expected_revision: grant.revision, strict: false}), saved => {
         setNotice(`Access ${saved.enabled ? 'enabled' : 'disabled'} at revision ${saved.revision}. Enabling stores authority only; connection is observed separately.`);
@@ -182,7 +257,10 @@ function DownstreamWorkspace({api}) {
       }
       if (token === generation.current) setEmergency(null);
     } catch (e) {
-      if (token === generation.current) setError(e);
+      if (token === generation.current) {
+        setError(e);
+        if (e.code === 'DOWNSTREAM_ADMIN_UNAVAILABLE') setAvailability('unavailable');
+      }
     } finally {
       if (token === generation.current) {
         setEmergencyResults(results);
@@ -193,6 +271,12 @@ function DownstreamWorkspace({api}) {
   }
 
   const grant = detail?.grant;
+  const party = counterparties.find(c => c.counterparty_id === selectedParty);
+  const visibleParties = counterparties.filter(c => showDeleted || !c.deleted);
+  const visibleGrants = grants.filter(g => showDeleted || !g.deleted);
+  const linkedGrants = id => grants.filter(g => g.authority.counterparty_id === id);
+  const visibleLinkedGrants = id => visibleGrants.filter(g => g.authority.counterparty_id === id);
+  const liveLinkedGrants = id => linkedGrants(id).filter(g => !g.deleted);
   const counterpartyName = id => counterparties.find(c => c.counterparty_id === id)?.display_name || id;
   const activeRoles = grant ? DOWNSTREAM_ROLES.filter(role => grant[role + '_credential'].state === 'active') : [];
   const reasonProblem = emergency ? emergencyReasonError(emergency.reason) : '';
@@ -201,84 +285,156 @@ function DownstreamWorkspace({api}) {
     <section className="lp-downstream" aria-label="Downstream access">
       <header>
         <h2>Downstream access (broker-as-LP)</h2>
-        <p>Grant a receiving broker FIX 4.4 quote and trade sessions on one coverage account. B-book only; the coverage account is funded through Payments (Deposits and Withdrawals).</p>
+        <p>Give a receiving broker FIX 4.4 quote and trade access to one broker-owned coverage account. Downstream orders use the local B-book route.</p>
         <div className="lp-downstream-actions">
-          <button type="button" disabled={busy} onClick={() => { setError(null); loadLists(); if (selected) loadDetail(selected); }}>Reload</button>
-          <button type="button" disabled={busy} onClick={() => { setError(null); setSelected(null); setDetail(null); setEditor({mode: 'create'}); }}>New access</button>
-          <button type="button" disabled={busy} onClick={() => setPartyForm({counterparty_id: '', display_name: '', status: 'active', revision: '0', isNew: true})}>New counterparty</button>
+          <button type="button" disabled={busy || availability === 'loading'} onClick={() => { setError(null); setSelected(null); setDetail(null); loadLists(); }}>Reload</button>
+          <button type="button" disabled={busy || availability !== 'ready' || !counterparties.some(c => !c.deleted && c.status === 'active')} onClick={() => { setError(null); setSelected(null); setDetail(null); setEditor({mode: 'create'}); }}>New access</button>
+          <button type="button" disabled={busy || availability !== 'ready'} onClick={() => { setError(null); setPartyForm({counterparty_id: '', display_name: '', status: 'active', revision: '0', isNew: true}); }}>New receiving broker</button>
         </div>
       </header>
-      <ErrorBanner error={error}/>
+      <section className="lp-downstream-setup" aria-label="Setup steps">
+        <h3>Set up a receiving broker</h3>
+        <ol>
+          <li>Create an active receiving broker counterparty.</li>
+          <li>Use an existing broker-owned coverage account. Have its login and account UUID ready, and select a named quote feed for the account or its group.</li>
+          <li>Create access for that broker and account, choose symbols and quote or trade operations, then enable the saved authority.</li>
+          <li>Issue each needed role credential and hand the one-time secret to the broker. A live FIX listener and available connection profile are needed before it can connect.</li>
+        </ol>
+        <p>Fund the coverage account through Payments: Deposits and Withdrawals. Saving access or issuing a credential does not prove that a FIX session is connected.</p>
+      </section>
+      {availability === 'unavailable' ? (
+        <div role="alert" className="lp-downstream-banner">
+          <strong>Downstream administration is unavailable on this server.</strong> No changes can be made here.
+          {deploymentStatus ? (
+            <>
+              <p>Admin route: {deploymentStatus.admin_enabled ? 'enabled' : 'disabled'}. C09 database schema: {deploymentStatus.schema_ready ? 'ready' : 'missing migrations'}.</p>
+              {deploymentStatus.missing_migrations.length > 0 && <p>Missing migrations: {deploymentStatus.missing_migrations.join(', ')}.</p>}
+              {deploymentStatus.missing_relations.length > 0 && <p>Missing database relations: {deploymentStatus.missing_relations.join(', ')}.</p>}
+              {deploymentStatus.ready ? (
+                <p>Status reports ready, but an access route is missing. Ask the deployment owner to check the manager-backend deployment and routing.</p>
+              ) : (
+                <p>Ask the deployment owner to complete any missing C09 migrations and enable <code>RTX5_C09_DOWNSTREAM_ADMIN_ENABLED=1</code> in manager-backend.</p>
+              )}
+            </>
+          ) : <p>This manager deployment did not provide downstream status or access. Ask the deployment owner to check C09 routing and licensing, the C09 schema, and <code>RTX5_C09_DOWNSTREAM_ADMIN_ENABLED=1</code>.</p>}
+          <p>Live quote and trade sessions also require the downstream FIX listener to be enabled and configured on the execution owner. Reload after deployment is ready.</p>
+        </div>
+      ) : <ErrorBanner error={error}/>}
+      {availability === 'error' && <p role="status">The lists could not be loaded. Reload to try again; no changes are available until they load.</p>}
       {notice && <p role="status">{notice}</p>}
-      {busy && <p role="status">Loading downstream access...</p>}
+      {availability === 'loading' && <p role="status">Checking downstream administration and loading access...</p>}
 
+      {availability === 'ready' && <>
+      <label className="lp-downstream-show-deleted"><input type="checkbox" checked={showDeleted} disabled={busy} onChange={event => {
+        setShowDeleted(event.target.checked);
+        if (!event.target.checked) {
+          if (party?.deleted) setSelectedParty(null);
+          if (grant?.deleted) { setSelected(null); setDetail(null); }
+        }
+      }}/>Show deleted</label>
       <section aria-label="Counterparties">
-        <h3>Counterparties</h3>
+        <h3>Receiving broker counterparties</h3>
         <table>
-          <thead><tr><th>ID</th><th>Name</th><th>Status</th><th>Revision</th><th/></tr></thead>
+          <thead><tr><th>ID</th><th>Name</th><th>Status</th><th>Revision</th><th>Actions</th></tr></thead>
           <tbody>
-            {counterparties.map(c => (
-              <tr key={c.counterparty_id}>
-                <td>{c.counterparty_id}</td><td>{c.display_name}</td><td>{c.status}</td><td>{c.revision}</td>
-                <td><button type="button" disabled={busy} onClick={() => setPartyForm({...c, isNew: false})}>Edit</button></td>
+            {visibleParties.map(c => (
+              <tr key={c.counterparty_id} aria-selected={c.counterparty_id === selectedParty}>
+                <td>{c.counterparty_id}</td><td>{c.display_name}</td><td>{c.deleted ? 'deleted' : c.status}</td><td>{c.revision}</td>
+                <td><div className="lp-downstream-row-actions">
+                  <button type="button" disabled={busy} onClick={() => { setSelectedParty(c.counterparty_id); setSelected(null); setDetail(null); setEditor(null); }}>View</button>
+                  {!c.deleted && <><button type="button" disabled={busy} onClick={() => setPartyForm({...c, isNew: false})}>Edit</button>
+                    <button type="button" className="lp-downstream-danger" disabled={busy} onClick={() => setConfirm({kind: 'deleteParty', party: c})}>Delete</button></>}
+                </div></td>
               </tr>
             ))}
-            {!counterparties.length && <tr><td colSpan={5}>No counterparties.</td></tr>}
+            {!visibleParties.length && <tr><td colSpan={5}>{counterparties.length ? 'No receiving brokers match this view. Select Show deleted to see archived records.' : 'No receiving brokers yet. Create a counterparty to begin setup.'}</td></tr>}
           </tbody>
         </table>
+        {party && (
+          <section aria-label="Receiving broker detail" className="lp-downstream-detail">
+            <h4>Receiving broker {party.display_name} ({party.counterparty_id})</h4>
+            <dl className="lp-downstream-facts">
+              <dt>Status</dt><dd>{party.deleted ? 'deleted' : party.status}</dd>
+              <dt>Revision</dt><dd>{party.revision}</dd>
+              <dt>Access grants</dt><dd>{liveLinkedGrants(party.counterparty_id).length} current, {linkedGrants(party.counterparty_id).filter(g => g.deleted).length} deleted</dd>
+            </dl>
+            <h4>Associated access grants</h4>
+            {visibleLinkedGrants(party.counterparty_id).length ? (
+              <ul className="lp-downstream-linked-grants">{visibleLinkedGrants(party.counterparty_id).map(g => (
+                <li key={g.access_id}><button type="button" disabled={busy} onClick={() => select(g.access_id)}>View {g.access_id}</button> · coverage login {g.authority.coverage_login}{g.deleted ? ' · deleted' : ''}</li>
+              ))}</ul>
+            ) : <p>{linkedGrants(party.counterparty_id).length ? 'Select Show deleted to view archived access grants.' : 'No access grants are associated with this receiving broker.'}</p>}
+            {!party.deleted && <div className="lp-downstream-actions">
+              <button type="button" disabled={busy} onClick={() => setPartyForm({...party, isNew: false})}>Edit receiving broker</button>
+              <button type="button" className="lp-downstream-danger" disabled={busy} onClick={() => setConfirm({kind: 'deleteParty', party})}>Delete receiving broker</button>
+            </div>}
+          </section>
+        )}
         {partyForm && (
-          <form aria-label="Counterparty editor" onSubmit={saveParty}>
+          <div className="lp-downstream-overlay"><form className="lp-downstream-dialog" role="dialog" aria-modal="true" aria-label={partyForm.isNew ? 'New receiving broker' : 'Edit receiving broker'} onSubmit={saveParty}>
             <fieldset disabled={busy}>
-              <legend>{partyForm.isNew ? 'New counterparty' : `Edit ${partyForm.counterparty_id} (revision ${partyForm.revision})`}</legend>
+              <legend>{partyForm.isNew ? 'New receiving broker' : `Edit ${partyForm.counterparty_id} (revision ${partyForm.revision})`}</legend>
               <label>Counterparty ID<input aria-label="Counterparty ID" value={partyForm.counterparty_id} disabled={!partyForm.isNew} onChange={e => setPartyForm(old => ({...old, counterparty_id: e.target.value}))}/></label>
               <label>Display name<input aria-label="Counterparty display name" value={partyForm.display_name} onChange={e => setPartyForm(old => ({...old, display_name: e.target.value}))}/></label>
               <label>Status<select aria-label="Counterparty status" value={partyForm.status} onChange={e => setPartyForm(old => ({...old, status: e.target.value}))}><option value="active">active</option><option value="suspended">suspended</option></select></label>
-              <button type="submit">Save counterparty</button>
-              <button type="button" onClick={() => setPartyForm(null)}>Cancel</button>
             </fieldset>
             <p>Suspending a counterparty logs out every session it holds.</p>
-          </form>
+            <div className="lp-downstream-actions"><button type="submit" disabled={busy}>{partyForm.isNew ? 'Create receiving broker' : 'Save receiving broker'}</button>
+              <button type="button" disabled={busy} onClick={() => setPartyForm(null)}>Cancel</button></div>
+          </form></div>
         )}
       </section>
 
       <section aria-label="Access grants">
         <h3>Access grants</h3>
         <table>
-          <thead><tr><th>Access</th><th>Counterparty</th><th>Coverage login</th><th>Enabled</th><th>Revision</th><th>Quote credential</th><th>Trade credential</th><th>Application</th><th/></tr></thead>
+          <thead><tr><th>Access</th><th>Counterparty</th><th>Coverage login</th><th>Status</th><th>Enabled</th><th>Revision</th><th>Quote credential</th><th>Trade credential</th><th>Application</th><th>Actions</th></tr></thead>
           <tbody>
-            {grants.map(g => (
+            {visibleGrants.map(g => (
               <tr key={g.access_id} aria-selected={g.access_id === selected}>
                 <td>{g.access_id}</td><td>{counterpartyName(g.authority.counterparty_id)}</td><td>{g.authority.coverage_login}</td>
+                <td>{g.deleted ? 'deleted' : 'current'}</td>
                 <td>{g.enabled ? 'yes' : 'no'}</td><td>{g.revision}</td><td>{g.quote_credential.state}</td><td>{g.trade_credential.state}</td>
                 <td>{applicationLabel(g.application_state)}</td>
-                <td><button type="button" disabled={busy} onClick={() => select(g.access_id)}>Open</button></td>
+                <td><div className="lp-downstream-row-actions"><button type="button" disabled={busy} onClick={() => select(g.access_id)}>View</button>
+                  {!g.deleted && <><button type="button" disabled={busy} onClick={() => select(g.access_id, 'edit')}>Edit</button>
+                    <button type="button" className="lp-downstream-danger" disabled={busy} onClick={() => setConfirm({kind: 'deleteGrant', access: g})}>Delete</button></>}</div></td>
               </tr>
             ))}
-            {!grants.length && <tr><td colSpan={9}>No downstream access.</td></tr>}
+            {!visibleGrants.length && <tr><td colSpan={10}>{grants.length ? 'No access grants match this view. Select Show deleted to see archived records.' : 'No access grants yet. Create one for an active receiving broker and coverage account.'}</td></tr>}
           </tbody>
         </table>
       </section>
 
       {editor && (
+        <div className="lp-downstream-overlay"><div className="lp-downstream-dialog lp-downstream-editor-dialog" role="dialog" aria-modal="true" aria-label={editor.mode === 'edit' ? 'Edit downstream access' : 'New downstream access'}>
         <DownstreamGrantEditor
           api={api}
-          counterparties={counterparties}
+          counterparties={counterparties.filter(c => !c.deleted)}
           grant={editor.mode === 'edit' ? grant : null}
-          onError={setError}
+          onError={error => {
+            setError(error);
+            if (error?.code === 'DOWNSTREAM_ADMIN_UNAVAILABLE') setAvailability('unavailable');
+          }}
           onCancel={() => setEditor(null)}
           onSaved={saved => {
             setEditor(null);
             setNotice(`Access ${saved.access_id} saved at revision ${saved.revision}. Saved authority is not applied, connected or verified.`);
-            loadLists();
-            setSelected(saved.access_id);
-            loadDetail(saved.access_id);
+            loadLists().then(ready => {
+              if (ready) {
+                setSelected(saved.access_id);
+                loadDetail(saved.access_id);
+              }
+            });
           }}
         />
+        </div></div>
       )}
 
       {grant && !editor && (
         <section aria-label="Access detail" className="lp-downstream-detail">
           <h3>Access {grant.access_id}</h3>
+          {grant.deleted && <p className="lp-downstream-warning">This access was deleted. Its credentials were retired; the record and history remain available for review.</p>}
           <dl className="lp-downstream-facts">
             <dt>Counterparty</dt><dd>{counterpartyName(grant.authority.counterparty_id)} ({grant.authority.counterparty_id})</dd>
             <dt>Coverage account</dt><dd>login {grant.authority.coverage_login} · {grant.authority.coverage_account_id} · {grant.authority.account_mode}</dd>
@@ -288,12 +444,14 @@ function DownstreamWorkspace({api}) {
             <dt>Revision</dt><dd>{grant.revision}</dd>
           </dl>
           <div className="lp-downstream-badges">
-            <span className="lp-downstream-badge">Authority: {grant.enabled ? 'enabled' : 'disabled'}</span>
+            <span className="lp-downstream-badge">Authority: {grant.deleted ? 'deleted' : grant.enabled ? 'enabled' : 'disabled'}</span>
             <span className="lp-downstream-badge">Application: {applicationLabel(grant.application_state)}</span>
           </div>
+          {!grant.deleted && <>
           <div className="lp-downstream-actions">
             <button type="button" disabled={busy} onClick={() => setConfirm({kind: 'toggle'})}>{grant.enabled ? 'Disable access' : 'Enable access'}</button>
             <button type="button" disabled={busy} onClick={() => setEditor({mode: 'edit'})}>Edit access</button>
+            <button type="button" className="lp-downstream-danger" disabled={busy} onClick={() => setConfirm({kind: 'deleteGrant', access: grant})}>Delete access</button>
             <button type="button" className="lp-downstream-danger" disabled={busy} onClick={() => { setEmergencyResults([]); setEmergency({reason: '', roles: Object.fromEntries(DOWNSTREAM_ROLES.map(role => [role, activeRoles.includes(role)]))}); }}>Emergency revoke</button>
           </div>
           <div className="lp-downstream-cards">
@@ -302,6 +460,7 @@ function DownstreamWorkspace({api}) {
                 onAction={(item, kind) => setConfirm({kind, role: item, requestId: newRequestId()})}/>
             ))}
           </div>
+          </>}
           {emergencyResults.length > 0 && (
             <div role="status" aria-label="Emergency revoke result" className="lp-downstream-banner">
               {emergencyResults.map(result => (
@@ -332,7 +491,28 @@ function DownstreamWorkspace({api}) {
         </section>
       )}
 
-      {confirm && grant && (
+      {confirm?.kind === 'deleteParty' && (
+        <div className="lp-downstream-overlay"><div className="lp-downstream-dialog" role="dialog" aria-modal="true" aria-label="Confirm delete receiving broker">
+          <h3>Delete receiving broker {confirm.party.display_name}?</h3>
+          <p>Archiving this receiving broker retains its record and audit history. It cannot be edited or used for new access.</p>
+          {liveLinkedGrants(confirm.party.counterparty_id).length > 0 && <p role="alert">Delete its {liveLinkedGrants(confirm.party.counterparty_id).length} current access grant(s) first. This receiving broker cannot be deleted while grants remain linked.</p>}
+          <p>Expected revision {confirm.party.revision}.</p>
+          <div className="lp-downstream-actions"><button type="button" className="lp-downstream-danger" disabled={busy || liveLinkedGrants(confirm.party.counterparty_id).length > 0} onClick={confirmAction}>Confirm delete receiving broker</button>
+            <button type="button" disabled={busy} onClick={() => setConfirm(null)}>Cancel</button></div>
+        </div></div>
+      )}
+
+      {confirm?.kind === 'deleteGrant' && (
+        <div className="lp-downstream-overlay"><div className="lp-downstream-dialog" role="dialog" aria-modal="true" aria-label="Confirm delete access">
+          <h3>Delete access {confirm.access.access_id}?</h3>
+          <p>Archiving this access disables it, retires its quote and trade credentials, and logs out live sessions. Its record and audit history remain available.</p>
+          <p>Open trades remain on the coverage account. The server may refuse this change while that account is trading. Expected revision {confirm.access.revision}.</p>
+          <div className="lp-downstream-actions"><button type="button" className="lp-downstream-danger" disabled={busy} onClick={confirmAction}>Confirm delete access</button>
+            <button type="button" disabled={busy} onClick={() => setConfirm(null)}>Cancel</button></div>
+        </div></div>
+      )}
+
+      {confirm && confirm.kind !== 'deleteParty' && confirm.kind !== 'deleteGrant' && grant && (
         <div className="lp-downstream-overlay">
           <div className="lp-downstream-dialog" role="dialog" aria-modal="true" aria-label="Confirm downstream change">
             <h3>{{toggle: grant.enabled ? 'Disable access' : 'Enable access', issue: `Issue ${confirm.role} credential`, rotate: `Rotate ${confirm.role} credential`, revoke: `Revoke ${confirm.role} credential`}[confirm.kind]}</h3>
@@ -375,6 +555,7 @@ function DownstreamWorkspace({api}) {
           </form>
         </div>
       )}
+      </>}
 
       <DownstreamExportModal value={oneTimeExport} onClose={() => setOneTimeExport(null)}/>
     </section>

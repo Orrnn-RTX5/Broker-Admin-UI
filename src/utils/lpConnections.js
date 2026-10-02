@@ -26,6 +26,12 @@ export function connectionResult(result) {
   return messages.join(' ') || 'Connection updated.';
 }
 export function connectionError(error) {
+  const status = error.response?.status;
+  const backend = error.response?.data;
+  if (status === 401 || status === 419 ||
+    (status === 403 && backend?.code === 'MT_RET_ERR_PERMISSIONS' && /^Not authenticated\b/i.test(backend?.message || ''))) {
+    return 'Your admin session was rejected. Sign in again, then refresh the connection list.';
+  }
   const code = error.response?.data?.error_code;
   if (code === 'CONFIGURATION_APPLY_REJECTED') return 'Connection change was rejected and not saved. Previous saved settings were retained.';
   if (code === 'CONFIGURATION_RUNTIME_UNAVAILABLE') return 'Connection change was not saved. Runtime restoration is unavailable; refresh and inspect the connection before retrying.';

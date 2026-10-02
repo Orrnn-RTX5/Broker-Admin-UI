@@ -155,17 +155,18 @@ export default function DownstreamGrantEditor({api, counterparties, grant, onSav
   return (
     <form className="lp-downstream-editor" aria-label={editing ? 'Edit downstream access' : 'New downstream access'} onSubmit={save}>
       <h3>{editing ? `Edit access ${grant.access_id} (revision ${grant.revision})` : 'New downstream access'}</h3>
-      <p>Saving stores authority only. It does not apply a listener, connect a session or verify a counterparty.</p>
+      <p>Choose the receiving broker and an existing broker-owned coverage account. Saving stores authority only; it does not start a listener or verify a connection.</p>
       <fieldset disabled={busy}>
-        <legend>Counterparty and coverage account</legend>
-        <label>Counterparty
+        <legend>Receiving broker and coverage account</legend>
+        <label>Receiving broker counterparty
           <select aria-label="Counterparty" value={form.counterparty_id} disabled={editing} onChange={event => set({counterparty_id: event.target.value})}>
-            <option value="">Select a counterparty</option>
+            <option value="">Select a receiving broker</option>
             {counterparties.map(c => <option key={c.counterparty_id} value={c.counterparty_id} disabled={c.status !== 'active' && c.counterparty_id !== form.counterparty_id}>{c.display_name} ({c.counterparty_id}){c.status !== 'active' ? ' - suspended' : ''}</option>)}
           </select>
         </label>
         <label>Coverage account login<input aria-label="Coverage account login" inputMode="numeric" value={form.coverage_login} disabled={editing} onChange={event => set({coverage_login: event.target.value.trim()})}/></label>
         <label>Coverage account UUID<input aria-label="Coverage account UUID" value={form.coverage_account_id} disabled={editing} onChange={event => { setResolved(null); set({coverage_account_id: event.target.value.trim().toLowerCase()}); }}/></label>
+        <p>Both identifiers must refer to the same coverage account. The account or its group needs an effective named quote feed selection.</p>
         <label>Account mode (checked by the server)
           <select aria-label="Coverage account mode" value={form.account_mode} onChange={event => set({account_mode: event.target.value})}>
             <option value="">Select mode</option><option value="hedging">hedging</option><option value="netting">netting</option>

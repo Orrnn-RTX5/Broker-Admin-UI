@@ -126,6 +126,11 @@ export const ManagerService = {
     return res.data;
   },
 
+  getGroupFeedSymbols: async (group) => {
+    const res = await api.get('/manager/SymbolList', { params: { group, catalog: 1 } });
+    return res.data;
+  },
+
   getSwapFreeGroups: async () => {
     const res = await api.get('/manager/SwapFreeGroupList');
     return res.data;

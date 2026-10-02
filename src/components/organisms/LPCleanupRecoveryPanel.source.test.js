@@ -35,5 +35,6 @@ test('confirmation sends the string plan revision and a required bounded note',(
 
 test('journal mounts the panel right after LPCleanupRead only for stopped plans',()=>{
  assert.match(journal,/import LPCleanupRecoveryPanel from '\.\/LPCleanupRecoveryPanel\.jsx';/);
- assert.match(journal,/<LPCleanupRead cleanup=\{selected\.cleanup\}\/>\{\['escalated','held','reconcile_required'\]\.includes\(selected\.cleanup\?\.status\)&&<LPCleanupRecoveryPanel key=\{selected\.intent_id\+':'\+selected\.cleanup\.revision\} intentID=\{selected\.intent_id\}\/>\}/);
+ const markup=journal.replace(/\s+/g,'');
+ assert.match(markup,/<LPCleanupReadcleanup=\{selected\.cleanup\}\/>\{\['escalated','held','reconcile_required'\]\.includes\(selected\.cleanup\?\.status\)&&<LPCleanupRecoveryPanelkey=\{selected\.intent_id\+':'\+selected\.cleanup\.revision\}intentID=\{selected\.intent_id\}\/>\}/);
 });

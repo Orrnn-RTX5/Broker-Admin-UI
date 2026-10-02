@@ -4,12 +4,28 @@ import { readFile } from 'node:fs/promises';
 const source = await readFile(new URL('./lpRouting.js',import.meta.url),'utf8');
 const apiModule = await import('data:text/javascript;base64,'+Buffer.from('import {validateExactDemoEvidence,validateRetainedExactDemoEvidence} from '+JSON.stringify(new URL('./lpExactDemoSizing.js',import.meta.url).href)+';\nconst defaultRequest=()=>{throw new Error("test transport required")};\n'+source.slice(source.indexOf("const base ="))).toString('base64'));
 const {newRoutingRule,newRoutingEvidence,rulePayload,evidencePayload,createLPRoutingAPI,selectorValues}=apiModule;
+test('routing removal sends saved revision and validates retained archive identity',async()=>{
+ const requests=[];
+ const request=async(path,options)=>{requests.push({path,options});return {ok:true,json:async()=>({rule_id:'demo',archived:true,revision:'9007199254740994'})};};
+ const api=createLPRoutingAPI(request),rule={id:'demo',version:'9007199254740993'};
+ assert.equal((await api.archiveRule(rule)).archived,true);
+ assert.equal(requests[0].path,'/api/v1/manager/lp-routing/rules/demo');
+ assert.equal(requests[0].options.method,'DELETE');
+ assert.deepEqual(JSON.parse(requests[0].options.body),{expected_revision:'9007199254740993'});
+ await assert.rejects(()=>api.archiveRule({id:'legacy-internal-demo',version:'1'}),/ordinary saved/);
+ await assert.rejects(()=>api.archiveRule({id:'draft',version:'0'}),/ordinary saved/);
+ const changed=createLPRoutingAPI(async()=>({ok:true,json:async()=>({rule_id:'foreign',archived:true,revision:'2'})}));
+ await assert.rejects(()=>changed.archiveRule({id:'demo',version:'1'}),/response changed/);
+ const locked=createLPRoutingAPI(async()=>({ok:false,json:async()=>({error_code:'CONFIGURATION_IN_USE'})}));
+ await assert.rejects(()=>locked.archiveRule(rule),error=>error.code==='CONFIGURATION_IN_USE');
+});
 test('rule scope, exact boundaries and overcoverage survive without floating point',()=>{
  const rule={...newRoutingRule(),id:'whole',version:'9007199254740993',connection_id:'named',policy:{mode:'whole_orders',selection_percent:'12.500000000000000001',selected_coverage_percent:'200'}};
  rule.scope.min_lots='0.000000000000000001';rule.scope.max_lots='0.000000000000000002';
- rule.scope.groups.include=selectorValues('vip, retail, vip');rule.scope.accounts.exclude=['account-1'];
+ rule.scope.groups.include=selectorValues('vip, retail, vip');
  const result=rulePayload(rule);
  assert.equal(result.expected_revision,'9007199254740993');
+ assert.equal(Object.hasOwn(result.rule.scope,'accounts'),false);
  assert.equal(result.rule.policy.selected_coverage_percent,'200');
  assert.equal(result.rule.policy.selection_percent,'12.500000000000000001');
  assert.deepEqual(result.rule.scope.groups.include,['vip','retail']);
@@ -104,4 +120,23 @@ test('evidence save accepts only explicit scoped demo sizing without verifying a
  assert.throws(()=>evidencePayload({...retained,native_close:{...retained.native_close,minimum_remainder_lots:'0.01'}},{closeRenewal:true}),/Native close/);
  assert.throws(()=>evidencePayload({...retained,native_close:{...retained.native_close,valid_until:new Date(now-1000).toISOString()}},{closeRenewal:true}),/Native close/);
  assert.throws(()=>evidencePayload({...retained,verified_at:new Date(now+1000).toISOString()},{closeRenewal:true}),/verification time/);
+});
+
+test('legacy account scopes cannot be saved or silently broadened',()=>{const rule={...newRoutingRule(),id:'legacy'}; rule.scope.accounts.exclude=['account-1']; assert.throws(()=>rulePayload(rule),/Account-specific routing/);rule.scope.accounts={include:['account-2'],exclude:[]};assert.throws(()=>rulePayload(rule),/Account-specific routing/);assert.deepEqual(rule.scope.accounts.include,['account-2']);});
+
+test('legacy disable keeps the exact saved scope and cannot enable or create a rule', async () => {
+ const calls=[];
+ const api=createLPRoutingAPI(async(path,options)=>{calls.push({path,...options});return new Response('{}',{status:200});});
+ const saved={...newRoutingRule(),id:'legacy',version:'9007199254740993',enabled:true};
+ saved.scope.accounts.include=['acct-one'];saved.scope.accounts.exclude=['acct-two'];
+ saved.scope.groups.include=['real/group'];saved.policy.volume_percent='125';
+ await api.disableLegacyRule(saved);
+ const payload=JSON.parse(calls[0].body);
+ assert.deepEqual(payload,{expected_revision:saved.version,rule:{...saved,enabled:false}});
+ assert.equal(calls[0].method,'PUT');assert.ok(calls[0].path.endsWith('/rules/legacy'));
+ assert.equal(saved.enabled,true);assert.equal(calls.length,1);
+ assert.throws(()=>api.disableLegacyRule({...saved,version:'0'}));
+ assert.throws(()=>api.disableLegacyRule({...saved,enabled:false}));
+ assert.throws(()=>api.disableLegacyRule({...newRoutingRule(),id:'group',version:'1',enabled:true}));
+ assert.equal(calls.length,1);
 });

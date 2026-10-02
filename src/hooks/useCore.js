@@ -4,6 +4,19 @@ import { useAuthStore } from '../store/authStore';
 const shouldSuppressFetchErrorLog = (error) => Boolean(error?.__rtx5SuppressLog);
 const pendingFetches = new Map();
 const responseCache = new Map();
+let cacheGeneration = 0;
+let lastInvalidationEvent;
+export const invalidateDataFetchCaches = () => {
+  cacheGeneration += 1;
+  responseCache.clear();
+  pendingFetches.clear();
+};
+const sessionIdentity = state => `${Boolean(state?.isAuthenticated)}:${state?.accessToken || ''}`;
+let session = sessionIdentity(useAuthStore.getState());
+useAuthStore.subscribe(state => {
+  const next = sessionIdentity(state);
+  if (next !== session) { session = next; invalidateDataFetchCaches(); }
+});
 
 const getPositiveNumber = (value, fallback = 0) => {
   const next = Number(value);
@@ -75,8 +88,8 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true, 
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
 
-    if (!isAuthenticated || !enabled) {
-      if (requestIdRef.current === requestId) setLoading(false);
+    if (!isAuthenticated || !useAuthStore.getState().isAuthenticated || !enabled) {
+      if (requestIdRef.current === requestId) { setData(null); setError(null); setLoading(false); }
       return null;
     }
 
@@ -92,10 +105,12 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true, 
       }
     }
 
+    const generation = cacheGeneration;
+    let requestPromise;
     try {
       setLoading(true);
       setError(null);
-      let requestPromise = fetchCacheKey ? pendingFetches.get(fetchCacheKey) : null;
+      requestPromise = fetchCacheKey ? pendingFetches.get(fetchCacheKey) : null;
 
       if (!requestPromise) {
         requestPromise = Promise.resolve(fetchFnRef.current(paramsRef.current));
@@ -105,6 +120,7 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true, 
       }
 
       const result = await requestPromise;
+      if (generation !== cacheGeneration) return null;
       writeCachedResponse(fetchCacheKey, result, cacheTtlMs);
 
       if (requestIdRef.current === requestId) {
@@ -112,7 +128,9 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true, 
       }
       return result;
     } catch (err) {
-      if (requestIdRef.current === requestId) {
+      if (generation === cacheGeneration && requestIdRef.current === requestId) {
+        setData(null);
+        responseCache.delete(fetchCacheKey);
         setError(err);
         if (!shouldSuppressFetchErrorLog(err)) {
           console.error('Fetch error:', err);
@@ -120,7 +138,7 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true, 
       }
       return null;
     } finally {
-      if (fetchCacheKey) {
+      if (fetchCacheKey && pendingFetches.get(fetchCacheKey) === requestPromise) {
         pendingFetches.delete(fetchCacheKey);
       }
       if (requestIdRef.current === requestId) {
@@ -131,9 +149,29 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true, 
 
   useEffect(() => {
     execute();
+    return () => { requestIdRef.current += 1; };
   }, [execute, paramsKey, depsKey]);
+
+  useEffect(() => {
+    let knownSession = sessionIdentity(useAuthStore.getState());
+    const unsubscribe = useAuthStore.subscribe(state => {
+      const next = sessionIdentity(state);
+      if (next === knownSession) return;
+      knownSession = next;
+      requestIdRef.current += 1;
+      setData(null); setError(null); setLoading(false);
+    });
+    const refresh = event => {
+      if (event !== lastInvalidationEvent) { lastInvalidationEvent = event; invalidateDataFetchCaches(); }
+      setData(null);
+      execute({ force: true });
+    };
+    const target = typeof window === 'undefined' ? null : window;
+    target?.addEventListener('admin:state-changed', refresh);
+    return () => { unsubscribe(); target?.removeEventListener('admin:state-changed', refresh); };
+  }, [execute]);
 
   const mutate = useCallback(() => execute({ force: true }), [execute]);
 
-  return { data, loading, error, mutate };
+  return { data: enabled && isAuthenticated ? data : null, loading, error, mutate };
 }

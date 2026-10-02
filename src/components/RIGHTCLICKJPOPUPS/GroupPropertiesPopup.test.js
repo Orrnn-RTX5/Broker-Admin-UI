@@ -25,7 +25,10 @@ test('Symbols: staged list loads from GroupSymbolsGet and saves via GroupSymbols
   assert.match(src, /ManagerService\.getGroupAllowedSymbols\(currentGroupName\)/);
   assert.match(src, /await ManagerService\.saveGroupAllowedSymbols\(payload\.group, payload\.symbols, symbolsRevision\);/);
   assert.match(src, /isGroupSymbolListDirty\(symbolsBaseline, symbolRows\)/);
-  assert.match(src, /accounts in this group see ALL broker symbols/);
+  assert.match(src, /accounts in this group see all symbols available from its quote feed/);
+  assert.match(src, /ManagerService\.getGroupFeedSymbols\(groupName\)/);
+  assert.match(src, /findGroupFeedSymbol\(symbols, name\)/);
+  assert.match(serviceSrc, /api\.get\('\/manager\/SymbolList', \{ params: \{ group, catalog: 1 \} \}\)/);
   assert.doesNotMatch(src, /getSymbolSet\(/, 'ADD no longer upserts immediately via the legacy GET');
   assert.doesNotMatch(src, /SymbolPropertiesPopup/, 'rows no longer open the nested symbol popup');
   assert.match(serviceSrc, /api\.get\('\/manager\/GroupSymbolsGet', \{ params: \{ group: groupName \} \}\)/);
@@ -45,7 +48,7 @@ test('Commissions: scoped to the group, editable, no alert()', () => {
 });
 
 test('Dialog chrome: Help works, dead tabs and window buttons are gone', () => {
-  assert.match(src, /const TABS = \['Margin', 'Symbols', 'Commissions'\];/);
+  assert.match(src, /const TABS = \['Margin', 'Symbols', 'Commissions', 'Inheritance', 'Migration'\];/);
   assert.match(src, /onClick=\{\(\) => setShowHelp\(\(value\) => !value\)\}/);
   for (const dead of ["'Statistics'", "'Company'", "'Reports'", "'News & Mail'", "'Permissions'", "'Common'"]) {
     assert.equal(src.includes(`activeTab === ${dead}`), false, `unreachable tab body ${dead} removed`);

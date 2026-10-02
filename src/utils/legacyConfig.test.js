@@ -67,7 +67,8 @@ test('account trading changes: only effective, validated, untouched fields ignor
   const stored = normalizeAccountConfig({ Login: 1001, Group: 'real', Currency: 'USD', Leverage: 100, AccountMode: 'hedging', revision: REV });
   assert.deepEqual(stored, { login: '1001', group: 'real', currency: 'USD', leverage: '100', accountMode: 'hedging', revision: REV });
   assert.deepEqual(buildAccountTradingChanges(stored, { leverage: '100', accountMode: 'hedging' }), { changes: {}, errors: {} });
-  assert.deepEqual(buildAccountTradingChanges(stored, { leverage: '500', accountMode: 'netting' }).changes, { leverage: 500, account_mode: 'netting' });
+  assert.match(buildAccountTradingChanges(stored, { leverage: '500', accountMode: 'netting' }).errors.accountMode, /fixed at creation/);
+  assert.deepEqual(buildAccountTradingChanges(stored, { leverage: '500', accountMode: 'hedging' }).changes, { leverage: 500 });
   assert.ok(buildAccountTradingChanges(stored, { leverage: '0', accountMode: 'hedging' }).errors.leverage);
   assert.ok(buildAccountTradingChanges(stored, { leverage: '1.5', accountMode: 'hedging' }).errors.leverage);
   assert.ok(buildAccountTradingChanges(stored, { leverage: '100', accountMode: 'hybrid' }).errors.accountMode);

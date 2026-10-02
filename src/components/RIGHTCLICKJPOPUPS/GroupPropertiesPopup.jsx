@@ -1,3 +1,6 @@
+import GroupMigrationPanel from '../organisms/GroupMigrationPanel.jsx';
+import { groupMigration } from '../../services/groupMigration.js';
+import GroupAuthorityPanel from '../organisms/GroupAuthorityPanel.jsx';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { X, HelpCircle, Users, ChevronUp, ChevronDown, Plus, Pencil, Trash2, Save, UserPlus } from 'lucide-react';
@@ -11,9 +14,8 @@ import {
   withExpectedRevision,
 } from '../../utils/legacyConfig';
 import { getApiErrorMessage, normalizeArrayResponse } from '../../utils/apiShapes';
-import { useLpSymbols } from '../../hooks/useLpSymbols';
+import { findGroupFeedSymbol, normalizeGroupFeedSymbols } from '../../utils/groupFeedSymbols';
 import { useToast } from '../ui/useToast';
-import LpSymbolDatalist from '../atoms/LpSymbolDatalist';
 import {
   COMMISSION_TYPE_OPTIONS,
   EXECUTION_MODE_OPTIONS,
@@ -46,17 +48,21 @@ import {
 
 const MotionDiv = motion.div;
 
-const TABS = ['Margin', 'Symbols', 'Commissions'];
+const TABS = ['Margin', 'Symbols', 'Commissions', 'Inheritance', 'Migration'];
 
 const TAB_INTRO = {
+  Inheritance: 'Set the parent, purpose for newly created accounts, and manual overrides.',
+  Migration: 'Preview and verify complete account/history migration before source deletion.',
   Margin: 'Please set up the mechanism of margin calculation for the group: execution mode and margin requirements.',
   Symbols: 'Please set up the symbols accounts in this group can see and trade, with individual trade parameters per symbol.',
   Commissions: 'Please set up commissions for accounts in the group. Changes on this tab are saved immediately.',
 };
 
 const TAB_HELP = {
+  Inheritance: 'Fields inherit continuously until overridden. Reset to inherit uses the latest effective parent value. Symbol and routing collections replace the complete inherited list.',
+  Migration: 'Existing trades retain their original feed and route. New orders use destination settings. Deletion requires verified account/history migration and retained execution dependencies.',
   Margin: 'Execution mode selects market or instant execution for the group. Margin call and stop out levels are margin levels in percent; the stop out level must not exceed the margin call level. "Compensate negative balance after stop out" resets a negative balance to zero after a stop out. When you press OK, changed values are also applied to the accounts already in the group. Leverage cannot change while any account in the group has an open position, a pending order or an unfinished order; the server names those accounts. If someone else saved the group after you opened it, reload and apply your change again. Greyed-out options are not available yet.',
-  Symbols: 'The ordered list of symbols that accounts in this group see and trade in the terminal. An empty list means all broker symbols are allowed. Each symbol has its own spread markup (points), commission, swap multiplier and trading switch. Use Add, Edit (or double-click a row), Delete, Up and Down; changes are kept until you press OK, and Cancel discards them.',
+  Symbols: 'The ordered list of symbols that accounts in this group see and trade in the terminal. An empty list allows every symbol available from the group’s quote feed. Each symbol has its own spread markup (points), commission, swap multiplier and trading switch. Use Add, Edit (or double-click a row), Delete, Up and Down; changes are kept until you press OK, and Cancel discards them.',
   Commissions: 'Commission schedules charged to accounts in this group, by symbol and volume range. Per lot charges the value per lot, Percentage charges a percent of the deal notional, Flat charges a fixed amount per deal. Add, Edit and Delete save immediately; OK and Cancel do not affect them.',
 };
 
@@ -159,9 +165,24 @@ const SymbolAddPicker = ({ groupName, existing, error, onAdd, onAddMany, onCance
   const [value, setValue] = useState('');
   const [mode, setMode] = useState('symbol');
   const [category, setCategory] = useState('');
-  const { symbols } = useLpSymbols();
+  const [symbols, setSymbols] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState('');
+  const [pickerError, setPickerError] = useState('');
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setCatalogError('');
+    ManagerService.getGroupFeedSymbols(groupName).then((response) => {
+      if (active) setSymbols(normalizeGroupFeedSymbols(response));
+    }).catch((reason) => {
+      if (active) setCatalogError(getApiErrorMessage(reason, 'Could not load symbols for this group.'));
+    }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [groupName]);
   const categories = useMemo(() => symbolCategoryOptions(symbols, existing), [symbols, existing]);
   const selectedCategory = categories.find((option) => option.category === category);
+  const catalogHint = loading ? 'Loading symbols...' : catalogError || (symbols.length === 0 ? 'Choose a quote feed with symbols for this group.' : '');
 
   const modeButton = (key, label) => (
     <button
@@ -215,7 +236,7 @@ const SymbolAddPicker = ({ groupName, existing, error, onAdd, onAddMany, onCance
             {selectedCategory.symbols.map((s) => s.symbol).join(', ')}
           </div>
         )}
-        {error && <div className="text-[11px] text-[color:var(--danger-500)]">{error}</div>}
+        {(catalogHint || error) && <div className="text-[11px] text-[color:var(--danger-500)]">{catalogHint || error}</div>}
       </div>
     );
   }
@@ -223,8 +244,12 @@ const SymbolAddPicker = ({ groupName, existing, error, onAdd, onAddMany, onCance
   const confirm = () => {
     const name = value.trim();
     if (!name) return;
-    const entry = symbols.find((item) => String(item.symbol).toUpperCase() === name.toUpperCase());
-    onAdd(entry ? entry.symbol : name, { configured: entry ? Boolean(entry.configured) : true });
+    const entry = findGroupFeedSymbol(symbols, name);
+    if (!entry) {
+      setPickerError('Choose a symbol from this group’s quote feed.');
+      return;
+    }
+    onAdd(entry.symbol, { configured: entry.configured });
   };
 
   return (
@@ -235,7 +260,7 @@ const SymbolAddPicker = ({ groupName, existing, error, onAdd, onAddMany, onCance
           type="text"
           autoFocus
           value={value}
-          onChange={(e) => { setValue(e.target.value); onInput(); }}
+          onChange={(e) => { setValue(e.target.value); setPickerError(''); onInput(); }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') { e.preventDefault(); confirm(); }
             if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); onCancel(); }
@@ -243,14 +268,17 @@ const SymbolAddPicker = ({ groupName, existing, error, onAdd, onAddMany, onCance
           list="group-symbol-add-options"
           autoComplete="off"
           aria-label={`Symbol to add to ${groupName}`}
-          placeholder="Symbol (e.g. XAUUSD)"
+          placeholder="Symbol from this group’s quote feed"
+          disabled={loading || Boolean(catalogError) || symbols.length === 0}
           className="flex-1 min-w-0 bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded-sm px-2 py-1 text-[11px] font-mono text-[color:var(--text-primary)] outline-none focus:border-blue-500/50"
         />
-        <LpSymbolDatalist id="group-symbol-add-options" exclude={existing} />
+        <datalist id="group-symbol-add-options">
+          {symbols.filter((item) => !existing.includes(item.symbol)).map((item) => <option key={item.symbol} value={item.symbol} />)}
+        </datalist>
         <button
           type="button"
           onClick={confirm}
-          disabled={!value.trim()}
+          disabled={!value.trim() || loading || Boolean(catalogError) || symbols.length === 0}
           className="px-3 py-1 text-[11px] bg-[color:var(--accent-500)] text-white rounded-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Add
@@ -263,17 +291,17 @@ const SymbolAddPicker = ({ groupName, existing, error, onAdd, onAddMany, onCance
           Cancel
         </button>
       </div>
-      {error && <div className="text-[11px] text-[color:var(--danger-500)]">{error}</div>}
+        {(catalogHint || pickerError || error) && <div className="text-[11px] text-[color:var(--danger-500)]">{catalogHint || pickerError || error}</div>}
     </div>
   );
 };
 
-const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
+const GroupPropertiesPopup = ({ group, onClose, onSaved, initialTab }) => {
   const currentGroupName = getGroupName(group);
   const dragControls = useDragControls();
   const { notify } = useToast();
 
-  const [activeTab, setActiveTab] = useState('Margin');
+  const [activeTab, setActiveTab] = useState(initialTab || 'Margin');
   const [showHelp, setShowHelp] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
@@ -608,7 +636,7 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
         persistedRef.current = true;
         const saved = normalizeGroupSymbolsResponse(res).rows;
         const count = res && Array.isArray(res.symbols) ? saved.length : payload.symbols.length;
-        summary.push(count === 0 ? 'All broker symbols allowed.' : `${count} symbol${count === 1 ? '' : 's'} allowed.`);
+        summary.push(count === 0 ? 'All symbols from the group’s quote feed allowed.' : `${count} symbol${count === 1 ? '' : 's'} allowed.`);
       }
 
       notify({ title: 'Group updated', description: `${currentGroupName} — ${summary.join(' ')}`, tone: 'success' });
@@ -715,6 +743,8 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
           <AnimatePresence mode="wait">
             <MotionDiv key={activeTab} initial={{ opacity: 0, x: 5 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.15 }}>
 
+              {activeTab === 'Migration' && <GroupMigrationPanel source={currentGroupName} api={groupMigration} canManage disabled={isSaving || marginDirty || symbolsDirty} onMigrated={value => { persistedRef.current = true; onSaved?.({ action: 'migrated', ...value }); }} onDeleted={value => { onSaved?.({ action: 'deleted', ...value }); onClose(); }} />}
+              {activeTab === 'Inheritance' && <GroupAuthorityPanel name={currentGroupName} readGroup={ManagerService.getGroup} updateGroup={(name, payload) => ManagerService.updateGroup({ ...payload, originalName: name })} canManage disabled={isSaving || marginDirty || symbolsDirty} onSaved={fresh => { persistedRef.current = true; setGroupRevision(readRevision(fresh)); setInitialLeverage(String(fresh.leverage ?? '')); setLeverage(String(fresh.leverage ?? '')); const next = buildMarginForm(fresh); setInitialMargin(next); setMarginForm(next); onSaved?.(); }} />}
               {/* --- MARGIN TAB --- */}
               {activeTab === 'Margin' && (
                 <div className="space-y-4">
@@ -798,7 +828,7 @@ const GroupPropertiesPopup = ({ group, onClose, onSaved }) => {
                   <div className="flex-1 min-w-0 flex flex-col gap-2">
                     {symbolsLoaded && symbolRows.length === 0 && (
                       <div className="px-3 py-2 border border-blue-500/30 bg-blue-500/5 rounded-sm text-[11px] text-[color:var(--text-secondary)]">
-                        No symbols listed — accounts in this group see ALL broker symbols. Add symbols to limit them.
+                        No symbols listed — accounts in this group see all symbols available from its quote feed. Add symbols to limit them.
                       </div>
                     )}
                     <div className="border border-[color:var(--border-default)] bg-[color:var(--bg-app)] overflow-hidden rounded-sm min-h-[300px]">

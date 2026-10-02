@@ -29,7 +29,7 @@ const source = (await readFile(new URL('./useCore.js', import.meta.url), 'utf8')
   .replace("import { useAuthStore } from '../store/authStore';", 'const useAuthStore=globalThis.__adminHookRuntime.auth;');
 const { useDataFetch } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
 const setSession = next => { auth = next; for (const listener of subscribers) listener(auth); };
-const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
+const deferred = () => { let resolve, reject; const promise = new Promise((done, fail) => { resolve = done; reject = fail; }); return { promise, resolve, reject }; };
 const settle = () => new Promise(resolve => setImmediate(resolve));
 let hosts, requests, counter = 0;
 const fetchData = () => { const pending = deferred(); requests.push(pending); return pending.promise; };
@@ -92,4 +92,15 @@ test('session switch discards both cached data and late prior-session responses'
   assert.equal(requests.length, 3, 'logout must clear cache even when the next token is identical');
   requests[2].resolve({ owner: 'signed-in-again' }); await settle();
   assert.deepEqual(signedInAgain.values[0], { owner: 'signed-in-again' });
+});
+
+test('scoped denial clears displayed and cached rows; retry cannot reuse the denied snapshot', async () => {
+ const host=mount();requests[0].resolve({rows:[{login:'1001',group:'old'}]});await settle();
+ assert.equal(host.values[0].rows[0].group,'old');
+ const denied=Object.assign(Error('scope denied'),{__rtx5SuppressLog:true});
+ const deniedRead=host.result.mutate(); requests[1].reject(denied); await deniedRead;
+ assert.equal(host.values[0],null); assert.equal(host.values[2],denied);
+ const retry=mount(); assert.equal(requests.length,3);
+ requests[2].resolve({rows:[{login:'1001',group:'new'}]});await settle();
+ assert.equal(retry.values[0].rows[0].group,'new');
 });

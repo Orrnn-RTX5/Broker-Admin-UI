@@ -1,3 +1,4 @@
+import { refreshGroupMembership } from './services/groupMembershipRefresh.js';
 import React from 'react';
 import MenuBar from './components/organisms/MenuBar';
 import ActionToolBar from './components/organisms/ActionToolBar';
@@ -39,7 +40,7 @@ import {
   getLatestDesktopInstaller,
 } from './config/desktopRelease';
 import { getViewCapabilityToast, shouldBlockViewNavigation } from './config/viewCapabilities';
-import { resolveGroupExplorerNode, sameGroupExplorerLocation, getHistoryEntryView } from './utils/groupExplorerNavigation';
+import { resolveGroupExplorerNode, sameGroupExplorerLocation, getHistoryEntryView, retireGroupHistory } from './utils/groupExplorerNavigation';
 import { Download, FolderTree, Network, RefreshCcw, ShieldAlert, Users } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { TooltipProvider } from './components/ui/Tooltip';
@@ -139,7 +140,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
   const [currentIndex, setCurrentIndex] = React.useState(0);
   const [tableSortDirection, setTableSortDirection] = React.useState('');
   const [autoRefresh, setAutoRefresh] = React.useState(false);
-  const [isDeletingTarget, setIsDeletingTarget] = React.useState(false);
+  const isDeletingTarget = false;
   const activeNode = activeTab || getHistoryEntryView(history[currentIndex]);
   const canCheckForUpdates =
     typeof window !== 'undefined' &&
@@ -548,8 +549,18 @@ const AuthenticatedAppInner = ({ navigate }) => {
     setRefreshKey((prev) => prev + 1);
   }, []);
 
-  const handleGroupSaved = React.useCallback(() => {
-    AccountsService.invalidateCache();
+  const handleGroupSaved = React.useCallback((result) => {
+    if (result?.action) {
+      refreshGroupMembership(result);
+      setSelectedEditTarget(null); setEditingAccount(null); setViewingTrade(null);
+      if (result.action === 'deleted') {
+        const location = resolveGroupExplorerNode({ type: 'group', groupName: result.to_group }) || resolveGroupExplorerNode('Groups');
+        setGroupExplorerLocation(location); setSelectedSidebarNodeId(location.type === 'group' ? location.id : null);
+        setGroupExplorerReveal(previous => ({ ...location, revision: (previous?.revision ?? 0) + 1 }));
+        setHistory(previous => retireGroupHistory(previous, result.from_group || result.group, result.to_group));
+        setSavedSearches(previous => ({ ...previous, Groups: '' }));
+      }
+    } else AccountsService.invalidateCache();
     setRefreshKey((prev) => prev + 1);
   }, []);
 
@@ -745,22 +756,9 @@ const AuthenticatedAppInner = ({ navigate }) => {
   const handleToolbarDelete = React.useCallback(async (explicitTarget) => {
     const target = explicitTarget?.type === 'group' || explicitTarget?.type === 'group-branch' ? explicitTarget : selectedEditTarget;
     if (!target) return;
+    if (!canEditGroups) return;
     if (target.type === 'group-branch') {
-      // Deepest names first, so a parent group never outlives its subgroups.
-      const names = [...target.names].sort((left, right) => right.length - left.length);
-      if (!names.length) return;
-      if (!window.confirm(`Delete "${target.path}" and the ${names.length} group(s) inside it?`)) return;
-      setIsDeletingTarget(true);
-      const failed = [];
-      for (const name of names) {
-        try { await ManagerService.deleteGroup(name); } catch { failed.push(name); }
-      }
-      setIsDeletingTarget(false);
-      setSelectedEditTarget(null);
-      setRefreshKey((p) => p + 1);
-      notify(failed.length
-        ? { title: 'Some groups were not deleted', description: failed.join(', '), tone: 'danger' }
-        : { title: 'Groups deleted', description: `Removed ${names.length} group(s) under "${target.path}"`, tone: 'success' });
+      notify({ title: 'Group migration required', description: 'Open each group to preview complete migration and verified deletion.', tone: 'warning' });
       return;
     }
     if (target.type === 'group' && target.row?.isDummy) {
@@ -770,18 +768,8 @@ const AuthenticatedAppInner = ({ navigate }) => {
     if (target.type === 'group') {
       const groupName = target.row?.name || target.row?.group || target.id;
       if (!groupName) return;
-      if (!window.confirm(`Are you sure you want to delete group "${groupName}"?`)) return;
-      setIsDeletingTarget(true);
-      try {
-        await ManagerService.deleteGroup(groupName);
-        notify({ title: 'Group deleted', description: `Group "${groupName}" removed successfully`, tone: 'success' });
-        setSelectedEditTarget(null);
-        setRefreshKey((p) => p + 1);
-      } catch (err) {
-        notify({ title: 'Delete failed', description: err?.message || 'Unable to delete group', tone: 'danger' });
-      } finally {
-        setIsDeletingTarget(false);
-      }
+      setSelectedGroup({ ...(target.row || {}), name: groupName, initialTab: 'Migration' });
+      setIsPopupOpen(true);
     } else {
       notify({ title: 'Delete unavailable', description: `Deleting ${target.type} is not supported from the toolbar.`, tone: 'warning' });
     }

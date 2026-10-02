@@ -68,3 +68,9 @@ export const getHistoryEntryView = (entry) => {
   if (typeof entry === 'string' && entry) return entry;
   return typeof entry?.view === 'string' && entry.view ? entry.view : 'Groups';
 };
+
+export const retireGroupHistory = (history, source, destination) => {
+  const nextLocation = resolveGroupExplorerNode({ type: 'group', groupName: destination }) || rootLocation();
+  return history.map(entry => entry?.groupExplorerLocation?.type === 'group' && entry.groupExplorerLocation.groupName === source
+    ? { ...entry, groupExplorerLocation: nextLocation } : entry);
+};
