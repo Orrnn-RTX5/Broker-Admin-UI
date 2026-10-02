@@ -30,6 +30,38 @@ cookies; Vite strips those cookies and, where configured, the path prefix before
 forwarding. Authentication fetches use `same-origin` credentials so those local
 cookies reach Vite without including cookies on cross-origin login requests.
 
+## Production Docker configuration
+
+Give the production manager a broker-specific `.env` file and place it at
+`$HOME/broker-admin-ui.env` on the deployment server, where `$HOME` belongs to
+the SSH user used by the deploy workflow. At minimum, set `BROKER_ID` and
+`API_HOST` to the broker's ID and API origin. For example:
+
+```env
+BACKEND_TARGET=web
+BROKER_ID=your-broker-id
+API_HOST=https://api.your-broker.example
+WS_HOST=wss://api.your-broker.example
+USE_MOCK_DISCOVERY=false
+```
+
+Set `BROKER_NAME` for a display name, `BROKER_SERVER` if login needs a specific
+server handle, `DEFAULT_MT5_SERVER` if it uses a separate MT5 host,
+`API_HOST_EXT` if the extended API uses another origin, and `FEED_WS_URL` or
+`FEED_STATUS_URL` if the market feed uses different endpoints.
+Keep `WS_HOST` at the WebSocket origin; other WebSocket routes use it too.
+The `VITE_` names in the local `.env` are accepted by the container as well;
+copy that file as-is and edit its broker values. Do not include both forms of
+the same key. The desktop mode file changes only `VITE_BACKEND_TARGET`, so it
+uses the same broker values from `.env`.
+
+The deploy workflow passes this file to Docker with `--env-file`. The image
+excludes source `.env` files, and the container generates browser runtime
+configuration from the supplied values when it starts. After editing the server
+file, restart or redeploy the container to apply changes. Runtime configuration
+is public in the browser, so keep passwords and tokens in a separate secret
+store, not in this file.
+
 ## Windows Desktop App
 
 Run the Electron desktop app locally:
@@ -51,20 +83,17 @@ Desktop updates are manual. Publishing a GitHub release does not make running ap
 
 ## Desktop Releases
 
-Create and push a version tag from the source repo:
+The checked-in GitHub Actions workflow builds and deploys the web Docker image on pushes to `main`. Desktop publishing is currently a local command. Set `GH_TOKEN` in the shell environment, then run:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+npm run release
 ```
 
-GitHub Actions runs `.github/workflows/admin-desktop-release.yml` on tags matching `v*`. The workflow installs with `npm ci`, runs tests, lint, web build, and then publishes the Windows installer with `electron-builder`.
-
-Release assets are uploaded to:
+Electron Builder publishes release assets to:
 
 https://github.com/rtx5-orrnn/rtx5-broker-admin-releases/releases
 
-The workflow uses only the repository secret `RTX5_BROKER_ADMIN_RELEASES` as `GH_TOKEN` for cross-repo publishing. Do not commit GitHub tokens to source, `.env`, README, package scripts, or workflow logs.
+Keep `GH_TOKEN` in a secret store or process environment. Do not commit it to source or env files.
 
 ## Broker Discovery Login Flow
 
@@ -85,5 +114,3 @@ Use `VITE_BACKEND_TARGET=web` for the hosted web app so each selected broker use
 Broker discovery entries should include a web URL field such as `backend_url`, `api_url`, `web_backend_url`, or `backend_domain`, plus a desktop field such as `server_ip`/`host` and `server_port`. Optional fields like `web_ext_api_url`, `desktop_backend_url`, and `ws_url` override the derived URLs when needed. A deployment `domain` is treated as the admin UI host, not the backend API URL. Use `nginx.listen_host` only on dedicated listen addresses; leave it empty on shared-IP broker servers.
 
 `VITE_USE_MOCK_DISCOVERY=true` uses the local `testorrnn` and `orrnn` broker map while the SuperAdmin discovery endpoint is pending. Set it to `false` when `/api/v1/brokers/{broker_id}` is available.
-# Broker-Manager-UI
-# Broker-Admin-UI

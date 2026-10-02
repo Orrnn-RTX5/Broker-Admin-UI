@@ -5,6 +5,9 @@ node_modules
 dist
 dist-ssr
 release
+/artifacts/
+/docs/
+/build/
 logs
 *.log
 .env

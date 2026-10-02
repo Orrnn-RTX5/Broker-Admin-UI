@@ -2,7 +2,7 @@ import React from 'react';
 import { cn } from '../../lib/cn';
 
 export const Table = ({ className, children, ...rest }) => (
-  <table className={cn('w-full text-[12px] font-mono border-separate border-spacing-0', className)} {...rest}>
+  <table className={cn('w-full text-[11px] font-normal border-separate border-spacing-0', className)} {...rest}>
     {children}
   </table>
 );

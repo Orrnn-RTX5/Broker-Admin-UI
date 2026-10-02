@@ -233,3 +233,29 @@ test('manual invalidation prevents an older in-flight request from restoring sta
     AccountsService.invalidateCache();
   }
 });
+
+test('getAllAccounts reads every page without a group filter and shares the result until invalidated', async () => {
+  AccountsService.invalidateCache();
+  useAuthStore.setState({ accessToken: 'session-token', user: { role: 'admin', is_admin: true }, isAuthenticated: true });
+  const seenParams = [];
+  const rows = Array.from({ length: 150 }, (_, index) => ({ login: 1000 + index, group: index % 2 ? 'dipannita' : 'Orrnn/demo-std' }));
+  mockAdapter = async (requestConfig) => {
+    seenParams.push(requestConfig.params);
+    const { offset = 0, limit = 100 } = requestConfig.params;
+    return { data: { accounts: rows.slice(offset, offset + limit), total: rows.length }, status: 200, statusText: 'OK', headers: {}, config: requestConfig, request: {} };
+  };
+  try {
+    const all = await AccountsService.getAllAccounts();
+    assert.equal(all.length, 150);
+    assert.ok(seenParams.every(params => params.group === undefined), 'no server-side group filter');
+    const requests = seenParams.length;
+    assert.equal(await AccountsService.getAllAccounts(), all, 'second caller reuses the loaded list');
+    assert.equal(seenParams.length, requests);
+    AccountsService.invalidateCache();
+    await AccountsService.getAllAccounts();
+    assert.ok(seenParams.length > requests, 'invalidation forces a fresh read');
+  } finally {
+    mockAdapter = null;
+    AccountsService.invalidateCache();
+  }
+});

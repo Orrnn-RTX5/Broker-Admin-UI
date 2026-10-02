@@ -7,7 +7,7 @@ const VendorItem = ({ logo, name, description }) => (
       {logo}
     </div>
     <div className="flex flex-col items-start pt-1">
-      <a href="#" className="text-[12.5px] font-semibold text-[#3b82f6] hover:underline mb-1.5">{name}</a>
+      <a href="#" className="text-[12.5px] font-semibold text-white hover:underline mb-1.5">{name}</a>
       <p className="text-[11px] text-[color:var(--text-muted)] leading-relaxed max-w-[1100px] mb-3">
         {description}
       </p>
@@ -36,12 +36,12 @@ const AntiDDoSView = () => {
         <div className="flex justify-between items-start mb-6">
           <div>
             <h1 className="text-[22px] font-normal text-white flex items-center gap-2 tracking-tight">
-              Anti DDoS Protection <Settings className="text-[#3b82f6]" size={16}/>
+              Anti DDoS Protection <Settings className="text-white" size={16}/>
             </h1>
-            <a href="#" className="text-[12px] text-[#3b82f6] hover:underline mt-[2px] block font-sans">How to set up</a>
+            <a href="#" className="text-[12px] text-white hover:underline mt-[2px] block font-sans">How to set up</a>
           </div>
           <button className="flex items-center gap-1.5 px-3 py-1.5 border border-[#555] rounded-[2px] text-[11.5px] text-[color:var(--text-primary)] hover:bg-[#333] transition-colors mt-1">
-            <CheckCircle2 size={13} className="text-[#22c55e]"/>
+            <CheckCircle2 size={13} className="text-white"/>
             Add Proxy Server
           </button>
         </div>
@@ -71,12 +71,12 @@ const AntiDDoSView = () => {
 
             {/* Normal Users (Green) */}
             <div className="absolute left-[40px] top-[105px] flex flex-col items-center gap-0.5">
-               <User size={18} className="text-[#22c55e] font-bold" />
-               <span className="text-[9px] text-[#22c55e] font-bold tracking-wider">USER</span>
+               <User size={18} className="text-white font-bold" />
+               <span className="text-[9px] text-white font-bold tracking-wider">USER</span>
             </div>
             <div className="absolute left-[80px] top-[220px] flex flex-col items-center gap-0.5">
-               <User size={18} className="text-[#22c55e] font-bold" />
-               <span className="text-[9px] text-[#22c55e] font-bold tracking-wider">USER</span>
+               <User size={18} className="text-white font-bold" />
+               <span className="text-[9px] text-white font-bold tracking-wider">USER</span>
             </div>
 
             {/* Connection Lines to Alert Triangle */}
@@ -109,7 +109,7 @@ const AntiDDoSView = () => {
                <div className="w-[45px] h-[45px] rounded-full border-l-[3px] border-[#3b82f6] absolute opacity-80 rotate-45"></div>
                
                <div className="w-[30px] h-[30px] bg-[#1e3a8a] rounded-sm flex items-center justify-center border border-[#3b82f6] z-20 absolute -left-1">
-                  <Shield size={16} fill="none" className="text-[#60a5fa]"/>
+                  <Shield size={16} fill="none" className="text-white"/>
                   <rect x="11" y="11" width="8" height="6" rx="1" fill="#60a5fa" className="absolute"/>
                   <path d="M12 11V9a3 3 0 0 1 6 0v2" stroke="#60a5fa" strokeWidth="1.5" className="absolute" />
                </div>
@@ -135,8 +135,8 @@ const AntiDDoSView = () => {
             <div className="absolute left-[370px] top-[75px] flex items-center justify-center z-0 w-[70px]">
                <div className="w-full h-[1px] bg-[#3b82f6]"></div>
                <div className="absolute flex gap-1 bg-[#222222] px-1">
-                 <CheckCircle2 size={10} className="text-[#22c55e]"/>
-                 <CheckCircle2 size={10} className="text-[#22c55e]"/>
+                 <CheckCircle2 size={10} className="text-white"/>
+                 <CheckCircle2 size={10} className="text-white"/>
                </div>
             </div>
 
@@ -149,7 +149,7 @@ const AntiDDoSView = () => {
                </div>
                {/* Tiny security lock attachment */}
                <div className="absolute -bottom-1 -right-1 bg-[#fff] rounded-full p-[1px] z-20">
-                 <div className="bg-[#22c55e] rounded-full p-[2px]">
+                 <div className="bg-[color:var(--accent-500)] rounded-full p-[2px]">
                    <Shield size={6} fill="#fff" className="text-white"/>
                  </div>
                </div>
@@ -163,8 +163,8 @@ const AntiDDoSView = () => {
             <div className="absolute left-[480px] top-[75px] flex items-center justify-center z-0 w-[80px]">
                <div className="w-full h-[1px] bg-[#3b82f6]"></div>
                <div className="absolute flex gap-1 bg-[#222222] px-1">
-                 <CheckCircle2 size={10} className="text-[#22c55e]"/>
-                 <CheckCircle2 size={10} className="text-[#22c55e]"/>
+                 <CheckCircle2 size={10} className="text-white"/>
+                 <CheckCircle2 size={10} className="text-white"/>
                </div>
             </div>
 
@@ -188,7 +188,7 @@ const AntiDDoSView = () => {
           <VendorItem 
             logo={
               <div className="flex items-center text-[#ff9900] font-bold text-[18px]">
-                <div className="text-[#06b6d4] mr-[-8px] text-[26px]">C</div>
+                <div className="text-white mr-[-8px] text-[26px]">C</div>
                 <span className="z-10 bg-[color:var(--bg-app)] pr-1 mt-1">Akamai</span>
               </div>
             }
@@ -220,7 +220,7 @@ const AntiDDoSView = () => {
         
         {/* Footer Area */}
         <div className="mt-8 pt-6 border-t border-[#333] text-[12px] text-[color:var(--text-muted)] font-sans pb-10">
-          <a href="#" className="text-[#3b82f6] hover:underline">Sign in to the Support Center</a> to receive RTX5 platform user support: articles, news, documents and direct contact with the technical support team. Explore the AppStore and enhance the RTX5 platform functionality using third-party applications: liquidity solutions, news feeds, and money management tools, amongst others.
+          <a href="#" className="text-white hover:underline">Sign in to the Support Center</a> to receive RTX5 platform user support: articles, news, documents and direct contact with the technical support team. Explore the AppStore and enhance the RTX5 platform functionality using third-party applications: liquidity solutions, news feeds, and money management tools, amongst others.
         </div>
       </div>
     </div>

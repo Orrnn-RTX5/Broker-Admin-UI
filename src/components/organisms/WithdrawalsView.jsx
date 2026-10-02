@@ -9,19 +9,19 @@ const fmtTs = (v) => { if (!v) return '—'; try { return new Date(v * 1000).toL
 
 const STATUS_STYLE = {
   pending:  { color: 'text-[#f4c96e]', bg: 'bg-[#f4c96e]/10' },
-  approved: { color: 'text-[#4ec9b0]', bg: 'bg-[#4ec9b0]/10' },
+  approved: { color: 'text-[color:var(--success-500)]', bg: 'bg-[color:var(--accent-soft)]' },
   rejected: { color: 'text-[#f48771]', bg: 'bg-[#f48771]/10' },
   on_hold:  { color: 'text-[#ce9178]', bg: 'bg-[#ce9178]/10' },
 };
 const Badge = ({ status }) => {
-  const s = STATUS_STYLE[status] || { color: 'text-[#aaa]', bg: 'bg-white/5' };
+  const s = STATUS_STYLE[status] || { color: 'text-white', bg: 'bg-white/5' };
   return <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-[2px] ${s.color} ${s.bg}`}>{status || '—'}</span>;
 };
 
 // ── Add Withdrawal Popup ───────────────────────────────────────────────────
 const FormLabel = ({ t, req, children }) => (
   <div className="flex flex-col gap-0.5">
-    <label className="text-[10px] text-[#888] uppercase tracking-wider">{t}{req && <span className="text-[#f48771] ml-0.5">*</span>}</label>
+    <label className="text-[10px] text-white uppercase tracking-wider">{t}{req && <span className="text-[#f48771] ml-0.5">*</span>}</label>
     {children}
   </div>
 );
@@ -61,7 +61,7 @@ const AddWithdrawalPopup = ({ onClose, onSaved }) => {
       <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-[3px] shadow-2xl w-[440px]" onClick={e => e.stopPropagation()}>
         <div className="flex items-center h-9 px-4 border-b border-black/40 bg-[color:var(--bg-surface-1)]">
           <span className="text-[12px] font-semibold text-[color:var(--text-primary)] flex-1">New Withdrawal Request</span>
-          <button onClick={onClose} className="text-[#555] hover:text-[#ccc]"><X size={14} /></button>
+          <button onClick={onClose} className="text-white hover:text-white"><X size={14} /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3">
           <div className="grid grid-cols-3 gap-3">
@@ -75,7 +75,7 @@ const AddWithdrawalPopup = ({ onClose, onSaved }) => {
           </div>
           {error && <div className="text-[11px] text-[#f48771] bg-[color:var(--bg-surface-2)] px-3 py-1.5 rounded-[2px]">{error}</div>}
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] rounded-[2px]">Cancel</button>
+            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-white rounded-[2px]">Cancel</button>
             <button type="submit" disabled={loading} className="h-[26px] px-4 text-[11px] bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] disabled:opacity-50 text-white rounded-[2px]">{loading ? 'Creating…' : 'Create'}</button>
           </div>
         </form>
@@ -100,17 +100,17 @@ const RejectPopup = ({ row, onClose, onSaved }) => {
       <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-[3px] shadow-2xl w-[340px]" onClick={e => e.stopPropagation()}>
         <div className="flex items-center h-9 px-4 border-b border-black/40 bg-[color:var(--bg-surface-1)]">
           <span className="text-[12px] font-semibold text-[color:var(--text-primary)] flex-1">Reject Withdrawal #{row.id}</span>
-          <button onClick={onClose} className="text-[#555] hover:text-[#ccc]"><X size={14} /></button>
+          <button onClick={onClose} className="text-white hover:text-white"><X size={14} /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3">
           <div className="flex flex-col gap-0.5">
-            <label className="text-[10px] text-[#888] uppercase tracking-wider">Reason (optional)</label>
+            <label className="text-[10px] text-white uppercase tracking-wider">Reason (optional)</label>
             <input value={reason} onChange={e => setReason(e.target.value)}
               className="w-full bg-[color:var(--bg-surface-2)] border border-[#555] text-[color:var(--text-primary)] text-[12px] px-2 py-1 rounded-[2px] focus:outline-none focus:border-[color:var(--accent-500)]"
               placeholder="AML hold…" />
           </div>
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] rounded-[2px]">Cancel</button>
+            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-white rounded-[2px]">Cancel</button>
             <button type="submit" disabled={loading} className="h-[26px] px-4 text-[11px] bg-[#e51400] hover:bg-[#ff2d00] disabled:opacity-50 text-white rounded-[2px]">{loading ? 'Rejecting…' : 'Reject'}</button>
           </div>
         </form>
@@ -191,13 +191,13 @@ const WithdrawalsView = () => {
           <input value={filterLogin} onChange={e => setFilterLogin(e.target.value)} onKeyDown={e => e.key === 'Enter' && fetchData()}
             placeholder="login…" className="h-[22px] w-[90px] bg-[color:var(--bg-surface-2)] border border-[#555] text-[color:var(--text-primary)] text-[11px] px-2 rounded-[2px] focus:outline-none" />
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-            className="h-[22px] bg-[color:var(--bg-surface-2)] border border-[#555] text-[#ccc] text-[11px] px-2 rounded-[2px]">
+            className="h-[22px] bg-[color:var(--bg-surface-2)] border border-[#555] text-white text-[11px] px-2 rounded-[2px]">
             <option value="">All status</option>
             {['pending','approved','rejected','on_hold'].map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-          <button onClick={fetchData} className="h-[22px] px-2.5 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] text-[11px] rounded-[2px] border border-[#555]">Filter</button>
+          <button onClick={fetchData} className="h-[22px] px-2.5 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-white text-[11px] rounded-[2px] border border-[#555]">Filter</button>
         </div>
-        <div className="ml-auto pr-2"><button onClick={fetchData} className="text-[#999] hover:text-white"><RefreshCw size={13} /></button></div>
+        <div className="ml-auto pr-2"><button onClick={fetchData} className="text-white hover:text-white"><RefreshCw size={13} /></button></div>
       </div>
 
       <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 sticky top-0 z-10 select-none shrink-0">
@@ -210,19 +210,19 @@ const WithdrawalsView = () => {
           <div key={row.id || idx}
             onContextMenu={e => { e.preventDefault(); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, row }); }}
             className={`flex border-b border-black/10 hover:bg-blue-600/10 transition-colors ${idx%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}>
-            <div className="w-[60px] px-3 py-1 text-[12px] text-[#9cdcfe] font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.id)}</div>
+            <div className="w-[60px] px-3 py-1 text-[12px] text-white font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.id)}</div>
             <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-primary)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.account_login)}</div>
             <div className="w-[80px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.method_id)}</div>
             <div className="w-[100px] px-3 py-1 text-[12px] text-[#f48771] font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.amount)}</div>
             <div className="w-[80px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.currency)}</div>
             <div className="w-[100px] px-3 py-1 border-r border-black/10 shrink-0 flex items-center"><Badge status={row.status} /></div>
-            <div className="w-[200px] px-3 py-1 text-[11px] text-[#888] font-mono border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.bank_details)}</div>
-            <div className="w-[150px] px-3 py-1 text-[11px] text-[#888] font-mono border-r border-black/10 shrink-0 flex items-center">{fmtTs(row.created_at)}</div>
-            <div className="flex-1 px-3 py-1 text-[11px] text-[#888] font-mono border-r border-black/10 flex items-center">{fmtTs(row.processed_at)}</div>
+            <div className="w-[200px] px-3 py-1 text-[11px] text-white font-mono border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.bank_details)}</div>
+            <div className="w-[150px] px-3 py-1 text-[11px] text-white font-mono border-r border-black/10 shrink-0 flex items-center">{fmtTs(row.created_at)}</div>
+            <div className="flex-1 px-3 py-1 text-[11px] text-white font-mono border-r border-black/10 flex items-center">{fmtTs(row.processed_at)}</div>
             <div className="w-[160px] px-2 py-1 flex items-center gap-1 shrink-0 flex-wrap">
               {(row.status === 'pending' || row.status === 'on_hold') && (
                 <button onClick={() => doAction('approve', row)} disabled={actionLoading === `approve-${row.id}`}
-                  className="flex items-center gap-1 h-[20px] px-2 bg-[#4ec9b0]/20 hover:bg-[#4ec9b0]/40 text-[#4ec9b0] text-[10px] rounded-[2px] disabled:opacity-50">
+                  className="flex items-center gap-1 h-[20px] px-2 bg-[color:var(--accent-soft)] hover:bg-[color:var(--accent-100)] text-[color:var(--success-500)] text-[10px] rounded-[2px] disabled:opacity-50">
                   <CheckCircle size={10} /> Approve
                 </button>
               )}
@@ -253,7 +253,7 @@ const WithdrawalsView = () => {
           <div className="px-4 py-1 hover:bg-[color:var(--accent-500)] hover:text-white cursor-pointer" onClick={() => { setAddOpen(true); setContextMenu({ visible: false }); }}>New Withdrawal</div>
           {contextMenu.row?.status === 'pending' && <>
             <div className="h-px bg-[color:var(--border-default)] my-1 mx-2"></div>
-            <div className="px-4 py-1 hover:bg-[#4ec9b0]/30 hover:text-[#4ec9b0] cursor-pointer" onClick={() => { doAction('approve', contextMenu.row); setContextMenu({ visible: false }); }}>Approve</div>
+            <div className="px-4 py-1 hover:bg-[color:var(--accent-soft)] hover:text-[color:var(--success-500)] cursor-pointer" onClick={() => { doAction('approve', contextMenu.row); setContextMenu({ visible: false }); }}>Approve</div>
             <div className="px-4 py-1 hover:bg-[#ce9178]/30 hover:text-[#ce9178] cursor-pointer" onClick={() => { doAction('hold', contextMenu.row); setContextMenu({ visible: false }); }}>Hold</div>
             <div className="px-4 py-1 hover:bg-[#e51400] hover:text-white cursor-pointer text-red-400" onClick={() => { setRejectRow(contextMenu.row); setContextMenu({ visible: false }); }}>Reject</div>
           </>}

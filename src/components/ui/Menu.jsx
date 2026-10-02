@@ -11,14 +11,14 @@ const contentCls = cn(
 );
 
 const itemCls = cn(
-  'relative flex items-center gap-2 h-7 px-2 text-[12px] rounded-[var(--radius-sm)]',
+  'relative flex items-center gap-2 h-7 px-2 text-[11px] font-normal rounded-[var(--radius-sm)]',
   'text-[color:var(--text-primary)] cursor-default select-none outline-none',
   'data-[highlighted]:bg-[color:var(--bg-surface-3)]',
   'data-[disabled]:text-[color:var(--text-muted)] data-[disabled]:pointer-events-none'
 );
 
 const separatorCls = 'h-px my-1 bg-[color:var(--border-subtle)]';
-const labelCls = 'px-2 py-1 text-[10px] uppercase tracking-wider text-[color:var(--text-muted)]';
+const labelCls = 'px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-muted)]';
 const shortcutCls = 'ml-auto pl-3 text-[11px] font-mono text-[color:var(--text-muted)]';
 
 /* Dropdown (click-triggered) */

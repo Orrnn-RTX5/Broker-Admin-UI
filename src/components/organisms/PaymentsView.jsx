@@ -6,7 +6,7 @@ const providers = [
     id: 1,
     name: 'Ecommpay',
     logo: (
-      <div className="flex items-center text-[#2185D0] font-bold text-lg italic tracking-tighter">
+      <div className="flex items-center text-white font-bold text-lg italic tracking-tighter">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-1">
           <path d="M5 12l5-5 10 10" />
           <path d="M5 12l5 5 10-10" />
@@ -24,7 +24,7 @@ const providers = [
     id: 2,
     name: 'Advanced Payment Solutions',
     logo: (
-      <div className="flex flex-col items-center justify-center text-[#21BA45] font-bold tracking-tighter w-24">
+      <div className="flex flex-col items-center justify-center text-white font-bold tracking-tighter w-24">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M12 2l10 10-10 10L2 12 12 2z" />
           <path d="M12 8l4 4-4 4-4-4 4-4z" />
@@ -118,7 +118,7 @@ const PaymentsView = () => {
             placeholder="Search" 
             className="bg-transparent border-none outline-none w-full text-[12px] text-white placeholder:text-[color:var(--text-muted)]" 
           />
-          <Search size={14} className="text-[#3B82F6]" />
+          <Search size={14} className="text-white" />
         </div>
       </div>
 
@@ -129,7 +129,7 @@ const PaymentsView = () => {
             
             {/* Action Button - Top Right */}
             <div className="absolute top-6 right-6">
-              <button className="flex items-center gap-1.5 px-3 h-7 bg-transparent border border-[color:var(--border-strong)] rounded text-[11px] text-[#21BA45] hover:border-[#21BA45] hover:bg-[#21BA45]/10 transition-all font-medium">
+              <button className="flex items-center gap-1.5 px-3 h-7 bg-transparent border border-[color:var(--border-strong)] rounded text-[11px] text-white hover:border-[#21BA45] hover:bg-[#21BA45]/10 transition-all font-medium">
                 <Link size={12} className="rotate-45" />
                 Connect Provider
               </button>
@@ -144,7 +144,7 @@ const PaymentsView = () => {
             <div className="flex-1 pr-32">
               <h2 className="text-[18px] text-white font-medium mb-3">{provider.name}</h2>
               
-              <div className="flex flex-wrap items-center gap-5 text-[11px] text-[#4ea0e9] mb-4">
+              <div className="flex flex-wrap items-center gap-5 text-[11px] text-white mb-4">
                 <a href="#" className="flex items-center gap-1.5 hover:underline">
                   <Globe size={11} className="text-[color:var(--text-muted)] shrink-0" />
                   {provider.website}

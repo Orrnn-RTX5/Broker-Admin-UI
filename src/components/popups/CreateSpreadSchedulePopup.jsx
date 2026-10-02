@@ -62,10 +62,10 @@ const CreateSpreadSchedulePopup = ({ onClose, onCreated }) => {
       >
         <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] select-none">
           <div className="flex items-center gap-2 text-white text-[13px] font-medium">
-            <Activity size={16} className="text-[#3b82f6]" />
+            <Activity size={16} className="text-white" />
             Create Spread Schedule
           </div>
-          <button onClick={onClose} className="text-[#999] hover:text-white hover:bg-white/10 p-1 rounded-sm transition-colors">
+          <button onClick={onClose} className="text-white hover:text-white hover:bg-white/10 p-1 rounded-sm transition-colors">
             <X size={14} />
           </button>
         </div>

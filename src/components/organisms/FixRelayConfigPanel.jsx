@@ -108,7 +108,7 @@ export default function FixRelayConfigPanel() {
       {status?.error && <p className="gw-support-message gw-support-error">Connection: {status.error}</p>}
       {error && <p role="alert" className="gw-support-message gw-support-error">{error}</p>}
       {loadError && <button type="button" className="ui-btn ui-btn-secondary ui-btn-sm" disabled={busy} onClick={() => { setBusy(true); setError(''); setLoadAttempt(value => value + 1); }}>Retry loading saved configuration</button>}
-      {notice && <p role="status" className="gw-support-message gw-support-success">{notice}</p>}
+      {notice && <p role="status" className="gw-support-message gw-support-success" style={{ color: '#ffffff' }}>{notice}</p>}
       {busy && <p role="status" className="gw-support-progress">Updating relay information…</p>}
 
       <form onSubmit={save}>

@@ -18,7 +18,7 @@ const fmtDate = (v) => { if (!v) return '—'; try { return new Date(v).toLocale
 const inp = "w-full bg-[color:var(--bg-surface-2)] border border-[#555] text-[color:var(--text-primary)] text-[12px] px-2 py-1.5 rounded-[2px] focus:outline-none focus:border-[color:var(--accent-500)]";
 const Lbl = ({ t, req, children }) => (
   <div className="flex flex-col gap-0.5">
-    <label className="text-[10px] text-[#888] uppercase tracking-wider">{t}{req && <span className="text-[#f48771] ml-0.5">*</span>}</label>
+    <label className="text-[10px] text-white uppercase tracking-wider">{t}{req && <span className="text-[#f48771] ml-0.5">*</span>}</label>
     {children}
   </div>
 );
@@ -28,7 +28,7 @@ const Modal = ({ title, width = 420, onClose, children }) => (
     <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-[3px] shadow-2xl" style={{ width }} onClick={e => e.stopPropagation()}>
       <div className="flex items-center h-9 px-4 border-b border-black/40 bg-[color:var(--bg-surface-1)]">
         <span className="text-[12px] font-semibold text-[color:var(--text-primary)] flex-1">{title}</span>
-        <button onClick={onClose} className="text-[#555] hover:text-[#ccc]"><X size={14} /></button>
+        <button onClick={onClose} className="text-white hover:text-white"><X size={14} /></button>
       </div>
       {children}
     </div>
@@ -36,13 +36,13 @@ const Modal = ({ title, width = 420, onClose, children }) => (
 );
 
 const Badge = ({ on, label }) => (
-  <span className={`px-1.5 py-0.5 rounded-[2px] text-[10px] font-medium ${on ? 'bg-[#22c55e]/20 text-[#4ec9b0]' : 'bg-[#555]/30 text-[#888]'}`}>
+  <span className={`px-1.5 py-0.5 rounded-[2px] text-[10px] font-medium ${on ? 'bg-[color:var(--accent-soft)] text-[color:var(--success-500)]' : 'bg-[#555]/30 text-white'}`}>
     {label ?? (on ? 'Enabled' : 'Disabled')}
   </span>
 );
 
 const RuleTypeBadge = ({ type }) => {
-  const color = type === 'deny' ? 'bg-[#ef4444]/20 text-[#f48771]' : 'bg-[#22c55e]/20 text-[#4ec9b0]';
+  const color = type === 'deny' ? 'bg-[#ef4444]/20 text-[#f48771]' : 'bg-[color:var(--accent-soft)] text-[color:var(--success-500)]';
   return <span className={`px-1.5 py-0.5 rounded-[2px] text-[10px] font-medium ${color}`}>{fmt(type)}</span>;
 };
 
@@ -112,7 +112,7 @@ const IpRestrictionsTab = () => {
           </Lbl>
           {error && <div className="text-[#f48771] text-[11px] bg-[#3a1c1c] px-3 py-2 rounded-[2px]">{error}</div>}
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="px-3 py-1.5 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] rounded-[2px]">Cancel</button>
+            <button type="button" onClick={onClose} className="px-3 py-1.5 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-white rounded-[2px]">Cancel</button>
             <button type="submit" disabled={saving} className="px-3 py-1.5 text-[11px] bg-[color:var(--accent-500)] hover:bg-[#1a8ad4] text-white rounded-[2px] disabled:opacity-50">
               {saving ? 'Creating…' : 'Create Rule'}
             </button>
@@ -131,32 +131,32 @@ const IpRestrictionsTab = () => {
         <button onClick={() => setPopup(true)} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--accent-500)] hover:bg-[#1a8ad4] text-white rounded-[2px]">
           <Plus size={11} /> New Rule
         </button>
-        <button onClick={load} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] rounded-[2px]">
+        <button onClick={load} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-white rounded-[2px]">
           <RefreshCw size={11} /> Refresh
         </button>
       </div>
       <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 select-none">
         {cols.map(([label, width]) => (
-          <div key={label} className={`${width} px-3 py-1.5 text-[11px] font-medium text-[#aaa] shrink-0`}>{label}</div>
+          <div key={label} className={`${width} px-3 py-1.5 text-[11px] font-medium text-white shrink-0`}>{label}</div>
         ))}
       </div>
       <div className="flex-1 overflow-auto">
         {loading ? (
-          <div className="flex items-center justify-center h-20 text-[11px] text-[#555]">Loading…</div>
+          <div className="flex items-center justify-center h-20 text-[11px] text-white">Loading…</div>
         ) : data.length === 0 ? (
-          <div className="flex items-center justify-center h-20 text-[11px] text-[#555]">No IP restrictions configured</div>
+          <div className="flex items-center justify-center h-20 text-[11px] text-white">No IP restrictions configured</div>
         ) : data.map((row, idx) => (
           <div key={row.id} className={`flex items-center border-b border-black/20 hover:bg-blue-600/10 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
-            <div className="w-10 px-3 py-1.5 text-[11px] text-[#555] shrink-0">{row.id}</div>
+            <div className="w-10 px-3 py-1.5 text-[11px] text-white shrink-0">{row.id}</div>
             <div className="w-24 px-3 py-1.5 shrink-0"><RuleTypeBadge type={row.rule_type} /></div>
-            <div className="w-48 px-3 py-1.5 text-[11px] text-[#9cdcfe] font-mono shrink-0">{fmt(row.ip_pattern)}</div>
-            <div className="w-24 px-3 py-1.5 text-[11px] text-[#ccc] shrink-0">{fmt(row.scope)}</div>
-            <div className="flex-1 px-3 py-1.5 text-[11px] text-[#aaa] truncate">{fmt(row.description)}</div>
+            <div className="w-48 px-3 py-1.5 text-[11px] text-white font-mono shrink-0">{fmt(row.ip_pattern)}</div>
+            <div className="w-24 px-3 py-1.5 text-[11px] text-white shrink-0">{fmt(row.scope)}</div>
+            <div className="flex-1 px-3 py-1.5 text-[11px] text-white truncate">{fmt(row.description)}</div>
             <div className="w-20 px-3 py-1.5 shrink-0"><Badge on={row.enabled} /></div>
-            <div className="w-28 px-3 py-1.5 text-[11px] text-[#ccc] shrink-0">{fmt(row.created_by)}</div>
-            <div className="w-40 px-3 py-1.5 text-[11px] text-[#888] shrink-0">{fmtDate(row.created_at)}</div>
+            <div className="w-28 px-3 py-1.5 text-[11px] text-white shrink-0">{fmt(row.created_by)}</div>
+            <div className="w-40 px-3 py-1.5 text-[11px] text-white shrink-0">{fmtDate(row.created_at)}</div>
             <div className="w-10 px-2 py-1.5 shrink-0">
-              <button onClick={() => handleDelete(row)} disabled={deleting === row.id} className="text-[#555] hover:text-[#f48771]" title="Delete">
+              <button onClick={() => handleDelete(row)} disabled={deleting === row.id} className="text-white hover:text-[#f48771]" title="Delete">
                 <Trash2 size={12} />
               </button>
             </div>
@@ -247,7 +247,7 @@ const ConnectionThrottleTab = () => {
           </Lbl>
           {error && <div className="text-[#f48771] text-[11px] bg-[#3a1c1c] px-3 py-2 rounded-[2px]">{error}</div>}
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="px-3 py-1.5 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] rounded-[2px]">Cancel</button>
+            <button type="button" onClick={onClose} className="px-3 py-1.5 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-white rounded-[2px]">Cancel</button>
             <button type="submit" disabled={saving} className="px-3 py-1.5 text-[11px] bg-[color:var(--accent-500)] hover:bg-[#1a8ad4] text-white rounded-[2px] disabled:opacity-50">
               {saving ? 'Creating…' : 'Create Rule'}
             </button>
@@ -266,33 +266,33 @@ const ConnectionThrottleTab = () => {
         <button onClick={() => setPopup(true)} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--accent-500)] hover:bg-[#1a8ad4] text-white rounded-[2px]">
           <Plus size={11} /> New Rule
         </button>
-        <button onClick={load} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] rounded-[2px]">
+        <button onClick={load} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-white rounded-[2px]">
           <RefreshCw size={11} /> Refresh
         </button>
       </div>
       <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 select-none">
         {cols.map(([label, width]) => (
-          <div key={label} className={`${width} px-3 py-1.5 text-[11px] font-medium text-[#aaa] shrink-0`}>{label}</div>
+          <div key={label} className={`${width} px-3 py-1.5 text-[11px] font-medium text-white shrink-0`}>{label}</div>
         ))}
       </div>
       <div className="flex-1 overflow-auto">
         {loading ? (
-          <div className="flex items-center justify-center h-20 text-[11px] text-[#555]">Loading…</div>
+          <div className="flex items-center justify-center h-20 text-[11px] text-white">Loading…</div>
         ) : data.length === 0 ? (
-          <div className="flex items-center justify-center h-20 text-[11px] text-[#555]">No throttle rules configured</div>
+          <div className="flex items-center justify-center h-20 text-[11px] text-white">No throttle rules configured</div>
         ) : data.map((row, idx) => (
           <div key={row.id} className={`flex items-center border-b border-black/20 hover:bg-blue-600/10 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
-            <div className="w-10 px-3 py-1.5 text-[11px] text-[#555] shrink-0">{row.id}</div>
+            <div className="w-10 px-3 py-1.5 text-[11px] text-white shrink-0">{row.id}</div>
             <div className="w-44 px-3 py-1.5 text-[11px] text-[color:var(--text-primary)] shrink-0">{fmt(row.name)}</div>
-            <div className="w-20 px-3 py-1.5 text-[11px] text-[#9cdcfe] shrink-0">{fmt(row.scope)}</div>
-            <div className="w-36 px-3 py-1.5 text-[11px] text-[#aaa] font-mono shrink-0">{fmt(row.scope_value)}</div>
-            <div className="w-24 px-3 py-1.5 text-[11px] text-[#4ec9b0] shrink-0">{fmt(row.max_connections)}</div>
-            <div className="w-20 px-3 py-1.5 text-[11px] text-[#ccc] shrink-0">{fmt(row.per_seconds)}s</div>
-            <div className="w-16 px-3 py-1.5 text-[11px] text-[#ccc] shrink-0">{fmt(row.burst)}</div>
+            <div className="w-20 px-3 py-1.5 text-[11px] text-white shrink-0">{fmt(row.scope)}</div>
+            <div className="w-36 px-3 py-1.5 text-[11px] text-white font-mono shrink-0">{fmt(row.scope_value)}</div>
+            <div className="w-24 px-3 py-1.5 text-[11px] text-white shrink-0">{fmt(row.max_connections)}</div>
+            <div className="w-20 px-3 py-1.5 text-[11px] text-white shrink-0">{fmt(row.per_seconds)}s</div>
+            <div className="w-16 px-3 py-1.5 text-[11px] text-white shrink-0">{fmt(row.burst)}</div>
             <div className="w-20 px-3 py-1.5 text-[11px] text-[#f48771] shrink-0">{fmt(row.action)}</div>
             <div className="w-20 px-3 py-1.5 shrink-0"><Badge on={row.enabled} /></div>
             <div className="w-10 px-2 py-1.5 shrink-0">
-              <button onClick={() => handleDelete(row)} disabled={deleting === row.id} className="text-[#555] hover:text-[#f48771]" title="Delete">
+              <button onClick={() => handleDelete(row)} disabled={deleting === row.id} className="text-white hover:text-[#f48771]" title="Delete">
                 <Trash2 size={12} />
               </button>
             </div>
@@ -358,22 +358,22 @@ const LogManagementTab = () => {
         <div className="max-w-xl space-y-5">
           {/* Current Level Card */}
           <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-[3px] p-4">
-            <div className="text-[11px] text-[#888] uppercase tracking-wider mb-3">Current Log Level</div>
+            <div className="text-[11px] text-white uppercase tracking-wider mb-3">Current Log Level</div>
             {loading ? (
-              <div className="text-[13px] text-[#555]">Loading…</div>
+              <div className="text-[13px] text-white">Loading…</div>
             ) : (
               <div className="flex items-center gap-3">
                 <span className="text-[22px] font-bold font-mono uppercase" style={{ color: levelColor(logLevel) }}>
                   {logLevel ?? '—'}
                 </span>
-                <span className="text-[11px] text-[#555]">active on server</span>
+                <span className="text-[11px] text-white">active on server</span>
               </div>
             )}
           </div>
 
           {/* Set Level */}
           <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-[3px] p-4">
-            <div className="text-[11px] text-[#888] uppercase tracking-wider mb-3">Set Log Level</div>
+            <div className="text-[11px] text-white uppercase tracking-wider mb-3">Set Log Level</div>
             <div className="flex gap-2 flex-wrap mb-3">
               {LOG_LEVELS.map(l => (
                 <button
@@ -398,8 +398,8 @@ const LogManagementTab = () => {
 
           {/* Flush Logs */}
           <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-[3px] p-4">
-            <div className="text-[11px] text-[#888] uppercase tracking-wider mb-1">Flush Logs</div>
-            <div className="text-[11px] text-[#666] mb-3">Immediately write all buffered log entries to disk and clear the in-memory buffer.</div>
+            <div className="text-[11px] text-white uppercase tracking-wider mb-1">Flush Logs</div>
+            <div className="text-[11px] text-white mb-3">Immediately write all buffered log entries to disk and clear the in-memory buffer.</div>
             <div className="flex items-center gap-3">
               <button
                 onClick={handleFlush}
@@ -409,7 +409,7 @@ const LogManagementTab = () => {
                 {flushing ? <RefreshCw size={11} className="animate-spin" /> : <FileText size={11} />}
                 {flushing ? 'Flushing…' : 'Flush Logs'}
               </button>
-              {lastFlush && <span className="text-[11px] text-[#4ec9b0]">Last flushed: {lastFlush}</span>}
+              {lastFlush && <span className="text-[11px] text-white">Last flushed: {lastFlush}</span>}
             </div>
           </div>
 
@@ -504,13 +504,13 @@ const BackupSchedulesTab = () => {
               <input type="number" min="1" className={inp} value={form.retention_days} onChange={e => set('retention_days', e.target.value)} />
             </Lbl>
           </div>
-          <label className="flex items-center gap-2 text-[11px] text-[#ccc] cursor-pointer select-none">
+          <label className="flex items-center gap-2 text-[11px] text-white cursor-pointer select-none">
             <input type="checkbox" checked={form.compress} onChange={e => set('compress', e.target.checked)} className="accent-[color:var(--accent-500)]" />
             Compress backup archive
           </label>
           {error && <div className="text-[#f48771] text-[11px] bg-[#3a1c1c] px-3 py-2 rounded-[2px]">{error}</div>}
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="px-3 py-1.5 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] rounded-[2px]">Cancel</button>
+            <button type="button" onClick={onClose} className="px-3 py-1.5 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-white rounded-[2px]">Cancel</button>
             <button type="submit" disabled={saving} className="px-3 py-1.5 text-[11px] bg-[color:var(--accent-500)] hover:bg-[#1a8ad4] text-white rounded-[2px] disabled:opacity-50">
               {saving ? 'Creating…' : 'Create Schedule'}
             </button>
@@ -521,9 +521,9 @@ const BackupSchedulesTab = () => {
   };
 
   const statusColor = (s) => {
-    if (s === 'success') return 'text-[#4ec9b0]';
+    if (s === 'success') return 'text-white';
     if (s === 'failed') return 'text-[#f48771]';
-    return 'text-[#888]';
+    return 'text-white';
   };
 
   const sCols = [['#', 'w-10'], ['Name', 'w-48'], ['Cron', 'w-32'], ['Type', 'w-28'], ['Target Path', 'flex-1'], ['Retention', 'w-20'], ['Compress', 'w-20'], ['Enabled', 'w-20'], ['Created', 'w-36'], ['', 'w-10']];
@@ -535,79 +535,79 @@ const BackupSchedulesTab = () => {
       {/* Schedules Panel */}
       <div className="flex flex-col" style={{ height: '55%' }}>
         <div className="flex items-center gap-2 px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40">
-          <span className="text-[11px] text-[#aaa] font-medium ml-1 mr-2">Schedules</span>
+          <span className="text-[11px] text-white font-medium ml-1 mr-2">Schedules</span>
           <button onClick={() => setPopup(true)} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--accent-500)] hover:bg-[#1a8ad4] text-white rounded-[2px]">
             <Plus size={11} /> New Schedule
           </button>
-          <button onClick={loadSchedules} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] rounded-[2px]">
+          <button onClick={loadSchedules} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-white rounded-[2px]">
             <RefreshCw size={11} /> Refresh
           </button>
         </div>
         <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 select-none shrink-0">
           {sCols.map(([label, width]) => (
-            <div key={label} className={`${width} px-3 py-1.5 text-[11px] font-medium text-[#aaa] shrink-0`}>{label}</div>
+            <div key={label} className={`${width} px-3 py-1.5 text-[11px] font-medium text-white shrink-0`}>{label}</div>
           ))}
         </div>
         <div className="flex-1 overflow-auto">
           {loadingS ? (
-            <div className="flex items-center justify-center h-20 text-[11px] text-[#555]">Loading…</div>
+            <div className="flex items-center justify-center h-20 text-[11px] text-white">Loading…</div>
           ) : schedules.length === 0 ? (
-            <div className="flex items-center justify-center h-20 text-[11px] text-[#555]">No backup schedules configured</div>
+            <div className="flex items-center justify-center h-20 text-[11px] text-white">No backup schedules configured</div>
           ) : schedules.map((row, idx) => (
             <div
               key={row.id}
               onClick={() => handleSelectSchedule(row)}
               className={`flex items-center border-b border-black/20 cursor-pointer ${selectedSchedule?.id === row.id ? 'bg-blue-600/20' : idx % 2 === 0 ? 'bg-[color:var(--bg-app)] hover:bg-blue-600/10' : 'bg-[color:var(--bg-surface-1)] hover:bg-blue-600/10'}`}
             >
-              <div className="w-10 px-3 py-1.5 text-[11px] text-[#555] shrink-0">{row.id}</div>
+              <div className="w-10 px-3 py-1.5 text-[11px] text-white shrink-0">{row.id}</div>
               <div className="w-48 px-3 py-1.5 text-[11px] text-[color:var(--text-primary)] shrink-0">{fmt(row.name)}</div>
-              <div className="w-32 px-3 py-1.5 text-[11px] text-[#9cdcfe] font-mono shrink-0">{fmt(row.schedule_cron)}</div>
-              <div className="w-28 px-3 py-1.5 text-[11px] text-[#ccc] shrink-0">{fmt(row.backup_type)}</div>
-              <div className="flex-1 px-3 py-1.5 text-[11px] text-[#aaa] font-mono truncate">{fmt(row.target_path)}</div>
-              <div className="w-20 px-3 py-1.5 text-[11px] text-[#ccc] shrink-0">{fmt(row.retention_days)}d</div>
+              <div className="w-32 px-3 py-1.5 text-[11px] text-white font-mono shrink-0">{fmt(row.schedule_cron)}</div>
+              <div className="w-28 px-3 py-1.5 text-[11px] text-white shrink-0">{fmt(row.backup_type)}</div>
+              <div className="flex-1 px-3 py-1.5 text-[11px] text-white font-mono truncate">{fmt(row.target_path)}</div>
+              <div className="w-20 px-3 py-1.5 text-[11px] text-white shrink-0">{fmt(row.retention_days)}d</div>
               <div className="w-20 px-3 py-1.5 shrink-0"><Badge on={row.compress} label={row.compress ? 'Yes' : 'No'} /></div>
               <div className="w-20 px-3 py-1.5 shrink-0"><Badge on={row.enabled} /></div>
-              <div className="w-36 px-3 py-1.5 text-[11px] text-[#888] shrink-0">{fmtDate(row.created_at)}</div>
+              <div className="w-36 px-3 py-1.5 text-[11px] text-white shrink-0">{fmtDate(row.created_at)}</div>
               <div className="w-10 px-2 py-1.5 shrink-0">
-                <button onClick={e => { e.stopPropagation(); handleDelete(row); }} disabled={deleting === row.id} className="text-[#555] hover:text-[#f48771]" title="Delete">
+                <button onClick={e => { e.stopPropagation(); handleDelete(row); }} disabled={deleting === row.id} className="text-white hover:text-[#f48771]" title="Delete">
                   <Trash2 size={12} />
                 </button>
               </div>
             </div>
           ))}
         </div>
-        <div className="h-6 bg-[color:var(--bg-surface-1)] border-t border-black/40 flex items-center px-4 text-[11px] text-[#888]">
+        <div className="h-6 bg-[color:var(--bg-surface-1)] border-t border-black/40 flex items-center px-4 text-[11px] text-white">
           {selectedSchedule ? `Showing history for: ${selectedSchedule.name}` : 'Click a schedule to filter history'} — Total: {schedules.length}
         </div>
       </div>
       {/* History Panel */}
       <div className="flex flex-col flex-1 border-t-2 border-black/40">
         <div className="flex items-center gap-2 px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40">
-          <span className="text-[11px] text-[#aaa] font-medium ml-1 mr-2">Backup History</span>
-          <button onClick={() => loadHistory(selectedSchedule?.id)} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] rounded-[2px]">
+          <span className="text-[11px] text-white font-medium ml-1 mr-2">Backup History</span>
+          <button onClick={() => loadHistory(selectedSchedule?.id)} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-white rounded-[2px]">
             <RefreshCw size={11} /> Refresh
           </button>
         </div>
         <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 select-none shrink-0">
           {hCols.map(([label, width]) => (
-            <div key={label} className={`${width} px-3 py-1.5 text-[11px] font-medium text-[#aaa] shrink-0`}>{label}</div>
+            <div key={label} className={`${width} px-3 py-1.5 text-[11px] font-medium text-white shrink-0`}>{label}</div>
           ))}
         </div>
         <div className="flex-1 overflow-auto">
           {loadingH ? (
-            <div className="flex items-center justify-center h-16 text-[11px] text-[#555]">Loading…</div>
+            <div className="flex items-center justify-center h-16 text-[11px] text-white">Loading…</div>
           ) : history.length === 0 ? (
-            <div className="flex items-center justify-center h-16 text-[11px] text-[#555]">No backup history available</div>
+            <div className="flex items-center justify-center h-16 text-[11px] text-white">No backup history available</div>
           ) : history.map((row, idx) => (
             <div key={row.id} className={`flex items-center border-b border-black/20 hover:bg-blue-600/10 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
-              <div className="w-10 px-3 py-1.5 text-[11px] text-[#555] shrink-0">{row.id}</div>
-              <div className="w-16 px-3 py-1.5 text-[11px] text-[#555] shrink-0">{fmt(row.schedule_id)}</div>
-              <div className="w-24 px-3 py-1.5 text-[11px] text-[#ccc] shrink-0">{fmt(row.backup_type)}</div>
+              <div className="w-10 px-3 py-1.5 text-[11px] text-white shrink-0">{row.id}</div>
+              <div className="w-16 px-3 py-1.5 text-[11px] text-white shrink-0">{fmt(row.schedule_id)}</div>
+              <div className="w-24 px-3 py-1.5 text-[11px] text-white shrink-0">{fmt(row.backup_type)}</div>
               <div className={`w-20 px-3 py-1.5 text-[11px] font-medium shrink-0 ${statusColor(row.status)}`}>{fmt(row.status)}</div>
-              <div className="flex-1 px-3 py-1.5 text-[11px] text-[#aaa] font-mono truncate">{fmt(row.file_path)}</div>
-              <div className="w-24 px-3 py-1.5 text-[11px] text-[#9cdcfe] shrink-0">{fmtBytes(row.file_size_bytes)}</div>
-              <div className="w-36 px-3 py-1.5 text-[11px] text-[#888] shrink-0">{fmtDate(row.started_at)}</div>
-              <div className="w-36 px-3 py-1.5 text-[11px] text-[#888] shrink-0">{fmtDate(row.finished_at)}</div>
+              <div className="flex-1 px-3 py-1.5 text-[11px] text-white font-mono truncate">{fmt(row.file_path)}</div>
+              <div className="w-24 px-3 py-1.5 text-[11px] text-white shrink-0">{fmtBytes(row.file_size_bytes)}</div>
+              <div className="w-36 px-3 py-1.5 text-[11px] text-white shrink-0">{fmtDate(row.started_at)}</div>
+              <div className="w-36 px-3 py-1.5 text-[11px] text-white shrink-0">{fmtDate(row.finished_at)}</div>
             </div>
           ))}
         </div>
@@ -703,7 +703,7 @@ const PluginManagementTab = () => {
           </Lbl>
           {error && <div className="text-[#f48771] text-[11px] bg-[#3a1c1c] px-3 py-2 rounded-[2px]">{error}</div>}
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="px-3 py-1.5 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] rounded-[2px]">Cancel</button>
+            <button type="button" onClick={onClose} className="px-3 py-1.5 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-white rounded-[2px]">Cancel</button>
             <button type="submit" disabled={saving} className="px-3 py-1.5 text-[11px] bg-[color:var(--accent-500)] hover:bg-[#1a8ad4] text-white rounded-[2px] disabled:opacity-50">
               {saving ? 'Installing…' : 'Install Plugin'}
             </button>
@@ -727,35 +727,35 @@ const PluginManagementTab = () => {
         <button onClick={() => setPopup(true)} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--accent-500)] hover:bg-[#1a8ad4] text-white rounded-[2px]">
           <Plus size={11} /> Install Plugin
         </button>
-        <button onClick={load} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] rounded-[2px]">
+        <button onClick={load} className="flex items-center gap-1 px-2 py-1 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-white rounded-[2px]">
           <RefreshCw size={11} /> Refresh
         </button>
       </div>
       <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 select-none">
         {cols.map(([label, width]) => (
-          <div key={label} className={`${width} px-3 py-1.5 text-[11px] font-medium text-[#aaa] shrink-0`}>{label}</div>
+          <div key={label} className={`${width} px-3 py-1.5 text-[11px] font-medium text-white shrink-0`}>{label}</div>
         ))}
       </div>
       <div className="flex-1 overflow-auto">
         {loading ? (
-          <div className="flex items-center justify-center h-20 text-[11px] text-[#555]">Loading…</div>
+          <div className="flex items-center justify-center h-20 text-[11px] text-white">Loading…</div>
         ) : data.length === 0 ? (
-          <div className="flex items-center justify-center h-20 text-[11px] text-[#555]">No plugins installed</div>
+          <div className="flex items-center justify-center h-20 text-[11px] text-white">No plugins installed</div>
         ) : data.map((row, idx) => (
           <div key={row.id} className={`flex items-center border-b border-black/20 hover:bg-blue-600/10 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
-            <div className="w-10 px-3 py-1.5 text-[11px] text-[#555] shrink-0">{row.id}</div>
+            <div className="w-10 px-3 py-1.5 text-[11px] text-white shrink-0">{row.id}</div>
             <div className="w-44 px-3 py-1.5 text-[11px] text-[color:var(--text-primary)] font-medium shrink-0">{fmt(row.name)}</div>
-            <div className="w-20 px-3 py-1.5 text-[11px] text-[#888] font-mono shrink-0">{fmt(row.version)}</div>
+            <div className="w-20 px-3 py-1.5 text-[11px] text-white font-mono shrink-0">{fmt(row.version)}</div>
             <div className="w-28 px-3 py-1.5 shrink-0">{typeBadge(row.plugin_type)}</div>
-            <div className="flex-1 px-3 py-1.5 text-[11px] text-[#aaa] truncate">{fmt(row.description)}</div>
-            <div className="w-20 px-3 py-1.5 text-[11px] text-[#9cdcfe] shrink-0">{fmt(row.priority)}</div>
+            <div className="flex-1 px-3 py-1.5 text-[11px] text-white truncate">{fmt(row.description)}</div>
+            <div className="w-20 px-3 py-1.5 text-[11px] text-white shrink-0">{fmt(row.priority)}</div>
             <div className="w-20 px-3 py-1.5 shrink-0"><Badge on={row.enabled} /></div>
-            <div className="w-36 px-3 py-1.5 text-[11px] text-[#888] shrink-0">{fmtDate(row.installed_at)}</div>
+            <div className="w-36 px-3 py-1.5 text-[11px] text-white shrink-0">{fmtDate(row.installed_at)}</div>
             <div className="w-24 px-2 py-1.5 flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => handleToggle(row)}
                 disabled={toggling === row.id}
-                className={`p-1 rounded-[2px] ${row.enabled ? 'text-[#4ec9b0] hover:bg-[#4ec9b0]/10' : 'text-[#555] hover:text-[#4ec9b0] hover:bg-[#4ec9b0]/10'}`}
+                className={`p-1 rounded-[2px] ${row.enabled ? 'text-[color:var(--success-500)] hover:bg-[color:var(--accent-soft)]' : 'text-[color:var(--text-primary)] hover:text-[color:var(--success-500)] hover:bg-[color:var(--accent-soft)]'}`}
                 title={row.enabled ? 'Disable' : 'Enable'}
               >
                 {row.enabled ? <Power size={11} /> : <PowerOff size={11} />}
@@ -763,7 +763,7 @@ const PluginManagementTab = () => {
               <button
                 onClick={() => handleUninstall(row)}
                 disabled={uninstalling === row.id}
-                className="p-1 text-[#555] hover:text-[#f48771] hover:bg-[#f48771]/10 rounded-[2px]"
+                className="p-1 text-white hover:text-[#f48771] hover:bg-[#f48771]/10 rounded-[2px]"
                 title="Uninstall"
               >
                 <Trash2 size={11} />
@@ -804,15 +804,15 @@ const SecurityAccessView = ({ initialTab }) => {
   return (
     <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden">
       <div className="flex items-center px-4 py-2 bg-[color:var(--bg-surface-1)] border-b border-black/40">
-        <Shield size={13} className="text-[#21BA45] mr-2" />
-        <span className="text-[11px] text-[#888]">Security &amp; Access — IP restrictions, throttle rules, log level, backup schedules, and plugin management. Requires <span className="text-[#9cdcfe]">server_admin</span> permission.</span>
+        <Shield size={13} className="text-white mr-2" />
+        <span className="text-[11px] text-white">Security &amp; Access — IP restrictions, throttle rules, log level, backup schedules, and plugin management. Requires <span className="text-white">server_admin</span> permission.</span>
       </div>
       <div className="flex bg-[color:var(--bg-surface-1)] border-b border-black/40">
         {TABS.map(({ id, label, icon }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`flex items-center gap-1.5 px-4 h-[30px] text-[11px] border-b-2 transition-colors ${tab === id ? 'border-[color:var(--accent-500)] text-[color:var(--text-primary)] bg-[color:var(--bg-app)]' : 'border-transparent text-[#888] hover:text-[#ccc] hover:bg-[color:var(--bg-surface-1)]'}`}
+            className={`flex items-center gap-1.5 px-4 h-[30px] text-[11px] border-b-2 transition-colors ${tab === id ? 'border-[color:var(--accent-500)] text-[color:var(--text-primary)] bg-[color:var(--bg-app)]' : 'border-transparent text-white hover:text-white hover:bg-[color:var(--bg-surface-1)]'}`}
           >
             {React.createElement(icon, { size: 11 })}
             {label}

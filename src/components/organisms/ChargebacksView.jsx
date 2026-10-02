@@ -28,11 +28,11 @@ const fmtTs = (v) => { if (!v) return '—'; try { return new Date(v * 1000).toL
 
 const STATUS_STYLE = {
   open:     { color: 'text-[#f4c96e]', bg: 'bg-[#f4c96e]/10' },
-  resolved: { color: 'text-[#4ec9b0]', bg: 'bg-[#4ec9b0]/10' },
+  resolved: { color: 'text-[color:var(--success-500)]', bg: 'bg-[color:var(--accent-soft)]' },
   rejected: { color: 'text-[#f48771]', bg: 'bg-[#f48771]/10' },
 };
 const Badge = ({ status }) => {
-  const s = STATUS_STYLE[status] || { color: 'text-[#aaa]', bg: 'bg-white/5' };
+  const s = STATUS_STYLE[status] || { color: 'text-white', bg: 'bg-white/5' };
   return <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-[2px] ${s.color} ${s.bg}`}>{status || '—'}</span>;
 };
 
@@ -60,7 +60,7 @@ const CreatePopup = ({ onClose, onSaved }) => {
 
   const Lbl = ({ t, req, children }) => (
     <div className="flex flex-col gap-0.5">
-      <label className="text-[10px] text-[#888] uppercase tracking-wider">{t}{req && <span className="text-[#f48771] ml-0.5">*</span>}</label>
+      <label className="text-[10px] text-white uppercase tracking-wider">{t}{req && <span className="text-[#f48771] ml-0.5">*</span>}</label>
       {children}
     </div>
   );
@@ -70,7 +70,7 @@ const CreatePopup = ({ onClose, onSaved }) => {
       <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-[3px] shadow-2xl w-[420px]" onClick={e => e.stopPropagation()}>
         <div className="flex items-center h-9 px-4 border-b border-black/40 bg-[color:var(--bg-surface-1)]">
           <span className="text-[12px] font-semibold text-[color:var(--text-primary)] flex-1">Create Chargeback</span>
-          <button onClick={onClose} className="text-[#555] hover:text-[#ccc]"><X size={14} /></button>
+          <button onClick={onClose} className="text-white hover:text-white"><X size={14} /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-3">
@@ -83,7 +83,7 @@ const CreatePopup = ({ onClose, onSaved }) => {
           </div>
           {error && <div className="text-[11px] text-[#f48771] bg-[color:var(--bg-surface-2)] px-3 py-1.5 rounded-[2px]">{error}</div>}
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] rounded-[2px]">Cancel</button>
+            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-white rounded-[2px]">Cancel</button>
             <button type="submit" disabled={loading} className="h-[26px] px-4 text-[11px] bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] disabled:opacity-50 text-white rounded-[2px]">{loading ? 'Creating…' : 'Create'}</button>
           </div>
         </form>
@@ -115,30 +115,30 @@ const ResolvePopup = ({ row, onClose, onSaved }) => {
       <div className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-[3px] shadow-2xl w-[380px]" onClick={e => e.stopPropagation()}>
         <div className="flex items-center h-9 px-4 border-b border-black/40 bg-[color:var(--bg-surface-1)]">
           <span className="text-[12px] font-semibold text-[color:var(--text-primary)] flex-1">Resolve Chargeback #{row.id}</span>
-          <button onClick={onClose} className="text-[#555] hover:text-[#ccc]"><X size={14} /></button>
+          <button onClick={onClose} className="text-white hover:text-white"><X size={14} /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3">
-          <div className="bg-[color:var(--bg-app)] rounded-[2px] px-3 py-2 text-[11px] text-[#888] border border-[color:var(--border-default)]">
+          <div className="bg-[color:var(--bg-app)] rounded-[2px] px-3 py-2 text-[11px] text-white border border-[color:var(--border-default)]">
             Login: <span className="text-[color:var(--text-primary)]">{row.account_login}</span> · Amount: <span className="text-[#f48771] font-semibold">{row.amount}</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-0.5">
-              <label className="text-[10px] text-[#888] uppercase">Resolution Status<span className="text-[#f48771] ml-0.5">*</span></label>
+              <label className="text-[10px] text-white uppercase">Resolution Status<span className="text-[#f48771] ml-0.5">*</span></label>
               <select className={inp} value={form.status} onChange={e => set('status', e.target.value)}>
                 <option value="resolved">resolved</option>
                 <option value="rejected">rejected</option>
               </select>
             </div>
             <div className="flex flex-col gap-0.5">
-              <label className="text-[10px] text-[#888] uppercase">Notes</label>
+              <label className="text-[10px] text-white uppercase">Notes</label>
               <input className={inp} value={form.resolution} onChange={e => set('resolution', e.target.value)} placeholder="Refund issued…" />
             </div>
           </div>
           {error && <div className="text-[11px] text-[#f48771] bg-[color:var(--bg-surface-2)] px-3 py-1.5 rounded-[2px]">{error}</div>}
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] rounded-[2px]">Cancel</button>
+            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-white rounded-[2px]">Cancel</button>
             <button type="submit" disabled={loading}
-              className={`h-[26px] px-4 text-[11px] disabled:opacity-50 text-white rounded-[2px] ${form.status === 'resolved' ? 'bg-[#4ec9b0] hover:bg-[#5dd9be]' : 'bg-[#e51400] hover:bg-[#ff2d00]'}`}>
+              className={`h-[26px] px-4 text-[11px] disabled:opacity-50 text-white rounded-[2px] ${form.status === 'resolved' ? 'bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-700)]' : 'bg-[#e51400] hover:bg-[#ff2d00]'}`}>
               {loading ? 'Saving…' : form.status === 'resolved' ? 'Resolve' : 'Reject'}
             </button>
           </div>
@@ -199,13 +199,13 @@ const ChargebacksView = () => {
         </button>
         <div className="flex items-center gap-1.5 ml-3">
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-            className="h-[22px] bg-[color:var(--bg-surface-2)] border border-[#555] text-[#ccc] text-[11px] px-2 rounded-[2px]">
+            className="h-[22px] bg-[color:var(--bg-surface-2)] border border-[#555] text-white text-[11px] px-2 rounded-[2px]">
             <option value="">All status</option>
             {['open','resolved','rejected'].map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-          <button onClick={fetchData} className="h-[22px] px-2.5 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] text-[11px] rounded-[2px] border border-[#555]">Filter</button>
+          <button onClick={fetchData} className="h-[22px] px-2.5 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-white text-[11px] rounded-[2px] border border-[#555]">Filter</button>
         </div>
-        <div className="ml-auto pr-2"><button onClick={fetchData} className="text-[#999] hover:text-white"><RefreshCw size={13} /></button></div>
+        <div className="ml-auto pr-2"><button onClick={fetchData} className="text-white hover:text-white"><RefreshCw size={13} /></button></div>
       </div>
 
       <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 sticky top-0 z-10 select-none shrink-0">
@@ -218,19 +218,19 @@ const ChargebacksView = () => {
           <div key={row.id || idx}
             onContextMenu={e => { e.preventDefault(); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, row }); }}
             className={`flex border-b border-black/10 hover:bg-blue-600/10 ${idx%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}>
-            <div className="w-[60px] px-3 py-1 text-[12px] text-[#9cdcfe] font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.id)}</div>
+            <div className="w-[60px] px-3 py-1 text-[12px] text-white font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.id)}</div>
             <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.deposit_id)}</div>
             <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-primary)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.account_login)}</div>
             <div className="w-[100px] px-3 py-1 text-[12px] text-[#f48771] font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.amount)}</div>
             <div className="w-[100px] px-3 py-1 border-r border-black/10 shrink-0 flex items-center"><Badge status={row.status} /></div>
             <div className="w-[220px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.reason)}</div>
             <div className="w-[180px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.resolution)}</div>
-            <div className="w-[150px] px-3 py-1 text-[11px] text-[#888] font-mono border-r border-black/10 shrink-0 flex items-center">{fmtTs(row.created_at)}</div>
-            <div className="flex-1 px-3 py-1 text-[11px] text-[#888] font-mono border-r border-black/10 flex items-center">{fmtTs(row.resolved_at)}</div>
+            <div className="w-[150px] px-3 py-1 text-[11px] text-white font-mono border-r border-black/10 shrink-0 flex items-center">{fmtTs(row.created_at)}</div>
+            <div className="flex-1 px-3 py-1 text-[11px] text-white font-mono border-r border-black/10 flex items-center">{fmtTs(row.resolved_at)}</div>
             <div className="w-[90px] px-2 py-1 flex items-center shrink-0">
               {row.status === 'open' && (
                 <button onClick={() => setResolveRow(row)}
-                  className="flex items-center gap-1 h-[20px] px-2 bg-[#4ec9b0]/20 hover:bg-[#4ec9b0]/40 text-[#4ec9b0] text-[10px] rounded-[2px]">
+                  className="flex items-center gap-1 h-[20px] px-2 bg-[color:var(--accent-soft)] hover:bg-[color:var(--accent-100)] text-[color:var(--success-500)] text-[10px] rounded-[2px]">
                   <CheckCircle size={10} /> Resolve
                 </button>
               )}
@@ -249,7 +249,7 @@ const ChargebacksView = () => {
           <div className="px-4 py-1 hover:bg-[color:var(--accent-500)] hover:text-white cursor-pointer" onClick={() => { setCreateOpen(true); setContextMenu({ visible: false }); }}>Create Chargeback</div>
           {contextMenu.row?.status === 'open' && <>
             <div className="h-px bg-[color:var(--border-default)] my-1 mx-2"></div>
-            <div className="px-4 py-1 hover:bg-[#4ec9b0]/30 hover:text-[#4ec9b0] cursor-pointer" onClick={() => { setResolveRow(contextMenu.row); setContextMenu({ visible: false }); }}>Resolve / Reject</div>
+            <div className="px-4 py-1 hover:bg-[color:var(--accent-soft)] hover:text-[color:var(--success-500)] cursor-pointer" onClick={() => { setResolveRow(contextMenu.row); setContextMenu({ visible: false }); }}>Resolve / Reject</div>
           </>}
         </div>
       )}

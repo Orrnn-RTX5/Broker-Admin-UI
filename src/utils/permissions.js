@@ -1,3 +1,4 @@
+import { canViewGroups } from './groupAccess.js';
 // Client-side RBAC helpers. These guards are a defense-in-depth UX layer only;
 // the broker backend remains authoritative on every privileged operation.
 
@@ -15,6 +16,7 @@ export const PERMISSION_KEYS = Object.freeze({
   MANAGE_COMMUNICATIONS: 'manage_communications',
   MANAGE_FINANCES: 'manage_finances',
   MANAGE_GROUPS: 'manage_groups',
+  VIEW_GROUPS: 'view_groups',
   MANAGE_IB: 'manage_ib',
   MANAGE_KYC: 'manage_kyc',
   MANAGE_MANAGERS: 'manage_managers',
@@ -59,6 +61,7 @@ export const ROLE_PERMISSION_OPTIONS = Object.freeze([
   { key: PERMISSION_KEYS.DEPOSIT, label: 'Deposit' },
   { key: PERMISSION_KEYS.WITHDRAW, label: 'Withdraw' },
   { key: PERMISSION_KEYS.CREDIT, label: 'Credit' },
+  { key: PERMISSION_KEYS.VIEW_GROUPS, label: 'View Groups' },
   { key: PERMISSION_KEYS.MANAGE_GROUPS, label: 'Manage Groups' },
   { key: PERMISSION_KEYS.MANAGE_MANAGERS, label: 'Manage Managers' },
   { key: PERMISSION_KEYS.MANAGE_KYC, label: 'Manage KYC' },
@@ -189,8 +192,8 @@ export const VIEW_PERMISSIONS = Object.freeze({
   'Transaction History': PERMISSION_KEYS.MANAGE_PAYMENTS,
 
   // Group, route, and manager administration
-  'Groups': PERMISSION_KEYS.MANAGE_GROUPS,
-  'LP Routing': PERMISSION_KEYS.MANAGE_GROUPS,
+  'Groups': PERMISSION_KEYS.VIEW_GROUPS,
+  'LP Routing': PERMISSION_KEYS.VIEW_GROUPS,
   'Gateways': PERMISSION_KEYS.SERVER_ADMIN,
   'Feed Tenants': PERMISSION_KEYS.SERVER_ADMIN,
   'Downstream access': ADMIN_ONLY_VIEW,
@@ -247,6 +250,7 @@ export const requiredPermissionForView = (viewLabel) =>
   VIEW_PERMISSIONS[viewLabel] ?? null;
 
 export const canAccessView = (user, viewLabel) => {
+  if (['Groups', 'LP Routing'].includes(viewLabel)) return canViewGroups(user);
   const required = requiredPermissionForView(viewLabel);
   if (required === ADMIN_ONLY_VIEW) return isBrokerAdmin(user);
   return hasPermission(user, required);

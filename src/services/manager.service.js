@@ -5,6 +5,10 @@ const cleanParams = (params = {}) => Object.fromEntries(
 );
 
 export const ManagerService = {
+  updateManagerGroupAccess: async (login, mode, groups) => {
+    const res=await api.post('/manager/ManagerUpdate',{manager_login:login,group_access_mode:mode,...(groups.length ? {'allowed_groups[]':groups}: {})});
+    return res.data;
+  },
   getGroupList: async (params = {}) => {
     const res = await api.get('/manager/GroupList', {
       params: cleanParams(params),
@@ -30,7 +34,19 @@ export const ManagerService = {
     return res.data;
   },
 
+  // The broker retired mutating GETs (410) but has not published the POST successor
+  // yet. Try the POST shape used by GroupCreate/GroupUpdate first, and fall back to
+  // the legacy GET so the server's own message still reaches the UI.
   deleteGroup: async (groupName) => {
+    try {
+      const res = await api.post('/manager/GroupDelete', { group_name: groupName, group: groupName }, {
+        params: { group_name: groupName },
+      });
+      return res.data;
+    } catch (error) {
+      const status = error?.response?.status;
+      if (status !== 404 && status !== 405) throw error;
+    }
     const res = await api.get('/manager/GroupDelete', {
       params: { group: groupName }
     });
@@ -111,6 +127,22 @@ export const ManagerService = {
   // One group with its G8 `revision` (the expected_revision for GroupUpdate).
   getGroup: async (groupName) => {
     const res = await api.get('/manager/GroupGet', { params: { group: groupName } });
+    return res.data;
+  },
+
+  // Every global instrument with the group's trade override and effective
+  // permission: { group, legacy_allow_list, allow_list_count, blocked,
+  // feed_scoped, symbols: [{ symbol, category, global_enabled,
+  // group_override: null | 'off', effective, status }] }.
+  getGroupSymbolOverrides: async (groupName) => {
+    const res = await api.get('/manager/GroupSymbolOverridesGet', { params: { group: groupName } });
+    return res.data;
+  },
+
+  // Sets (trade_allowed false) or clears (true) group trade overrides. Never
+  // changes the group's allowed/blocked lists. Returns the Get shape.
+  saveGroupSymbolOverrides: async (groupName, changes) => {
+    const res = await api.post('/manager/GroupSymbolOverridesSave', { group: groupName, changes });
     return res.data;
   },
 

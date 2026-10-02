@@ -1,3 +1,5 @@
+import GroupAccessFields from '../organisms/GroupAccessFields';
+import { validateGroupAssignment } from '../../utils/groupAccess';
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Check } from 'lucide-react';
@@ -25,7 +27,7 @@ const CheckboxIcon = ({ checked, indeterminate, isRedCross }) => {
   }
   return (
     <div className={`w-[13px] h-[13px] border border-black/40 rounded-[2px] bg-white flex items-center justify-center ${indeterminate ? 'bg-gray-200' : ''}`}>
-      {checked && <Check size={10} className="text-blue-500" strokeWidth={3} />}
+      {checked && <Check size={10} className="text-white" strokeWidth={3} />}
       {!checked && indeterminate && <div className="w-2 h-2 bg-blue-500 rounded-sm"></div>}
     </div>
   );
@@ -33,6 +35,8 @@ const CheckboxIcon = ({ checked, indeterminate, isRedCross }) => {
 
 const ManagerPropertiesPopup = ({ manager, onClose }) => {
   const [activeTab, setActiveTab] = useState('Common');
+ const [groupMode,setGroupMode]=useState(manager?.group_access_mode || 'none');
+ const [assignedGroups,setAssignedGroups]=useState(manager?.allowed_groups || []);
   const [roleId, setRoleId] = useState(() => manager?.role_id || '');
 
   const { data: rolesResponse } = useRoles();
@@ -43,16 +47,19 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
       if (roleId && roleId !== manager?.role_id) {
         await ManagerService.updateManagerRole(manager.login, roleId);
       }
+      validateGroupAssignment(groupMode,assignedGroups);
+      await ManagerService.updateManagerGroupAccess(manager.login,groupMode,assignedGroups);
       onClose();
     } catch (err) {
       alert("Failed to update manager settings: " + err.message);
     }
   };
 
-  const tabs = ['Common', 'Permissions', 'Reports', 'IP Access List'];
+  const tabs = ['Common', 'Permissions', 'Group Access', 'Reports', 'IP Access List'];
 
   const renderContent = () => {
     switch (activeTab) {
+      case 'Group Access': return <GroupAccessFields mode={groupMode} groups={assignedGroups} onChange={(mode,groups)=>{setGroupMode(mode);setAssignedGroups(groups);}} />;
       case 'Common':
         return (
           <div className="flex-1 flex flex-col overflow-hidden pt-2 text-[color:var(--text-secondary)]">
@@ -90,10 +97,10 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
                   <label className="text-[12px] mt-1 shrink-0">Groups:</label>
                   <div className="flex-1 border border-[color:var(--border-strong)] bg-transparent overflow-y-auto min-h-0">
                     <div className="bg-[color:var(--bg-surface-1)] px-2 py-1 flex items-center text-[12px] text-[color:var(--text-primary)] hover:bg-blue-600/30 cursor-pointer">
-                      <span className="text-blue-400 mr-2">👥</span> demo\Propfirm
+                      <span className="text-white mr-2">👥</span> demo\Propfirm
                     </div>
                     <div className="px-2 py-1 flex items-center text-[12px] text-[color:var(--text-primary)] hover:bg-blue-600/30 cursor-pointer border-t border-[color:var(--bg-surface-2)]">
-                      <span className="text-blue-400 mr-2">👥</span> Demo\propfirm
+                      <span className="text-white mr-2">👥</span> Demo\propfirm
                     </div>
                   </div>
                 </div>
@@ -254,7 +261,7 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
                   </div>
                   {/* Add Row */}
                   <div className="flex items-center py-1 px-2 border-b border-[color:var(--bg-surface-2)] hover:bg-white/5 cursor-pointer">
-                    <div className="flex-1 flex items-center text-[12px] text-green-500">
+                    <div className="flex-1 flex items-center text-[12px] text-white">
                       <span className="mr-1.5">+</span> click to add...
                     </div>
                   </div>
@@ -288,7 +295,7 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
 
                   <div className="flex items-center py-1 px-2 border-b border-[color:var(--bg-surface-2)] hover:bg-blue-600/30">
                     <div className="flex-1 flex items-center text-[12px] text-[color:var(--text-primary)]">
-                      <span className="text-green-500 mr-2 border border-green-500 rounded-sm w-[14px] h-[10px] relative"><span className="absolute top-[2px] left-[-2px] w-[16px] border-b border-green-500"></span></span> 81.29.145.69
+                      <span className="text-white mr-2 border border-green-500 rounded-sm w-[14px] h-[10px] relative"><span className="absolute top-[2px] left-[-2px] w-[16px] border-b border-green-500"></span></span> 81.29.145.69
                     </div>
                     <div className="flex-1 text-[12px] text-[color:var(--text-primary)]">81.29.145.69</div>
                   </div>

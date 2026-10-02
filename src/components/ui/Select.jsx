@@ -8,7 +8,7 @@ export const Select = ({ value, onValueChange, placeholder, options = [], classN
     <RSelect.Trigger
       className={cn(
         'inline-flex items-center justify-between gap-2 h-9 px-3 w-full',
-        'text-[13px] rounded-[var(--radius-sm)]',
+        'text-[11px] font-normal rounded-[var(--radius-sm)]',
         'bg-[color:var(--bg-surface-1)] text-[color:var(--text-primary)]',
         'border border-[color:var(--border-strong)] shadow-[var(--shadow-sm)]',
         'hover:bg-[color:var(--bg-surface-2)] transition-colors duration-150',
@@ -37,7 +37,7 @@ export const Select = ({ value, onValueChange, placeholder, options = [], classN
               key={opt.value}
               value={opt.value}
               className={cn(
-                'relative flex items-center h-7 px-2 pr-7 text-[13px] rounded-[var(--radius-sm)]',
+                'relative flex items-center h-7 px-2 pr-7 text-[11px] font-normal rounded-[var(--radius-sm)]',
                 'text-[color:var(--text-primary)] cursor-default select-none',
                 'data-[highlighted]:bg-[color:var(--bg-surface-3)] data-[highlighted]:outline-none'
               )}

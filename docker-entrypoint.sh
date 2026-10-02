@@ -16,6 +16,14 @@ discovery_base_url="${DISCOVERY_BASE_URL:-${VITE_DISCOVERY_BASE_URL:-$default_di
 use_mock_discovery="${USE_MOCK_DISCOVERY:-${VITE_USE_MOCK_DISCOVERY:-false}}"
 backend_target="${BACKEND_TARGET:-${VITE_BACKEND_TARGET:-${BACKEND_MODE:-${VITE_BACKEND_MODE:-web}}}}"
 broker_id="${BROKER_ID:-${VITE_BROKER_ID:-}}"
+broker_name="${BROKER_NAME:-${VITE_BROKER_NAME:-}}"
+broker_server="${BROKER_SERVER:-${VITE_BROKER_SERVER:-}}"
+feed_broker_id="${FEED_BROKER_ID:-${VITE_FEED_BROKER_ID:-}}"
+feed_ws_url="${FEED_WS_URL:-${VITE_FEED_WS_URL:-}}"
+feed_status_url="${FEED_STATUS_URL:-${VITE_FEED_STATUS_URL:-}}"
+feed_send_token="${FEED_SEND_TOKEN:-${VITE_FEED_SEND_TOKEN:-true}}"
+feed_broker_token="${FEED_BROKER_TOKEN:-${VITE_FEED_BROKER_TOKEN:-}}"
+direct_manager_origins="${DIRECT_MANAGER_ORIGINS:-${VITE_DIRECT_MANAGER_ORIGINS:-}}"
 super_admin_api_host="${SUPER_ADMIN_API_HOST:-${VITE_SUPER_ADMIN_API_HOST:-https://superbackend.orrnn.com}}"
 
 normalize_origin() {
@@ -34,6 +42,14 @@ cat > "$CONFIG_FILE" <<EOF
 window.__RTX5_RUNTIME_CONFIG__ = {
   BACKEND_TARGET: "$(js_escape "$backend_target")",
   BROKER_ID: "$(js_escape "$broker_id")",
+  BROKER_NAME: "$(js_escape "$broker_name")",
+  BROKER_SERVER: "$(js_escape "$broker_server")",
+  FEED_BROKER_ID: "$(js_escape "$feed_broker_id")",
+  FEED_WS_URL: "$(js_escape "$feed_ws_url")",
+  FEED_STATUS_URL: "$(js_escape "$feed_status_url")",
+  FEED_SEND_TOKEN: "$(js_escape "$feed_send_token")",
+  FEED_BROKER_TOKEN: "$(js_escape "$feed_broker_token")",
+  DIRECT_MANAGER_ORIGINS: "$(js_escape "$direct_manager_origins")",
   SUPER_ADMIN_API_HOST: "$(js_escape "$super_admin_api_host")",
   API_HOST: "$(js_escape "$api_host")",
   WS_HOST: "$(js_escape "$ws_host")",

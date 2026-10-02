@@ -34,6 +34,19 @@ const upper = (value) => String(value ?? '').trim().toUpperCase();
 
 export const getGroupName = (group) => String(group?.group || group?.name || '');
 
+const GROUP_RECORD_NAME_KEYS = ['group', 'name', 'Group', 'Name', 'group_name', 'groupName'];
+
+/**
+ * The server's record for `groupName` in GroupList rows. Names compare
+ * case-insensitively because account group names can differ in case.
+ */
+export const findGroupRecord = (rows, groupName) => {
+  const wanted = String(groupName ?? '').trim().toLowerCase();
+  if (!wanted || !Array.isArray(rows)) return null;
+  return rows.find((row) => row && typeof row === 'object'
+    && GROUP_RECORD_NAME_KEYS.some((key) => String(row[key] ?? '').trim().toLowerCase() === wanted)) ?? null;
+};
+
 // ---------------------------------------------------------------------------
 // Margin tab
 // ---------------------------------------------------------------------------

@@ -15,12 +15,15 @@ const notifyBackendDisconnect = async (token) => {
   }
 };
 
+let accessRequestSequence = 0;
 export const AuthService = {
   getMe: async () => {
+    const token=useAuthStore.getState().accessToken;
+    const sequence=++accessRequestSequence;
     try {
       const response = await api.get('/manager/api/v2/auth/me', { _allowAuthFailure: true });
       const user = buildUserFromAuthPayload(response.data);
-      useAuthStore.getState().setUser(user);
+      if(sequence===accessRequestSequence && useAuthStore.getState().accessToken===token) useAuthStore.getState().setUser(user);
       return user;
     } catch (error) {
       throw error.response?.data || { message: 'Failed to fetch user data' };

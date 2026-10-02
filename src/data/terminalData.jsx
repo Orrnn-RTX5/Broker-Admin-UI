@@ -54,7 +54,7 @@ const BlueBookRedBookmarkIcon = (props) => (
 
 const ApiIcon = (props) => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" {...props}>
-    <text x="0" y="16" fill="#3b82f6" fontSize="11px" fontWeight="bold" fontFamily="sans-serif">API</text>
+    <text x="0" y="16" fill="#ffffff" fontSize="11px" fontWeight="bold" fontFamily="sans-serif">API</text>
   </svg>
 );
 

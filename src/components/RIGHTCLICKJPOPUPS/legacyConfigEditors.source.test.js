@@ -44,7 +44,13 @@ test('group properties: revisions, leverage, lock/conflict text and account crea
   assert.match(groupProps, /const reason = describeConfigError\(error, 'request failed\.'\);/);
   // A GroupUpdate revision conflict reloads the group and its revision, keeps
   // the admin's edits (rebased) and asks for a fresh OK; it never re-sends.
-  assert.match(groupProps, /saveMargin && readConfigError\(error\)\.kind === 'conflict'\) \{\s*setActiveTab\('Margin'\);\s*setSaveError\(await reloadGroupAfterConflict\(reason\)\);/);
+  assert.match(groupProps, /let failedTab = 'Margin';/);
+  assert.match(groupProps, /setActiveTab\(failedTab\);\s*if \(failedTab === 'Margin' && readConfigError\(error\)\.kind === 'conflict'\) \{\s*setSaveError\(await reloadGroupAfterConflict\(reason\)\);/);
+  // Later symbol failures stay on their own tab and retain the successful
+  // margin save summary instead of being mistaken for a margin conflict.
+  assert.match(groupProps, /if \(symbolsDirty\) \{\s*failedTab = 'Symbol List';/);
+  assert.match(groupProps, /if \(overridesDirty\) \{\s*failedTab = 'Symbols';/);
+  assert.match(groupProps, /setSaveError\(summary\.length > 0\s*\? `\$\{summary\.join\(' '\)\} But saving the \$\{what\} failed: \$\{reason\}`\s*: `Failed to save \$\{what\}: \$\{reason\}`\);/);
   const reload = groupProps.slice(groupProps.indexOf('const reloadGroupAfterConflict'), groupProps.indexOf('const handleOk'));
   assert.match(reload, /ManagerService\.getGroup\(currentGroupName\)/);
   assert.match(reload, /setGroupRevision\(revision\)/);

@@ -7,7 +7,7 @@ const fmtTs = (v) => { if (!v) return '—'; try { return new Date(v * 1000).toL
 const inp = "w-full bg-[color:var(--bg-surface-2)] border border-[#555] text-[color:var(--text-primary)] text-[12px] px-2 py-1.5 rounded-[2px] focus:outline-none focus:border-[color:var(--accent-500)]";
 const Lbl = ({ t, req, children }) => (
   <div className="flex flex-col gap-0.5">
-    <label className="text-[10px] text-[#888] uppercase tracking-wider">{t}{req && <span className="text-[#f48771] ml-0.5">*</span>}</label>
+    <label className="text-[10px] text-white uppercase tracking-wider">{t}{req && <span className="text-[#f48771] ml-0.5">*</span>}</label>
     {children}
   </div>
 );
@@ -18,7 +18,7 @@ const Modal = ({ title, width = 420, onClose, children }) => (
     <div className={`bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-[3px] shadow-2xl`} style={{ width }} onClick={e => e.stopPropagation()}>
       <div className="flex items-center h-9 px-4 border-b border-black/40 bg-[color:var(--bg-surface-1)]">
         <span className="text-[12px] font-semibold text-[color:var(--text-primary)] flex-1">{title}</span>
-        <button onClick={onClose} className="text-[#555] hover:text-[#ccc]"><X size={14} /></button>
+        <button onClick={onClose} className="text-white hover:text-white"><X size={14} /></button>
       </div>
       {children}
     </div>
@@ -27,8 +27,8 @@ const Modal = ({ title, width = 420, onClose, children }) => (
 
 // ── Result Box ─────────────────────────────────────────────────────────────
 const ResultBox = ({ result }) => (
-  <div className="bg-[#1e3a2e] border border-[#4ec9b0]/30 rounded-[2px] px-4 py-3">
-    <div className="text-[10px] text-[#4ec9b0] font-semibold uppercase mb-2">Success</div>
+  <div className="bg-[color:var(--accent-soft)] border border-[color:var(--accent-border)] rounded-[2px] px-4 py-3">
+    <div className="text-[10px] text-white font-semibold uppercase mb-2">Success</div>
     <pre className="text-[11px] text-[color:var(--text-primary)] font-mono whitespace-pre-wrap">{JSON.stringify(result, null, 2)}</pre>
   </div>
 );
@@ -97,13 +97,13 @@ const AutoNotificationRulesTab = () => {
             </Lbl>
             <Lbl t="Template"><input className={inp} value={form.template} onChange={e => set('template', e.target.value)} placeholder="welcome_v1" /></Lbl>
           </div>
-          <label className="flex items-center gap-2 text-[11px] text-[#ccc] cursor-pointer">
+          <label className="flex items-center gap-2 text-[11px] text-white cursor-pointer">
             <input type="checkbox" checked={form.enabled} onChange={e => set('enabled', e.target.checked)} className="accent-[color:var(--accent-500)]" />
             Enabled
           </label>
           {error && <div className="text-[11px] text-[#f48771] bg-[color:var(--bg-surface-2)] px-3 py-1.5 rounded-[2px]">{error}</div>}
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] rounded-[2px]">Cancel</button>
+            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-white rounded-[2px]">Cancel</button>
             <button type="submit" disabled={loading} className="h-[26px] px-4 text-[11px] bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] disabled:opacity-50 text-white rounded-[2px]">{loading ? 'Saving…' : mode === 'create' ? 'Create' : 'Update'}</button>
           </div>
         </form>
@@ -122,7 +122,7 @@ const AutoNotificationRulesTab = () => {
           className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px]">
           <Plus size={12} /> New Rule
         </button>
-        <div className="ml-auto"><button onClick={fetch} className="text-[#999] hover:text-white"><RefreshCw size={13} /></button></div>
+        <div className="ml-auto"><button onClick={fetch} className="text-white hover:text-white"><RefreshCw size={13} /></button></div>
       </div>
       <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 select-none shrink-0">
         {cols.map(([l, w]) => <div key={l} className={`${w} px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0`}>{l}</div>)}
@@ -131,18 +131,18 @@ const AutoNotificationRulesTab = () => {
       <div className="flex-1 overflow-auto no-scrollbar">
         {data.map((row, idx) => (
           <div key={row.id || idx} className={`flex border-b border-black/10 hover:bg-blue-600/10 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
-            <div className="w-[60px] px-3 py-1 text-[12px] text-[#9cdcfe] font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.id)}</div>
+            <div className="w-[60px] px-3 py-1 text-[12px] text-white font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.id)}</div>
             <div className="w-[180px] px-3 py-1 text-[12px] text-[color:var(--text-primary)] border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.name)}</div>
-            <div className="w-[180px] px-3 py-1 text-[12px] text-[#9cdcfe] font-mono border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.event_type)}</div>
+            <div className="w-[180px] px-3 py-1 text-[12px] text-white font-mono border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.event_type)}</div>
             <div className="w-[100px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.channel)}</div>
-            <div className="w-[160px] px-3 py-1 text-[12px] text-[#888] font-mono border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.template)}</div>
+            <div className="w-[160px] px-3 py-1 text-[12px] text-white font-mono border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.template)}</div>
             <div className="flex-1 px-3 py-1 border-r border-black/10 flex items-center">
-              <span className={`text-[11px] font-semibold ${row.enabled ? 'text-[#4ec9b0]' : 'text-[#f48771]'}`}>{row.enabled ? 'Yes' : 'No'}</span>
+              <span className={`text-[11px] font-semibold ${row.enabled ? 'text-white' : 'text-[#f48771]'}`}>{row.enabled ? 'Yes' : 'No'}</span>
             </div>
-            <div className="w-[150px] px-3 py-1 text-[11px] text-[#888] font-mono border-r border-black/10 shrink-0 flex items-center">{fmtTs(row.created_at)}</div>
+            <div className="w-[150px] px-3 py-1 text-[11px] text-white font-mono border-r border-black/10 shrink-0 flex items-center">{fmtTs(row.created_at)}</div>
             <div className="w-[100px] px-2 py-1 flex items-center gap-1 shrink-0">
               <button onClick={() => setPopup({ mode: 'edit', row })} title="Edit"
-                className="flex items-center gap-1 h-[20px] px-2 bg-[color:var(--accent-500)]/20 hover:bg-[color:var(--accent-500)]/40 text-[color:var(--accent-500)] text-[10px] rounded-[2px]">
+                className="flex items-center gap-1 h-[20px] px-2 bg-[color:var(--accent-500)]/20 hover:bg-[color:var(--accent-500)]/40 text-white text-[10px] rounded-[2px]">
                 <Edit2 size={10} />
               </button>
               <button onClick={() => handleDelete(row)} disabled={deleting === row.id} title="Delete"
@@ -234,7 +234,7 @@ const EmailCampaignsTab = () => {
           </div>
           {error && <div className="text-[11px] text-[#f48771] bg-[color:var(--bg-surface-2)] px-3 py-1.5 rounded-[2px]">{error}</div>}
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] rounded-[2px]">Cancel</button>
+            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-white rounded-[2px]">Cancel</button>
             <button type="submit" disabled={loading} className="h-[26px] px-4 text-[11px] bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] disabled:opacity-50 text-white rounded-[2px]">{loading ? 'Creating…' : 'Create'}</button>
           </div>
         </form>
@@ -251,7 +251,7 @@ const EmailCampaignsTab = () => {
           className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px]">
           <Plus size={12} /> New Campaign
         </button>
-        <div className="ml-auto"><button onClick={fetch} className="text-[#999] hover:text-white"><RefreshCw size={13} /></button></div>
+        <div className="ml-auto"><button onClick={fetch} className="text-white hover:text-white"><RefreshCw size={13} /></button></div>
       </div>
       <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 select-none shrink-0">
         {cols.map(([l, w]) => <div key={l} className={`${w} px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0`}>{l}</div>)}
@@ -260,18 +260,18 @@ const EmailCampaignsTab = () => {
       <div className="flex-1 overflow-auto no-scrollbar">
         {data.map((row, idx) => (
           <div key={row.id || idx} className={`flex border-b border-black/10 hover:bg-blue-600/10 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
-            <div className="w-[60px] px-3 py-1 text-[12px] text-[#9cdcfe] font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.id)}</div>
+            <div className="w-[60px] px-3 py-1 text-[12px] text-white font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.id)}</div>
             <div className="w-[200px] px-3 py-1 text-[12px] text-[color:var(--text-primary)] border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.name)}</div>
             <div className="w-[220px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.subject)}</div>
             <div className="w-[110px] px-3 py-1 border-r border-black/10 shrink-0 flex items-center">
-              <span className={`text-[11px] font-semibold ${row.status === 'sent' ? 'text-[#4ec9b0]' : row.status === 'scheduled' ? 'text-[#f4c96e]' : 'text-[color:var(--text-muted)]'}`}>{fmt(row.status)}</span>
+              <span className={`text-[11px] font-semibold ${row.status === 'sent' ? 'text-white' : row.status === 'scheduled' ? 'text-[#f4c96e]' : 'text-[color:var(--text-muted)]'}`}>{fmt(row.status)}</span>
             </div>
             <div className="w-[110px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.recipient_count)}</div>
-            <div className="flex-1 px-3 py-1 text-[11px] text-[#888] font-mono border-r border-black/10 flex items-center">{fmtTs(row.sent_at)}</div>
-            <div className="w-[150px] px-3 py-1 text-[11px] text-[#888] font-mono border-r border-black/10 shrink-0 flex items-center">{fmtTs(row.created_at)}</div>
+            <div className="flex-1 px-3 py-1 text-[11px] text-white font-mono border-r border-black/10 flex items-center">{fmtTs(row.sent_at)}</div>
+            <div className="w-[150px] px-3 py-1 text-[11px] text-white font-mono border-r border-black/10 shrink-0 flex items-center">{fmtTs(row.created_at)}</div>
             <div className="w-[130px] px-2 py-1 flex items-center gap-1 shrink-0">
               <button onClick={() => handleSend(row)} disabled={actionLoading === row.id} title="Send Campaign"
-                className="flex items-center gap-1 h-[20px] px-2 bg-[#4ec9b0]/20 hover:bg-[#4ec9b0]/40 text-[#4ec9b0] text-[10px] rounded-[2px] disabled:opacity-50">
+                className="flex items-center gap-1 h-[20px] px-2 bg-[color:var(--accent-soft)] hover:bg-[color:var(--accent-100)] text-[color:var(--success-500)] text-[10px] rounded-[2px] disabled:opacity-50">
                 <Send size={10} /> Send
               </button>
               <button onClick={() => handleStats(row)} disabled={actionLoading === `stats-${row.id}`} title="View Stats"
@@ -373,7 +373,7 @@ const MessageCenterTab = () => {
           </Lbl>
           {error && <div className="text-[11px] text-[#f48771] bg-[color:var(--bg-surface-2)] px-3 py-1.5 rounded-[2px]">{error}</div>}
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] rounded-[2px]">Cancel</button>
+            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-white rounded-[2px]">Cancel</button>
             <button type="submit" disabled={loading} className="h-[26px] px-4 text-[11px] bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] disabled:opacity-50 text-white rounded-[2px]">{loading ? 'Sending…' : 'Send'}</button>
           </div>
         </form>
@@ -393,9 +393,9 @@ const MessageCenterTab = () => {
         <div className="flex items-center gap-1.5 ml-3">
           <input value={filterLogin} onChange={e => setFilterLogin(e.target.value)} onKeyDown={e => e.key === 'Enter' && fetch()}
             placeholder="login…" className="h-[22px] w-[90px] bg-[color:var(--bg-surface-2)] border border-[#555] text-[color:var(--text-primary)] text-[11px] px-2 rounded-[2px] focus:outline-none focus:border-[color:var(--accent-500)]" />
-          <button onClick={fetch} className="h-[22px] px-2.5 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] text-[11px] rounded-[2px] border border-[#555]">Filter</button>
+          <button onClick={fetch} className="h-[22px] px-2.5 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-white text-[11px] rounded-[2px] border border-[#555]">Filter</button>
         </div>
-        <div className="ml-auto"><button onClick={fetch} className="text-[#999] hover:text-white"><RefreshCw size={13} /></button></div>
+        <div className="ml-auto"><button onClick={fetch} className="text-white hover:text-white"><RefreshCw size={13} /></button></div>
       </div>
       <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 select-none shrink-0">
         {cols.map(([l, w]) => <div key={l} className={`${w} px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20 shrink-0`}>{l}</div>)}
@@ -404,18 +404,18 @@ const MessageCenterTab = () => {
       <div className="flex-1 overflow-auto no-scrollbar">
         {data.map((row, idx) => (
           <div key={row.id || idx} className={`flex border-b border-black/10 hover:bg-blue-600/10 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
-            <div className="w-[60px] px-3 py-1 text-[12px] text-[#9cdcfe] font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.id)}</div>
+            <div className="w-[60px] px-3 py-1 text-[12px] text-white font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.id)}</div>
             <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-primary)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.account_login ?? row.login)}</div>
             <div className="w-[220px] px-3 py-1 text-[12px] text-[color:var(--text-primary)] border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.subject)}</div>
             <div className="w-[90px] px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.type)}</div>
             <div className="w-[80px] px-3 py-1 border-r border-black/10 shrink-0 flex items-center">
-              <span className={`text-[11px] font-semibold ${row.read ? 'text-[#4ec9b0]' : 'text-[#f4c96e]'}`}>{row.read ? 'Yes' : 'No'}</span>
+              <span className={`text-[11px] font-semibold ${row.read ? 'text-white' : 'text-[#f4c96e]'}`}>{row.read ? 'Yes' : 'No'}</span>
             </div>
-            <div className="flex-1 px-3 py-1 text-[11px] text-[#888] font-mono border-r border-black/10 flex items-center">{fmtTs(row.sent_at ?? row.created_at)}</div>
+            <div className="flex-1 px-3 py-1 text-[11px] text-white font-mono border-r border-black/10 flex items-center">{fmtTs(row.sent_at ?? row.created_at)}</div>
             <div className="w-[100px] px-2 py-1 flex items-center shrink-0">
               {!row.read && (
                 <button onClick={() => handleMarkRead(row)} disabled={actionLoading === row.id} title="Mark as Read"
-                  className="flex items-center gap-1 h-[20px] px-2 bg-[#4ec9b0]/20 hover:bg-[#4ec9b0]/40 text-[#4ec9b0] text-[10px] rounded-[2px] disabled:opacity-50">
+                  className="flex items-center gap-1 h-[20px] px-2 bg-[color:var(--accent-soft)] hover:bg-[color:var(--accent-100)] text-[color:var(--success-500)] text-[10px] rounded-[2px] disabled:opacity-50">
                   <CheckCircle size={10} /> Read
                 </button>
               )}
@@ -460,7 +460,7 @@ const PushNotificationsTab = () => {
 
     return (
       <div className="flex flex-col gap-3">
-        <div className="text-[11px] text-[#888] font-semibold uppercase tracking-wider flex items-center gap-1.5"><Bell size={11} className="text-[#f4c96e]" /> Single Push Notification</div>
+        <div className="text-[11px] text-white font-semibold uppercase tracking-wider flex items-center gap-1.5"><Bell size={11} className="text-[#f4c96e]" /> Single Push Notification</div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-3">
             <Lbl t="Account Login" req><input className={inp2} type="number" value={form.login} onChange={e => set('login', e.target.value)} placeholder="12345" /></Lbl>
@@ -502,7 +502,7 @@ const PushNotificationsTab = () => {
 
     return (
       <div className="flex flex-col gap-3">
-        <div className="text-[11px] text-[#888] font-semibold uppercase tracking-wider flex items-center gap-1.5"><Bell size={11} className="text-[#9cdcfe]" /> Bulk Push Notifications</div>
+        <div className="text-[11px] text-white font-semibold uppercase tracking-wider flex items-center gap-1.5"><Bell size={11} className="text-white" /> Bulk Push Notifications</div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <Lbl t="Account Logins (comma-separated)" req>
             <input className={inp2} value={form.logins} onChange={e => set('logins', e.target.value)} placeholder="12345, 12346, 12347" />
@@ -515,7 +515,7 @@ const PushNotificationsTab = () => {
           {error && <div className="text-[11px] text-[#f48771] bg-[color:var(--bg-surface-2)] px-3 py-1.5 rounded-[2px]">{error}</div>}
           {result && <ResultBox result={result} />}
           <button type="submit" disabled={loading}
-            className="flex items-center justify-center gap-1.5 h-[28px] px-4 text-[11px] bg-[#4ec9b0] hover:bg-[#5dd9c0] disabled:opacity-50 text-[color:var(--bg-app)] font-semibold rounded-[2px] w-fit">
+            className="flex items-center justify-center gap-1.5 h-[28px] px-4 text-[11px] bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-700)] disabled:opacity-50 text-[color:var(--accent-contrast)] font-semibold rounded-[2px] w-fit">
             <Send size={11} /> {loading ? 'Sending…' : 'Send Bulk'}
           </button>
         </form>
@@ -570,7 +570,7 @@ const SMSTab = () => {
 
     return (
       <div className="flex flex-col gap-3">
-        <div className="text-[11px] text-[#888] font-semibold uppercase tracking-wider flex items-center gap-1.5"><Smartphone size={11} className="text-[#4ec9b0]" /> Send SMS</div>
+        <div className="text-[11px] text-white font-semibold uppercase tracking-wider flex items-center gap-1.5"><Smartphone size={11} className="text-white" /> Send SMS</div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-3">
             <Lbl t="Phone Number" req><input className={inp2} value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+1234567890" /></Lbl>
@@ -619,7 +619,7 @@ const SMSTab = () => {
           <Lbl t="Variables (comma-separated)"><input className={inp2} value={form.variables} onChange={e => set('variables', e.target.value)} placeholder="amount, currency, date" /></Lbl>
           {error && <div className="text-[11px] text-[#f48771] bg-[color:var(--bg-surface-2)] px-3 py-1.5 rounded-[2px]">{error}</div>}
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] rounded-[2px]">Cancel</button>
+            <button type="button" onClick={onClose} className="h-[26px] px-4 text-[11px] bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-white rounded-[2px]">Cancel</button>
             <button type="submit" disabled={loading} className="h-[26px] px-4 text-[11px] bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] disabled:opacity-50 text-white rounded-[2px]">{loading ? 'Creating…' : 'Create'}</button>
           </div>
         </form>
@@ -637,12 +637,12 @@ const SMSTab = () => {
       {/* Templates Table */}
       <div className="flex flex-col flex-1 mt-4">
         <div className="flex items-center gap-2 px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0">
-          <span className="text-[11px] text-[#888] font-semibold uppercase tracking-wider flex items-center gap-1.5 ml-1"><Smartphone size={11} className="text-[#9cdcfe]" /> SMS Templates</span>
+          <span className="text-[11px] text-white font-semibold uppercase tracking-wider flex items-center gap-1.5 ml-1"><Smartphone size={11} className="text-white" /> SMS Templates</span>
           <button onClick={() => setCreateTplOpen(true)}
             className="flex items-center gap-1.5 h-[22px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] ml-3">
             <Plus size={11} /> New Template
           </button>
-          <div className="ml-auto"><button onClick={fetchTemplates} className="text-[#999] hover:text-white"><RefreshCw size={13} /></button></div>
+          <div className="ml-auto"><button onClick={fetchTemplates} className="text-white hover:text-white"><RefreshCw size={13} /></button></div>
         </div>
         <div className="flex bg-[color:var(--bg-surface-2)] border-b border-black/40 select-none shrink-0">
           {[['ID', 'w-[60px]'], ['Name', 'w-[200px]'], ['Body', 'flex-1'], ['Variables', 'w-[200px]'], ['Created', 'w-[150px]']].map(([l, w]) =>
@@ -652,13 +652,13 @@ const SMSTab = () => {
         <div className="flex-1 overflow-auto no-scrollbar">
           {templates.map((row, idx) => (
             <div key={row.id || idx} className={`flex border-b border-black/10 hover:bg-blue-600/10 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
-              <div className="w-[60px] px-3 py-1 text-[12px] text-[#9cdcfe] font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.id)}</div>
+              <div className="w-[60px] px-3 py-1 text-[12px] text-white font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.id)}</div>
               <div className="w-[200px] px-3 py-1 text-[12px] text-[color:var(--text-primary)] border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.name)}</div>
               <div className="flex-1 px-3 py-1 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 truncate flex items-center">{fmt(row.body)}</div>
-              <div className="w-[200px] px-3 py-1 text-[11px] text-[#888] font-mono border-r border-black/10 shrink-0 truncate flex items-center">
+              <div className="w-[200px] px-3 py-1 text-[11px] text-white font-mono border-r border-black/10 shrink-0 truncate flex items-center">
                 {Array.isArray(row.variables) ? row.variables.join(', ') : fmt(row.variables)}
               </div>
-              <div className="w-[150px] px-3 py-1 text-[11px] text-[#888] font-mono flex items-center">{fmtTs(row.created_at)}</div>
+              <div className="w-[150px] px-3 py-1 text-[11px] text-white font-mono flex items-center">{fmtTs(row.created_at)}</div>
             </div>
           ))}
           {tplLoading && <div className="p-4 text-[color:var(--text-muted)] text-[12px] italic">Loading…</div>}
@@ -704,8 +704,8 @@ const CommunicationsView = ({ initialTab }) => {
     <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center px-4 py-2 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0 select-none">
-        <span className="text-[11px] text-[#888]">
-          Push notifications, SMS, message center, email campaigns, auto-notification rules. Requires <span className="text-[#9cdcfe] font-mono">manage_communications</span> permission.
+        <span className="text-[11px] text-white">
+          Push notifications, SMS, message center, email campaigns, auto-notification rules. Requires <span className="text-white font-mono">manage_communications</span> permission.
         </span>
       </div>
       {/* Tab Bar */}
@@ -714,7 +714,7 @@ const CommunicationsView = ({ initialTab }) => {
           <button key={item.id} onClick={() => setTab(item.id)}
             className={`flex items-center gap-1.5 px-4 h-[30px] text-[11px] border-r border-black/30 transition-colors ${tab === item.id
               ? 'bg-[color:var(--bg-app)] text-white border-t-2 border-t-[color:var(--accent-500)]'
-              : 'text-[#888] hover:text-[#ccc] hover:bg-[color:var(--bg-surface-1)]'}`}>
+              : 'text-white hover:text-white hover:bg-[color:var(--bg-surface-1)]'}`}>
             {React.createElement(item.icon, { size: 11 })}
             {item.label}
           </button>

@@ -1,4 +1,6 @@
 import { refreshGroupMembership } from './services/groupMembershipRefresh.js';
+import { startManagerAccessFeed } from './services/managerAccessFeed';
+import { canViewGroup, canViewGroups, canManageGroupLifecycle, groupAccessKey } from './utils/groupAccess';
 import React from 'react';
 import MenuBar from './components/organisms/MenuBar';
 import ActionToolBar from './components/organisms/ActionToolBar';
@@ -16,17 +18,19 @@ import {nativePendingAccountTarget} from './utils/nativePendingAccountTarget';
 import {getManagerTradeScope} from './services/managerTradeApi';
 import TradeDetailsPopup from './components/RIGHTCLICKJPOPUPS/TradeDetailsPopup';
 import { HelpModal } from './components/organisms/HelpModal';
+import BugReportDialog from './components/BugReportDialog';
 import { AboutModal } from './components/organisms/AboutModal';
 import { SuperAdminConsole } from './components/organisms/SuperAdminConsole';
 
 import {
-  expireAuthSession,
+  getSearchesStorageKey,
   isAuthStorageEvent,
-  normalizeTokenExpiresAt,
+  LEGACY_SEARCHES_KEY,
   SESSION_EXPIRED_EVENT,
   useAuthStore,
   validateAuthSession,
 } from './store/authStore';
+import { startSessionRefreshScheduler } from './services/sessionRefreshScheduler';
 import { useConnectionStore } from './store/connectionStore';
 import useSymbolStore from './store/useSymbolStore';
 import { useLocalStorage } from './lib/useLocalStorage';
@@ -106,6 +110,8 @@ const AuthenticatedAppInner = ({ navigate }) => {
   const [selectedGroup, setSelectedGroup] = React.useState(null);
   const dummyGroupsRef = React.useRef(null);
   const [isPopupOpen, setIsPopupOpen] = React.useState(false);
+  // Opened by double-clicking an account: that account's group, on Margin, without the Accounts tab.
+  const [groupPopupFromAccount, setGroupPopupFromAccount] = React.useState(false);
   const [selectedEditTarget, setSelectedEditTarget] = React.useState(null);
   const [selectedSidebarNodeId, setSelectedSidebarNodeId] = React.useState(null);
   const [editingAccount, setEditingAccount] = React.useState(null);
@@ -115,6 +121,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
   const [isCreatingGroup, setIsCreatingGroup] = React.useState(false);
   const [refreshKey, setRefreshKey] = React.useState(0);
   const [helpOpen, setHelpOpen] = React.useState(false);
+  const [bugReportOpen, setBugReportOpen] = React.useState(false);
   const [aboutOpen, setAboutOpen] = React.useState(false);
   const [isSuperAdminOpen, setIsSuperAdminOpen] = React.useState(false);
   const [rowCount, setRowCount] = React.useState({ total: 0, filtered: 0, visible: 0, bytes: 0 });
@@ -126,7 +133,12 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
   const [globalTheme, setGlobalTheme] = useLocalStorage('rtx5.theme', 'light');
   const [density, setDensity] = useLocalStorage('rtx5.density', 'compact');
-  const [savedSearches, setSavedSearches] = useLocalStorage('rtx5.searches', {});
+  // Searches last for this tab and broker only, so a filter typed in an earlier
+  // session (or for another broker) can never silently hide this session's rows.
+  const [savedSearches, setSavedSearches] = useLocalStorage(getSearchesStorageKey(), {}, 'sessionStorage');
+  React.useEffect(() => {
+    try { localStorage.removeItem(LEGACY_SEARCHES_KEY); } catch { /* noop */ }
+  }, []);
   const defaultLandingView = canAccessView(currentUser, 'Integrations') ? 'Integrations' : 'Groups';
   // Keep the existing storage key so the last selected page still restores.
   const [activeTab, setActiveTab] = useLocalStorage('rtx5.activeTab', defaultLandingView);
@@ -153,20 +165,31 @@ const AuthenticatedAppInner = ({ navigate }) => {
     setSavedSearches((prev) => ({ ...prev, [activeNode]: q }));
   };
 
+
+  const groupIdentity=groupAccessKey(currentUser);
+  React.useEffect(()=>{
+    setSelectedGroup(null);setIsPopupOpen(false);setIsCreatingGroup(false);
+    setSelectedEditTarget(target=>target?.type==='group'?null:target);
+    setRefreshKey(value=>value+1);
+  },[groupIdentity]);
+
   const searchInputRef = React.useRef(null);
   React.useEffect(() => {
     if (!isAuthenticated || !accessToken) return undefined;
 
     let cancelled = false;
-    AuthService.getMe().catch(() => {
+    const refreshAccess=()=>AuthService.getMe().catch(() => {
       if (!cancelled && currentUser) {
-        setUser({ ...currentUser, permissions: null });
+        const latest=useAuthStore.getState();
+        if(latest.accessToken===accessToken) setUser({...latest.user,group_config_admin:false,group_access_mode:'none',permissions:null});
       }
     });
 
-    return () => {
-      cancelled = true;
-    };
+    refreshAccess();
+    const timer=window.setInterval(refreshAccess,5000);
+    const stopAccessFeed=startManagerAccessFeed(refreshAccess);
+    window.addEventListener('focus',refreshAccess);
+    return () => { cancelled=true;stopAccessFeed();window.clearInterval(timer);window.removeEventListener('focus',refreshAccess); };
     // Hydrate when the access token changes. currentUser is intentionally not
     // a dependency; getMe updates it and would otherwise loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -213,21 +236,11 @@ const AuthenticatedAppInner = ({ navigate }) => {
   React.useEffect(() => {
     if (!isAuthenticated || !tokenExpiresAt) return undefined;
 
-    const expiryMs = normalizeTokenExpiresAt(tokenExpiresAt);
-    if (!expiryMs) return undefined;
-
-    const delay = expiryMs - Date.now();
-    if (delay <= 0) {
-      expireAuthSession('token_expired');
-      return undefined;
-    }
-
-    const timeoutId = window.setTimeout(
-      () => expireAuthSession('token_expired'),
-      Math.min(delay, 2147483647)
-    );
-
-    return () => window.clearTimeout(timeoutId);
+    // The access token lasts about an hour; renew it before it expires instead
+    // of logging out. Restarts whenever the expiry changes, including after a
+    // refresh done by another tab.
+    const scheduler = startSessionRefreshScheduler();
+    return () => scheduler.stop();
   }, [isAuthenticated, tokenExpiresAt]);
 
   React.useEffect(() => {
@@ -311,7 +324,8 @@ const AuthenticatedAppInner = ({ navigate }) => {
   const canEditAccounts = hasPermission(currentUser, PERMISSION_KEYS.EDIT_ACCOUNTS);
   const nativePendingTarget=nativePendingAccountTarget({selected:selectedEditTarget,activeView:activeNode,accountView:isAccountEditView,canView:canViewActive,user:currentUser,scope:isAuthenticated?getManagerTradeScope():''});
   React.useEffect(()=>{if(nativePendingTargetKey!==nativePendingTarget?.key)setNativePendingTargetKey(null);},[nativePendingTargetKey,nativePendingTarget?.key]);
-  const canEditGroups = hasPermission(currentUser, PERMISSION_KEYS.MANAGE_GROUPS);
+  const canEditGroups = canViewGroups(currentUser);
+  const canCreateDeleteGroups=canManageGroupLifecycle(currentUser);
   const canEditSelectedTarget =
     (selectedEditTarget?.type === 'account' && selectedEditTarget.viewType === activeNode && isAccountEditView && canEditAccounts) ||
     (selectedEditTarget?.type === 'group' && selectedEditTarget.viewType === activeNode && canEditGroups) ||
@@ -351,7 +365,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
     const location = resolveGroupExplorerNode(node);
     if (!location) return false;
     if (!canAccessView(currentUser, 'Groups')) {
-      notify({ title: 'Groups unavailable', description: `Requires ${PERMISSION_KEYS.MANAGE_GROUPS} permission.`, tone: 'warning' });
+      notify({ title: 'Groups unavailable', description: `Requires ${PERMISSION_KEYS.VIEW_GROUPS} permission and assigned groups.`, tone: 'warning' });
       return false;
     }
     setGroupExplorerLocation(location);
@@ -523,7 +537,9 @@ const AuthenticatedAppInner = ({ navigate }) => {
     }
 
     if (target.type === 'group') {
+      if(!canViewGroup(currentUser,target.row?.name || target.row?.group)) return false;
       setSelectedGroup(target.row);
+      setGroupPopupFromAccount(false);
       setIsPopupOpen(true);
       return true;
     }
@@ -539,7 +555,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
     }
 
     return false;
-  }, [openAccountEditor]);
+  }, [openAccountEditor,currentUser]);
 
   const handleToolbarEdit = React.useCallback(() => {
     openEditTarget(selectedEditTarget);
@@ -580,12 +596,20 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
   const handleAddClick = () => {
     if (activeNode === 'Groups') {
+      if(!canCreateDeleteGroups) return;
       setIsCreatingGroup(true);
       return;
     }
     setSelectedGroup({ group: 'New Group\\Demo' });
+    setGroupPopupFromAccount(false);
     setIsPopupOpen(true);
   };
+
+  const openAccountGroupProperties = React.useCallback((group) => {
+    setSelectedGroup(group);
+    setGroupPopupFromAccount(true);
+    setIsPopupOpen(true);
+  }, []);
 
   const handleRefresh = React.useCallback(() => {
     AccountsService.invalidateCache();
@@ -656,7 +680,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
     });
   };
 
-  const parseImportFile = (text, name) => {
+  const parseImportFile = (text) => {
     const trimmed = text.trim();
     if (!trimmed) throw new Error('file is empty');
     if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
@@ -752,11 +776,10 @@ const AuthenticatedAppInner = ({ navigate }) => {
     });
   }, [notify]);
 
-  const canDeleteSelectedTarget = Boolean(selectedEditTarget?.type === 'group' && canEditGroups);
+  const canDeleteSelectedTarget = Boolean(selectedEditTarget?.type === 'group' && canCreateDeleteGroups);
   const handleToolbarDelete = React.useCallback(async (explicitTarget) => {
     const target = explicitTarget?.type === 'group' || explicitTarget?.type === 'group-branch' ? explicitTarget : selectedEditTarget;
-    if (!target) return;
-    if (!canEditGroups) return;
+    if (!target || !canCreateDeleteGroups) return;
     if (target.type === 'group-branch') {
       notify({ title: 'Group migration required', description: 'Open each group to preview complete migration and verified deletion.', tone: 'warning' });
       return;
@@ -769,14 +792,15 @@ const AuthenticatedAppInner = ({ navigate }) => {
       const groupName = target.row?.name || target.row?.group || target.id;
       if (!groupName) return;
       setSelectedGroup({ ...(target.row || {}), name: groupName, initialTab: 'Migration' });
+      setGroupPopupFromAccount(false);
       setIsPopupOpen(true);
     } else {
       notify({ title: 'Delete unavailable', description: `Deleting ${target.type} is not supported from the toolbar.`, tone: 'warning' });
     }
-  }, [selectedEditTarget, canEditGroups, notify]);
+  }, [selectedEditTarget, canCreateDeleteGroups, notify]);
 
-  const canAdd = Boolean(canEditGroups || activeNode === 'Groups' || activeNode === 'Trading Accounts' || activeNode === 'Clients' || activeNode === 'Managers');
-  const canImport = Boolean(canEditGroups || activeNode === 'Groups');
+  const canAdd = Boolean((activeNode === 'Groups' && canCreateDeleteGroups) || activeNode === 'Trading Accounts' || activeNode === 'Clients' || activeNode === 'Managers');
+  const canImport = activeNode === 'Groups' && canCreateDeleteGroups;
   const canSort = true;
 
   const handleCheckForUpdates = React.useCallback(() => {
@@ -894,7 +918,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[color:var(--bg-app)] text-[color:var(--text-primary)] font-sans">
+    <div className="admin-workspace flex flex-col h-screen w-screen overflow-hidden bg-[color:var(--bg-app)] text-[color:var(--text-primary)] font-sans">
       <MenuBar
         onMenuSelect={handleNodeSelect}
         activeNode={activeNode}
@@ -909,10 +933,11 @@ const AuthenticatedAppInner = ({ navigate }) => {
         onExportCsv={handleExportCsv}
         onImport={handleImport}
         onHelp={() => setHelpOpen(true)}
+        onReportBug={() => setBugReportOpen(true)}
         onAbout={() => setAboutOpen(true)}
         canUndo={currentIndex > 0}
         canRedo={currentIndex < history.length - 1}
-      />
+      >
 
       <ActionToolBar
         onDisconnect={handleDisconnect}
@@ -949,8 +974,10 @@ const AuthenticatedAppInner = ({ navigate }) => {
         density={density}
         onDensityToggle={() => setDensity((d) => (d === 'compact' ? 'cozy' : 'compact'))}
         onHelp={() => setHelpOpen(true)}
+        onReportBug={() => setBugReportOpen(true)}
         connStatus={connStatus}
       />
+      </MenuBar>
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <MarketWatchDock>
@@ -967,23 +994,23 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
         <div className={`flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden border-l border-[color:var(--border-default)] bg-[color:var(--bg-app)]${activeNode === 'Allocations' ? ' allocation-typography' : ''}`}>
           {!(canViewActive && ['Integrations', 'Market Overview', 'Symbols Browser', 'Symbol Management'].includes(activeNode)) && (
-          <div className="h-9 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] flex items-center px-4 gap-3 text-xs text-[color:var(--text-muted)] shadow-[var(--shadow-sm)] select-none">
-            <div className="flex items-center gap-2 text-[color:var(--text-primary)] font-semibold text-xs tracking-wide">
+          <div className="min-h-10 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] flex items-center px-4 gap-3 text-xs text-[color:var(--text-muted)] shadow-[var(--shadow-sm)] select-none">
+            <div role="heading" aria-level="1" className="flex items-center gap-2 text-[color:var(--text-primary)] font-semibold tracking-wide" style={{ fontSize: '14px', lineHeight: '18px' }}>
               {activeNode === 'Groups' ? (
-                <FolderTree size={13} className="text-[color:var(--accent-500)]" />
+                <FolderTree size={13} className="text-white" />
               ) : (activeNode === 'Trading Accounts' || activeNode === 'Clients') ? (
-                <Users size={13} className="text-[color:var(--accent-500)]" />
+                <Users size={13} className="text-white" />
               ) : activeNode !== 'Allocations' ? (
-                <Network size={13} className="text-[color:var(--accent-500)]" />
+                <Network size={13} className="text-white" />
               ) : null}
               <span>{activeNode}</span>
             </div>
             {canViewActive && rowCount.total > 0 && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-[color:var(--bg-surface-3)] text-[color:var(--text-secondary)] border border-[color:var(--border-subtle)] shadow-xs">
                 {searchQuery ? (
-                  <>Showing <strong className="text-[color:var(--accent-500)]">{rowCount.filtered}</strong> of {rowCount.total}</>
+                  <>Showing <strong className="text-white">{rowCount.filtered}</strong> of {rowCount.total}</>
                 ) : (
-                  <>{rowCount.total} {rowCount.total === 1 ? (activeNode === 'Groups' ? 'group folder' : 'row') : (activeNode === 'Groups' ? 'groups' : 'rows')}</>
+                  <>{rowCount.total} {rowCount.total === 1 ? (activeNode === 'Groups' ? 'item' : 'row') : (activeNode === 'Groups' ? 'items' : 'rows')}</>
                 )}
               </span>
             )}
@@ -994,14 +1021,15 @@ const AuthenticatedAppInner = ({ navigate }) => {
           {canViewActive && activeNode === 'Groups' ? (
             <GroupsExplorer
               dummyActionsRef={dummyGroupsRef}
-              key={groupExplorerLocation.id}
+              key={`${groupIdentity}:${groupExplorerLocation.id}`}
               location={groupExplorerLocation}
               onNavigate={navigateGroupExplorer}
               onAccountOpen={handleNodeDoubleClick}
+              onAccountGroupOpen={openAccountGroupProperties}
               onSelectionChange={handleEditableTargetSelect}
               selectedNodeId={selectedSidebarNodeId}
               onGroupEdit={(node) => openEditTarget({ type: 'group', row: node.group, viewType: 'Groups', id: node.groupName })}
-              onGroupCreate={(draft) => setIsCreatingGroup(draft ? { draft } : true)}
+              onGroupCreate={canCreateDeleteGroups ? (draft) => setIsCreatingGroup(draft ? { draft } : true) : undefined}
               onGroupDelete={handleToolbarDelete}
               deleting={isDeletingTarget}
               refreshTrigger={refreshKey}
@@ -1011,7 +1039,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
               onRowsChange={handleRowsChange}
             />
           ) : canViewActive ? (
-            <AdminDataTable
+            <AdminDataTable key={groupIdentity}
               onRowDoubleClick={handleRowDoubleClick}
               viewType={activeNode}
               onAddClick={handleAddClick}
@@ -1042,6 +1070,10 @@ const AuthenticatedAppInner = ({ navigate }) => {
             group={selectedGroup}
             onClose={() => setIsPopupOpen(false)}
             onSaved={handleGroupSaved}
+            onOpenAccount={openAccountEditor}
+            onNoChanges={groupPopupFromAccount ? undefined : (groupName) => navigateGroupExplorer({ type: 'group', groupName })}
+            initialTab={groupPopupFromAccount ? 'Margin' : (selectedGroup?.initialTab || 'Accounts')}
+            showAccountsTab={!groupPopupFromAccount}
           />
         )}
         {editingAccount && (
@@ -1058,7 +1090,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
             onClose={() => setViewingTrade(null)}
           />
         )}
-        {isCreatingGroup && (
+        {isCreatingGroup && canCreateDeleteGroups && (
           <CreateGroupPopup
             draftData={isCreatingGroup?.draft}
             onClose={() => setIsCreatingGroup(false)}
@@ -1076,6 +1108,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
       </AnimatePresence>
 
       <HelpModal open={helpOpen} onOpenChange={setHelpOpen} />
+      {bugReportOpen && <BugReportDialog onClose={() => setBugReportOpen(false)} />}
       <AboutModal open={aboutOpen} onOpenChange={setAboutOpen} />
       {isSuperAdminOpen && (
         <div className="fixed inset-0 z-[10000]">

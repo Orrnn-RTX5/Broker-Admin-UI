@@ -293,14 +293,22 @@ export const buildAdminStateWsUrl = (ticket) => {
   return url.toString();
 };
 
-export const shouldUseFeedDevProxy = () => {
+const isLocalFeedDevFlagOn = (runtimeKey, viteKey) => {
   const isDev = viteEnv.DEV === true || viteEnv.MODE === 'development';
   if (!isDev || typeof window === 'undefined') return false;
-  const explicit = String(
-    getRuntimeValue('FEED_USE_DEV_PROXY', 'VITE_FEED_USE_DEV_PROXY') ?? viteEnv.VITE_FEED_USE_DEV_PROXY ?? 'false'
-  ).toLowerCase();
+  const explicit = String(getRuntimeValue(runtimeKey, viteKey) ?? viteEnv[viteKey] ?? 'false').toLowerCase();
   return explicit === 'true' && isLocalWebHostname(window.location?.hostname);
 };
+
+export const shouldUseFeedDevProxy = () =>
+  isLocalFeedDevFlagOn('FEED_USE_DEV_PROXY', 'VITE_FEED_USE_DEV_PROXY');
+
+// Only the status fetch is subject to CORS; the feed WebSocket is not, and some
+// brokers reject it when the proxy rewrites its Origin. This proxies the status
+// request alone for brokers whose status endpoint omits CORS for localhost.
+export const shouldUseFeedStatusDevProxy = () =>
+  shouldUseFeedDevProxy() ||
+  isLocalFeedDevFlagOn('FEED_STATUS_USE_DEV_PROXY', 'VITE_FEED_STATUS_USE_DEV_PROXY');
 
 export const toLocalDevFeedProxyUrl = (
   feedUrl = '',
@@ -325,13 +333,22 @@ export const buildFeedWsUrl = () => {
   updateDynamicEndpoints();
   const brokerInfo = readBrokerInfo();
   const explicitWsUrl = getRuntimeValue('FEED_WS_URL', 'VITE_FEED_WS_URL') ||
+    brokerInfo?.feed_ws_url ||
+    brokerInfo?.ws_url ||
     brokerInfo?.env?.FEED_WS_URL ||
     brokerInfo?.env?.VITE_FEED_WS_URL ||
     viteEnv.VITE_FEED_WS_URL;
-  const base = explicitWsUrl || getBaseWsHost();
-  const rawUrl = !base ? '/ws/feed' : (base.endsWith('/ws/feed') ? base : `${base}/ws/feed`);
-  const authenticatedUrl = appendWsAuthParams(rawUrl, readWsAuthContext());
-  const proxiedUrl = toLocalDevFeedProxyUrl(authenticatedUrl);
+  const base = explicitWsUrl || getBaseWsHost() || 'wss://nexa.orrnn.com/ws/feed';
+  const rawUrl = base.endsWith('/ws/feed') ? base : `${base}/ws/feed`;
+  const authContext = readWsAuthContext();
+  const sendToken = String(
+    getRuntimeValue('FEED_SEND_TOKEN', 'VITE_FEED_SEND_TOKEN') ?? viteEnv.VITE_FEED_SEND_TOKEN ?? 'true'
+  ).toLowerCase() !== 'false';
+  const authenticatedUrl = appendWsAuthParams(rawUrl, {
+    ...authContext,
+    token: sendToken ? authContext.token : null,
+  });
+  const proxiedUrl = shouldUseFeedDevProxy() ? toLocalDevFeedProxyUrl(authenticatedUrl) : authenticatedUrl;
   try {
     const url = new URL(proxiedUrl, typeof window !== 'undefined' ? window.location.href : 'http://localhost');
     if (url.protocol === 'https:') url.protocol = 'wss:';
@@ -346,7 +363,10 @@ export const buildFeedStatusUrl = () => {
   updateDynamicEndpoints();
   const explicitStatusUrl = getRuntimeValue('FEED_STATUS_URL', 'VITE_FEED_STATUS_URL') || viteEnv.VITE_FEED_STATUS_URL;
   if (explicitStatusUrl) {
-    return toLocalDevFeedProxyUrl(explicitStatusUrl);
+    return toLocalDevFeedProxyUrl(explicitStatusUrl, shouldUseFeedStatusDevProxy());
+  }
+  if (shouldUseLocalDevProxy()) {
+    return '/ws/feed/status';
   }
   const wsUrl = buildFeedWsUrl();
   try {

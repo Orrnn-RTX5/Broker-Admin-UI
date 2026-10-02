@@ -6,7 +6,7 @@ const tones = {
   success: 'bg-transparent text-[color:var(--success-500)] border-[color:var(--border-default)]',
   warning: 'bg-transparent text-[color:var(--warning-500)] border-[color:var(--border-default)]',
   danger:  'bg-transparent text-[color:var(--danger-500)]  border-[color:var(--border-default)]',
-  info:    'bg-transparent text-[color:var(--info-500)]    border-[color:var(--border-default)]',
+  info:    'bg-transparent text-[color:var(--info-500)] border-[color:var(--border-default)]',
 };
 
 export const Badge = ({ tone = 'neutral', className, children, ...rest }) => (

@@ -24,7 +24,7 @@ test('Groups sidebar node is collapsed before dynamic group children mount', () 
   );
 });
 
-test('account lists load only when their group opens with account permission', () => {
+test('account lists load only when the Groups tree opens with account permission', () => {
   assert.doesNotMatch(src, /import \{ useAccounts \} from '\.\.\/\.\.\/hooks\/useAccounts';/);
   assert.doesNotMatch(src, /import \{ useInstruments \} from '\.\.\/\.\.\/hooks\/useInstruments';/);
   assert.doesNotMatch(src, /SIDEBAR_COUNT_LIMIT/);
@@ -33,7 +33,7 @@ test('account lists load only when their group opens with account permission', (
   assert.doesNotMatch(src, /getKnownSidebarCount/);
   assert.match(groupsTree, /expanded && canLoadAccounts/);
   assert.match(groupsTree, /canLoadGroups && canAccessView\(currentUser, 'Trading Accounts'\)/);
-  assert.match(groupsTree, /\{ group: group\.groupName \}/);
+  assert.match(groupsTree, /AccountsService\.getAllAccounts, null, \[refreshTrigger\], expanded && canLoadAccounts/);
   assert.match(groupsTree, /normalizeNavigationAccounts\(/);
   assert.doesNotMatch(terminalData, /label:\s*"Clients & Accounts"[\s\S]{0,80}count:/);
   assert.doesNotMatch(terminalData, /label:\s*"Symbols"[\s\S]{0,80}count:/);

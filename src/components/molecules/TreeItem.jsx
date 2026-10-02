@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { ChevronRight, Folder, File, LockKeyhole } from 'lucide-react';
 import { cn } from '../../lib/cn';
 
 const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, selectedLabel, selectedId, onExpandedChange, expanded, refreshTrigger, groupExplorerReveal }) => {
   const [expansion, setExpansion] = useState({ open: Boolean(item.initiallyExpanded), revealedAt: null, hasOpened: Boolean(item.initiallyExpanded) });
+  const groupId = useId();
   const rowRef = useRef(null);
   const hasChildren = Boolean(item.children?.length || item.renderChildren);
   const showArrow = hasChildren || item.lockedDropdown;
@@ -82,25 +83,66 @@ const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, selectedLabel, sel
     onDoubleClick?.(item);
   };
 
+  const handleRowKeyDown = (event) => {
+    // The chevron is a separate button; let its native keyboard click run once.
+    if (event.target !== event.currentTarget || isBlockedNavigation) return;
+
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleRowClick();
+      return;
+    }
+
+    if (event.key === 'ArrowRight' && hasChildren && !isOpen) {
+      event.preventDefault();
+      setOpen(true);
+      return;
+    }
+    if (event.key === 'ArrowLeft' && hasChildren && isOpen) {
+      event.preventDefault();
+      setOpen(false);
+      return;
+    }
+
+    if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+      const rows = [...(event.currentTarget.closest('[role="tree"]')?.querySelectorAll('[role="treeitem"]') || [])]
+        .filter((row) => row.tabIndex >= 0 && !row.closest('[hidden]'));
+      const current = rows.indexOf(event.currentTarget);
+      const next = event.key === 'Home' ? 0
+        : event.key === 'End' ? rows.length - 1
+          : current + (event.key === 'ArrowDown' ? 1 : -1);
+      if (current !== -1 && rows[next]) {
+        event.preventDefault();
+        rows[next].focus();
+      }
+    }
+  };
+
   return (
-    <div>
+    <div role="none">
       <div
         ref={rowRef}
         onClick={handleRowClick}
         onDoubleClick={handleRowDoubleClick}
+        onKeyDown={handleRowKeyDown}
+        role="treeitem"
+        tabIndex={isBlockedNavigation ? -1 : 0}
         aria-disabled={isBlockedNavigation || undefined}
         aria-expanded={hasChildren ? Boolean(isOpen) : undefined}
+        aria-owns={hasChildren && !item.lockedDropdown && (isOpen || expansion.hasOpened) ? groupId : undefined}
+        aria-selected={isActive}
+        aria-level={level + 1}
         title={isBlockedNavigation ? `${item.label} — unavailable` : undefined}
         className={cn(
-          'mx-1 flex items-center min-h-[24px] h-[24px] pr-2 select-none text-[12px] rounded-[var(--radius-sm)]',
+          'admin-tree-row mx-1 flex items-center min-h-[28px] h-[28px] pr-2 select-none text-[11px] font-normal rounded-[var(--radius-sm)]',
           showArrow && 'admin-tree-branch',
-          isBlockedNavigation ? 'cursor-not-allowed opacity-50' : 'cursor-default',
+          isBlockedNavigation ? 'cursor-not-allowed' : 'cursor-default',
           'transition-colors duration-100',
           isActive
-            ? 'bg-[#04395e] text-white font-medium shadow-[inset_2px_0_0_var(--accent-500)]'
+            ? 'bg-[color:var(--accent-100)] text-[color:var(--text-primary)] font-semibold shadow-[inset_2px_0_0_var(--accent-500)]'
             : isBlockedNavigation
               ? 'text-[color:var(--text-muted)]'
-              : 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-surface-3)] hover:text-white'
+              : 'text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)] hover:text-[color:var(--text-primary)]'
         )}
         style={{ paddingLeft: `${level * 14 + 6}px` }}
       >
@@ -111,7 +153,7 @@ const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, selectedLabel, sel
           onClick={handleArrowClick}
           onDoubleClick={event => event.stopPropagation()}
           className={cn(
-            'w-5 h-5 flex items-center justify-center shrink-0 rounded-sm enabled:hover:bg-[color:var(--bg-surface-3)] focus:outline-none',
+            'w-6 h-6 flex items-center justify-center shrink-0 rounded-sm enabled:hover:bg-[color:var(--bg-surface-3)] focus:outline-none',
             isBlockedNavigation ? 'cursor-not-allowed' : 'cursor-default'
           )}
           tabIndex={hasChildren && !isBlockedNavigation ? 0 : -1}
@@ -127,7 +169,7 @@ const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, selectedLabel, sel
           )}
         </button>
 
-        <div className={cn('w-4 h-4 flex items-center justify-center shrink-0', isActive ? 'text-white' : 'text-[color:var(--text-muted)]')}>
+        <div className={cn('w-4 h-4 flex items-center justify-center shrink-0', isActive ? 'text-[color:var(--accent-600)]' : 'text-[color:var(--text-muted)]')}>
           <Icon size={13} />
         </div>
 
@@ -143,7 +185,7 @@ const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, selectedLabel, sel
       </div>
 
       {hasChildren && !item.lockedDropdown && (isOpen || expansion.hasOpened) && (
-        <div hidden={!isOpen}>
+        <div id={groupId} role="group" hidden={!isOpen}>
           {item.renderChildren ? item.renderChildren({ level: level + 1 }) : item.children.map((child, index) => {
             const ChildItem = child.component || TreeItem;
             return <ChildItem

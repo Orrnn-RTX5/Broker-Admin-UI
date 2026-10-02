@@ -48,7 +48,7 @@
 .allocation-url-row:last-child { border-bottom: 0; }
 .allocation-url-row input, .allocation-dialog input { width: 100%; min-width: 0; height: 31px; padding: 5px 10px; background: var(--bg-app); border: 1px solid var(--border-default); border-radius: 3px; color: var(--text-primary); font: inherit; }
 .allocation-url-row a { display: grid; place-items: center; height: 30px; color: var(--text-secondary); border-radius: 3px; }
-.allocation-url-row a:hover { color: var(--allocation-accent); background: var(--bg-surface-3); }
+.allocation-url-row a:hover { color: #ffffff; background: var(--bg-surface-3); }
 .allocations-view .allocation-icon-button { padding: 5px; min-width: 30px; min-height: 30px; background: transparent; border-color: transparent; }
 .allocations-view .allocation-icon-button[data-active="true"] { border-color: var(--allocation-accent); color: var(--allocation-accent); }
 .allocation-groups { display: flex; flex-direction: column; flex: 1; min-height: 370px; padding: 14px 14px 0; }
@@ -63,14 +63,13 @@
 .allocation-table :is(th, td) { padding: 0 12px; border-right: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); }
 .allocation-table :is(th, td):last-child { border-right: 0; }
 .allocation-table td { height: 33px; color: var(--text-secondary); }
-.allocation-table tbody tr:not(.allocation-filler):hover { background: var(--bg-surface-3); }
+.allocation-table tbody tr:hover { background: var(--bg-surface-3); }
 .allocation-table .is-selected { background: color-mix(in srgb, var(--accent-500) 22%, var(--bg-surface-1)); }
 .allocation-table .is-selected td:first-child { box-shadow: inset 3px 0 var(--allocation-accent); }
 .allocation-group-name { color: var(--text-primary); }
 .allocation-row-actions { display: flex; gap: 5px; }
 .allocations-view .allocation-sort { border: 0; background: transparent; padding: 0; }
 .allocation-table .allocation-empty { text-align: center; padding: 30px; }
-.allocation-filler { pointer-events: none; }
 .allocation-pagination { padding: 10px 0; color: var(--text-muted); }
 .allocation-pagination > span, .allocation-pagination label { display: inline-flex; align-items: center; gap: 8px; }
 .allocation-pagination .allocation-tools { gap: 18px; }

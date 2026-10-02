@@ -326,7 +326,7 @@
 
 .dummy-icon-account {
   flex-shrink: 0;
-  color: #34d399;
+  color: var(--accent-500);
 }
 
 .dummy-group-badge {
@@ -355,7 +355,7 @@
 }
 
 .dummy-cell-empty {
-  color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
   font-size: 11px;
   user-select: none;
 }
@@ -373,7 +373,7 @@
   border: 1px solid var(--border-default, #3c3c3c);
   border-radius: 4px;
   background: var(--bg-surface-2, #252526);
-  color: var(--accent-500, #2196f3);
+  color: #ffffff;
   cursor: pointer;
 }
 
@@ -427,7 +427,7 @@
 .dummy-group-tabs [role="tab"][aria-selected="true"] {
   border-color: var(--border-default, #3c3c3c);
   background: var(--bg-app, #141414);
-  color: var(--accent-600, #42a5f5);
+  color: #ffffff;
   font-weight: 600;
   box-shadow: inset 0 -2px 0 0 var(--accent-500, #2196f3);
 }

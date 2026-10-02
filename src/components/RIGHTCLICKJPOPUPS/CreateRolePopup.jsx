@@ -1,3 +1,4 @@
+import { toggleRolePermission } from '../../utils/groupAccess';
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -17,7 +18,7 @@ const CreateRolePopup = ({ onClose, onCreated }) => {
   const [error, setError] = useState(null);
 
   const togglePermission = (key, checked) => {
-    setPermissions((current) => ({ ...current, [key]: checked }));
+    setPermissions((current) => current[key] === checked ? current : toggleRolePermission(current,key));
   };
 
   const handleSubmit = async () => {

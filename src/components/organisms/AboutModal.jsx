@@ -35,7 +35,7 @@ export const AboutModal = ({ open, onOpenChange }) => (
     <div className="space-y-4">
       <div className="flex items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-sm)] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-2)]">
-          <Info size={18} className="text-[color:var(--accent-500)]" aria-hidden="true" />
+          <Info size={18} className="text-white" aria-hidden="true" />
         </div>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -58,7 +58,7 @@ export const AboutModal = ({ open, onOpenChange }) => (
 
       <div className="grid gap-2 text-[12px] text-[color:var(--text-secondary)]">
         <div className="flex items-center gap-2">
-          <ShieldCheck size={13} className="text-[color:var(--success-500)]" aria-hidden="true" />
+          <ShieldCheck size={13} className="text-white" aria-hidden="true" />
           <span>Secure broker administration workspace</span>
         </div>
         <div className="flex items-center gap-2">
@@ -69,7 +69,7 @@ export const AboutModal = ({ open, onOpenChange }) => (
           <Mail size={13} className="text-[color:var(--text-muted)]" aria-hidden="true" />
           <a
             href={`mailto:${SUPPORT_EMAIL}`}
-            className="text-[color:var(--accent-500)] hover:text-[color:var(--accent-600)] underline-offset-2 hover:underline"
+            className="text-white hover:text-white underline-offset-2 hover:underline"
           >
             {SUPPORT_EMAIL}
           </a>

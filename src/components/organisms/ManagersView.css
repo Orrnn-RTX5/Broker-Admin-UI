@@ -1,0 +1,16 @@
+.manager-view [data-export-header] {
+  background: var(--bg-surface-2);
+  border-bottom-color: var(--border-default);
+}
+
+.manager-view [data-export-header] > div,
+.manager-view [data-export-row] > div {
+  border-right-color: var(--border-subtle);
+}
+
+.manager-view [data-export-row] {
+  min-height: var(--row-h);
+  align-items: center;
+  border-bottom-color: var(--border-subtle);
+  font-variant-numeric: tabular-nums;
+}

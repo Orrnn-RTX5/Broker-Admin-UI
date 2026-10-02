@@ -1,13 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { buildFeedWsUrl, buildFeedStatusUrl } from '../config/endpoints';
-import { extractMarketTicks, extractStreamedSymbols, mapFeedStatusRows, validMarketPrice } from '../utils/marketWatch';
+import { buildFeedWsUrl, buildFeedStatusUrl, shouldUseFeedDevProxy } from '../config/endpoints';
+import { extractMarketTicks, extractStreamedSymbols, getMarketPriceDirection, mapFeedStatusRows, validMarketPrice } from '../utils/marketWatch';
 import { createBrowserDeferredPersistStorage } from './deferredPersistStorage';
+import { getFeedOriginError, getFeedReconnectDelayMs } from './feedConnectionPolicy';
 
 const STATUS_SYNC_TTL_MS = 10000;
 // Re-read the streamed symbol inventory so SuperAdmin changes appear without a reload.
 const STATUS_POLL_MS = 15000;
-const FEED_RECONNECT_DELAY_MS = 500;
 const symbolPersistStorage = createBrowserDeferredPersistStorage();
 
 const getCurrentBrokerScope = () => {
@@ -77,7 +77,9 @@ const useSymbolStore = create(
       ws: null,
       isConnected: false,
       feedError: '',
+      feedOriginBlocked: false,
       shouldReconnect: false,
+      connectionGeneration: 0,
       reconnectTimer: null,
       brokerScope: getCurrentBrokerScope(),
       statusSyncPromise: null,
@@ -108,21 +110,22 @@ const useSymbolStore = create(
             const category = getCategory(sym);
             const prev = nextSymbols[sym];
             const numBid = validMarketPrice(bid) ? Number(bid) : null;
-            const prevBid = prev && validMarketPrice(prev.bid) ? Number(prev.bid) : null;
-
-            let dir = 'up';
-            if (numBid !== null && prevBid !== null) {
-              if (numBid < prevBid) dir = 'down';
-              else if (numBid > prevBid) dir = 'up';
-              else dir = prev.dir || 'up';
-            }
+            const numAsk = validMarketPrice(ask) ? Number(ask) : null;
+            const bidDir = numBid === null
+              ? (prev?.live ? prev.bidDir : null) ?? null
+              : getMarketPriceDirection(numBid, prev?.live ? prev.bid : null, prev?.bidDir);
+            const askDir = numAsk === null
+              ? (prev?.live ? prev.askDir : null) ?? null
+              : getMarketPriceDirection(numAsk, prev?.live ? prev.ask : null, prev?.askDir);
 
             nextSymbols[sym] = {
               ...(prev || {}),
               symbol: sym,
-              bid: validMarketPrice(bid) ? Number(bid).toFixed(5) : (prev?.bid || null),
-              ask: validMarketPrice(ask) ? Number(ask).toFixed(5) : (prev?.ask || null),
-              dir,
+              bid: numBid !== null ? numBid.toFixed(5) : (prev?.bid || null),
+              ask: numAsk !== null ? numAsk.toFixed(5) : (prev?.ask || null),
+              bidDir,
+              askDir,
+              dir: bidDir ?? askDir,
               live: true,
               lastUpdate: now,
               category,
@@ -151,6 +154,12 @@ const useSymbolStore = create(
         if (get().ws) return;
 
         const nextBrokerScope = getCurrentBrokerScope();
+        const generation = get().connectionGeneration + 1;
+        const existingTimer = get().reconnectTimer;
+        const existingStatusPoll = get().statusPollTimer;
+        if (existingTimer) clearTimeout(existingTimer);
+        if (existingStatusPoll) clearInterval(existingStatusPoll);
+
         if (nextBrokerScope !== get().brokerScope) {
           // Never expose quotes or metadata from a previously authenticated broker.
           set({
@@ -165,25 +174,26 @@ const useSymbolStore = create(
           useSymbolStore.persist.rehydrate();
         }
 
-        const existingTimer = get().reconnectTimer;
-        if (existingTimer) clearTimeout(existingTimer);
         set((state) => ({
+          connectionGeneration: generation,
           shouldReconnect: true,
           reconnectTimer: null,
+          statusPollTimer: null,
+          statusSyncPromise: null,
+          lastStatusSyncAt: 0,
+          feedOriginBlocked: false,
           feedError: '',
           symbols: Object.fromEntries(
             Object.entries(state.symbols).map(([key, value]) => [key, { ...value, live: false }])
           ),
         }));
 
-        // Eagerly prefetch symbols from status endpoint while socket establishes
-        get().syncAvailableSymbols();
-        if (!get().statusPollTimer) {
-          set({ statusPollTimer: setInterval(() => get().syncAvailableSymbols({ force: true }), STATUS_POLL_MS) });
-        }
+        const isCurrent = () => get().connectionGeneration === generation &&
+          get().shouldReconnect && getCurrentBrokerScope() === nextBrokerScope;
+        let reconnectAttempt = 0;
 
         const connect = () => {
-          if (!get().shouldReconnect) return;
+          if (!isCurrent() || get().ws || get().feedOriginBlocked) return;
 
           let ws;
           try {
@@ -196,14 +206,15 @@ const useSymbolStore = create(
             if (get().ws === ws && ws.readyState === 0) ws.close();
           }, 10000);
           let batchHandle;
-          const pending = new Map();
+          const pending = [];
 
           ws.onopen = () => {
             clearTimeout(watchdog);
-            if (get().ws !== ws) {
+            if (!isCurrent() || get().ws !== ws) {
               ws.close();
               return;
             }
+            reconnectAttempt = 0;
             set({ isConnected: true, feedError: '' });
             ws.send(JSON.stringify({ type: 'subscribe', symbols: ['*'] }));
             get().syncAvailableSymbols();
@@ -214,14 +225,14 @@ const useSymbolStore = create(
             try {
               const updates = extractMarketTicks(e.data);
               if (updates.length > 0) {
-                updates.forEach((tick) =>
-                  pending.set(tick.symbol, { ...pending.get(tick.symbol), ...tick })
-                );
+                // Keep tick order within the frame. Collapsing each symbol to
+                // its final quote loses the direction of its last price move.
+                updates.forEach((tick) => pending.push(tick));
                 if (!batchHandle) {
                   batchHandle = scheduleTickBatch(() => {
                     batchHandle = null;
-                    if (get().ws === ws) get().upsertSymbols([...pending.values()]);
-                    pending.clear();
+                    if (get().ws === ws) get().upsertSymbols(pending.splice(0));
+                    else pending.length = 0;
                   });
                 }
               }
@@ -234,38 +245,90 @@ const useSymbolStore = create(
             clearTimeout(watchdog);
             cancelTickBatch(batchHandle);
             batchHandle = null;
-            pending.clear();
+            pending.length = 0;
             if (get().ws !== ws) return;
-            const shouldReconnect = get().shouldReconnect;
+            const shouldReconnect = isCurrent();
+            const originBlocked = get().feedOriginBlocked;
             set((state) => ({
               isConnected: false,
               ws: null,
-              feedError: shouldReconnect ? 'Market feed reconnecting…' : 'Market feed disconnected.',
+              feedError: originBlocked ? state.feedError :
+                shouldReconnect ? 'Market feed reconnecting…' : 'Market feed disconnected.',
               symbols: Object.fromEntries(
                 Object.entries(state.symbols).map(([key, value]) => [key, { ...value, live: false }])
               ),
             }));
-            if (shouldReconnect) {
-              const reconnectTimer = setTimeout(connect, FEED_RECONNECT_DELAY_MS);
+            if (shouldReconnect && !originBlocked) {
+              const reconnectTimer = setTimeout(connect, getFeedReconnectDelayMs(reconnectAttempt));
+              reconnectAttempt += 1;
               set({ reconnectTimer });
             }
           };
 
-          ws.onerror = (err) => {
-            console.error('[SymbolStore] WS error:', err);
+          ws.onerror = () => {
+            if (get().ws !== ws) return;
+            // Browser error events do not expose the handshake reason. The
+            // close handler owns the visible state and bounded retry.
             ws.close();
           };
 
           set({ ws });
         };
 
-        connect();
+        const syncStatusAndOrigin = async () => {
+          let allowedOrigins = null;
+          try {
+            allowedOrigins = await get().syncAvailableSymbols({ force: true });
+          } catch {
+            // An unavailable status endpoint must not prevent a valid socket.
+          }
+          if (!isCurrent()) return;
+
+          const originError = getFeedOriginError(
+            allowedOrigins,
+            typeof window !== 'undefined' ? window.location?.origin : '',
+            shouldUseFeedDevProxy()
+          );
+          if (originError) {
+            set({ feedOriginBlocked: true, isConnected: false, feedError: originError });
+            const currentSocket = get().ws;
+            if (currentSocket && currentSocket.readyState !== WebSocket.CLOSING &&
+              currentSocket.readyState !== WebSocket.CLOSED) currentSocket.close();
+            return;
+          }
+
+          if (get().feedOriginBlocked) {
+            set({ feedOriginBlocked: false, feedError: '' });
+            connect();
+          }
+        };
+
+        set({ statusPollTimer: setInterval(() => { void syncStatusAndOrigin(); }, STATUS_POLL_MS) });
+        const initialStatus = syncStatusAndOrigin();
+        if (shouldUseFeedDevProxy()) {
+          // The proxy presents its own permitted Origin to the upstream feed.
+          // Its status request must not delay a working WebSocket handshake.
+          connect();
+          return;
+        }
+
+        let preflightTimer;
+        const preflightDeadline = new Promise((resolve) => {
+          preflightTimer = setTimeout(resolve, 3000);
+        });
+        void Promise.race([initialStatus, preflightDeadline]).then(() => {
+          clearTimeout(preflightTimer);
+          if (isCurrent() && !get().feedOriginBlocked) connect();
+        });
       },
 
       syncAvailableSymbols: ({ force = false } = {}) => {
         const current = get();
         if (current.statusSyncPromise) return current.statusSyncPromise;
         if (!force && Date.now() - current.lastStatusSyncAt < STATUS_SYNC_TTL_MS) return Promise.resolve();
+
+        const statusGeneration = current.connectionGeneration;
+        const statusBrokerScope = current.brokerScope;
 
         const syncPromise = (async () => {
           let statusUrl;
@@ -281,14 +344,20 @@ const useSymbolStore = create(
             // the response from backends that omit Access-Control-Allow-Credentials,
             // which silently fell back to the full instrument list.
             const res = await fetch(statusUrl, { credentials: 'omit' });
-            if (!res.ok) return;
+            if (!res.ok) return null;
             const payload = await res.json();
+            if (get().connectionGeneration !== statusGeneration ||
+              get().brokerScope !== statusBrokerScope) return null;
+            const allowedOrigins = Array.isArray(payload?.allowed_browser_origins)
+              ? payload.allowed_browser_origins : null;
             const streamed = extractStreamedSymbols(payload);
-            if (streamed.size === 0) return;
+            if (streamed.size === 0) return allowedOrigins;
 
             const statusRows = mapFeedStatusRows(payload);
 
             set((state) => {
+              if (state.connectionGeneration !== statusGeneration ||
+                state.brokerScope !== statusBrokerScope) return {};
               // The list is exactly the streamed symbols: symbols SuperAdmin
               // stopped streaming are removed, new ones are added.
               const unchanged = sameNames(state.feedSymbolNames, streamed)
@@ -308,7 +377,9 @@ const useSymbolStore = create(
                   symbol: sym,
                   bid: validMarketPrice(item.bid) ? Number(item.bid).toFixed(5) : null,
                   ask: validMarketPrice(item.ask) ? Number(item.ask).toFixed(5) : null,
-                  dir: 'up',
+                  bidDir: null,
+                  askDir: null,
+                  dir: null,
                   live: Boolean(item.fresh && (item.bid || item.ask)),
                   lastUpdate: item.last_tick_ms || null,
                   category: getCategory(sym),
@@ -326,8 +397,10 @@ const useSymbolStore = create(
                 feedSymbolNames: [...streamed],
               };
             });
+            return allowedOrigins;
           } catch {
             // Ignore transient status fetch errors; cached symbols remain available.
+            return null;
           }
         })().finally(() => {
           if (get().statusSyncPromise === syncPromise) set({ statusSyncPromise: null });
@@ -343,17 +416,26 @@ const useSymbolStore = create(
         if (statusPollTimer) clearInterval(statusPollTimer);
 
         set({
+          connectionGeneration: get().connectionGeneration + 1,
           shouldReconnect: false,
           reconnectTimer: null,
           statusPollTimer: null,
+          statusSyncPromise: null,
+          feedOriginBlocked: false,
           isConnected: false,
           ws: null,
         });
 
         if (ws && typeof WebSocket !== 'undefined') {
+          const connecting = WebSocket.CONNECTING ?? 0;
           const closing = WebSocket.CLOSING ?? 2;
           const closed = WebSocket.CLOSED ?? 3;
-          if (ws.readyState !== closing && ws.readyState !== closed) {
+          if (ws.readyState === connecting) {
+            // Closing mid-handshake makes the browser report a failed connection
+            // (React StrictMode unmounts effects once in dev), so close on open.
+            ws.onmessage = null;
+            ws.onopen = () => ws.close(1000, 'Symbol feed disabled');
+          } else if (ws.readyState !== closing && ws.readyState !== closed) {
             ws.close(1000, 'Symbol feed disabled');
           }
         }

@@ -1,5 +1,6 @@
+import { canManageGroupLifecycle } from '../../utils/groupAccess';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowUp, ChevronRight, Folder, Info, Pencil, Plus, Trash2, User, Users } from 'lucide-react';
+import { ArrowUp, ChevronRight, Folder, Info, Pencil, Plus, Search, Trash2, User, Users, X } from 'lucide-react';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useDataFetch } from '../../hooks/useCore';
@@ -7,7 +8,10 @@ import { useAuthStore } from '../../store/authStore';
 import { ManagerService } from '../../services/manager.service';
 import { AccountsService } from '../../services/accounts.service';
 import { canAccessView } from '../../utils/permissions';
+import { loadGroupTreePages } from '../../utils/groupTreeData';
+import { GROUP_LIST_ARRAY_KEYS, GROUP_LIST_FETCH_OPTIONS, loadGroupList, readGroupListSnapshot } from '../../utils/groupListCache';
 import './DummyGroupsExplorer.css';
+import './GroupsExplorer.css';
 import {
   GROUPS_ROOT_NODE,
   filterGroupsExplorerNodes,
@@ -48,11 +52,18 @@ const hasSubgroups = (node) => node.type === 'group' && node.count > 0;
 const isBranch = (node) => node.type === 'server-folder' || hasSubgroups(node);
 const nodeIcon = (node) => (node.type === 'group-account' ? AccountIcon : node.type === 'group' && !hasSubgroups(node) ? GroupIcon : YellowFolderIcon);
 const cellText = (value) => (value === '' || value === undefined || value === null ? '' : String(value));
+const formatAmount = (value) => {
+  const text = cellText(value);
+  if (!/^-?\d+(?:\.\d+)?$/.test(text)) return text;
+  const [integer, fraction] = text.split('.');
+  return `${integer.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}${fraction === undefined ? '' : `.${fraction}`}`;
+};
 
 const ServerGroupsExplorer = ({
   location,
   onNavigate,
   onAccountOpen,
+  onAccountGroupOpen,
   onGroupEdit,
   onGroupCreate,
   onGroupDelete,
@@ -68,40 +79,74 @@ const ServerGroupsExplorer = ({
   const user = useAuthStore(state => state.user);
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const canLoadGroups = isAuthenticated && canAccessView(user, 'Groups');
+  const canLifecycle=canManageGroupLifecycle(user);
   const canLoadAccounts = canLoadGroups && canAccessView(user, 'Trading Accounts');
   const isAccountFolder = location.type === 'group';
   // Main groups sit directly under Groups; the old "Admin" location is just the root.
   const isRoot = location.type === 'root' || location.type === 'admin';
+  // Every row at the Groups root is a main group, i.e. a folder, even before it has subgroups.
+  const rowIsBranch = (node) => isBranch(node) || (isRoot && node.type === 'group');
   const folderPath = location.type === 'server-folder' ? location.path : isAccountFolder ? getServerGroupParentPath(location.groupName) : '';
   const canRead = isAccountFolder ? canLoadAccounts : canLoadGroups;
-  const [selection, setSelection] = useState(null);
-  const [allGroups, setAllGroups] = useState(false);
-  const [subgroupDraft, setSubgroupDraft] = useState(null);
-  const fetchGroups = useCallback(() => loadGroupsExplorerNodes(ADMIN_LOCATION, {
-    getGroups: ManagerService.getGroupList,
-    getAccounts: AccountsService.getAccounts,
-  }), []);
-  const fetchAccounts = useCallback(() => loadGroupsExplorerNodes(location, {
-    getGroups: ManagerService.getGroupList,
-    getAccounts: AccountsService.getAccounts,
-  }), [location]);
+  // Per-folder UI state lives in one object keyed by the location, so opening a
+  // folder resets it during render instead of remounting the whole explorer.
+  const locationKey = `${location.type}:${location.path || location.groupName || ''}`;
+  const freshView = { key: locationKey, selection: null, allGroups: false, subgroupDraft: null, localSearch: '' };
+  const [storedView, setView] = useState(freshView);
+  if (storedView.key !== locationKey) setView(freshView);
+  const view = storedView.key === locationKey ? storedView : freshView;
+  const { selection, allGroups, subgroupDraft, localSearch } = view;
+  const setSelection = (next) => setView(current => ({ ...current, selection: next }));
+  const setAllGroups = (next) => setView(current => ({ ...current, allGroups: next }));
+  const setSubgroupDraft = (next) => setView(current => ({ ...current, subgroupDraft: typeof next === 'function' ? next(current.subgroupDraft) : next }));
+  const setLocalSearch = (next) => setView(current => ({ ...current, localSearch: next }));
+  const [menuNode, setMenuNode] = useState(null);
+  const fetchGroups = useCallback(() => loadGroupList(() => loadGroupTreePages(
+    ManagerService.getGroupList,
+    { arrayKeys: GROUP_LIST_ARRAY_KEYS },
+  )), []);
   const { data: groupData, loading: fetchingGroups, error: groupError, mutate: retryGroups } = useDataFetch(
-    fetchGroups, null, [refreshTrigger], canLoadGroups,
+    fetchGroups, null, [refreshTrigger], canLoadGroups, GROUP_LIST_FETCH_OPTIONS,
   );
+  // The stored snapshot paints the tree instantly while the live list is still loading.
+  const snapshot = useMemo(() => (groupData ? null : readGroupListSnapshot()), [groupData]);
+  const groupList = groupData ?? snapshot;
+  const groupNodes = useMemo(() => (groupList ? groupList.map(group => ({ ...group, type: 'group' })) : EMPTY_NODES), [groupList]);
+  // An opened folder that is itself a server group (every main group) also holds accounts.
+  const folderGroupName = location.type === 'server-folder'
+    ? groupNodes.find(group => group.groupName.toLowerCase() === location.path.toLowerCase())?.groupName || ''
+    : '';
+  const accountGroupName = isAccountFolder ? location.groupName : folderGroupName;
+  const loadsAccounts = canLoadAccounts && Boolean(accountGroupName);
+  // Account rows are tagged with their group so a previous folder's rows never show under a new one.
+  const fetchAccounts = useCallback(async () => ({
+    groupName: accountGroupName,
+    nodes: await loadGroupsExplorerNodes({ type: 'group', groupName: accountGroupName }, {
+      getAllAccounts: AccountsService.getAllAccounts,
+    }),
+  }), [accountGroupName]);
   const { data: accountData, loading: fetchingAccounts, error: accountError, mutate: retryAccounts } = useDataFetch(
-    fetchAccounts, null, [location.type, location.groupName, refreshTrigger], canRead && isAccountFolder,
+    fetchAccounts, null, [accountGroupName, refreshTrigger], loadsAccounts,
   );
-  const loading = (canLoadGroups && fetchingGroups) || (canRead && isAccountFolder && fetchingAccounts);
-  const error = groupError || accountError;
-  const groupNodes = groupData || EMPTY_NODES;
-  const accountNodes = isAccountFolder ? accountData || EMPTY_NODES : EMPTY_NODES;
+  const accountsReady = loadsAccounts && accountData?.groupName === accountGroupName;
+  const accountsPending = loadsAccounts && !accountsReady && !accountError;
+  const loading = (canLoadGroups && fetchingGroups && !groupList) || (!allGroups && loadsAccounts && (fetchingAccounts || accountsPending));
+  const error = (groupError && !groupList) || (!allGroups && loadsAccounts && accountError);
+  const accountNodes = accountsReady ? accountData.nodes : EMPTY_NODES;
   const folderNodes = useMemo(() => getServerGroupFolderNodes(groupNodes, folderPath), [groupNodes, folderPath]);
-  const baseNodes = allGroups ? groupNodes : isAccountFolder ? accountNodes : folderNodes;
+  const folderContents = useMemo(() => [...folderNodes, ...accountNodes], [folderNodes, accountNodes]);
+  const baseNodes = allGroups ? groupNodes : isAccountFolder ? accountNodes : folderContents;
   const nodes = !canRead || loading || error ? EMPTY_NODES : baseNodes;
+  // Folders first, then groups, then accounts.
   const visibleNodes = useMemo(() => {
     const filtered = filterGroupsExplorerNodes(nodes, searchQuery, sortDirection);
-    return [...filtered.filter(node => !isLeafNode(node)), ...filtered.filter(isLeafNode)];
-  }, [nodes, searchQuery, sortDirection]);
+    const searched = localSearch.trim() ? filterGroupsExplorerNodes(filtered, localSearch, sortDirection) : filtered;
+    return [
+      ...searched.filter(node => !isLeafNode(node)),
+      ...searched.filter(node => node.type === 'group'),
+      ...searched.filter(node => node.type === 'group-account'),
+    ];
+  }, [nodes, searchQuery, sortDirection, localSearch]);
   const rows = useMemo(() => visibleNodes.map(getGroupsExplorerRow), [visibleNodes]);
   const columns = useMemo(
     () => getGroupsExplorerColumns(allGroups || !isAccountFolder ? ADMIN_LOCATION : location, nodes),
@@ -110,10 +155,13 @@ const ServerGroupsExplorer = ({
   const effectiveSelectedId = selection && selection.sidebarId === selectedNodeId ? selection.id : selectedNodeId;
   const selectedNode = visibleNodes.find(node => node.id === effectiveSelectedId);
   const selectedTarget = useMemo(() => (selectedNode ? getGroupsExplorerEditTarget(selectedNode) : null), [selectedNode]);
-  const noun = isAccountFolder && !allGroups ? 'accounts' : 'groups';
+  const noun = allGroups ? 'groups' : isAccountFolder ? 'accounts' : folderGroupName ? 'groups and accounts' : 'groups';
   const groupCount = groupNodes.length;
   const folderCount = isAccountFolder ? accountNodes.length : getServerGroupCount(groupNodes, folderPath);
   const serverPath = isAccountFolder ? location.groupName : folderPath;
+  const listTitle = allGroups ? 'All groups' : isAccountFolder ? location.groupName : isRoot ? 'Group directory' : serverPath;
+  const listType = allGroups || !isAccountFolder ? 'GROUP DIRECTORY' : 'GROUP ACCOUNTS';
+  const countLabel = loading ? `Loading ${noun}...` : `${visibleNodes.length}${visibleNodes.length !== nodes.length ? ` of ${nodes.length}` : ''} ${noun}`;
 
   useEffect(() => {
     onSelectionChange?.(selectedTarget);
@@ -127,6 +175,7 @@ const ServerGroupsExplorer = ({
   const navigate = (node) => {
     setSelection(null);
     setAllGroups(false);
+    setMenuNode(null);
     onSelectionChange?.(null);
     onNavigate?.(node);
   };
@@ -135,10 +184,17 @@ const ServerGroupsExplorer = ({
     const target = getGroupsExplorerEditTarget(node);
     if (target) onGroupEdit?.({ ...node, group: target.row });
   };
+  // An account opens its group's properties (Margin / Symbols / Commissions), like MT5 Manager.
+  const openAccountGroup = (node) => {
+    const groupName = node.account?.group || node.groupName || '';
+    const record = groupNodes.find(group => group.groupName.toLowerCase() === String(groupName).toLowerCase());
+    const name = record?.groupName || groupName;
+    if (name) onAccountGroupOpen?.({ ...(record?.group && typeof record.group === 'object' ? record.group : {}), group: name });
+  };
   // Folders and main groups open; a client group (no subgroups) opens its properties.
   const activate = (node) => {
-    if (node.type === 'group-account') onAccountOpen?.(node);
-    else if (node.type === 'group' && (allGroups || !hasSubgroups(node))) openSettings(node);
+    if (node.type === 'group-account') openAccountGroup(node);
+    else if (node.type === 'group' && (allGroups || !rowIsBranch(node))) openSettings(node);
     else if (node.type === 'group') navigate(folderNode(node.groupName));
     else navigate(node);
   };
@@ -150,7 +206,7 @@ const ServerGroupsExplorer = ({
   const branchNames = (path) => groupNodes
     .filter(group => group.groupName.toLowerCase() === path.toLowerCase() || group.groupName.toLowerCase().startsWith(`${path.toLowerCase()}${SEPARATOR}`))
     .map(group => group.groupName);
-  const canDelete = (node) => Boolean(node) && (node.type === 'group' || node.type === 'server-folder');
+  const canDelete = (node) => canLifecycle && Boolean(node) && (node.type === 'group' || node.type === 'server-folder');
   const deleteGroup = (node) => {
     if (!canDelete(node)) return;
     if (isBranch(node)) {
@@ -185,13 +241,20 @@ const ServerGroupsExplorer = ({
   const menu = (node) => (
     <ContextMenu.Portal>
       <ContextMenu.Content className="dummy-group-menu">
-        <ContextMenu.Item onSelect={() => activate(node)}>
-          {node.type === 'group-account' ? 'Open account' : node.type === 'group' ? (allGroups || !hasSubgroups(node) ? 'Settings' : 'Open') : 'Open folder'}
-        </ContextMenu.Item>
-        {hasSubgroups(node) && !allGroups && <ContextMenu.Item onSelect={() => openSettings(node)}>Settings</ContextMenu.Item>}
+        {node.type === 'group-account' ? (
+          <>
+            <ContextMenu.Item onSelect={() => openAccountGroup(node)}>Group settings</ContextMenu.Item>
+            <ContextMenu.Item onSelect={() => onAccountOpen?.(node)}>Open account</ContextMenu.Item>
+          </>
+        ) : (
+          <ContextMenu.Item onSelect={() => activate(node)}>
+            {node.type === 'group' ? (allGroups || !rowIsBranch(node) ? 'Settings' : 'Open') : 'Open folder'}
+          </ContextMenu.Item>
+        )}
+        {node.type === 'group' && rowIsBranch(node) && !allGroups && <ContextMenu.Item onSelect={() => openSettings(node)}>Settings</ContextMenu.Item>}
         {node.type === 'group' && !allGroups && <ContextMenu.Item onSelect={() => navigate(node)}>Open accounts</ContextMenu.Item>}
-        {node.type !== 'group-account' && <ContextMenu.Item disabled={!canLoadGroups} onSelect={() => addGroup(containerOf(node))}>Add group</ContextMenu.Item>}
-        {node.type !== 'group-account' && <ContextMenu.Item disabled={!canLoadGroups} onSelect={() => askSubgroup(containerOf(node))}>Add subgroup</ContextMenu.Item>}
+        {canLifecycle && node.type !== 'group-account' && <ContextMenu.Item hidden={!canLifecycle} disabled={!canLoadGroups || !canLifecycle} onSelect={() => addGroup(containerOf(node))}>Add group</ContextMenu.Item>}
+        {node.type !== 'group-account' && <ContextMenu.Item hidden={!canLifecycle} disabled={!canLoadGroups || !canLifecycle} onSelect={() => askSubgroup(containerOf(node))}>Add subgroup</ContextMenu.Item>}
         {canDelete(node) && (
           <>
             <ContextMenu.Separator />
@@ -203,7 +266,7 @@ const ServerGroupsExplorer = ({
   );
 
   return (
-    <section className="dummy-groups-explorer" aria-label="Groups explorer">
+    <section className="dummy-groups-explorer server-groups-explorer" aria-label="Groups explorer">
       <div className="dummy-group-header-bar">
         {/* Left: Navigation path & breadcrumbs */}
         <div className="dummy-group-path">
@@ -247,7 +310,7 @@ const ServerGroupsExplorer = ({
           <button
             type="button"
             className="dummy-btn-action dummy-btn-primary"
-            disabled={!canLoadGroups}
+            hidden={!canLifecycle} disabled={!canLoadGroups || !canLifecycle}
             onClick={() => addGroup(targetContainer)}
           >
             <Plus size={13} strokeWidth={2.4} />
@@ -256,7 +319,7 @@ const ServerGroupsExplorer = ({
           <button
             type="button"
             className="dummy-btn-action dummy-btn-secondary"
-            disabled={!canLoadGroups}
+            hidden={!canLifecycle} disabled={!canLoadGroups || !canLifecycle}
             onClick={() => askSubgroup()}
           >
             <YellowFolderIcon />
@@ -275,7 +338,7 @@ const ServerGroupsExplorer = ({
             type="button"
             className="dummy-btn-action dummy-btn-danger"
             disabled={!canDelete(selectedNode) || deleting}
-            onClick={() => deleteGroup(selectedNode)}
+            hidden={!canLifecycle} onClick={() => deleteGroup(selectedNode)}
           >
             <Trash2 size={12} strokeWidth={2} />
             <span>{deleting ? 'Deleting...' : 'Delete'}</span>
@@ -283,33 +346,60 @@ const ServerGroupsExplorer = ({
         </div>
       </div>
 
-      <div className="dummy-group-table-wrap" aria-busy={loading}>
-        <table aria-label={allGroups ? 'All groups' : isAccountFolder ? `Accounts in ${location.groupName}` : isRoot ? 'Groups' : `Groups in ${serverPath}`}>
+      <div className="server-group-list-bar">
+        <div className="server-group-list-heading">
+          <span className="server-group-list-type">{listType}</span>
+          <h2 title={listTitle}>{listTitle}</h2>
+          <span className="server-group-list-count" role="status">{countLabel}</span>
+        </div>
+        <div className="server-group-list-search">
+          <Search size={14} aria-hidden="true" />
+          <input
+            type="search"
+            aria-label={`Search ${noun} in this view`}
+            placeholder={`Search ${noun}...`}
+            value={localSearch}
+            onChange={event => setLocalSearch(event.target.value)}
+            onKeyDown={event => { if (event.key === 'Escape') setLocalSearch(''); }}
+          />
+          {localSearch && <button type="button" aria-label="Clear search" onClick={() => setLocalSearch('')}><X size={13} /></button>}
+        </div>
+      </div>
+
+      <div className="dummy-group-table-wrap" aria-busy={loading} role="region" aria-label={`${noun} table`} tabIndex={0}>
+        <table className="server-group-data-table" data-layout={isAccountFolder && !allGroups ? 'accounts' : allGroups || isRoot ? 'groups' : 'mixed'} aria-label={allGroups ? 'All groups' : isAccountFolder ? `Accounts in ${location.groupName}` : isRoot ? 'Groups' : `Groups in ${serverPath}`}>
           <thead>
             <tr>
               {columns.map(column => (
-                <th key={column.key} scope="col" style={column.numeric ? { textAlign: 'right' } : undefined}>
+                <th key={column.key} scope="col" data-column={column.key} style={column.numeric ? { textAlign: 'right' } : undefined}>
                   {column.label}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody>
+          {/* One context menu for the whole table; the right-clicked row is remembered in menuNode. */}
+          <ContextMenu.Root onOpenChange={open => { if (!open) setMenuNode(null); }}>
+          <ContextMenu.Trigger asChild>
+          <tbody onContextMenu={event => {
+            const id = event.target.closest?.('tr[data-node-id]')?.dataset.nodeId;
+            const node = id ? visibleNodes.find(item => item.id === id) : null;
+            if (!node) { event.preventDefault(); return; }
+            select(node);
+            setMenuNode(node);
+          }}>
             {visibleNodes.map((node, index) => {
-              const Icon = nodeIcon(node);
+              const Icon = node.type === 'group' && rowIsBranch(node) ? YellowFolderIcon : nodeIcon(node);
               const selected = effectiveSelectedId === node.id;
               const row = rows[index];
               const childCount = isBranch(node) ? node.count : null;
               return (
-                <ContextMenu.Root key={node.id}>
-                  <ContextMenu.Trigger asChild>
                     <tr
+                      key={node.id}
                       tabIndex={0}
                       aria-selected={selected}
                       data-node-id={node.id}
                       onClick={() => select(node)}
                       onFocus={() => select(node)}
-                      onContextMenu={() => select(node)}
                       onDoubleClick={() => activate(node)}
                       onKeyDown={event => {
                         if (event.key === 'Enter') { event.preventDefault(); activate(node); }
@@ -317,13 +407,14 @@ const ServerGroupsExplorer = ({
                       }}
                     >
                       {columns.map((column, cell) => {
-                        const val = cellText(row[column.key]);
+                        // The first cell names the row: a group's name or an account's login.
+                        const val = cellText(cell === 0 ? node.label : row[column.key]);
                         return (
-                          <td key={column.key} style={column.numeric ? { textAlign: 'right', fontVariantNumeric: 'tabular-nums' } : undefined}>
+                          <td key={column.key} data-column={column.key} title={val || undefined} style={column.numeric ? { textAlign: 'right', fontVariantNumeric: 'tabular-nums' } : undefined}>
                             {cell === 0 ? (
                               <span className="dummy-group-name">
                                 <Icon size={15} />
-                                <span className="dummy-group-label-text">{val}</span>
+                                <span className={`dummy-group-label-text${node.type === 'group-account' ? ' server-group-login' : ''}`}>{val}</span>
                                 {childCount !== null && (
                                   <span className="dummy-group-badge">
                                     {childCount} {childCount === 1 ? 'group' : 'groups'}
@@ -331,7 +422,15 @@ const ServerGroupsExplorer = ({
                                 )}
                               </span>
                             ) : val !== '' ? (
-                              val
+                              column.key === 'status' ? (
+                                <span className="server-group-status" data-state={val.toLowerCase()}><span aria-hidden="true" />{val}</span>
+                              ) : column.key === 'balance' || column.key === 'equity' ? (
+                                <span className="server-group-number">{formatAmount(val)}</span>
+                              ) : column.key === 'name' ? (
+                                <span className="server-group-account-name">{val}</span>
+                              ) : column.key === 'group' ? (
+                                <span className="server-group-path-value">{val}</span>
+                              ) : val
                             ) : (
                               <span className="dummy-cell-empty">—</span>
                             )}
@@ -339,12 +438,12 @@ const ServerGroupsExplorer = ({
                         );
                       })}
                     </tr>
-                  </ContextMenu.Trigger>
-                  {menu(node)}
-                </ContextMenu.Root>
               );
             })}
           </tbody>
+          </ContextMenu.Trigger>
+          {menuNode && menu(menuNode)}
+          </ContextMenu.Root>
         </table>
         {!canRead ? (
           <p role="alert" className="dummy-group-empty">
@@ -358,7 +457,7 @@ const ServerGroupsExplorer = ({
           </div>
         ) : !visibleNodes.length ? (
           <p role="status" className="dummy-group-empty">
-            {searchQuery.trim() ? `No ${noun} match your search.` : isAccountFolder && !allGroups ? 'No accounts in this group.' : 'No groups in this folder.'}
+            {searchQuery.trim() || localSearch.trim() ? `No ${noun} match your search.` : isAccountFolder && !allGroups ? 'No accounts in this group.' : isRoot ? 'No groups yet. Use Add group to create a main group.' : `No ${folderGroupName ? 'subgroups or accounts' : 'subgroups'} in ${serverPath.split(SEPARATOR).at(-1)} yet. Use Add group or Add subgroup to create one.`}
           </p>
         ) : null}
       </div>
@@ -366,7 +465,7 @@ const ServerGroupsExplorer = ({
       <div className="dummy-group-footer">
         <div role="tablist" aria-label="Group list views" className="dummy-group-tabs">
           <button type="button" role="tab" aria-selected={!allGroups} onClick={() => setAllGroups(false)}>
-            <span>Groups {serverPath ? serverPath : ''}</span>
+            <span>{isAccountFolder ? 'Accounts' : isRoot ? 'Groups' : 'This folder'}</span>
             <span className="dummy-tab-count">({folderCount})</span>
           </button>
           <button type="button" role="tab" aria-selected={allGroups} onClick={() => { setAllGroups(true); setSelection(null); }}>
@@ -376,7 +475,7 @@ const ServerGroupsExplorer = ({
         </div>
         <div className="dummy-group-status-tip" role="status">
           <Info size={12} className="dummy-tip-icon" />
-          <span>{isAccountFolder && !allGroups ? 'Double-click an account to open it.' : 'Double-click a folder or main group to open it; double-click a client group for its properties.'}</span>
+          <span><span className="server-group-scroll-tip">Scroll horizontally for more columns. </span>{isAccountFolder && !allGroups ? "Double-click an account for its group's settings; right-click to open the account." : folderGroupName && accountNodes.length ? "Double-click a folder to open it, or an account for its group's settings." : 'Double-click a folder or main group to open it; double-click a client group for its properties.'}</span>
         </div>
       </div>
 
@@ -410,10 +509,10 @@ const ServerGroupsExplorer = ({
   );
 };
 
-// A new location owns its selection and request state, so records from the
-// previous folder cannot flash while the next folder is loading.
+// One mounted explorer serves every folder; the cached group list and per-folder
+// view state make navigation a plain re-render instead of a remount.
 const GroupsExplorer = ({ location = ROOT_LOCATION, ...props }) => (
-  <ServerGroupsExplorer key={`${location.type}:${location.path || location.groupName || ''}`} location={location} {...props} />
+  <ServerGroupsExplorer location={location} {...props} />
 );
 
 export default GroupsExplorer;

@@ -67,7 +67,7 @@ const GatewayStatusTab = () => {
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       <div className="flex items-center px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0">
-        <button onClick={fetchData} className="flex items-center gap-1.5 h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-[#ccc] text-[11px] rounded-[2px] border border-[#555]">
+        <button onClick={fetchData} className="flex items-center gap-1.5 h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--border-strong)] text-white text-[11px] rounded-[2px] border border-[#555]">
           <RefreshCw size={11} /> Refresh
         </button>
       </div>
@@ -83,25 +83,25 @@ const GatewayStatusTab = () => {
       <div className="flex-1 overflow-auto no-scrollbar">
         {data.map((row, idx) => (
           <div key={row.id || idx} className={`flex border-b border-black/10 hover:bg-blue-600/10 ${idx%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}>
-            <div className="w-[60px] px-3 py-1.5 text-[12px] text-[#9cdcfe] font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.id)}</div>
+            <div className="w-[60px] px-3 py-1.5 text-[12px] text-white font-semibold border-r border-black/10 shrink-0 flex items-center">{fmt(row.id)}</div>
             <div className="w-[150px] px-3 py-1.5 text-[12px] text-[color:var(--text-primary)] border-r border-black/10 shrink-0 truncate flex items-center">{fmt(row.gateway_name)}</div>
             <div className="w-[110px] px-3 py-1.5 text-[12px] text-[color:var(--text-muted)] font-mono border-r border-black/10 shrink-0 flex items-center">{fmt(row.provider)}</div>
             <div className="w-[100px] px-3 py-1.5 border-r border-black/10 shrink-0 flex items-center">
-              <span className={`text-[11px] font-semibold ${row.status === 'active' ? 'text-[#4ec9b0]' : 'text-[#f48771]'}`}>{fmt(row.status)}</span>
+              <span className={`text-[11px] font-semibold ${row.status === 'active' ? 'text-white' : 'text-[#f48771]'}`}>{fmt(row.status)}</span>
             </div>
-            <div className="w-[110px] px-3 py-1.5 text-[12px] text-[#4ec9b0] font-semibold border-r border-black/10 shrink-0 flex items-center">
+            <div className="w-[110px] px-3 py-1.5 text-[12px] text-white font-semibold border-r border-black/10 shrink-0 flex items-center">
               {row.success_rate != null ? `${row.success_rate}%` : '—'}
             </div>
             <div className="w-[90px] px-3 py-1.5 text-[12px] text-[color:var(--text-muted)] border-r border-black/10 shrink-0 flex items-center">{fmt(row.avg_response_ms)}</div>
-            <div className="w-[170px] px-3 py-1.5 text-[11px] text-[#888] font-mono border-r border-black/10 shrink-0 flex items-center">{fmtTs(row.last_health_check)}</div>
+            <div className="w-[170px] px-3 py-1.5 text-[11px] text-white font-mono border-r border-black/10 shrink-0 flex items-center">{fmtTs(row.last_health_check)}</div>
             <div className="flex-1 px-3 py-1.5 border-r border-black/10 flex items-center">
-              <span className={`text-[11px] font-semibold ${row.enabled ? 'text-[#4ec9b0]' : 'text-[#f48771]'}`}>{row.enabled ? 'Yes' : 'No'}</span>
+              <span className={`text-[11px] font-semibold ${row.enabled ? 'text-white' : 'text-[#f48771]'}`}>{row.enabled ? 'Yes' : 'No'}</span>
             </div>
             <div className="w-[90px] px-3 py-1.5 flex items-center shrink-0">
               <button onClick={() => handleToggle(row)} disabled={toggling === row.id}
                 className={`flex items-center gap-1 h-[20px] px-2 text-[10px] rounded-[2px] disabled:opacity-50 transition-colors ${row.enabled
                   ? 'bg-[#f48771]/20 hover:bg-[#f48771]/40 text-[#f48771]'
-                  : 'bg-[#4ec9b0]/20 hover:bg-[#4ec9b0]/40 text-[#4ec9b0]'}`}>
+                  : 'bg-[color:var(--accent-soft)] hover:bg-[color:var(--accent-100)] text-[color:var(--success-500)]'}`}>
                 {row.enabled ? <><ToggleRight size={10} /> Disable</> : <><ToggleLeft size={10} /> Enable</>}
               </button>
             </div>
@@ -139,28 +139,28 @@ const CallbackTab = () => {
 
   return (
     <div className="flex flex-col p-6 gap-4 max-w-[500px]">
-      <div className="text-[11px] text-[#888]">Process a callback from a payment gateway to update deposit status and reference.</div>
+      <div className="text-[11px] text-white">Process a callback from a payment gateway to update deposit status and reference.</div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-0.5">
-            <label className="text-[10px] text-[#888] uppercase tracking-wider">Deposit ID<span className="text-[#f48771] ml-0.5">*</span></label>
+            <label className="text-[10px] text-white uppercase tracking-wider">Deposit ID<span className="text-[#f48771] ml-0.5">*</span></label>
             <input className={inp} type="number" value={form.deposit_id} onChange={e => set('deposit_id', e.target.value)} placeholder="10" />
           </div>
           <div className="flex flex-col gap-0.5">
-            <label className="text-[10px] text-[#888] uppercase tracking-wider">Gateway Status<span className="text-[#f48771] ml-0.5">*</span></label>
+            <label className="text-[10px] text-white uppercase tracking-wider">Gateway Status<span className="text-[#f48771] ml-0.5">*</span></label>
             <select className={inp} value={form.gateway_status} onChange={e => set('gateway_status', e.target.value)}>
               {['success','failed','pending'].map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
         </div>
         <div className="flex flex-col gap-0.5">
-          <label className="text-[10px] text-[#888] uppercase tracking-wider">Gateway Reference</label>
+          <label className="text-[10px] text-white uppercase tracking-wider">Gateway Reference</label>
           <input className={inp} value={form.gateway_ref} onChange={e => set('gateway_ref', e.target.value)} placeholder="GW-TXN-9988" />
         </div>
         {error && <div className="text-[11px] text-[#f48771] bg-[color:var(--bg-surface-2)] px-3 py-1.5 rounded-[2px]">{error}</div>}
         {result && (
-          <div className="bg-[#1e3a2e] border border-[#4ec9b0]/30 rounded-[2px] px-4 py-3">
-            <div className="text-[10px] text-[#4ec9b0] font-semibold uppercase mb-2">Callback Processed</div>
+          <div className="bg-[color:var(--accent-soft)] border border-[color:var(--accent-border)] rounded-[2px] px-4 py-3">
+            <div className="text-[10px] text-white font-semibold uppercase mb-2">Callback Processed</div>
             <pre className="text-[11px] text-[color:var(--text-primary)] font-mono whitespace-pre-wrap">{JSON.stringify(result, null, 2)}</pre>
           </div>
         )}
@@ -195,22 +195,22 @@ const RefundTab = () => {
 
   return (
     <div className="flex flex-col p-6 gap-4 max-w-[500px]">
-      <div className="text-[11px] text-[#888]">Refund a transaction and credit the account balance (atomic operation).</div>
+      <div className="text-[11px] text-white">Refund a transaction and credit the account balance (atomic operation).</div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-0.5">
-            <label className="text-[10px] text-[#888] uppercase tracking-wider">Transaction ID<span className="text-[#f48771] ml-0.5">*</span></label>
+            <label className="text-[10px] text-white uppercase tracking-wider">Transaction ID<span className="text-[#f48771] ml-0.5">*</span></label>
             <input className={inp} type="number" value={form.transaction_id} onChange={e => set('transaction_id', e.target.value)} placeholder="101" />
           </div>
           <div className="flex flex-col gap-0.5">
-            <label className="text-[10px] text-[#888] uppercase tracking-wider">Reason</label>
+            <label className="text-[10px] text-white uppercase tracking-wider">Reason</label>
             <input className={inp} value={form.reason} onChange={e => set('reason', e.target.value)} placeholder="Duplicate charge" />
           </div>
         </div>
         {error && <div className="text-[11px] text-[#f48771] bg-[color:var(--bg-surface-2)] px-3 py-1.5 rounded-[2px]">{error}</div>}
         {result && (
-          <div className="bg-[#1e3a2e] border border-[#4ec9b0]/30 rounded-[2px] px-4 py-3">
-            <div className="text-[10px] text-[#4ec9b0] font-semibold uppercase mb-2">Refund Processed</div>
+          <div className="bg-[color:var(--accent-soft)] border border-[color:var(--accent-border)] rounded-[2px] px-4 py-3">
+            <div className="text-[10px] text-white font-semibold uppercase mb-2">Refund Processed</div>
             <pre className="text-[11px] text-[color:var(--text-primary)] font-mono whitespace-pre-wrap">{JSON.stringify(result, null, 2)}</pre>
           </div>
         )}
@@ -235,7 +235,7 @@ const PaymentGatewayView = () => {
       <div className="flex bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0 select-none">
         {TABS.map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={`px-5 h-[30px] text-[11px] border-r border-black/30 transition-colors ${tab === t ? 'bg-[color:var(--bg-app)] text-white border-t-2 border-t-[color:var(--accent-500)]' : 'text-[#888] hover:text-[#ccc] hover:bg-[color:var(--bg-surface-1)]'}`}>
+            className={`px-5 h-[30px] text-[11px] border-r border-black/30 transition-colors ${tab === t ? 'bg-[color:var(--bg-app)] text-white border-t-2 border-t-[color:var(--accent-500)]' : 'text-white hover:text-white hover:bg-[color:var(--bg-surface-1)]'}`}>
             {t}
           </button>
         ))}

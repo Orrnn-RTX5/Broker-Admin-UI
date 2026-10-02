@@ -25,6 +25,7 @@ globalThis.__adminHookRuntime = runtime;
 // Replace only import boundaries; every hook/cache statement below them is the
 // production implementation, executed rather than inspected as text.
 const source = (await readFile(new URL('./useCore.js', import.meta.url), 'utf8'))
+  .replace('../utils/groupAccess.js', new URL('../utils/groupAccess.js', import.meta.url).href)
   .replace(/import \{[^}]+\} from 'react';/, 'const {useState,useRef,useCallback,useEffect}=globalThis.__adminHookRuntime;')
   .replace("import { useAuthStore } from '../store/authStore';", 'const useAuthStore=globalThis.__adminHookRuntime.auth;');
 const { useDataFetch } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
@@ -103,4 +104,23 @@ test('scoped denial clears displayed and cached rows; retry cannot reuse the den
  const retry=mount(); assert.equal(requests.length,3);
  requests[2].resolve({rows:[{login:'1001',group:'new'}]});await settle();
  assert.equal(retry.values[0].rows[0].group,'new');
+});
+
+test('group access changes invalidate reads even if the original access is restored', async () => {
+  const original = { ...auth, user: { group_access_mode: 'restricted', allowed_groups: ['old'] } };
+  setSession(original);
+  const prior = mount();
+  const priorRequest = requests[0];
+  setSession({ ...original, user: { group_access_mode: 'restricted', allowed_groups: ['new'] } });
+  assert.equal(prior.values[0], null);
+  setSession(original);
+  const restored = mount();
+  assert.equal(requests.length, 2);
+  requests[1].resolve({ rows: [{ group: 'current' }] }); await settle();
+  priorRequest.resolve({ rows: [{ group: 'stale' }] }); await settle();
+  assert.equal(prior.values[0], null);
+  assert.deepEqual(restored.values[0], { rows: [{ group: 'current' }] });
+  const cached = mount(); await settle();
+  assert.deepEqual(cached.values[0], { rows: [{ group: 'current' }] });
+  assert.equal(requests.length, 2);
 });

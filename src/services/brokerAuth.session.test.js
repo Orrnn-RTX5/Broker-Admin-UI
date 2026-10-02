@@ -64,6 +64,65 @@ test('configured Nexa admin can select its backend without platform discovery', 
   assert.equal(brokers[0].direct_manager_paths, false);
 });
 
+const ORRNN_ENV = {
+  BROKER_ID: 'orrnn',
+  BROKER_NAME: 'ORRNN',
+  API_HOST: 'https://service.orrnn.com',
+  API_HOST_EXT: 'https://service.orrnn.com',
+  FEED_WS_URL: 'wss://service.orrnn.com/ws/feed',
+  FEED_STATUS_URL: 'https://service.orrnn.com/ws/feed/status',
+  DEFAULT_MT5_SERVER: '51.195.188.172',
+  DISCOVERY_BASE_URL: 'https://superadmin-prod.orrnn.com',
+};
+
+test('environment-configured broker keeps its discovery handle but uses .env hosts', async () => {
+  installBrowserGlobals(ORRNN_ENV);
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push(url);
+    return {
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      text: async () => JSON.stringify(options.method === 'GET' ? [{
+        broker_id: 'Orrnn',
+        broker_name: 'ORRNN',
+        server: '51.195.188.172:443',
+        server_url: 'https://51.195.188.172:443',
+        ws_url: 'ws://51.195.188.172/ws/feed',
+      }] : { token: 'test-token' }),
+    };
+  };
+  const auth = await importFreshBrokerAuth();
+  const [broker, ...rest] = await auth.fetchBrokerList();
+  assert.equal(calls[0], 'https://superadmin-prod.orrnn.com/api/v2/broker/servers');
+  assert.equal(rest.length, 0);
+  assert.equal(broker.broker_id, 'orrnn');
+  assert.equal(broker.name, 'ORRNN');
+  assert.equal(broker.server, '51.195.188.172:443');
+  assert.equal(broker.backend_url, 'https://service.orrnn.com');
+  assert.equal(broker.server_url, 'https://service.orrnn.com');
+  assert.equal(broker.feed_ws_url, 'wss://service.orrnn.com/ws/feed');
+
+  // A previously stored record for the same broker cannot redirect login.
+  await auth.loginAdmin(
+    { broker_id: 'Orrnn', backend_url: 'https://51.195.188.172:443', env: { API_HOST: 'https://old.example.com' } },
+    { user: 'test-admin', password: 'test-password' }
+  );
+  assert.equal(calls[1], 'https://service.orrnn.com/manager/api/v2/admin/login');
+});
+
+test('environment-configured broker stays available when discovery is unreachable', async () => {
+  installBrowserGlobals(ORRNN_ENV);
+  globalThis.fetch = async () => { throw new Error('offline'); };
+  const auth = await importFreshBrokerAuth();
+  const brokers = await auth.fetchBrokerList();
+  assert.equal(brokers.length, 1);
+  assert.equal(brokers[0].broker_id, 'orrnn');
+  assert.equal(brokers[0].server, '51.195.188.172');
+  assert.equal(brokers[0].backend_url, 'https://service.orrnn.com');
+});
+
 test('Nexa discovery preserves platform handles and respects disabled records', async () => {
   installBrowserGlobals();
   const auth = await importFreshBrokerAuth();

@@ -1,3 +1,4 @@
+import { groupAccessKey } from '../utils/groupAccess.js';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuthStore } from '../store/authStore';
 
@@ -11,7 +12,7 @@ export const invalidateDataFetchCaches = () => {
   responseCache.clear();
   pendingFetches.clear();
 };
-const sessionIdentity = state => `${Boolean(state?.isAuthenticated)}:${state?.accessToken || ''}`;
+const sessionIdentity = state => `${Boolean(state?.isAuthenticated)}:${state?.accessToken || ''}:${groupAccessKey(state?.user)}`;
 let session = sessionIdentity(useAuthStore.getState());
 useAuthStore.subscribe(state => {
   const next = sessionIdentity(state);
@@ -72,7 +73,8 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true, 
   const paramsKey = JSON.stringify(params);
   const depsKey = JSON.stringify(deps);
   const cacheTtlMs = getPositiveNumber(options.cacheTtlMs);
-  const fetchCacheKey = buildFetchCacheKey(options.requestKey, paramsKey, depsKey);
+  const accessIdentity=useAuthStore(state => String(state.accessToken || '')+groupAccessKey(state.user));
+  const fetchCacheKey = buildFetchCacheKey(options.requestKey ? accessIdentity+'|'+options.requestKey : null, paramsKey, depsKey);
   
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
@@ -85,18 +87,22 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true, 
   }, [paramsKey, params]);
 
   const execute = useCallback(async ({ force = false } = {}) => {
+    const isCurrentAccess = () => {
+      const state=useAuthStore.getState();
+      return String(state.accessToken || '')+groupAccessKey(state.user)===accessIdentity;
+    };
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
 
     if (!isAuthenticated || !useAuthStore.getState().isAuthenticated || !enabled) {
-      if (requestIdRef.current === requestId) { setData(null); setError(null); setLoading(false); }
+      if (requestIdRef.current === requestId && isCurrentAccess()) { setData(null); setError(null); setLoading(false); }
       return null;
     }
 
     if (!force) {
       const cachedResult = readCachedResponse(fetchCacheKey);
       if (cachedResult !== undefined) {
-        if (requestIdRef.current === requestId) {
+        if (requestIdRef.current === requestId && isCurrentAccess()) {
           setData(cachedResult);
           setError(null);
           setLoading(false);
@@ -120,15 +126,15 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true, 
       }
 
       const result = await requestPromise;
-      if (generation !== cacheGeneration) return null;
-      writeCachedResponse(fetchCacheKey, result, cacheTtlMs);
+      if (generation !== cacheGeneration || !isCurrentAccess()) return null;
+      if (requestIdRef.current === requestId) writeCachedResponse(fetchCacheKey, result, cacheTtlMs);
 
-      if (requestIdRef.current === requestId) {
+      if (requestIdRef.current === requestId && isCurrentAccess()) {
         setData(result);
       }
       return result;
     } catch (err) {
-      if (generation === cacheGeneration && requestIdRef.current === requestId) {
+      if (generation === cacheGeneration && requestIdRef.current === requestId && isCurrentAccess()) {
         setData(null);
         responseCache.delete(fetchCacheKey);
         setError(err);
@@ -141,13 +147,14 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true, 
       if (fetchCacheKey && pendingFetches.get(fetchCacheKey) === requestPromise) {
         pendingFetches.delete(fetchCacheKey);
       }
-      if (requestIdRef.current === requestId) {
+      if (requestIdRef.current === requestId && isCurrentAccess()) {
         setLoading(false);
       }
     }
-  }, [cacheTtlMs, fetchCacheKey, isAuthenticated, enabled]);
+  }, [accessIdentity, cacheTtlMs, fetchCacheKey, isAuthenticated, enabled]);
 
   useEffect(() => {
+    setData(null);
     execute();
     return () => { requestIdRef.current += 1; };
   }, [execute, paramsKey, depsKey]);

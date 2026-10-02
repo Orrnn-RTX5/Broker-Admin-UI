@@ -33,7 +33,7 @@ export function startSessionStateFeed({ requestTicket, buildUrl, onChange,
         if (stopped || socket !== current) return;
         try {
           const event = JSON.parse(raw);
-          if (event.type === 'state_changed' || event.action || event.data?.action) invalidate();
+          if (event.type === 'state_changed' || event.type === 'access_changed' || event.action || event.data?.action) invalidate();
         } catch { /* malformed/control frames cannot change local state */ }
       };
       current.onerror = () => reconnect(attempt);

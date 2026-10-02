@@ -5,7 +5,7 @@ import {
   Bell, Building2, SlidersHorizontal, Power, ChevronDown,
   Maximize2, Printer, Sparkles, Rows3, Search, Filter, Plug,
   Folder, ArrowUpDown, BarChart3, Server, Copy, LayoutGrid,
-  Newspaper, ClipboardCopy, HelpCircle,
+  Newspaper, ClipboardCopy, HelpCircle, Bug,
 } from 'lucide-react';
 import { Tooltip } from '../ui/Tooltip';
 import {
@@ -55,7 +55,7 @@ const ActionToolBar = ({
   onNativePending, canViewNativePending = false,
   onSort, canSort = false, sortDirection = '', autoRefresh = false, onStart, onPause,
   searchQuery = '', onSearchChange, searchInputRef,
-  activeNode = 'Groups', onNodeSelect, density = 'compact', onDensityToggle, onHelp, connStatus = 'connected',
+  activeNode = 'Groups', onNodeSelect, density = 'compact', onDensityToggle, onHelp, onReportBug, connStatus = 'connected',
 }) => {
   const clearSearch = () => {
     onSearchChange?.('');
@@ -105,10 +105,10 @@ const ActionToolBar = ({
             </Tooltip>
             <DropdownMenuContent align="start" className="w-48">
               <DropdownMenuItem onSelect={onExportCsv}>
-                <span className="text-[color:var(--success-500)] font-semibold">CSV:</span> Export Table
+                <span className="text-[color:var(--text-primary)] font-semibold">CSV:</span> Export Table
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onExport}>
-                <span className="text-[color:var(--info-500)] font-semibold">JSON:</span> Export Table
+                <span className="text-[color:var(--text-primary)] font-semibold">JSON:</span> Export Table
               </DropdownMenuItem>
               {canImport && (
                 <>
@@ -224,7 +224,7 @@ const ActionToolBar = ({
               </DropdownMenuTrigger>
             </Tooltip>
             <DropdownMenuContent align="end" className="w-56">
-              <div className="px-3 py-2 text-xs font-semibold text-[color:var(--text-primary)]">
+              <div className="px-3 py-2 text-[11px] font-semibold text-[color:var(--text-primary)]">
                 Server Connection
               </div>
               <DropdownMenuItem onSelect={onSync}>
@@ -253,6 +253,7 @@ const ActionToolBar = ({
 
           <Tool icon={ClipboardCopy} label="Duplicate Selected Configuration" onClick={onExport} />
           <Tool icon={HelpCircle} label="Help Topics & User Guide (F1)" onClick={onHelp} />
+          <Tool icon={Bug} label="Report a Bug to the RTX5 platform team" onClick={onReportBug} />
         </div>
       </div>
 

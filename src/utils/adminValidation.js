@@ -1,3 +1,4 @@
+import { validateGroupAssignment } from './groupAccess.js';
 // Group names come from the broker's group list (MT5 style, e.g. "real\vip").
 const GROUP_ITEM_RE = /^[A-Za-z0-9_*./:\\ -]+$/;
 
@@ -117,8 +118,8 @@ export const validateManagerLists = ({ allowedGroups = '', ipWhitelist = '' }) =
 };
 
 // ManagerUpdate POST body from the Edit Manager form, keyed as the backend's
-// JSON contract names them. Lists are always sent so clearing a field clears
-// it; an empty list goes as [''] (a present-but-blank list). role_id is sent
+// JSON contract names them. Empty group selections are omitted so choosing
+// No groups does not rewrite the separate account scope array. role_id is sent
 // only when it changed, as an integer (0 removes the role).
 export const buildManagerUpdateParams = (form, original = {}) => {
   const name = String(form.name || '').trim();
@@ -132,7 +133,8 @@ export const buildManagerUpdateParams = (form, original = {}) => {
   const params = {
     name,
     enabled: Boolean(form.enabled),
-    'allowed_groups[]': allowed_groups.length ? allowed_groups : [''],
+    group_access_mode: validateGroupAssignment(form.group_access_mode || (allowed_groups.length ? 'restricted' : 'none'), allowed_groups),
+    ...(allowed_groups.length ? { 'allowed_groups[]': allowed_groups } : {}),
     'ip_whitelist[]': ip_whitelist.length ? ip_whitelist : [''],
   };
 
@@ -188,6 +190,7 @@ export const buildManagerCreatePayload = (form, options = {}) => {
     is_admin: !!form.is_admin && canGrantAdmin,
   };
 
+  payload.group_access_mode = validateGroupAssignment(form.group_access_mode || (allowed_groups.length ? 'restricted' : 'none'), allowed_groups);
   if (roleId) payload.role_id = parsePositiveInteger(roleId, 'Role');
   if (includeEmptyLists || allowed_groups.length) payload.allowed_groups = allowed_groups;
   if (includeEmptyLists || ip_whitelist.length) payload.ip_whitelist = ip_whitelist;

@@ -26,10 +26,10 @@ export const TreeNode = ({
     onDoubleClick={onDoubleClick}
     onContextMenu={onContextMenu}
     className={cn(
-      'flex items-center h-7 pr-2 text-[12px] cursor-default select-none',
-      'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-surface-2)]',
+      'flex items-center h-7 pr-2 text-[11px] font-normal cursor-default select-none',
+      'text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-2)]',
       selected &&
-        'bg-[color:var(--bg-surface-3)] text-[color:var(--text-primary)] font-medium',
+        'bg-[color:var(--accent-100)] text-[color:var(--text-primary)] font-semibold',
       className
     )}
     style={{ paddingLeft: 8 + depth * 14 }}

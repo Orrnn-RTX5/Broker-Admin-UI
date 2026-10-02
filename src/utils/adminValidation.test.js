@@ -117,16 +117,16 @@ test('parsePositiveInteger: validates account login values for money-create form
   assert.throws(() => parsePositiveInteger('abc', 'Login'), /valid number/);
 });
 
-test('Edit Manager sends changed role, trimmed lists and clears emptied lists', () => {
+test('Edit Manager sends changed role and preserves account scope for empty group selection', () => {
   const original = { role_id: 3 };
   assert.deepEqual(
     buildManagerUpdateParams({ name: ' Arijit ', role_id: '5', enabled: true, allowed_groups: 'retail, vip', ip_whitelist: '10.0.0.1' }, original),
-    { name: 'Arijit', enabled: true, 'allowed_groups[]': ['retail', 'vip'], 'ip_whitelist[]': ['10.0.0.1'], role_id: 5 },
+    { name: 'Arijit', enabled: true, group_access_mode: 'restricted', 'allowed_groups[]': ['retail', 'vip'], 'ip_whitelist[]': ['10.0.0.1'], role_id: 5 },
   );
-  // Unchanged role is not re-sent; emptied lists are sent as [''] so they clear.
+  // Unchanged role is not re-sent; no group array is rewritten for No groups.
   assert.deepEqual(
     buildManagerUpdateParams({ name: 'Arijit', role_id: '3', enabled: false, allowed_groups: '', ip_whitelist: '  ' }, original),
-    { name: 'Arijit', enabled: false, 'allowed_groups[]': [''], 'ip_whitelist[]': [''] },
+    { name: 'Arijit', enabled: false, group_access_mode: 'none', 'ip_whitelist[]': [''] },
   );
   // Choosing "No role" removes the role (0 in the integer-typed JSON contract).
   assert.equal(buildManagerUpdateParams({ name: 'A', role_id: '', enabled: true }, original).role_id, 0);
@@ -135,6 +135,16 @@ test('Edit Manager sends changed role, trimmed lists and clears emptied lists', 
 test('Edit Manager rejects a blank name and invalid IPs', () => {
   assert.throws(() => buildManagerUpdateParams({ name: '  ' }), /Name is required/);
   assert.throws(() => buildManagerUpdateParams({ name: 'A', ip_whitelist: 'not-an-ip' }), /IP whitelist entry/);
+});
+
+test('Edit Manager preserves explicit group access and rejects invalid restricted assignments', () => {
+  const allGroups = buildManagerUpdateParams({ name: 'A', group_access_mode: 'all_within_broker', allowed_groups: '' });
+  assert.equal(allGroups.group_access_mode, 'all_within_broker');
+  assert.equal(Object.hasOwn(allGroups, 'allowed_groups[]'), false);
+  assert.equal(buildManagerUpdateParams({ name: 'A', group_access_mode: 'none', allowed_groups: 'retail' }).group_access_mode, 'none');
+  assert.throws(() => buildManagerUpdateParams({ name: 'A', group_access_mode: 'restricted', allowed_groups: '' }), /Select at least one group/);
+  assert.throws(() => buildManagerUpdateParams({ name: 'A', group_access_mode: 'restricted', allowed_groups: 'real*' }), /Select exact group names/);
+  assert.throws(() => buildManagerUpdateParams({ name: 'A', group_access_mode: 'invalid', allowed_groups: '' }), /Choose group access/);
 });
 
 test('Reset Password enforces the backend length bounds and confirmation', () => {

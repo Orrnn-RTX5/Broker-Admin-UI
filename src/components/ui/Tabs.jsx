@@ -22,11 +22,11 @@ export const TabsTrigger = React.forwardRef(function TabsTrigger({ className, ..
     <RTabs.Trigger
       ref={ref}
       className={cn(
-        'inline-flex items-center h-8 px-3 text-[12px] font-medium',
-        'text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]',
+        'inline-flex items-center h-8 px-3 text-[11px] font-normal',
+        'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]',
         'border-b-2 border-transparent -mb-px transition-colors duration-150',
         'data-[state=active]:text-[color:var(--text-primary)]',
-        'data-[state=active]:border-[color:var(--text-primary)]',
+        'data-[state=active]:font-semibold data-[state=active]:border-[color:var(--accent-500)]',
         'focus-visible:outline-none',
         className
       )}

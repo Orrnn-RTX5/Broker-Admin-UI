@@ -105,7 +105,8 @@ test('unavailable sidebar entries remain visible and cannot activate', () => {
   assert.match(treeItemSource, /onDoubleClick=\{handleRowDoubleClick\}/);
   assert.match(treeItemSource, /disabled=\{isBlockedNavigation \|\| !hasChildren\}/);
   assert.match(treeItemSource, /aria-disabled=\{isBlockedNavigation \|\| undefined\}/);
-  assert.match(treeItemSource, /cursor-not-allowed opacity-50/);
+  assert.match(treeItemSource, /isBlockedNavigation \? 'cursor-not-allowed'/);
+  assert.doesNotMatch(treeItemSource, /cursor-not-allowed opacity-50/, 'locked labels stay white; the lock icon marks them');
   assert.match(treeItemSource, /isBlockedNavigation && <LockKeyhole/);
   assert.doesNotMatch(treeItemSource, /onLockedDropdownClick/);
 });

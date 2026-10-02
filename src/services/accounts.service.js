@@ -1,5 +1,6 @@
 import { api } from '../lib/api.js';
 import { normalizeArrayResponse } from '../utils/apiShapes.js';
+import { loadGroupTreePages } from '../utils/groupTreeData.js';
 
 const ACCOUNT_ARRAY_KEYS = ['accounts', 'data', 'answer', 'items', 'rows'];
 const ACCOUNT_TOTAL_PATHS = [
@@ -16,16 +17,19 @@ const ACCOUNT_TOTAL_PATHS = [
 ];
 const DEFAULT_ACCOUNT_LIMIT = 100;
 const LEGACY_ACCOUNT_CACHE_TTL_MS = 2 * 60 * 1000;
+const ALL_ACCOUNTS_TTL_MS = 60 * 1000;
 
 let legacyAccountsCache = null;
 let legacyAccountsProbePromise = null;
 let accountCacheGeneration = 0;
+let allAccountsLoad = null;
 const pendingAccountRequests = new Map();
 
 const invalidateAccountsCache = () => {
   accountCacheGeneration += 1;
   legacyAccountsCache = null;
   legacyAccountsProbePromise = null;
+  allAccountsLoad = null;
   pendingAccountRequests.clear();
 };
 
@@ -271,6 +275,22 @@ export const AccountsService = {
     }
 
     return trackedPromise;
+  },
+
+  // Every account on the server, all pages. Group screens filter this one list
+  // themselves: the server's group filter is not reliable for every broker
+  // (e.g. group names that differ only in letter case).
+  getAllAccounts: () => {
+    if (allAccountsLoad && Date.now() - allAccountsLoad.startedAt < ALL_ACCOUNTS_TTL_MS) return allAccountsLoad.promise;
+    const load = {
+      startedAt: Date.now(),
+      promise: loadGroupTreePages(AccountsService.getAccounts, { arrayKeys: ACCOUNT_ARRAY_KEYS }),
+    };
+    load.promise.catch(() => {
+      if (allAccountsLoad === load) allAccountsLoad = null;
+    });
+    allAccountsLoad = load;
+    return load.promise;
   },
 
   // DEPRECATED (R15/R17 G23): deposit/withdraw/credit below hit the legacy

@@ -15,14 +15,14 @@
   --accent: var(--accent-500);
   --accent-hover: var(--accent-600);
   --accent-press: var(--accent-700);
-  --accent-soft: rgba(33, 150, 243, 0.14);
-  --accent-soft-2: rgba(33, 150, 243, 0.08);
-  --accent-border: rgba(66, 165, 245, 0.38);
-  --accent-text: #64b5f6;
+  --accent-soft: color-mix(in srgb, var(--accent-500) 14%, transparent);
+  --accent-soft-2: color-mix(in srgb, var(--accent-500) 8%, transparent);
+  --accent-border: color-mix(in srgb, var(--accent-500) 38%, transparent);
+  --accent-text: #ffffff;
 
   --ok: var(--success-500);
   --ok-soft: color-mix(in srgb, var(--success-500) 16%, transparent);
-  --ok-text: var(--success-500);
+  --ok-text: #ffffff;
   --ok-border: color-mix(in srgb, var(--success-500) 44%, transparent);
 
   --danger: var(--danger-500);
@@ -37,7 +37,7 @@
 
   --info: var(--info-500);
   --info-soft: color-mix(in srgb, var(--info-500) 16%, transparent);
-  --info-text: var(--info-500);
+  --info-text: #ffffff;
   --info-border: color-mix(in srgb, var(--info-500) 44%, transparent);
 
   --ring: 0 0 0 3px color-mix(in srgb, var(--accent-500) 24%, transparent);
@@ -51,13 +51,13 @@
 }
 
 [data-theme="dark"] {
-  --accent-soft: rgba(33, 150, 243, 0.14);
-  --accent-soft-2: rgba(33, 150, 243, 0.08);
-  --accent-border: rgba(66, 165, 245, 0.38);
-  --accent-text: #64b5f6;
+  --accent-soft: color-mix(in srgb, var(--accent-500) 18%, transparent);
+  --accent-soft-2: color-mix(in srgb, var(--accent-500) 10%, transparent);
+  --accent-border: color-mix(in srgb, var(--accent-500) 44%, transparent);
+  --accent-text: #ffffff;
 
   --ok-soft: color-mix(in srgb, var(--success-500) 22%, transparent);
-  --ok-text: var(--success-500);
+  --ok-text: #ffffff;
   --ok-border: color-mix(in srgb, var(--success-500) 54%, transparent);
 
   --danger-soft: color-mix(in srgb, var(--danger-500) 22%, transparent);
@@ -69,7 +69,7 @@
   --warn-border: color-mix(in srgb, var(--warning-500) 54%, transparent);
 
   --info-soft: color-mix(in srgb, var(--info-500) 22%, transparent);
-  --info-text: #93c5fd;
+  --info-text: #ffffff;
   --info-border: color-mix(in srgb, var(--info-500) 54%, transparent);
 }
 
@@ -80,7 +80,7 @@
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   min-height: 28px;
   padding: 5px 12px;
-  font-size: 12px; font-weight: 500; line-height: 1;
+  font-size: var(--ui-font-base); font-weight: 500; line-height: 1;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -113,7 +113,7 @@
 .ui-input, .ui-select, .ui-textarea {
   display: block; width: 100%;
   padding: 5px 9px;
-  font-size: 12px; line-height: 1.4;
+  font-size: var(--ui-font-base); line-height: 1.4;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
@@ -157,7 +157,7 @@
 .ui-badge-warning { background: var(--warn-soft); color: var(--warn-text); border-color: var(--warn-border); }
 
 /* Data grid */
-.ui-grid { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; font-variant-numeric: tabular-nums; }
+.ui-grid { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--ui-font-base); font-variant-numeric: tabular-nums; }
 .ui-grid thead th {
   position: sticky; top: 0; z-index: 2;
   text-align: left; padding: 10px 14px;
@@ -197,8 +197,8 @@
   max-width: 90vw; max-height: 90vh;
   display: flex; flex-direction: column;
 }
-.ui-modal-header { display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 15px; font-weight: 600; color: var(--text); }
+.ui-modal-header { display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: var(--ui-font-heading); font-weight: 600; color: var(--text); }
 .ui-modal-header .x { margin-left: auto; color: var(--text-3); cursor: pointer; padding: 4px; border-radius: var(--radius-sm); }
 .ui-modal-header .x:hover { background: var(--surface-3); color: var(--text); }
-.ui-modal-body { padding: 20px; overflow: auto; color: var(--text-2); font-size: 13px; }
+.ui-modal-body { padding: 20px; overflow: auto; color: var(--text-2); font-size: var(--ui-font-base); }
 .ui-modal-footer { display: flex; gap: 8px; justify-content: flex-end; padding: 16px 20px; background: var(--surface-2); border-top: 1px solid var(--border); }

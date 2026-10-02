@@ -29,7 +29,7 @@ export const CardHeader = ({ className, children, ...rest }) => (
 export const CardTitle = ({ className, children, ...rest }) => (
   <h3
     className={cn(
-      'text-[12px] font-semibold uppercase tracking-wider text-[color:var(--text-primary)]',
+      'text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-primary)]',
       className
     )}
     {...rest}

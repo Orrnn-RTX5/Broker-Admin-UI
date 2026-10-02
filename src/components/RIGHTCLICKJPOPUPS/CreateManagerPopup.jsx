@@ -1,3 +1,4 @@
+import GroupAccessFields from '../organisms/GroupAccessFields';
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -15,7 +16,8 @@ const CreateManagerPopup = ({ onClose, onCreated }) => {
   const [password, setPassword] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [roleId, setRoleId] = useState('');
-  const [allowedGroups, setAllowedGroups] = useState('std_ecn');
+  const [allowedGroups, setAllowedGroups] = useState('');
+ const [groupMode,setGroupMode] = useState('none');
   const [ipWhitelist, setIpWhitelist] = useState('192.168.1.0/24');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -36,6 +38,7 @@ const CreateManagerPopup = ({ onClose, onCreated }) => {
         is_admin: isAdmin,
         role_id: roleId,
         allowed_groups: allowedGroups,
+ group_access_mode: groupMode,
         ip_whitelist: ipWhitelist,
       }, {
         requireRole: true,
@@ -116,13 +119,7 @@ const CreateManagerPopup = ({ onClose, onCreated }) => {
 
           <div className="flex items-center gap-3">
             <label className="text-[12px] w-24 shrink-0 text-right">Allowed Groups:</label>
-            <input 
-              type="text" 
-              value={allowedGroups}
-              onChange={(e) => setAllowedGroups(e.target.value)}
-              placeholder="e.g. std_ecn, real_account"
-              className="flex-1 bg-[color:var(--bg-app)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-white focus:outline-none focus:border-blue-500 rounded-sm"
-            />
+            <GroupAccessFields mode={groupMode} groups={allowedGroups} onChange={(mode,groups)=>{setGroupMode(mode);setAllowedGroups(groups.join(','));}} />
           </div>
 
           <div className="flex items-center gap-3">

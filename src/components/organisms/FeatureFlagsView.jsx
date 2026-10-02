@@ -94,7 +94,7 @@ const FeatureFlagsView = () => {
           />
           <button
             onClick={() => fetchFlags(groupFilter)}
-            className="h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]"
+            className="h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-white text-[11px] rounded-[2px]"
           >
             Load
           </button>
@@ -104,21 +104,21 @@ const FeatureFlagsView = () => {
       {/* Header */}
       <div className="flex items-center px-3 h-[24px] bg-[color:var(--bg-surface-1)] border-b border-black/30 shrink-0">
         {[['ID', 'w-12'], ['Feature Name', 'w-56'], ['Group', 'w-36'], ['Enabled', 'w-20'], ['Config', 'flex-1'], ['Updated', 'w-44']].map(([label, w]) => (
-          <div key={label} className={`${w} text-[10px] font-semibold text-[#888] uppercase tracking-wider pr-3`}>{label}</div>
+          <div key={label} className={`${w} text-[10px] font-semibold text-white uppercase tracking-wider pr-3`}>{label}</div>
         ))}
       </div>
 
       {/* Rows */}
       <div className="flex-1 overflow-auto">
         {loading ? (
-          <div className="flex items-center justify-center h-24 text-[#888] text-[11px]">Loading…</div>
+          <div className="flex items-center justify-center h-24 text-white text-[11px]">Loading…</div>
         ) : loadError ? (
           <div className="flex flex-col items-center justify-center h-24 text-center px-4">
             <div className="text-[12px] font-semibold text-[#f48771]">Failed to load feature flags</div>
-            <div className="mt-1 text-[11px] text-[#888] max-w-[520px]">{loadError}</div>
+            <div className="mt-1 text-[11px] text-white max-w-[520px]">{loadError}</div>
           </div>
         ) : data.length === 0 ? (
-          <div className="flex items-center justify-center h-24 text-[#555] text-[11px]">No feature flags found</div>
+          <div className="flex items-center justify-center h-24 text-white text-[11px]">No feature flags found</div>
         ) : (
           data.map((row, i) => (
             <div
@@ -127,7 +127,7 @@ const FeatureFlagsView = () => {
             >
               <div className="w-12 text-[11px] text-[color:var(--text-primary)] pr-3">{row.id}</div>
               <div className="w-56 text-[11px] text-[color:var(--text-primary)] pr-3 truncate">{row.feature_name}</div>
-              <div className="w-36 text-[11px] text-[#9cdcfe] pr-3 truncate">{row.group_name || <span className="text-[#555]">global</span>}</div>
+              <div className="w-36 text-[11px] text-white pr-3 truncate">{row.group_name || <span className="text-white">global</span>}</div>
               <div className="w-20 pr-3">
                 <button
                   onClick={() => handleToggle(row)}
@@ -135,15 +135,15 @@ const FeatureFlagsView = () => {
                   className="flex items-center gap-1 text-[11px] transition-colors disabled:opacity-50"
                 >
                   {row.enabled
-                    ? <ToggleRight size={16} className="text-[#4ec9b0]" />
-                    : <ToggleLeft size={16} className="text-[#555]" />}
-                  <span className={row.enabled ? 'text-[#4ec9b0]' : 'text-[#555]'}>{row.enabled ? 'On' : 'Off'}</span>
+                    ? <ToggleRight size={16} className="text-white" />
+                    : <ToggleLeft size={16} className="text-white" />}
+                  <span className={row.enabled ? 'text-white' : 'text-white'}>{row.enabled ? 'On' : 'Off'}</span>
                 </button>
               </div>
-              <div className="flex-1 text-[11px] text-[#888] pr-3 truncate font-mono">
+              <div className="flex-1 text-[11px] text-white pr-3 truncate font-mono">
                 {row.config_json && Object.keys(row.config_json).length > 0 ? JSON.stringify(row.config_json) : '{}'}
               </div>
-              <div className="w-44 text-[11px] text-[#888]">
+              <div className="w-44 text-[11px] text-white">
                 {row.updated_at ? new Date(row.updated_at).toLocaleString() : '—'}
               </div>
             </div>
@@ -162,7 +162,7 @@ const FeatureFlagsView = () => {
             <div className="text-[12px] font-semibold text-[color:var(--text-primary)] mb-1">Set Feature Flag</div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-[#888] uppercase tracking-wider">Feature Name *</label>
+              <label className="text-[10px] text-white uppercase tracking-wider">Feature Name *</label>
               <input
                 required
                 value={form.feature_name}
@@ -173,7 +173,7 @@ const FeatureFlagsView = () => {
 
             <div className="flex gap-3">
               <div className="flex flex-col gap-1 flex-1">
-                <label className="text-[10px] text-[#888] uppercase tracking-wider">Group (blank = global)</label>
+                <label className="text-[10px] text-white uppercase tracking-wider">Group (blank = global)</label>
                 <input
                   value={form.group_name}
                   onChange={e => setForm(f => ({ ...f, group_name: e.target.value }))}
@@ -182,7 +182,7 @@ const FeatureFlagsView = () => {
                 />
               </div>
               <div className="flex flex-col gap-1 justify-end">
-                <label className="flex items-center gap-1.5 text-[11px] text-[#ccc] cursor-pointer">
+                <label className="flex items-center gap-1.5 text-[11px] text-white cursor-pointer">
                   <input
                     type="checkbox"
                     checked={form.enabled}
@@ -195,7 +195,7 @@ const FeatureFlagsView = () => {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-[#888] uppercase tracking-wider">Config JSON</label>
+              <label className="text-[10px] text-white uppercase tracking-wider">Config JSON</label>
               <textarea
                 value={form.config_json}
                 onChange={e => setForm(f => ({ ...f, config_json: e.target.value }))}
@@ -206,7 +206,7 @@ const FeatureFlagsView = () => {
 
             <div className="flex gap-2 mt-1 justify-end">
               <button type="button" onClick={() => setShowForm(false)}
-                className="h-[24px] px-4 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-[#ccc] text-[11px] rounded-[2px]">
+                className="h-[24px] px-4 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-white text-[11px] rounded-[2px]">
                 Cancel
               </button>
               <button type="submit" disabled={saving}

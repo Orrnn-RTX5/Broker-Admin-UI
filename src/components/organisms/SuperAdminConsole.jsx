@@ -83,11 +83,11 @@ const StatusBadge = ({ status, active, text }) => {
   const isBad = ['suspended', 'error', 'failed', 'down', 'disconnected', 'terminated'].includes(String(status).toLowerCase());
   const isWarn = ['warning', 'degraded', 'provisioning', 'pending'].includes(String(status).toLowerCase());
 
-  let bg = 'bg-slate-500/10 text-slate-400 border-slate-500/20';
+  let bg = 'bg-slate-500/10 text-white border-slate-500/20';
   let dot = 'bg-slate-400';
 
   if (isGood) {
-    bg = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+    bg = 'bg-emerald-500/10 text-white border-emerald-500/20';
     dot = 'bg-emerald-400';
   } else if (isBad) {
     bg = 'bg-rose-500/10 text-rose-400 border-rose-500/20';
@@ -495,15 +495,15 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#0b0f17] text-slate-200 select-none overflow-hidden font-sans">
+    <div className="flex flex-col h-screen w-screen bg-[#0b0f17] text-white select-none overflow-hidden font-sans">
       {/* Top Super Admin Header */}
       <header className="h-14 shrink-0 bg-[#121824] border-b border-slate-800 flex items-center justify-between px-4 z-20">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-semibold text-sm">
-            <ShieldCheck size={18} className="text-indigo-400" />
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded bg-indigo-500/10 border border-indigo-500/20 text-white font-semibold text-sm">
+            <ShieldCheck size={18} className="text-white" />
             <span>RTX5 Super Admin</span>
           </div>
-          <span className="text-xs text-slate-400 font-mono hidden md:inline">
+          <span className="text-xs text-white font-mono hidden md:inline">
             Control Plane · {getSuperAdminOrigin()}
           </span>
           <div className="flex items-center gap-2 ml-2 pl-3 border-l border-slate-700">
@@ -511,7 +511,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               className={`w-2 h-2 rounded-full ${healthStatus.ok ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`}
               title={healthStatus.ok ? 'Control Plane Online' : 'Health check failed'}
             />
-            <span className="text-xs text-slate-300 font-medium">
+            <span className="text-xs text-white font-medium">
               {healthStatus.loading ? 'Checking...' : healthStatus.ok ? 'Online' : 'Offline'}
             </span>
           </div>
@@ -521,18 +521,18 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
           <button
             type="button"
             onClick={refreshSystemHealth}
-            className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+            className="p-1.5 rounded hover:bg-slate-800 text-white hover:text-white transition-colors"
             title="Refresh System Status"
           >
             <RefreshCw size={15} />
           </button>
 
           <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-xs">
-            <User size={13} className="text-slate-400" />
-            <span className="text-slate-200 font-medium">
+            <User size={13} className="text-white" />
+            <span className="text-white font-medium">
               {session.user?.username || session.user?.login || 'admin'}
             </span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono uppercase">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-white font-mono uppercase">
               Super Admin
             </span>
           </div>
@@ -541,7 +541,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
             <button
               type="button"
               onClick={onNavigateBrokerLogin}
-              className="text-xs px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors flex items-center gap-1.5"
+              className="text-xs px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 transition-colors flex items-center gap-1.5"
             >
               <Building2 size={13} />
               <span>Broker Admin</span>
@@ -562,7 +562,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+              className="p-1.5 rounded hover:bg-slate-800 text-white hover:text-white transition-colors"
               title="Close Super Admin View"
             >
               <X size={18} />
@@ -576,7 +576,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
         {/* Navigation Sidebar */}
         <aside className="w-60 shrink-0 bg-[#0e1420] border-r border-slate-800 flex flex-col justify-between overflow-y-auto">
           <nav className="p-3 space-y-1">
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 px-3 py-1">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-white px-3 py-1">
               Platform Modules
             </div>
 
@@ -600,17 +600,17 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all ${
                     isActive
                       ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                      : 'text-white hover:text-white hover:bg-slate-800/60'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Icon size={16} className={isActive ? 'text-white' : 'text-slate-400'} />
+                    <Icon size={16} className={isActive ? 'text-white' : 'text-white'} />
                     <span>{item.label}</span>
                   </div>
                   {item.count !== null && (
                     <span
                       className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
-                        isActive ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
+                        isActive ? 'bg-white/20 text-white' : 'bg-slate-800 text-white'
                       }`}
                     >
                       {item.count}
@@ -622,18 +622,18 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
           </nav>
 
           {/* Sidebar Footer Info */}
-          <div className="p-3 border-t border-slate-800/80 text-[11px] text-slate-500 space-y-1 bg-[#0b0f17]">
+          <div className="p-3 border-t border-slate-800/80 text-[11px] text-white space-y-1 bg-[#0b0f17]">
             <div className="flex items-center justify-between">
               <span>Readiness:</span>
-              <span className={`font-mono ${readinessStatus.ok ? 'text-emerald-400' : 'text-amber-400'}`}>
+              <span className={`font-mono ${readinessStatus.ok ? 'text-white' : 'text-amber-400'}`}>
                 {readinessStatus.ok ? 'Ready' : 'Checking'}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span>API Total:</span>
-              <span className="font-mono text-slate-400">91 Endpoints</span>
+              <span className="font-mono text-white">91 Endpoints</span>
             </div>
-            <div className="text-[10px] text-slate-600 truncate mt-1" title={getSuperAdminOrigin()}>
+            <div className="text-[10px] text-white truncate mt-1" title={getSuperAdminOrigin()}>
               {getSuperAdminOrigin()}
             </div>
           </div>
@@ -647,7 +647,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               <div className="flex items-center justify-between pb-4 border-b border-slate-800">
                 <div>
                   <h1 className="text-xl font-bold text-white tracking-tight">System & Platform Health</h1>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-white mt-0.5">
                     Global metrics, active cluster nodes, deployment readiness and admin audit activity.
                   </p>
                 </div>
@@ -664,53 +664,53 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               {/* Status Overview Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="p-4 rounded-xl bg-[#121824] border border-slate-800">
-                  <div className="flex items-center justify-between text-slate-400 text-xs">
+                  <div className="flex items-center justify-between text-white text-xs">
                     <span>Process Liveness</span>
-                    <Activity size={16} className={healthStatus.ok ? 'text-emerald-400' : 'text-rose-400'} />
+                    <Activity size={16} className={healthStatus.ok ? 'text-white' : 'text-rose-400'} />
                   </div>
                   <div className="mt-2 text-2xl font-bold font-mono text-white">
                     {healthStatus.loading ? 'Checking...' : healthStatus.ok ? 'HEALTHY' : 'DOWN'}
                   </div>
-                  <div className="mt-1 text-[11px] text-slate-500 font-mono">
+                  <div className="mt-1 text-[11px] text-white font-mono">
                     GET /health · 200 OK
                   </div>
                 </div>
 
                 <div className="p-4 rounded-xl bg-[#121824] border border-slate-800">
-                  <div className="flex items-center justify-between text-slate-400 text-xs">
+                  <div className="flex items-center justify-between text-white text-xs">
                     <span>SuperAdmin Readiness</span>
-                    <ShieldCheck size={16} className={readinessStatus.ok ? 'text-emerald-400' : 'text-amber-400'} />
+                    <ShieldCheck size={16} className={readinessStatus.ok ? 'text-white' : 'text-amber-400'} />
                   </div>
                   <div className="mt-2 text-2xl font-bold font-mono text-white">
                     {readinessStatus.loading ? 'Checking...' : readinessStatus.ok ? 'READY' : 'PENDING'}
                   </div>
-                  <div className="mt-1 text-[11px] text-slate-500 font-mono">
+                  <div className="mt-1 text-[11px] text-white font-mono">
                     GET /readiness · Control Plane
                   </div>
                 </div>
 
                 <div className="p-4 rounded-xl bg-[#121824] border border-slate-800">
-                  <div className="flex items-center justify-between text-slate-400 text-xs">
+                  <div className="flex items-center justify-between text-white text-xs">
                     <span>Active Brokers</span>
-                    <Building2 size={16} className="text-indigo-400" />
+                    <Building2 size={16} className="text-white" />
                   </div>
                   <div className="mt-2 text-2xl font-bold font-mono text-white">
                     {stats.data?.active_brokers ?? stats.data?.brokers_count ?? brokers.list.length ?? '—'}
                   </div>
-                  <div className="mt-1 text-[11px] text-slate-500">
+                  <div className="mt-1 text-[11px] text-white">
                     Total registered: {stats.data?.total_brokers ?? brokers.list.length ?? '—'}
                   </div>
                 </div>
 
                 <div className="p-4 rounded-xl bg-[#121824] border border-slate-800">
-                  <div className="flex items-center justify-between text-slate-400 text-xs">
+                  <div className="flex items-center justify-between text-white text-xs">
                     <span>Platform Trading Accounts</span>
-                    <Users size={16} className="text-emerald-400" />
+                    <Users size={16} className="text-white" />
                   </div>
                   <div className="mt-2 text-2xl font-bold font-mono text-white">
                     {stats.data?.total_accounts ?? stats.data?.traders_count ?? 'Active'}
                   </div>
-                  <div className="mt-1 text-[11px] text-slate-500">
+                  <div className="mt-1 text-[11px] text-white">
                     Across all licensed broker nodes
                   </div>
                 </div>
@@ -720,25 +720,25 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               <div className="p-5 rounded-xl bg-[#121824] border border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-                    <Cpu size={16} className="text-indigo-400" />
+                    <Cpu size={16} className="text-white" />
                     <span>Platform Statistics</span>
-                    <span className="text-xs text-slate-500 font-mono font-normal">GET /api/v1/admin/stats</span>
+                    <span className="text-xs text-white font-mono font-normal">GET /api/v1/admin/stats</span>
                   </h2>
                   {stats.data && (
                     <button
                       type="button"
                       onClick={() => copyToClipboard(stats.data, 'stats')}
-                      className="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1"
+                      className="text-xs text-white hover:text-white flex items-center gap-1"
                     >
-                      {copiedKey === 'stats' ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                      {copiedKey === 'stats' ? <Check size={12} className="text-white" /> : <Copy size={12} />}
                       <span>{copiedKey === 'stats' ? 'Copied' : 'Copy JSON'}</span>
                     </button>
                   )}
                 </div>
 
                 {stats.loading ? (
-                  <div className="py-6 flex justify-center text-slate-400 text-xs gap-2 items-center">
-                    <Loader2 size={16} className="animate-spin text-indigo-400" />
+                  <div className="py-6 flex justify-center text-white text-xs gap-2 items-center">
+                    <Loader2 size={16} className="animate-spin text-white" />
                     <span>Loading platform statistics...</span>
                   </div>
                 ) : stats.error ? (
@@ -749,7 +749,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {Object.entries(stats.data).map(([key, value]) => (
                       <div key={key} className="p-3 rounded-lg bg-[#0b0f17] border border-slate-800">
-                        <div className="text-[11px] uppercase tracking-wider text-slate-400 font-medium">
+                        <div className="text-[11px] uppercase tracking-wider text-white font-medium">
                           {key.replace(/_/g, ' ')}
                         </div>
                         <div className="text-sm font-semibold font-mono text-white mt-1 break-words">
@@ -759,7 +759,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-xs text-slate-500 italic">No platform stats received yet.</div>
+                  <div className="text-xs text-white italic">No platform stats received yet.</div>
                 )}
               </div>
 
@@ -769,12 +769,12 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                   <h2 className="text-sm font-semibold text-white flex items-center gap-2">
                     <Clock size={16} className="text-amber-400" />
                     <span>Admin Audit Log</span>
-                    <span className="text-xs text-slate-500 font-mono font-normal">GET /api/v1/admin/audit-log</span>
+                    <span className="text-xs text-white font-mono font-normal">GET /api/v1/admin/audit-log</span>
                   </h2>
                   <button
                     type="button"
                     onClick={loadAuditLog}
-                    className="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1"
+                    className="text-xs text-white hover:text-white flex items-center gap-1"
                   >
                     <RefreshCw size={12} />
                     <span>Refresh</span>
@@ -782,18 +782,18 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                 </div>
 
                 {auditLog.loading ? (
-                  <div className="py-6 flex justify-center text-slate-400 text-xs gap-2 items-center">
-                    <Loader2 size={16} className="animate-spin text-indigo-400" />
+                  <div className="py-6 flex justify-center text-white text-xs gap-2 items-center">
+                    <Loader2 size={16} className="animate-spin text-white" />
                     <span>Loading audit log entries...</span>
                   </div>
                 ) : auditLog.data.length === 0 ? (
-                  <div className="text-xs text-slate-500 italic py-4 text-center">
+                  <div className="text-xs text-white italic py-4 text-center">
                     No recent audit events logged.
                   </div>
                 ) : (
                   <div className="border border-slate-800 rounded-lg overflow-hidden">
-                    <table className="w-full text-left text-xs text-slate-300">
-                      <thead className="bg-[#0b0f17] text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                    <table className="w-full text-left text-xs text-white">
+                      <thead className="bg-[#0b0f17] text-white uppercase text-[10px] tracking-wider border-b border-slate-800">
                         <tr>
                           <th className="px-3 py-2 font-medium">Timestamp</th>
                           <th className="px-3 py-2 font-medium">Admin</th>
@@ -806,24 +806,24 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                       <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
                         {auditLog.data.slice(0, 20).map((log, idx) => (
                           <tr key={log.id || idx} className="hover:bg-slate-800/40">
-                            <td className="px-3 py-2 whitespace-nowrap text-slate-400">
+                            <td className="px-3 py-2 whitespace-nowrap text-white">
                               {log.created_at || log.timestamp || log.time || '—'}
                             </td>
-                            <td className="px-3 py-2 font-semibold text-indigo-300">
+                            <td className="px-3 py-2 font-semibold text-white">
                               {log.admin_username || log.user || log.actor || 'admin'}
                             </td>
-                            <td className="px-3 py-2 text-slate-200">
-                              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
+                            <td className="px-3 py-2 text-white">
+                              <span className="px-1.5 py-0.5 rounded bg-slate-800 text-white">
                                 {log.action || log.event || '—'}
                               </span>
                             </td>
-                            <td className="px-3 py-2 text-slate-300">
+                            <td className="px-3 py-2 text-white">
                               {log.resource_type || log.target || '—'} {log.resource_id ? `(${log.resource_id})` : ''}
                             </td>
-                            <td className="px-3 py-2 text-slate-400">
+                            <td className="px-3 py-2 text-white">
                               {log.ip_address || log.ip || '—'}
                             </td>
-                            <td className="px-3 py-2 text-slate-400 truncate max-w-xs" title={JSON.stringify(log.details || log)}>
+                            <td className="px-3 py-2 text-white truncate max-w-xs" title={JSON.stringify(log.details || log)}>
                               {typeof log.details === 'object' ? JSON.stringify(log.details) : String(log.details || log.message || '—')}
                             </td>
                           </tr>
@@ -842,7 +842,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
                 <div>
                   <h1 className="text-xl font-bold text-white tracking-tight">Brokers Registry & Lifecycle</h1>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-white mt-0.5">
                     Register, suspend, activate, monitor license usage, and inspect broker manager credentials.
                   </p>
                 </div>
@@ -850,7 +850,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                   <button
                     type="button"
                     onClick={loadBrokers}
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-700"
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-700"
                   >
                     <RefreshCw size={13} />
                     <span>Refresh</span>
@@ -869,16 +869,16 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               {/* Search and Filters */}
               <div className="flex items-center justify-between gap-4">
                 <div className="relative flex-1 max-w-md">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white" />
                   <input
                     type="text"
                     placeholder="Search brokers by ID, name, plan..."
                     value={brokerSearch}
                     onChange={(e) => setBrokerSearch(e.target.value)}
-                    className="w-full bg-[#121824] border border-slate-800 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                    className="w-full bg-[#121824] border border-slate-800 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-white focus:outline-none focus:border-indigo-500 transition-colors"
                   />
                 </div>
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-white">
                   Showing {filteredBrokers.length} of {brokers.list.length} brokers
                 </span>
               </div>
@@ -886,8 +886,8 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               {/* Brokers Table */}
               <div className="bg-[#121824] border border-slate-800 rounded-xl overflow-hidden shadow-xl">
                 {brokers.loading ? (
-                  <div className="py-12 flex flex-col justify-center items-center gap-3 text-slate-400 text-xs">
-                    <Loader2 size={24} className="animate-spin text-indigo-400" />
+                  <div className="py-12 flex flex-col justify-center items-center gap-3 text-white text-xs">
+                    <Loader2 size={24} className="animate-spin text-white" />
                     <span>Loading registered brokers from SuperAdmin...</span>
                   </div>
                 ) : brokers.error ? (
@@ -897,20 +897,20 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                     <button
                       type="button"
                       onClick={loadBrokers}
-                      className="px-3 py-1.5 rounded bg-slate-800 text-xs text-slate-300 hover:bg-slate-700"
+                      className="px-3 py-1.5 rounded bg-slate-800 text-xs text-white hover:bg-slate-700"
                     >
                       Retry
                     </button>
                   </div>
                 ) : filteredBrokers.length === 0 ? (
-                  <div className="py-12 text-center text-slate-500 text-xs space-y-2">
-                    <Building2 size={28} className="mx-auto text-slate-600" />
+                  <div className="py-12 text-center text-white text-xs space-y-2">
+                    <Building2 size={28} className="mx-auto text-white" />
                     <p>No brokers found matching your criteria.</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs text-slate-300">
-                      <thead className="bg-[#0b0f17] text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                    <table className="w-full text-left text-xs text-white">
+                      <thead className="bg-[#0b0f17] text-white uppercase text-[10px] tracking-wider border-b border-slate-800">
                         <tr>
                           <th className="px-4 py-3 font-medium">Broker ID & Name</th>
                           <th className="px-4 py-3 font-medium">Status</th>
@@ -929,11 +929,11 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                               <td className="px-4 py-3">
                                 <div className="font-semibold text-white flex items-center gap-2">
                                   <span>{broker.name || brokerId}</span>
-                                  <span className="font-mono text-[10px] text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded">
+                                  <span className="font-mono text-[10px] text-white bg-indigo-500/10 px-1.5 py-0.5 rounded">
                                     {brokerId}
                                   </span>
                                 </div>
-                                <div className="text-[11px] text-slate-500 mt-0.5">
+                                <div className="text-[11px] text-white mt-0.5">
                                   {broker.company_name || broker.admin_email || '—'}
                                 </div>
                               </td>
@@ -943,16 +943,16 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                               </td>
 
                               <td className="px-4 py-3 font-mono text-[11px]">
-                                <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                                <span className="px-2 py-0.5 rounded bg-slate-800 text-white border border-slate-700">
                                   {broker.plan || broker.license_plan || 'standard'}
                                 </span>
                               </td>
 
-                              <td className="px-4 py-3 font-mono text-slate-400">
+                              <td className="px-4 py-3 font-mono text-white">
                                 {Array.isArray(broker.servers) ? broker.servers.length : (broker.server_count || '1')} nodes
                               </td>
 
-                              <td className="px-4 py-3 font-mono text-[11px] text-slate-400">
+                              <td className="px-4 py-3 font-mono text-[11px] text-white">
                                 {broker.license_key ? (
                                   <button
                                     type="button"
@@ -962,7 +962,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                                   >
                                     <span className="truncate max-w-[120px]">{broker.license_key}</span>
                                     {copiedKey === `lk-${brokerId}` ? (
-                                      <Check size={12} className="text-emerald-400" />
+                                      <Check size={12} className="text-white" />
                                     ) : (
                                       <Copy size={12} className="opacity-0 group-hover:opacity-100" />
                                     )}
@@ -977,7 +977,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                                   <button
                                     type="button"
                                     onClick={() => handleBrokerAction(brokerId, 'details')}
-                                    className="p-1.5 rounded hover:bg-slate-700 text-slate-400 hover:text-white"
+                                    className="p-1.5 rounded hover:bg-slate-700 text-white hover:text-white"
                                     title="Broker Details & Servers"
                                   >
                                     <Eye size={14} />
@@ -997,7 +997,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                                       type="button"
                                       disabled={actionLoading[`${brokerId}-activate`]}
                                       onClick={() => handleBrokerAction(brokerId, 'activate')}
-                                      className="p-1.5 rounded hover:bg-emerald-500/20 text-emerald-400"
+                                      className="p-1.5 rounded hover:bg-emerald-500/20 text-white"
                                       title="Reactivate Broker"
                                     >
                                       {actionLoading[`${brokerId}-activate`] ? (
@@ -1025,7 +1025,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                                   <button
                                     type="button"
                                     onClick={() => handleBrokerAction(brokerId, 'license-sync')}
-                                    className="p-1.5 rounded hover:bg-slate-700 text-indigo-400 hover:text-indigo-300"
+                                    className="p-1.5 rounded hover:bg-slate-700 text-white hover:text-white"
                                     title="Enqueue License Sync"
                                   >
                                     <RefreshCw size={14} />
@@ -1058,7 +1058,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               <div className="flex items-center justify-between pb-4 border-b border-slate-800">
                 <div>
                   <h1 className="text-xl font-bold text-white tracking-tight">License Plans & Expiry</h1>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-white mt-0.5">
                     Tiered license plans, expiration tracking, and key regeneration controls.
                   </p>
                 </div>
@@ -1066,7 +1066,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                   <button
                     type="button"
                     onClick={loadLicenses}
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-700"
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-700"
                   >
                     <RefreshCw size={13} />
                     <span>Refresh</span>
@@ -1088,14 +1088,14 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                   <h2 className="text-sm font-semibold text-white flex items-center gap-2">
                     <Clock size={16} className="text-amber-400" />
                     <span>Brokers with Expiring Licenses</span>
-                    <span className="text-xs text-slate-500 font-mono font-normal">GET /api/v1/admin/licenses/expiring</span>
+                    <span className="text-xs text-white font-mono font-normal">GET /api/v1/admin/licenses/expiring</span>
                   </h2>
                 </div>
 
                 {expiringLicenses.loading ? (
-                  <div className="py-4 text-center text-xs text-slate-400">Checking expiring licenses...</div>
+                  <div className="py-4 text-center text-xs text-white">Checking expiring licenses...</div>
                 ) : expiringLicenses.list.length === 0 ? (
-                  <div className="py-4 text-center text-xs text-emerald-400 bg-emerald-500/5 rounded-lg border border-emerald-500/10">
+                  <div className="py-4 text-center text-xs text-white bg-emerald-500/5 rounded-lg border border-emerald-500/10">
                     No brokers currently nearing license expiration. All runtime licenses healthy.
                   </div>
                 ) : (
@@ -1104,7 +1104,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                       <div key={idx} className="py-2.5 flex items-center justify-between text-xs">
                         <div>
                           <span className="font-semibold text-white">{item.broker_id || item.id}</span>
-                          <span className="ml-2 text-slate-400">Expires: {item.expires_at || item.expiry || 'Soon'}</span>
+                          <span className="ml-2 text-white">Expires: {item.expires_at || item.expiry || 'Soon'}</span>
                         </div>
                         <button
                           type="button"
@@ -1135,30 +1135,30 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               {/* License Plans List */}
               <div className="p-5 rounded-xl bg-[#121824] border border-slate-800 space-y-3">
                 <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-                  <Key size={16} className="text-indigo-400" />
+                  <Key size={16} className="text-white" />
                   <span>Configured License Plans</span>
-                  <span className="text-xs text-slate-500 font-mono font-normal">GET /api/v1/admin/licenses/plans</span>
+                  <span className="text-xs text-white font-mono font-normal">GET /api/v1/admin/licenses/plans</span>
                 </h2>
 
                 {licensePlans.loading ? (
-                  <div className="py-6 text-center text-xs text-slate-400">Loading license plans...</div>
+                  <div className="py-6 text-center text-xs text-white">Loading license plans...</div>
                 ) : licensePlans.list.length === 0 ? (
-                  <div className="text-xs text-slate-500 italic py-4 text-center">No license plans returned from backend.</div>
+                  <div className="text-xs text-white italic py-4 text-center">No license plans returned from backend.</div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {licensePlans.list.map((plan) => (
                       <div key={plan.id || plan.plan_id || plan.name} className="p-4 rounded-xl bg-[#0b0f17] border border-slate-800 space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="font-semibold text-white">{plan.name || plan.plan_id}</span>
-                          <span className="text-xs px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 font-mono">
+                          <span className="text-xs px-2 py-0.5 rounded bg-indigo-500/10 text-white font-mono">
                             {plan.id || plan.plan_id}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-400">{plan.description || 'Standard platform tier'}</p>
-                        <div className="text-xs space-y-1 pt-2 border-t border-slate-800 font-mono text-slate-300">
+                        <p className="text-xs text-white">{plan.description || 'Standard platform tier'}</p>
+                        <div className="text-xs space-y-1 pt-2 border-t border-slate-800 font-mono text-white">
                           <div>Max Accounts: <span className="text-white">{plan.max_accounts ?? 'Unlimited'}</span></div>
                           <div>Max Servers: <span className="text-white">{plan.max_servers ?? '1'}</span></div>
-                          <div>Feed Enabled: <span className="text-emerald-400">{plan.feed_enabled ? 'Yes' : 'No'}</span></div>
+                          <div>Feed Enabled: <span className="text-white">{plan.feed_enabled ? 'Yes' : 'No'}</span></div>
                         </div>
                       </div>
                     ))}
@@ -1174,7 +1174,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               <div className="flex items-center justify-between pb-4 border-b border-slate-800">
                 <div>
                   <h1 className="text-xl font-bold text-white tracking-tight">Broker Servers & Fleet Health</h1>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-white mt-0.5">
                     Live endpoint health checks, latency monitoring, and active broker host mappings.
                   </p>
                 </div>
@@ -1182,7 +1182,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                   <button
                     type="button"
                     onClick={loadServers}
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-700"
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium flex items-center gap-1.5 transition-colors border border-slate-700"
                   >
                     <RefreshCw size={13} />
                     <span>Refresh</span>
@@ -1202,11 +1202,11 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               {/* Bulk Health Result banner */}
               {bulkHealth.data && (
                 <div className="p-4 rounded-xl bg-[#121824] border border-emerald-500/30 text-xs space-y-1">
-                  <div className="font-semibold text-emerald-400 flex items-center gap-2">
+                  <div className="font-semibold text-white flex items-center gap-2">
                     <CheckCircle2 size={16} />
                     <span>Bulk Health Check Completed</span>
                   </div>
-                  <pre className="text-[11px] font-mono text-slate-300 overflow-x-auto max-h-40">
+                  <pre className="text-[11px] font-mono text-white overflow-x-auto max-h-40">
                     {JSON.stringify(bulkHealth.data, null, 2)}
                   </pre>
                 </div>
@@ -1215,18 +1215,18 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               {/* All Servers Table */}
               <div className="bg-[#121824] border border-slate-800 rounded-xl overflow-hidden shadow-xl">
                 {servers.loading ? (
-                  <div className="py-12 flex justify-center items-center gap-2 text-slate-400 text-xs">
-                    <Loader2 size={20} className="animate-spin text-indigo-400" />
+                  <div className="py-12 flex justify-center items-center gap-2 text-white text-xs">
+                    <Loader2 size={20} className="animate-spin text-white" />
                     <span>Polling all active broker servers...</span>
                   </div>
                 ) : servers.list.length === 0 ? (
-                  <div className="py-12 text-center text-slate-500 text-xs space-y-2">
-                    <Server size={28} className="mx-auto text-slate-600" />
+                  <div className="py-12 text-center text-white text-xs space-y-2">
+                    <Server size={28} className="mx-auto text-white" />
                     <p>No active broker servers reported in fleet registry.</p>
                   </div>
                 ) : (
-                  <table className="w-full text-left text-xs text-slate-300">
-                    <thead className="bg-[#0b0f17] text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                  <table className="w-full text-left text-xs text-white">
+                    <thead className="bg-[#0b0f17] text-white uppercase text-[10px] tracking-wider border-b border-slate-800">
                       <tr>
                         <th className="px-4 py-3 font-medium">Server Address</th>
                         <th className="px-4 py-3 font-medium">Broker</th>
@@ -1242,23 +1242,23 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                           <td className="px-4 py-3 font-semibold text-white">
                             {srv.host || srv.ip || srv.address}:{srv.port || '80'}
                           </td>
-                          <td className="px-4 py-3 text-indigo-400 font-sans">
+                          <td className="px-4 py-3 text-white font-sans">
                             {srv.broker_id || srv.broker || '—'}
                           </td>
-                          <td className="px-4 py-3 text-slate-400">
+                          <td className="px-4 py-3 text-white">
                             {srv.role || srv.type || 'gateway'}
                           </td>
                           <td className="px-4 py-3">
                             <StatusBadge status={srv.status || (srv.is_active ? 'online' : 'disabled')} />
                           </td>
-                          <td className="px-4 py-3 text-slate-400">
+                          <td className="px-4 py-3 text-white">
                             {srv.latency ? `${srv.latency}ms` : '—'}
                           </td>
                           <td className="px-4 py-3 text-right">
                             <button
                               type="button"
                               onClick={() => handlePingServer(srv.broker_id, srv.server_id || srv.id)}
-                              className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs"
+                              className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white text-xs"
                             >
                               Ping
                             </button>
@@ -1278,7 +1278,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               <div className="flex items-center justify-between pb-4 border-b border-slate-800">
                 <div>
                   <h1 className="text-xl font-bold text-white tracking-tight">Market Data Hub & Liquidity</h1>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-white mt-0.5">
                     Central LP configuration, broker FIX accounts, active FIX sessions, and failover monitoring.
                   </p>
                 </div>
@@ -1296,9 +1296,9 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               <div className="p-5 rounded-xl bg-[#121824] border border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-                    <Radio size={16} className="text-emerald-400" />
+                    <Radio size={16} className="text-white" />
                     <span>Central Liquidity Provider (LP) Configuration</span>
-                    <span className="text-xs text-slate-500 font-mono font-normal">GET /api/v1/admin/market-data/central-lp</span>
+                    <span className="text-xs text-white font-mono font-normal">GET /api/v1/admin/market-data/central-lp</span>
                   </h2>
                   <button
                     type="button"
@@ -1310,18 +1310,18 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                         alert(`Test failed: ${e.message}`);
                       }
                     }}
-                    className="px-3 py-1 rounded bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 text-xs font-medium hover:bg-emerald-600/30"
+                    className="px-3 py-1 rounded bg-emerald-600/20 text-white border border-emerald-500/30 text-xs font-medium hover:bg-emerald-600/30"
                   >
                     Test Central LP Connection
                   </button>
                 </div>
 
                 {centralLP.loading ? (
-                  <div className="py-4 text-xs text-slate-400">Loading Central LP state...</div>
+                  <div className="py-4 text-xs text-white">Loading Central LP state...</div>
                 ) : centralLP.error ? (
                   <div className="text-xs text-rose-400">{centralLP.error}</div>
                 ) : (
-                  <pre className="p-3 bg-[#0b0f17] border border-slate-800 rounded-lg text-xs font-mono text-slate-300 overflow-x-auto max-h-48">
+                  <pre className="p-3 bg-[#0b0f17] border border-slate-800 rounded-lg text-xs font-mono text-white overflow-x-auto max-h-48">
                     {JSON.stringify(centralLP.data || { status: 'idle', config: 'default' }, null, 2)}
                   </pre>
                 )}
@@ -1331,16 +1331,16 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               <div className="p-5 rounded-xl bg-[#121824] border border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-                    <Database size={16} className="text-indigo-400" />
+                    <Database size={16} className="text-white" />
                     <span>Liquidity Providers Registry</span>
-                    <span className="text-xs text-slate-500 font-mono font-normal">GET /api/v1/admin/market-data/lps</span>
+                    <span className="text-xs text-white font-mono font-normal">GET /api/v1/admin/market-data/lps</span>
                   </h2>
                 </div>
 
                 {lps.loading ? (
-                  <div className="py-4 text-xs text-slate-400">Loading LPs...</div>
+                  <div className="py-4 text-xs text-white">Loading LPs...</div>
                 ) : lps.list.length === 0 ? (
-                  <div className="text-xs text-slate-500 italic py-2">No liquidity providers configured yet.</div>
+                  <div className="text-xs text-white italic py-2">No liquidity providers configured yet.</div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {lps.list.map((lp) => (
@@ -1349,8 +1349,8 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                           <span className="font-semibold text-white">{lp.name || lp.id}</span>
                           <StatusBadge status={lp.status || (lp.enabled ? 'active' : 'disabled')} />
                         </div>
-                        <div className="text-[11px] font-mono text-slate-400">Host: {lp.host || '—'}:{lp.port || '—'}</div>
-                        <div className="text-[11px] font-mono text-slate-400">Protocol: {lp.protocol || 'FIX 4.4'}</div>
+                        <div className="text-[11px] font-mono text-white">Host: {lp.host || '—'}:{lp.port || '—'}</div>
+                        <div className="text-[11px] font-mono text-white">Protocol: {lp.protocol || 'FIX 4.4'}</div>
                       </div>
                     ))}
                   </div>
@@ -1362,17 +1362,17 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                 <h2 className="text-sm font-semibold text-white flex items-center gap-2">
                   <Wifi size={16} className="text-amber-400" />
                   <span>Active Broker FIX Market Data Sessions</span>
-                  <span className="text-xs text-slate-500 font-mono font-normal">GET /api/v1/admin/market-data/fix-sessions</span>
+                  <span className="text-xs text-white font-mono font-normal">GET /api/v1/admin/market-data/fix-sessions</span>
                 </h2>
 
                 {fixSessions.loading ? (
-                  <div className="py-4 text-xs text-slate-400">Polling active FIX sessions...</div>
+                  <div className="py-4 text-xs text-white">Polling active FIX sessions...</div>
                 ) : fixSessions.list.length === 0 ? (
-                  <div className="text-xs text-slate-500 italic py-2">No active FIX sessions currently connected.</div>
+                  <div className="text-xs text-white italic py-2">No active FIX sessions currently connected.</div>
                 ) : (
                   <div className="border border-slate-800 rounded-lg overflow-hidden font-mono text-xs">
                     <table className="w-full text-left">
-                      <thead className="bg-[#0b0f17] text-slate-400 uppercase text-[10px]">
+                      <thead className="bg-[#0b0f17] text-white uppercase text-[10px]">
                         <tr>
                           <th className="px-3 py-2">Session ID</th>
                           <th className="px-3 py-2">Broker</th>
@@ -1385,9 +1385,9 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                         {fixSessions.list.map((sess) => (
                           <tr key={sess.session_id || sess.id} className="hover:bg-slate-800/30">
                             <td className="px-3 py-2 text-white">{sess.session_id || sess.id}</td>
-                            <td className="px-3 py-2 text-indigo-300">{sess.broker_id || '—'}</td>
-                            <td className="px-3 py-2 text-slate-400">{sess.target_comp_id || '—'}</td>
-                            <td className="px-3 py-2 text-slate-400">{sess.connected_at || '—'}</td>
+                            <td className="px-3 py-2 text-white">{sess.broker_id || '—'}</td>
+                            <td className="px-3 py-2 text-white">{sess.target_comp_id || '—'}</td>
+                            <td className="px-3 py-2 text-white">{sess.connected_at || '—'}</td>
                             <td className="px-3 py-2 text-right">
                               <button
                                 type="button"
@@ -1419,7 +1419,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               <div className="flex items-center justify-between pb-4 border-b border-slate-800">
                 <div>
                   <h1 className="text-xl font-bold text-white tracking-tight">Market Data Monitoring & Candles</h1>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-white mt-0.5">
                     Live symbol feeds, candle storage fleet health, gap scanning, and backfill job controls.
                   </p>
                 </div>
@@ -1442,7 +1442,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                   <button
                     type="button"
                     onClick={loadCandlesAndMonitoring}
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 border border-slate-700"
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium flex items-center gap-1.5 border border-slate-700"
                   >
                     <RefreshCw size={13} />
                     <span>Refresh</span>
@@ -1451,12 +1451,12 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               </div>
 
               {streamTicket && (
-                <div className="p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-xs font-mono text-indigo-300 flex items-center justify-between">
+                <div className="p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-xs font-mono text-white flex items-center justify-between">
                   <span>Stream Ticket: {streamTicket}</span>
                   <button
                     type="button"
                     onClick={() => copyToClipboard(streamTicket, 'ticket')}
-                    className="text-xs text-indigo-400 hover:text-white"
+                    className="text-xs text-white hover:text-white"
                   >
                     Copy
                   </button>
@@ -1466,21 +1466,21 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               {/* Live Symbols Overview */}
               <div className="p-5 rounded-xl bg-[#121824] border border-slate-800 space-y-3">
                 <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-                  <Radio size={16} className="text-emerald-400" />
+                  <Radio size={16} className="text-white" />
                   <span>Live Market Data Symbols</span>
-                  <span className="text-xs text-slate-500 font-mono font-normal">GET /api/v1/admin/market-data/live-symbols</span>
+                  <span className="text-xs text-white font-mono font-normal">GET /api/v1/admin/market-data/live-symbols</span>
                 </h2>
 
                 {liveSymbols.loading ? (
-                  <div className="py-4 text-xs text-slate-400">Loading symbols...</div>
+                  <div className="py-4 text-xs text-white">Loading symbols...</div>
                 ) : liveSymbols.list.length === 0 ? (
-                  <div className="text-xs text-slate-500 italic py-2">No live symbols currently broadcasting.</div>
+                  <div className="text-xs text-white italic py-2">No live symbols currently broadcasting.</div>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {liveSymbols.list.map((sym, idx) => (
                       <span
                         key={idx}
-                        className="px-2.5 py-1 rounded bg-[#0b0f17] border border-slate-800 text-xs font-mono text-slate-200"
+                        className="px-2.5 py-1 rounded bg-[#0b0f17] border border-slate-800 text-xs font-mono text-white"
                       >
                         {typeof sym === 'object' ? (sym.symbol || sym.name) : sym}
                       </span>
@@ -1492,12 +1492,12 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               {/* Candle Storage Fleet Status */}
               <div className="p-5 rounded-xl bg-[#121824] border border-slate-800 space-y-3">
                 <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-                  <HardDrive size={16} className="text-indigo-400" />
+                  <HardDrive size={16} className="text-white" />
                   <span>Candle Storage Fleet Status</span>
-                  <span className="text-xs text-slate-500 font-mono font-normal">GET /api/v1/admin/market-data/candle-storage</span>
+                  <span className="text-xs text-white font-mono font-normal">GET /api/v1/admin/market-data/candle-storage</span>
                 </h2>
 
-                <pre className="p-3 bg-[#0b0f17] border border-slate-800 rounded-lg text-xs font-mono text-slate-300 overflow-x-auto max-h-56">
+                <pre className="p-3 bg-[#0b0f17] border border-slate-800 rounded-lg text-xs font-mono text-white overflow-x-auto max-h-56">
                   {JSON.stringify(candleStorage.data || { status: 'fleet_idle' }, null, 2)}
                 </pre>
               </div>
@@ -1510,7 +1510,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               <div className="flex items-center justify-between pb-4 border-b border-slate-800">
                 <div>
                   <h1 className="text-xl font-bold text-white tracking-tight">LP Gateway (Feed-Only)</h1>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-white mt-0.5">
                     Dedicated market data feed gateway connection controls.
                   </p>
                 </div>
@@ -1520,7 +1520,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-sm font-semibold text-white">Gateway Connection Status</h2>
-                    <p className="text-xs text-slate-400">GET /api/v1/admin/gateway/lp/status</p>
+                    <p className="text-xs text-white">GET /api/v1/admin/gateway/lp/status</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -1555,7 +1555,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                   </div>
                 </div>
 
-                <div className="p-4 bg-[#0b0f17] border border-slate-800 rounded-lg text-xs font-mono text-slate-300">
+                <div className="p-4 bg-[#0b0f17] border border-slate-800 rounded-lg text-xs font-mono text-white">
                   {JSON.stringify(gatewayStatus.data || { state: 'ready' }, null, 2)}
                 </div>
               </div>
@@ -1568,14 +1568,14 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               <div className="flex items-center justify-between pb-4 border-b border-slate-800">
                 <div>
                   <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-                    <Terminal size={20} className="text-indigo-400" />
+                    <Terminal size={20} className="text-white" />
                     <span>Interactive Super Admin API Explorer</span>
                   </h1>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-white mt-0.5">
                     Execute, test, and inspect real-time responses from all 91 Super Admin endpoints directly against the live backend.
                   </p>
                 </div>
-                <div className="text-xs font-mono text-slate-400 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
+                <div className="text-xs font-mono text-white bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
                   Target: {getSuperAdminBaseUrl()}
                 </div>
               </div>
@@ -1583,7 +1583,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               {/* Endpoint Picker Toolbar */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 bg-[#121824] border border-slate-800 rounded-xl">
                 <div>
-                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                  <label className="text-[11px] font-semibold text-white uppercase tracking-wider block mb-1">
                     API Section
                   </label>
                   <select
@@ -1601,7 +1601,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                  <label className="text-[11px] font-semibold text-white uppercase tracking-wider block mb-1">
                     Search or Choose Endpoint
                   </label>
                   <select
@@ -1629,9 +1629,9 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                       <span
                         className={`text-xs font-bold font-mono px-2 py-0.5 rounded ${
                           currentOp.method === 'GET'
-                            ? 'bg-emerald-500/20 text-emerald-400'
+                            ? 'bg-emerald-500/20 text-white'
                             : currentOp.method === 'POST'
-                            ? 'bg-indigo-500/20 text-indigo-400'
+                            ? 'bg-indigo-500/20 text-white'
                             : currentOp.method === 'PUT'
                             ? 'bg-amber-500/20 text-amber-400'
                             : 'bg-rose-500/20 text-rose-400'
@@ -1643,13 +1643,13 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-400">{currentOp.label}</span>
+                      <span className="text-xs text-white">{currentOp.label}</span>
                       {currentOp.auth ? (
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-white font-mono">
                           Bearer Auth
                         </span>
                       ) : (
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono">
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-white font-mono">
                           Public
                         </span>
                       )}
@@ -1660,11 +1660,11 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                     {/* Dynamic Path Parameters */}
                     {pathPlaceholders.length > 0 && (
                       <div className="space-y-2 p-3 bg-[#0b0f17] rounded-lg border border-slate-800">
-                        <span className="text-xs font-semibold text-slate-300 block">Path Parameters:</span>
+                        <span className="text-xs font-semibold text-white block">Path Parameters:</span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                           {pathPlaceholders.map((param) => (
                             <div key={param}>
-                              <label className="text-[10px] font-mono text-slate-400 block mb-1">
+                              <label className="text-[10px] font-mono text-white block mb-1">
                                 {`{${param}}`} *
                               </label>
                               <input
@@ -1686,21 +1686,21 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                     {/* Request Body Editor for POST / PUT */}
                     {['POST', 'PUT', 'PATCH'].includes(currentOp.method) && !currentOp.fileUpload && (
                       <div className="space-y-1">
-                        <label className="text-xs font-semibold text-slate-300 block">
+                        <label className="text-xs font-semibold text-white block">
                           Request Body (JSON):
                         </label>
                         <textarea
                           rows={4}
                           value={apiRequestBody}
                           onChange={(e) => setApiRequestBody(e.target.value)}
-                          className="w-full bg-[#0b0f17] border border-slate-800 rounded-lg p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-indigo-500"
+                          className="w-full bg-[#0b0f17] border border-slate-800 rounded-lg p-3 text-xs font-mono text-white focus:outline-none focus:border-indigo-500"
                           placeholder='{"key": "value"}'
                         />
                       </div>
                     )}
 
                     <div className="flex items-center justify-between pt-2">
-                      <span className="text-xs text-slate-500 font-mono">
+                      <span className="text-xs text-white font-mono">
                         {currentOp.destructive && (
                           <span className="text-rose-400 font-semibold flex items-center gap-1">
                             <AlertTriangle size={13} />
@@ -1734,14 +1734,14 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                             <span
                               className={`px-2 py-0.5 rounded font-mono font-bold text-[11px] ${
                                 apiExecution.response.status >= 200 && apiExecution.response.status < 300
-                                  ? 'bg-emerald-500/20 text-emerald-400'
+                                  ? 'bg-emerald-500/20 text-white'
                                   : 'bg-rose-500/20 text-rose-400'
                               }`}
                             >
                               HTTP {apiExecution.response.status}
                             </span>
                           )}
-                          <span className="text-slate-400 font-mono text-[11px]">
+                          <span className="text-white font-mono text-[11px]">
                             {apiExecution.timeMs}ms
                           </span>
                         </div>
@@ -1750,10 +1750,10 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                           <button
                             type="button"
                             onClick={() => copyToClipboard(apiExecution.response.data, 'api-res')}
-                            className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
+                            className="text-xs text-white hover:text-white flex items-center gap-1"
                           >
                             {copiedKey === 'api-res' ? (
-                              <Check size={12} className="text-emerald-400" />
+                              <Check size={12} className="text-white" />
                             ) : (
                               <Copy size={12} />
                             )}
@@ -1769,7 +1769,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                       )}
 
                       {apiExecution.response && (
-                        <pre className="p-4 bg-[#0b0f17] border border-slate-800 rounded-lg text-xs font-mono text-emerald-300 overflow-x-auto max-h-96">
+                        <pre className="p-4 bg-[#0b0f17] border border-slate-800 rounded-lg text-xs font-mono text-white overflow-x-auto max-h-96">
                           {typeof apiExecution.response.data === 'object'
                             ? JSON.stringify(apiExecution.response.data, null, 2)
                             : String(apiExecution.response.data)}
@@ -1796,7 +1796,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               <button
                 type="button"
                 onClick={() => setManagerCredsModal(null)}
-                className="text-slate-400 hover:text-white"
+                className="text-white hover:text-white"
               >
                 <X size={16} />
               </button>
@@ -1804,28 +1804,28 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
 
             <div className="space-y-3 font-mono text-xs">
               <div className="p-3 bg-[#0b0f17] rounded border border-slate-800">
-                <span className="text-[10px] uppercase text-slate-500 block mb-1">Broker ID</span>
+                <span className="text-[10px] uppercase text-white block mb-1">Broker ID</span>
                 <span className="text-white font-semibold">{managerCredsModal.brokerId}</span>
               </div>
 
               <div className="p-3 bg-[#0b0f17] rounded border border-slate-800">
-                <span className="text-[10px] uppercase text-slate-500 block mb-1">Manager Login ID</span>
-                <span className="text-indigo-400 font-bold text-sm">
+                <span className="text-[10px] uppercase text-white block mb-1">Manager Login ID</span>
+                <span className="text-white font-bold text-sm">
                   {managerCredsModal.creds?.manager_login || managerCredsModal.creds?.login || '10001'}
                 </span>
               </div>
 
               <div className="p-3 bg-[#0b0f17] rounded border border-slate-800 flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] uppercase text-slate-500 block mb-1">Manager Password</span>
-                  <span className="text-emerald-400 font-bold text-sm">
+                  <span className="text-[10px] uppercase text-white block mb-1">Manager Password</span>
+                  <span className="text-white font-bold text-sm">
                     {showPassword ? (managerCredsModal.creds?.manager_password || managerCredsModal.creds?.password || '••••••••') : '••••••••••••'}
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="p-1 text-slate-400 hover:text-white"
+                  className="p-1 text-white hover:text-white"
                   title={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -1859,20 +1859,20 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
           <div className="bg-[#121824] border border-slate-800 rounded-xl p-6 max-w-2xl w-full space-y-4 shadow-2xl max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
               <div className="flex items-center gap-2 font-bold text-white text-sm">
-                <Building2 size={18} className="text-indigo-400" />
+                <Building2 size={18} className="text-white" />
                 <span>Broker Details: {brokerDetailsModal.broker_id || brokerDetailsModal.id}</span>
               </div>
               <button
                 type="button"
                 onClick={() => setBrokerDetailsModal(null)}
-                className="text-slate-400 hover:text-white"
+                className="text-white hover:text-white"
               >
                 <X size={16} />
               </button>
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-3 font-mono text-xs">
-              <pre className="p-4 bg-[#0b0f17] rounded-lg border border-slate-800 text-slate-300 overflow-x-auto">
+              <pre className="p-4 bg-[#0b0f17] rounded-lg border border-slate-800 text-white overflow-x-auto">
                 {JSON.stringify(brokerDetailsModal, null, 2)}
               </pre>
             </div>
@@ -1886,13 +1886,13 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
           <div className="bg-[#121824] border border-slate-800 rounded-xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2 font-bold text-white text-sm">
-                <Plus size={18} className="text-indigo-400" />
+                <Plus size={18} className="text-white" />
                 <span>Register New Broker (POST /api/v1/admin/brokers)</span>
               </div>
               <button
                 type="button"
                 onClick={() => setCreateBrokerModalOpen(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-white hover:text-white"
               >
                 <X size={16} />
               </button>
@@ -1921,7 +1921,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               className="space-y-3 text-xs"
             >
               <div>
-                <label className="font-semibold text-slate-300 block mb-1">Broker Identifier (broker_id) *</label>
+                <label className="font-semibold text-white block mb-1">Broker Identifier (broker_id) *</label>
                 <input
                   name="broker_id"
                   required
@@ -1931,7 +1931,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               </div>
 
               <div>
-                <label className="font-semibold text-slate-300 block mb-1">Display Name *</label>
+                <label className="font-semibold text-white block mb-1">Display Name *</label>
                 <input
                   name="name"
                   required
@@ -1941,7 +1941,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               </div>
 
               <div>
-                <label className="font-semibold text-slate-300 block mb-1">Company Legal Name</label>
+                <label className="font-semibold text-white block mb-1">Company Legal Name</label>
                 <input
                   name="company_name"
                   placeholder="e.g. GTA Markets LLC"
@@ -1950,7 +1950,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               </div>
 
               <div>
-                <label className="font-semibold text-slate-300 block mb-1">Admin Email</label>
+                <label className="font-semibold text-white block mb-1">Admin Email</label>
                 <input
                   name="admin_email"
                   type="email"
@@ -1960,7 +1960,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
               </div>
 
               <div>
-                <label className="font-semibold text-slate-300 block mb-1">License Plan</label>
+                <label className="font-semibold text-white block mb-1">License Plan</label>
                 <select
                   name="plan"
                   className="w-full bg-[#0b0f17] border border-slate-700 rounded px-3 py-2 text-white font-mono"
@@ -1975,7 +1975,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                 <button
                   type="button"
                   onClick={() => setCreateBrokerModalOpen(false)}
-                  className="px-4 py-2 rounded bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  className="px-4 py-2 rounded bg-slate-800 text-white hover:bg-slate-700"
                 >
                   Cancel
                 </button>
