@@ -1,10 +1,10 @@
 /* RTX5 Admin — desktop-style action toolbar */
 .admin-action-toolbar.mt5-action-toolbar {
-  --tb-height: 34px;
-  --tb-btn: 24px;
+  --tb-height: 100%;
+  --tb-btn: var(--header-control, 28px);
   --tb-radius: 3px;
-  --tb-hover: rgba(255, 255, 255, 0.06);
-  --tb-pressed: rgba(255, 255, 255, 0.12);
+  --tb-hover: color-mix(in srgb, var(--text-primary) 7%, transparent);
+  --tb-pressed: color-mix(in srgb, var(--text-primary) 12%, transparent);
   --tb-accent-tint: var(--accent-100, rgba(0, 120, 212, 0.18));
   --tb-accent-ring: color-mix(in srgb, var(--accent-500, #0078d4) 45%, transparent);
 
@@ -18,7 +18,8 @@
   border-bottom: 1px solid var(--border-default, #333333);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
   font-family: var(--font-sans);
-  font-size: var(--ui-font-base, 11px);
+  font-size: var(--header-type, 12px);
+  font-weight: var(--header-weight, 500);
   user-select: none;
 }
 
@@ -27,7 +28,7 @@
   min-width: 0;
   height: 100%;
   min-height: 0;
-  padding: 0 5px;
+  padding: 0 8px;
   background: transparent;
   border: 0;
   box-shadow: none;
@@ -37,7 +38,7 @@
 .mt5-toolbar-main {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--header-gap, 4px);
   flex: 1 1 auto;
   min-width: 0;
   height: 100%;
@@ -53,15 +54,17 @@
 .mt5-toolbar-side {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--header-gap, 4px);
   flex-shrink: 0;
 }
 
-.mt5-tool-group {
+.mt5-tool-group,
+.mt5-tool-group--accounts {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--header-gap, 4px);
   flex-shrink: 0;
+  padding: 0;
 }
 
 .mt5-toolbar-divider {
@@ -90,7 +93,7 @@
   border: 0;
   border-radius: var(--tb-radius);
   background: transparent;
-  color: var(--text-secondary, #cccccc);
+  color: var(--text-primary);
   cursor: pointer;
   transition: background-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
 }
@@ -106,7 +109,8 @@
 }
 
 .mt5-tool:disabled {
-  color: var(--text-tertiary, #6f6f6f);
+  color: var(--text-primary);
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
@@ -120,150 +124,14 @@
   background: color-mix(in srgb, var(--accent-500, #2196f3) 22%, transparent);
 }
 
-.mt5-tool--add:not(:disabled) {
-  color: var(--success-500, #6db3f2);
-}
-
+.mt5-tool--add:not(:disabled),
 .mt5-tool--add:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--success-500, #6db3f2) 14%, transparent);
-  color: var(--success-500, #6db3f2);
+  color: var(--text-primary);
 }
 
 .mt5-tool--danger:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--danger-500, #e53935) 14%, transparent);
-  color: var(--danger-500, #e53935);
-}
-
-.mt5-tool-badge {
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  min-width: 7px;
-  height: 7px;
-  padding: 0 2px;
-  border-radius: 999px;
-  background: var(--danger-500, #e53935);
-  color: #fff;
-  font-size: 8px;
-  font-weight: 700;
-  line-height: 7px;
-}
-
-.mt5-sort-badge {
-  position: absolute;
-  right: 3px;
-  bottom: 2px;
-  font-size: 7px;
-  font-weight: 800;
-  line-height: 1;
+  background: var(--tb-hover);
   color: var(--text-primary);
-}
-
-/* ---------- Text chips (Connect / Automation / Filter) ---------- */
-.mt5-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: var(--tb-btn);
-  padding: 0 9px;
-  flex-shrink: 0;
-  border: 1px solid var(--border-default, #333333);
-  border-radius: var(--radius-sm, 3px);
-  background: var(--bg-surface-2, #252526);
-  color: var(--text-secondary, #cccccc);
-  font: inherit;
-  font-size: var(--ui-font-base, 11px);
-  font-weight: 400;
-  line-height: 1;
-  white-space: nowrap;
-  cursor: pointer;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
-}
-
-.mt5-chip:hover,
-.mt5-chip[data-state="open"] {
-  background: var(--bg-surface-3, #2a2d2e);
-  border-color: var(--border-strong, #454545);
-  color: var(--text-primary);
-}
-
-.mt5-chip:active {
-  background: var(--bg-surface-1, #1e1e1e);
-}
-
-.mt5-chip-icon {
-  flex-shrink: 0;
-}
-
-.mt5-chip-caret {
-  flex-shrink: 0;
-  margin-left: -2px;
-  color: var(--text-muted, #6e6e6e);
-  transition: color 0.12s ease;
-}
-
-.mt5-chip:hover .mt5-chip-caret,
-.mt5-chip[data-state="open"] .mt5-chip-caret {
-  color: var(--text-primary);
-}
-
-.mt5-chip.is-connected .mt5-chip-icon {
-  color: var(--success-500, #6db3f2);
-}
-
-.mt5-chip.is-error {
-  color: var(--danger-500, #f14c4c);
-  border-color: color-mix(in srgb, var(--danger-500, #f14c4c) 50%, transparent);
-  background: color-mix(in srgb, var(--danger-500, #f14c4c) 12%, var(--bg-surface-2));
-}
-
-.mt5-chip.is-error:hover {
-  background: color-mix(in srgb, var(--danger-500, #f14c4c) 20%, var(--bg-surface-3));
-  color: #ff5252;
-}
-
-.mt5-chip.is-active {
-  color: #ffffff;
-  border-color: var(--accent-500, #0078d4);
-  background: var(--accent-soft, rgba(0, 120, 212, 0.22));
-}
-
-.mt5-chip.is-active:hover,
-.mt5-chip.is-active[data-state="open"] {
-  background: color-mix(in srgb, var(--accent-500, #0078d4) 30%, transparent);
-  border-color: var(--accent-600, #3794ff);
-  color: #ffffff;
-}
-
-.mt5-filter-indicator {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--accent-500, #0078d4);
-  box-shadow: 0 0 6px var(--accent-500, #0078d4);
-  margin-left: -1px;
-}
-
-.mt5-chip-icon--spin {
-  animation: mt5Spin 6s linear infinite;
-}
-
-.mt5-live-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--accent-600, #3794ff);
-  animation: mt5Pulse 1.6s ease-in-out infinite;
-}
-
-@keyframes mt5Spin {
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes mt5Pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.8); }
 }
 
 /* ---------- Search ---------- */
@@ -272,43 +140,60 @@
   align-items: center;
   gap: 6px;
   height: var(--tb-btn);
-  width: 190px;
-  padding: 0 8px;
+  width: 240px;
+  padding: 0 6px 0 8px;
   border: 1px solid var(--border-default, #333333);
   border-radius: var(--radius-sm, 3px);
-  background: var(--bg-app, #181818);
-  color: var(--text-primary, #cccccc);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  background: var(--bg-surface-2, #292929);
+  color: var(--text-primary, #e4e4e4);
+  box-shadow: none;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
 }
 
 .mt5-toolbar-search:hover {
-  border-color: var(--border-strong, #454545);
+  border-color: var(--border-strong, #575757);
+  background: var(--bg-surface-3, #333333);
 }
 
 .mt5-toolbar-search:focus-within {
-  width: 230px;
-  background: #1f1f1f;
-  border-color: var(--accent-500, #0078d4);
-  box-shadow: 0 0 0 1px var(--accent-500, #0078d4), inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  background: var(--bg-surface-1, #1e1e1e);
+  border-color: var(--accent-500, #0075c2);
+  box-shadow: none;
 }
 
 .mt5-toolbar-search input {
   flex: 1 1 auto;
+  width: 100%;
   min-width: 0;
+  height: 22px;
+  margin: 0;
+  padding: 0;
   border: 0;
   outline: none;
+  box-shadow: none;
+  appearance: none;
+  color-scheme: inherit;
   background: transparent;
   color: inherit;
+  caret-color: var(--text-primary);
   font: inherit;
-  font-size: var(--ui-font-base, 11px);
-  line-height: 1;
-  padding: 0;
+  font-size: var(--header-type, 12px) !important;
+  font-weight: var(--header-weight, 500) !important;
+  line-height: 22px;
+}
+
+.admin-action-toolbar .mt5-toolbar-search input:focus,
+.admin-action-toolbar .mt5-toolbar-search input:focus-visible {
+  outline: none;
+  outline-offset: 0;
+  box-shadow: none;
 }
 
 .mt5-toolbar-search input::placeholder {
-  color: var(--text-muted, #71717a);
-  font-size: 11px;
+  color: var(--text-primary, #e4e4e4);
+  opacity: 0.8;
+  font-size: var(--header-type, 12px);
+  font-weight: var(--header-weight, 500);
 }
 
 .mt5-toolbar-search input::-webkit-search-cancel-button,
@@ -319,13 +204,12 @@
 
 .mt5-search-icon {
   flex-shrink: 0;
-  color: var(--text-muted, #999999);
-  transition: color 0.15s ease, transform 0.15s ease;
+  color: var(--text-primary);
+  transition: color 0.12s ease;
 }
 
 .mt5-toolbar-search:focus-within .mt5-search-icon {
-  color: var(--accent-500, #2196f3);
-  transform: scale(1.05);
+  color: var(--accent-500, #0075c2);
 }
 
 .mt5-search-kbd {
@@ -333,16 +217,18 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 1.5px 5px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-muted, #a1a1aa);
-  font-family: var(--font-mono, monospace);
-  font-size: 9.5px;
-  font-weight: 500;
-  letter-spacing: 0.03em;
-  line-height: 1;
+  min-width: 42px;
+  height: 16px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--header-type, 12px);
+  font-weight: var(--header-weight, 500);
+  letter-spacing: 0.02em;
+  line-height: 16px;
   user-select: none;
 }
 
@@ -371,31 +257,19 @@
   color: var(--text-primary);
 }
 
-/* ---------- Focus & motion ---------- */
+/* ---------- Focus ---------- */
 .admin-action-toolbar button:focus-visible {
   outline: 2px solid var(--accent-500, #2196f3);
   outline-offset: -2px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .mt5-chip-icon--spin,
-  .mt5-live-dot {
-    animation: none;
-  }
-}
-
 /* ---------- Narrow windows ---------- */
 @media (max-width: 960px) {
-  .mt5-chip { padding: 0 8px; }
-  .mt5-chip-text { display: none; }
-  .mt5-chip-caret { margin-left: 0; }
-  .mt5-toolbar-search { width: 150px; }
-  .mt5-toolbar-search:focus-within { width: 190px; }
+  .mt5-toolbar-search { width: 168px; }
 }
 
 @media (max-width: 700px) {
-  .admin-unified-header .mt5-toolbar-search { width: 112px; }
-  .admin-unified-header .mt5-toolbar-search:focus-within { width: 140px; }
+  .admin-unified-header .mt5-toolbar-search { width: 128px; }
 }
 
 @media (max-width: 480px) {

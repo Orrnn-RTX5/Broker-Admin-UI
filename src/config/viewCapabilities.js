@@ -180,11 +180,6 @@ export const VIEW_CAPABILITIES = Object.freeze({
     'Chargeback management APIs are not available in the current backend contract.',
     'info'
   ),
-  Allocations: capability(
-    STATIC_ONLY,
-    'Allocations uses local data',
-    'This page currently renders static allocation rows and is not connected to a backend API.'
-  ),
   'Corporate links': capability(
     LOCKED_NO_API,
     'Corporate links is locked',

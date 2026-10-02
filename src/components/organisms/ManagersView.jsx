@@ -3,28 +3,17 @@ import { toggleRolePermission } from '../../utils/groupAccess';
 import { sortToolbarRows } from '../../utils/toolbarActions';
 import React, { useState, useEffect, useCallback } from 'react';
 import { ManagerService } from '../../services/manager.service';
-import { UserPlus, ShieldPlus, RefreshCw, Wifi, Activity, Trash2, Edit2, X, AlertCircle, Check, KeyRound, Power } from 'lucide-react';
+import { UserPlus, Users, Shield, ShieldPlus, LockKeyhole, Search, RefreshCw, Wifi, Activity, Trash2, Edit2, X, AlertCircle, Check, KeyRound, Power } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { buildManagerCreatePayload, buildManagerUpdateParams, canGrantAdminRole, parseCsvList, validateManagerPassword } from '../../utils/adminValidation';
 import { loadGroupTreePages, normalizeNavigationGroups } from '../../utils/groupTreeData';
 import { ROLE_PERMISSION_OPTIONS } from '../../utils/permissions';
 import { buildActionableErrorState } from '../../utils/errorState';
 import ActionableErrorState from '../atoms/ActionableErrorState';
+import { Tooltip, TooltipProvider } from '../ui/Tooltip';
 import './ManagersView.css';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-const BlueUserIcon = (props) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="#3B82F6" stroke="#1D4ED8" strokeWidth="1" {...props}>
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
-  </svg>
-);
-const ShieldIcon = (props) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="#E8B339" stroke="#B38600" strokeWidth="1" {...props}>
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-  </svg>
-);
-
 const fmtTime = (epoch) => {
   if (!epoch) return '—';
   return new Date(epoch * 1000).toLocaleString();
@@ -38,15 +27,15 @@ const fmtAge = (secs) => {
 
 // ─── Permission Badge ────────────────────────────────────────────────────────
 const PermBadges = ({ permissions }) => {
-  if (!permissions || typeof permissions !== 'object') return <span className="text-white">—</span>;
+  if (!permissions || typeof permissions !== 'object') return <span className="managers-muted">—</span>;
   const active = Object.entries(permissions).filter(([,v]) => v);
-  if (!active.length) return <span className="text-white">None</span>;
+  if (!active.length) return <span className="managers-muted">None</span>;
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="managers-permissions">
       {active.slice(0, 3).map(([k]) => (
-        <span key={k} className="px-1.5 py-0.5 bg-blue-500/20 text-white text-[10px] rounded border border-blue-500/30 truncate max-w-[90px]">{k}</span>
+        <span key={k} title={k} className="managers-permission">{PERMISSIONS.find(permission => permission.key === k)?.label || k}</span>
       ))}
-      {active.length > 3 && <span className="px-1.5 py-0.5 text-[10px] text-white">+{active.length - 3}</span>}
+      {active.length > 3 && <span className="managers-muted" title={active.slice(3).map(([key]) => key).join(', ')}>+{active.length - 3}</span>}
     </div>
   );
 };
@@ -154,11 +143,11 @@ const CreateRoleModal = ({ onClose, onCreated }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
+    <div className="managers-modal-layer fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
       <div className="w-[420px] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-md shadow-2xl text-[12px]">
         <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)]">
           <div className="flex items-center gap-2 text-white text-[13px] font-medium"><ShieldPlus size={15} className="text-white" />Create Role</div>
-          <button onClick={onClose} className="text-white hover:text-white p-1"><X size={14}/></button>
+          <button type="button" onClick={onClose} aria-label="Close dialog" className="text-white hover:text-white p-1"><X size={14}/></button>
         </div>
         <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3 bg-[color:var(--bg-app)]">
           {error && <div className="flex items-center gap-2 text-red-400 bg-red-500/10 border border-red-500/30 p-2 rounded"><AlertCircle size={13}/>{error}</div>}
@@ -291,11 +280,11 @@ const CreateManagerModal = ({ roles, onClose, onCreated, onCreateRole }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
+    <div className="managers-modal-layer fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
       <div className="w-[440px] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-md shadow-2xl text-[12px]">
         <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)]">
           <div className="flex items-center gap-2 text-white text-[13px] font-medium"><UserPlus size={15} className="text-white"/>Create Manager</div>
-          <button onClick={onClose} className="text-white hover:text-white p-1"><X size={14}/></button>
+          <button type="button" onClick={onClose} aria-label="Close dialog" className="text-white hover:text-white p-1"><X size={14}/></button>
         </div>
         <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3 bg-[color:var(--bg-app)]">
           {error && <div className="flex items-center gap-2 text-red-400 bg-red-500/10 border border-red-500/30 p-2 rounded"><AlertCircle size={13}/>{error}</div>}
@@ -387,11 +376,11 @@ const EditManagerModal = ({ manager, roles, onClose, onSaved }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
+    <div className="managers-modal-layer fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
       <div className="w-[440px] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-md shadow-2xl text-[12px]">
         <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)]">
           <div className="flex items-center gap-2 text-white text-[13px] font-medium"><Edit2 size={15} className="text-white"/>Edit Manager {manager.login}</div>
-          <button onClick={onClose} className="text-white hover:text-white p-1"><X size={14}/></button>
+          <button type="button" onClick={onClose} aria-label="Close dialog" className="text-white hover:text-white p-1"><X size={14}/></button>
         </div>
         <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3 bg-[color:var(--bg-app)]">
           {error && <div className="flex items-center gap-2 text-red-400 bg-red-500/10 border border-red-500/30 p-2 rounded"><AlertCircle size={13}/>{error}</div>}
@@ -447,11 +436,11 @@ const ResetPasswordModal = ({ manager, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
+    <div className="managers-modal-layer fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
       <div className="w-[400px] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-md shadow-2xl text-[12px]">
         <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)]">
           <div className="flex items-center gap-2 text-white text-[13px] font-medium"><KeyRound size={15} className="text-white"/>Reset Password — {manager.name} ({manager.login})</div>
-          <button onClick={onClose} className="text-white hover:text-white p-1"><X size={14}/></button>
+          <button type="button" onClick={onClose} aria-label="Close dialog" className="text-white hover:text-white p-1"><X size={14}/></button>
         </div>
         {done ? (
           <div className="p-4 flex flex-col gap-3 bg-[color:var(--bg-app)]">
@@ -508,13 +497,13 @@ const EditRoleModal = ({ role, onClose, onSaved }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
+    <div className="managers-modal-layer fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
       <div className="w-[420px] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-md shadow-2xl text-[12px]">
         <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)]">
           <div className="flex items-center gap-2 text-white text-[13px] font-medium">
             <Edit2 size={15} className="text-white" />Edit Role — <span className="text-white">{role.role_name}</span>
           </div>
-          <button onClick={onClose} className="text-white hover:text-white p-1"><X size={14}/></button>
+          <button type="button" onClick={onClose} aria-label="Close dialog" className="text-white hover:text-white p-1"><X size={14}/></button>
         </div>
         <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3 bg-[color:var(--bg-app)]">
           {error && <div className="flex items-center gap-2 text-red-400 bg-red-500/10 border border-red-500/30 p-2 rounded"><AlertCircle size={13}/>{error}</div>}
@@ -560,13 +549,13 @@ const ActivityLogModal = ({ manager, onClose }) => {
   }, [manager.login]);
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
+    <div className="managers-modal-layer fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center">
       <div className="w-[700px] max-h-[80vh] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] rounded-md shadow-2xl flex flex-col text-[12px]">
         <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] shrink-0">
           <div className="flex items-center gap-2 text-white text-[13px] font-medium">
             <Activity size={15} className="text-white"/>Activity Log — {manager.name} ({manager.login})
           </div>
-          <button onClick={onClose} className="text-white hover:text-white p-1"><X size={14}/></button>
+          <button type="button" onClick={onClose} aria-label="Close dialog" className="text-white hover:text-white p-1"><X size={14}/></button>
         </div>
         <div className="overflow-auto flex-1 bg-[color:var(--bg-app)]">
           <div className="flex border-b border-[#333] bg-[color:var(--bg-surface-1)] select-none sticky top-0">
@@ -595,21 +584,28 @@ const ActivityLogModal = ({ manager, onClose }) => {
 
 // ─── Main ManagersView ───────────────────────────────────────────────────────
 const EmptyManagerView = ({ title, description }) => (
-  <div role="status" className="m-4 max-w-lg rounded-[var(--radius-md)] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] px-4 py-4">
-    <div className="text-[13px] font-medium text-[color:var(--text-primary)]">{title}</div>
-    <p className="mt-1 text-[12px] text-[color:var(--text-secondary)]">{description}</p>
+  <div role="status" className="managers-empty">
+    <Users size={28} strokeWidth={1.4} aria-hidden="true" />
+    <div className="managers-empty-title">{title}</div>
+    <p>{description}</p>
   </div>
 );
 
+const ManagerRowAction = ({ label, icon, onClick, tone = 'neutral', children }) => (
+  <Tooltip content={label}>
+    <button type="button" onClick={onClick} aria-label={label}
+      className={'managers-icon-button managers-icon-button--' + tone + (children ? ' managers-icon-button--label' : '')}>
+      {React.createElement(icon, { size: 15, strokeWidth: 1.65, 'aria-hidden': true })}
+      {children && <span>{children}</span>}
+    </button>
+  </Tooltip>
+);
+
 const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = '' }) => {
-  const matchesSearch = (row) => !searchQuery.trim() || Object.values(row).some((value) => String(value ?? '').toLowerCase().includes(searchQuery.trim().toLowerCase()));
-  // Say when the toolbar search hides every loaded row, instead of an empty table.
-  const renderNoMatch = (rows, noun) => searchQuery.trim() && rows.length > 0 && !rows.some(matchesSearch) && (
-    <div className="p-4 text-white italic text-[12px]">
-      No {noun} match &ldquo;{searchQuery.trim()}&rdquo;. Clear the search box to show all {rows.length}.
-    </div>
+  const [directorySearch, setDirectorySearch] = useState('');
+  const matchesSearch = (row) => [searchQuery, directorySearch].every((query) =>
+    !query.trim() || Object.values(row).some((value) => String(value ?? '').toLowerCase().includes(query.trim().toLowerCase()))
   );
-  const countLabel = (rows) => (searchQuery.trim() ? `${rows.filter(matchesSearch).length} of ${rows.length}` : rows.length);
   const [activeTab, setActiveTab] = useState('Managers');
 
   const [managers, setManagers] = useState([]);
@@ -744,185 +740,169 @@ const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = ''
   };
 
   const tabs = ['Managers', 'Roles', 'Online'];
+  const tabIcons = { Managers: Users, Roles: Shield, Online: Wifi };
+  const tabRows = { Managers: managers, Roles: roles, Online: online };
+  const activeRows = tabRows[activeTab];
+  const activeError = loadErrors[activeTab.toLowerCase()];
+  const visibleRows = sortToolbarRows(activeRows.filter(matchesSearch), sortDirection, 'Managers');
+  const retryActiveTab = { Managers: fetchManagers, Roles: fetchRoles, Online: fetchOnline }[activeTab];
+  const columns = {
+    Managers: ['Login', 'Name', 'Role', 'Access', 'Status', 'Last login', 'Last IP', 'Actions'],
+    Roles: ['ID', 'Role name', 'Description', 'Permissions', 'Created', 'Actions'],
+    Online: ['Login', 'Name', 'Connected at', 'Session age'],
+  }[activeTab];
+  const emptyTitles = { Managers: 'No managers yet', Roles: 'No roles yet', Online: 'No managers online' };
+  const emptyDescriptions = {
+    Managers: 'Create a manager to add an operator to this broker.',
+    Roles: 'Create a role to define a manager permission set.',
+    Online: 'Connected manager sessions will appear here.',
+  };
   const renderLoadError = (state, onRetry) => (
     <ActionableErrorState state={state} onAction={onRetry} />
   );
 
   return (
-    <div className="manager-view flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative"
+    <TooltipProvider>
+    <div className="manager-view"
       onClick={() => setContextMenu({ visible: false })}
       onContextMenu={(e) => e.preventDefault()}>
 
-      {/* Top Action Bar */}
-      <div className="flex items-center gap-2 px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0 select-none">
-        {activeTab === 'Managers' && (
-          <button onClick={() => setIsCreateManagerOpen(true)}
-            className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] transition-colors">
-            <UserPlus size={12}/> Create Manager
+      <header className="managers-heading">
+        <div>
+          <div className="managers-eyebrow">Access management</div>
+          <h2>Managers</h2>
+          <p>Manage operator accounts, permissions, and connected sessions.</p>
+        </div>
+        <div className="managers-heading-actions">
+          <button type="button" onClick={refreshAll} disabled={loading} className="managers-button managers-button--secondary">
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} aria-hidden="true" />
+            {loading ? 'Refreshing' : 'Refresh'}
           </button>
-        )}
-        {activeTab === 'Roles' && (
-          <button onClick={() => setIsCreateRoleOpen(true)}
-            className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] transition-colors">
-            <ShieldPlus size={12}/> Create Role
-          </button>
-        )}
-        <button onClick={refreshAll} disabled={loading}
-          className="flex items-center gap-1 h-[24px] px-2 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-white text-[11px] rounded-[2px] disabled:opacity-50 transition-colors">
-          <RefreshCw size={11} className={loading ? 'animate-spin' : ''}/> Refresh
-        </button>
-        {activeTab === 'Online' && (
-          <span className="ml-2 text-[11px] text-white">
-            <span className="inline-block w-2 h-2 rounded-full bg-green-400 mr-1.5"></span>{online.length} connected
-          </span>
-        )}
-      </div>
+          {activeTab === 'Managers' && (
+            <button type="button" onClick={() => setIsCreateManagerOpen(true)} className="managers-button managers-button--primary">
+              <UserPlus size={15} aria-hidden="true" />Create Manager
+            </button>
+          )}
+          {activeTab === 'Roles' && (
+            <button type="button" onClick={() => setIsCreateRoleOpen(true)} className="managers-button managers-button--primary">
+              <ShieldPlus size={15} aria-hidden="true" />Create Role
+            </button>
+          )}
+        </div>
+      </header>
 
-      {/* ─── MANAGERS TAB ──────────────────────────────────────── */}
-      {activeTab === 'Managers' && (
-        <>
-          <div data-export-header="true" className="flex bg-[#333] border-b border-black/40 select-none shrink-0">
-            <div className="w-[80px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Login</div>
-            <div className="w-[160px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Name</div>
-            <div className="w-[130px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Role</div>
-            <div className="w-[70px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Admin</div>
-            <div className="w-[80px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Status</div>
-            <div className="w-[130px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Last Login</div>
-            <div className="w-[120px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Last IP</div>
-            <div className="w-[110px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Actions</div>
-            <div className="flex-1"></div>
+      <section className="managers-directory" aria-label="Manager directory">
+        <div className="managers-directory-toolbar">
+          <nav aria-label="Manager views" className="managers-tabs">
+            {tabs.map((tab) => {
+              const Icon = tabIcons[tab];
+              return (
+                <button type="button" key={tab}
+                  onClick={() => { setActiveTab(tab); setDirectorySearch(''); }}
+                  aria-current={activeTab === tab ? 'page' : undefined}
+                  className="managers-tab">
+                  <Icon size={14} aria-hidden="true" />
+                  {tab}
+                  <span className="managers-tab-count">{loadErrors[tab.toLowerCase()] || loading ? '—' : tabRows[tab].length}</span>
+                </button>
+              );
+            })}
+          </nav>
+          <div className="managers-search">
+            <Search size={14} aria-hidden="true" />
+            <input type="search" aria-label={'Search ' + activeTab.toLowerCase()}
+              placeholder={activeTab === 'Managers' ? 'Search login, name, or role…' : 'Search ' + activeTab.toLowerCase() + '…'}
+              value={directorySearch} onChange={(event) => setDirectorySearch(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Escape') setDirectorySearch(''); }} />
+            {directorySearch && (
+              <button type="button" onClick={() => setDirectorySearch('')} aria-label="Clear directory search">
+                <X size={13} aria-hidden="true" />
+              </button>
+            )}
           </div>
-          <div className="flex-1 overflow-auto bg-[color:var(--bg-app)]">
-            {loading && <div className="p-4 text-white italic text-[12px]">Loading...</div>}
-            {!loading && loadErrors.managers && renderLoadError(loadErrors.managers, fetchManagers)}
-            {!loading && !loadErrors.managers && managers.length === 0 && <EmptyManagerView title="No managers yet" description="Create a manager to add an operator to this broker." />}
-            {!loading && !loadErrors.managers && renderNoMatch(managers, 'managers')}
-            {sortToolbarRows(managers.filter(matchesSearch), sortDirection, 'Managers').map((row, idx) => (
-              <div data-export-row="true" key={row.login} onContextMenu={e => handleContextMenu(e, row, 'manager')}
-                className={`flex cursor-default border-b border-black/10 hover:bg-blue-600/20 transition-colors ${idx%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}>
-                <div className="w-[80px]  px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10"><BlueUserIcon/>{row.login}</div>
-                <div className="w-[160px] px-3 py-1 text-[12px] text-white border-r border-black/10 truncate">{row.name}</div>
-                <div className="w-[130px] px-3 py-1 text-[12px] text-white border-r border-black/10 truncate">{row.role_name || '—'}</div>
-                <div className="w-[70px]  px-3 py-1 text-[12px] border-r border-black/10">
-                  {row.is_admin ? <span className="text-yellow-400">Yes</span> : <span className="text-white">No</span>}
-                </div>
-                <div className="w-[80px]  px-3 py-1 text-[12px] border-r border-black/10">
-                  {row.enabled ? <span className="text-white">Active</span> : <span className="text-red-400">Disabled</span>}
-                </div>
-                <div className="w-[130px] px-3 py-1 text-[11px] text-white border-r border-black/10 truncate">{fmtTime(row.last_login)}</div>
-                <div className="w-[120px] px-3 py-1 text-[12px] text-white border-r border-black/10 truncate">{row.last_ip || '—'}</div>
-                <div className="w-[110px] px-2 py-0.5 flex items-center gap-0.5 border-r border-black/10">
-                  {canAdminister(row) ? (
+        </div>
+
+        <div className="managers-table-scroll" tabIndex={0} aria-label={activeTab + ' table'} aria-busy={loading}>
+          <table className={'managers-table managers-table--' + activeTab.toLowerCase()} aria-label={activeTab}>
+            <thead>
+              <tr data-export-header="true">
+                {columns.map((column) => <th key={column} scope="col">{column}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {!loading && !activeError && visibleRows.map((row) => (
+                <tr data-export-row="true" key={activeTab === 'Roles' ? row.id : row.login}
+                  onContextMenu={activeTab === 'Online' ? undefined : (event) => handleContextMenu(event, row, activeTab === 'Roles' ? 'role' : 'manager')}>
+                  {activeTab === 'Managers' && (
                     <>
-                      <button type="button" onClick={() => setEditingManager(row)} title="Edit Manager" aria-label={`Edit manager ${row.login}`}
-                        className="inline-flex h-6 w-6 items-center justify-center text-[color:var(--text-secondary)] hover:text-white hover:bg-[color:var(--accent-500)]/10 rounded-[2px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent-500)]"><Edit2 size={12}/></button>
-                      <button type="button" onClick={() => setPasswordTarget(row)} title="Reset Password" aria-label={`Reset password for manager ${row.login}`}
-                        className="inline-flex h-6 w-6 items-center justify-center text-[color:var(--text-secondary)] hover:text-white hover:bg-[color:var(--accent-500)]/10 rounded-[2px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent-500)]"><KeyRound size={12}/></button>
-                      <button onClick={() => (row.enabled ? handleDisableManager(row.login) : handleEnableManager(row.login))}
-                        title={row.enabled ? 'Disable Manager' : 'Enable Manager'} aria-label={`${row.enabled ? 'Disable' : 'Enable'} manager ${row.login}`} type="button"
-                        className={`inline-flex h-6 w-6 items-center justify-center rounded-[2px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent-500)] ${row.enabled ? 'text-[color:var(--text-secondary)] hover:text-orange-400 hover:bg-orange-500/10' : 'text-[color:var(--text-secondary)] hover:text-white hover:bg-green-500/10'}`}><Power size={12}/></button>
-                      <button type="button" onClick={() => handleDeleteManager(row.login, row.name)} title="Delete Manager permanently" aria-label={`Delete manager ${row.login} permanently`}
-                        className="inline-flex h-6 w-6 items-center justify-center text-[color:var(--text-secondary)] hover:text-red-400 hover:bg-red-500/10 rounded-[2px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent-500)]"><Trash2 size={12}/></button>
+                      <td className="managers-mono">{row.login}</td>
+                      <td>
+                        <span className="managers-name" title={row.name}>{row.name || '—'}</span>
+                      </td>
+                      <td><span className={row.role_name ? 'managers-cell-text' : 'managers-muted'} title={row.role_name}>{row.role_name || '—'}</span></td>
+                      <td><span className="managers-access" data-admin={Boolean(row.is_admin)}>{row.is_admin ? 'Administrator' : 'Standard'}</span></td>
+                      <td><span className="managers-status" data-active={Boolean(row.enabled)}>{row.enabled ? 'Active' : 'Disabled'}</span></td>
+                      <td><span className={row.last_login ? 'managers-cell-text' : 'managers-muted'} title={fmtTime(row.last_login)}>{fmtTime(row.last_login)}</span></td>
+                      <td className="managers-mono"><span className={row.last_ip ? 'managers-cell-text' : 'managers-muted'} title={row.last_ip}>{row.last_ip || '—'}</span></td>
+                      <td>
+                        <div className="managers-row-actions">
+                          {canAdminister(row) ? (
+                            <div className="managers-action-group">
+                              <ManagerRowAction label={'Edit manager ' + row.login} icon={Edit2} onClick={() => setEditingManager(row)}>Edit</ManagerRowAction>
+                              <ManagerRowAction label={'Reset password for manager ' + row.login} icon={KeyRound} onClick={() => setPasswordTarget(row)} />
+                              <ManagerRowAction label={(row.enabled ? 'Disable' : 'Enable') + ' manager ' + row.login} icon={Power}
+                                tone={row.enabled ? 'warning' : 'success'} onClick={() => row.enabled ? handleDisableManager(row.login) : handleEnableManager(row.login)} />
+                              <span className="managers-action-divider" aria-hidden="true" />
+                              <ManagerRowAction label={'Delete manager ' + row.login + ' permanently'} icon={Trash2} tone="danger" onClick={() => handleDeleteManager(row.login, row.name)} />
+                            </div>
+                          ) : (
+                            <span className="managers-protected" title="Protected administrator or your own account"><LockKeyhole size={12} aria-hidden="true" />Protected</span>
+                          )}
+                        </div>
+                      </td>
                     </>
-                  ) : (
-                    <span className="text-[10px] text-white px-1" title="Protected administrator or your own account">protected</span>
                   )}
-                </div>
-                <div className="flex-1"></div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+                  {activeTab === 'Roles' && (
+                    <>
+                      <td className="managers-mono">{row.id}</td>
+                      <td><div className="managers-identity" title={row.role_name}><span className="managers-avatar"><Shield size={15} aria-hidden="true" /></span><span className="managers-name">{row.role_name}</span></div></td>
+                      <td><span className="managers-cell-text" title={row.description}>{row.description || <span className="managers-muted">—</span>}</span></td>
+                      <td><PermBadges permissions={row.permissions} /></td>
+                      <td><span className="managers-cell-text" title={fmtTime(row.created_at)}>{fmtTime(row.created_at)}</span></td>
+                      <td><div className="managers-row-actions">
+                        <div className="managers-action-group">
+                          <ManagerRowAction label={'Edit role ' + row.role_name} icon={Edit2} onClick={() => setEditingRole(row)}>Edit</ManagerRowAction>
+                          <span className="managers-action-divider" aria-hidden="true" />
+                          <ManagerRowAction label={'Delete role ' + row.role_name} icon={Trash2} tone="danger" onClick={() => handleDeleteRole(row.id, row.role_name)} />
+                        </div>
+                      </div></td>
+                    </>
+                  )}
+                  {activeTab === 'Online' && (
+                    <>
+                      <td className="managers-mono"><span className="managers-status" data-active="true">{row.login}</span></td>
+                      <td><span className="managers-name" title={row.name}>{row.name || '—'}</span></td>
+                      <td>{fmtTime(row.connected_at)}</td>
+                      <td className="managers-mono">{fmtAge(row.session_age)}</td>
+                    </>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {loading && <div role="status" className="managers-loading"><RefreshCw size={18} className="animate-spin" aria-hidden="true" />Loading manager data…</div>}
+          {!loading && activeError && <div className="managers-error">{renderLoadError(activeError, retryActiveTab)}</div>}
+          {!loading && !activeError && activeRows.length === 0 && <EmptyManagerView title={emptyTitles[activeTab]} description={emptyDescriptions[activeTab]} />}
+          {!loading && !activeError && activeRows.length > 0 && visibleRows.length === 0 && (
+            <EmptyManagerView title={'No matching ' + activeTab.toLowerCase()} description="Try another search, or clear the directory and toolbar searches to show all records." />
+          )}
+        </div>
 
-      {/* ─── ROLES TAB ─────────────────────────────────────────── */}
-      {activeTab === 'Roles' && (
-        <>
-          <div data-export-header="true" className="flex bg-[#333] border-b border-black/40 select-none shrink-0">
-            <div className="w-[50px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">ID</div>
-            <div className="w-[150px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Role Name</div>
-            <div className="w-[200px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Description</div>
-            <div className="w-[260px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Permissions</div>
-            <div className="w-[150px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Created</div>
-            <div className="w-[80px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)]">Actions</div>
-          </div>
-          <div className="flex-1 overflow-auto bg-[color:var(--bg-app)]">
-            {loading && <div className="p-4 text-white italic text-[12px]">Loading...</div>}
-            {!loading && loadErrors.roles && renderLoadError(loadErrors.roles, fetchRoles)}
-            {!loading && !loadErrors.roles && roles.length === 0 && <EmptyManagerView title="No roles yet" description="Create a role to define a manager permission set." />}
-            {!loading && !loadErrors.roles && renderNoMatch(roles, 'roles')}
-            {sortToolbarRows(roles.filter(matchesSearch), sortDirection, 'Managers').map((row, idx) => (
-              <div data-export-row="true" key={row.id} onContextMenu={e => handleContextMenu(e, row, 'role')}
-                className={`flex cursor-default border-b border-black/10 hover:bg-blue-600/20 transition-colors items-center ${idx%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}>
-                <div className="w-[50px]  px-3 py-1 text-[12px] text-[color:var(--text-primary)] border-r border-black/10">{row.id}</div>
-                <div className="w-[150px] px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10"><ShieldIcon/>{row.role_name}</div>
-                <div className="w-[200px] px-3 py-1 text-[12px] text-white border-r border-black/10 truncate">{row.description || '—'}</div>
-                <div className="w-[260px] px-3 py-1 border-r border-black/10"><PermBadges permissions={row.permissions}/></div>
-                <div className="w-[150px] px-3 py-1 text-[11px] text-white border-r border-black/10">{fmtTime(row.created_at)}</div>
-                <div className="w-[80px] px-3 py-1 flex items-center gap-1">
-                  <button type="button" onClick={() => setEditingRole(row)} title="Edit Role" aria-label={`Edit role ${row.role_name}`}
-                    className="inline-flex h-6 w-6 items-center justify-center text-[color:var(--text-secondary)] hover:text-white hover:bg-[color:var(--accent-500)]/10 rounded-[2px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent-500)]">
-                    <Edit2 size={12}/>
-                  </button>
-                  <button type="button" onClick={() => handleDeleteRole(row.id, row.role_name)} title="Delete Role" aria-label={`Delete role ${row.role_name}`}
-                    className="inline-flex h-6 w-6 items-center justify-center text-[color:var(--text-secondary)] hover:text-red-400 hover:bg-red-500/10 rounded-[2px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent-500)]">
-                    <Trash2 size={12}/>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* ─── ONLINE TAB ────────────────────────────────────────── */}
-      {activeTab === 'Online' && (
-        <>
-          <div data-export-header="true" className="flex bg-[#333] border-b border-black/40 select-none shrink-0">
-            <div className="w-[80px]  px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Login</div>
-            <div className="w-[180px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Name</div>
-            <div className="w-[180px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Connected At</div>
-            <div className="w-[120px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Session Age</div>
-            <div className="flex-1"></div>
-          </div>
-          <div className="flex-1 overflow-auto bg-[color:var(--bg-app)]">
-            {loading && <div className="p-4 text-white italic text-[12px]">Loading...</div>}
-            {!loading && loadErrors.online && renderLoadError(loadErrors.online, fetchOnline)}
-            {!loading && !loadErrors.online && online.length === 0 && <EmptyManagerView title="No managers online" description="Connected manager sessions will appear here." />}
-            {!loading && !loadErrors.online && renderNoMatch(online, 'online managers')}
-            {sortToolbarRows(online.filter(matchesSearch), sortDirection, 'Managers').map((row, idx) => (
-              <div data-export-row="true" key={row.login} className={`flex cursor-default border-b border-black/10 hover:bg-blue-600/20 transition-colors ${idx%2===0?'bg-[color:var(--bg-app)]':'bg-[color:var(--bg-surface-1)]'}`}>
-                <div className="w-[80px]  px-3 py-1 text-[12px] flex items-center gap-2 border-r border-black/10">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0"></span>{row.login}
-                </div>
-                <div className="w-[180px] px-3 py-1 text-[12px] text-white border-r border-black/10">{row.name}</div>
-                <div className="w-[180px] px-3 py-1 text-[12px] text-white border-r border-black/10">{fmtTime(row.connected_at)}</div>
-                <div className="w-[120px] px-3 py-1 text-[12px] font-mono text-white border-r border-black/10">{fmtAge(row.session_age)}</div>
-                <div className="flex-1"></div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* Bottom Tab Bar */}
-      <nav aria-label="Manager views" className="min-h-8 bg-[color:var(--bg-surface-1)] border-t border-[color:var(--border-default)] flex items-center px-1 gap-1 select-none shrink-0">
-        {tabs.map(tab => (
-          <button type="button" key={tab} onClick={() => setActiveTab(tab)} aria-current={activeTab === tab ? 'page' : undefined}
-            className={`min-h-7 px-3 text-[11px] flex items-center gap-1.5 rounded-[var(--radius-sm)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[color:var(--accent-500)] ${activeTab===tab?'bg-[color:var(--bg-surface-3)] text-[color:var(--text-primary)] border border-[color:var(--accent-500)]':'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)]'}`}>
-            {tab === 'Online' && <span className={`w-1.5 h-1.5 rounded-full ${activeTab==='Online'?'bg-green-400':'bg-[#555]'}`}></span>}
-            {tab}
-            {tab === 'Online' && online.length > 0 && <span className="ml-1 text-[10px] text-white">{online.length}</span>}
-          </button>
-        ))}
-      </nav>
-
-      {/* Status Bar */}
-      <div className="min-h-6 bg-[color:var(--bg-surface-1)] text-[color:var(--text-secondary)] flex items-center px-3 text-[11px] select-none shrink-0 border-t border-[color:var(--border-subtle)]">
-        {activeTab === 'Managers' && <span>Managers: {countLabel(managers)}</span>}
-        {activeTab === 'Roles' && <span>Roles: {countLabel(roles)}</span>}
-        {activeTab === 'Online' && <span>Online: {countLabel(online)}</span>}
-      </div>
+        <footer className="managers-footer">
+          <span aria-live="polite">{loading ? 'Updating records…' : activeError ? 'Records unavailable' : 'Showing ' + visibleRows.length + ' of ' + activeRows.length + ' ' + (activeTab === 'Online' ? 'sessions' : activeTab.toLowerCase())}</span>
+          <span className="managers-session-summary"><Wifi size={12} aria-hidden="true" />{loading ? 'Checking sessions…' : loadErrors.online ? 'Session data unavailable' : online.length + ' connected ' + (online.length === 1 ? 'session' : 'sessions')}</span>
+        </footer>
+      </section>
 
       {/* Context Menu */}
       {contextMenu.visible && (
@@ -994,6 +974,7 @@ const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = ''
       {editingManager      && <EditManagerModal   manager={editingManager} roles={roles} onClose={() => setEditingManager(null)} onSaved={fetchManagers} />}
       {passwordTarget      && <ResetPasswordModal manager={passwordTarget} onClose={() => setPasswordTarget(null)} />}
     </div>
+    </TooltipProvider>
   );
 };
 

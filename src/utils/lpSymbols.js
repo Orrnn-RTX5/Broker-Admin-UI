@@ -14,6 +14,9 @@ const symbolNameOf = (row) => {
   return String(name).trim().toUpperCase();
 };
 
+const categoryNameOf = row => row && typeof row === 'object'
+  ? [row.category, row.Category, row.path, row.Path].map(value => String(value ?? '').trim()).find(Boolean) || '' : '';
+
 /**
  * Merges the LP catalogue with the configured instruments.
  * Returns [{ symbol, configured, instrument, category, fromLp }] sorted by symbol.
@@ -25,7 +28,7 @@ export const mergeLpSymbols = (catalogue = [], configured = []) => {
   for (const row of Array.isArray(catalogue) ? catalogue : []) {
     const symbol = symbolNameOf(row);
     if (!symbol || bySymbol.has(symbol)) continue;
-    bySymbol.set(symbol, { symbol, configured: false, instrument: null, category: inferMarketCategory(symbol), fromLp: true });
+    bySymbol.set(symbol, { symbol, configured: false, instrument: null, category: categoryNameOf(row) || inferMarketCategory(symbol), fromLp: true });
   }
   for (const row of Array.isArray(configured) ? configured : []) {
     const symbol = symbolNameOf(row);
@@ -35,7 +38,7 @@ export const mergeLpSymbols = (catalogue = [], configured = []) => {
       symbol,
       configured: true,
       instrument: row,
-      category: (row && typeof row === 'object' && row.category) || existing?.category || inferMarketCategory(symbol),
+      category: categoryNameOf(row) || existing?.category || inferMarketCategory(symbol),
       fromLp: Boolean(existing),
     });
   }

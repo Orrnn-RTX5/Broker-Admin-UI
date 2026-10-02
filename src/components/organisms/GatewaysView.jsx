@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AlertCircle, CheckCircle2, Loader2, Save, Zap } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, Network, Save, Zap } from 'lucide-react';
 import {
   gatewayApplyFeedConfig,
   gatewayGetFeedConfig,
@@ -8,6 +8,8 @@ import {
 import { buildFeedConfigPayload, normalizeFeedProvider } from '../../lib/feedConfigPayload';
 import { useToast } from '../ui/useToast';
 import FixRelayConfigPanel from './FixRelayConfigPanel';
+import GatewaySymbolPicker from './GatewaySymbolPicker';
+import './GatewaysView.css';
 
 const PROVIDER_OPTIONS = [
   { value: 'rtxmd', label: 'RTX Market Data FIX' },
@@ -57,9 +59,9 @@ const formFromSavedConfig = (config) => {
 };
 
 const Field = ({ label, required, children }) => (
-  <label className="flex flex-col gap-1.5">
-    <span className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--text-muted)]">
-      {label}{required && <span className="ml-0.5 text-red-400">*</span>}
+  <label className="gateways-field">
+    <span className="gateways-field-label">
+      {label}{required && <span className="gateways-required">*</span>}
     </span>
     {children}
   </label>
@@ -83,18 +85,10 @@ const Notice = ({ tone = 'info', children }) => {
   const isError = tone === 'error';
   return (
     <div
-      className="flex items-start gap-2 rounded-lg px-3 py-2 text-xs"
-      style={{
-        background: isError
-          ? 'color-mix(in srgb, var(--danger-500) 10%, transparent)'
-          : 'color-mix(in srgb, var(--success-500) 10%, transparent)',
-        color: isError ? 'var(--danger-500)' : 'var(--success-500)',
-        border: `1px solid ${isError
-          ? 'color-mix(in srgb, var(--danger-500) 25%, transparent)'
-          : 'color-mix(in srgb, var(--success-500) 25%, transparent)'}`,
-      }}
+      className={`gateways-notice gateways-notice--${isError ? 'error' : 'success'}`}
+      role={isError ? 'alert' : 'status'}
     >
-      {isError ? <AlertCircle size={13} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={13} className="mt-0.5 shrink-0" />}
+      {isError ? <AlertCircle size={14} /> : <CheckCircle2 size={14} />}
       <span>{children}</span>
     </div>
   );
@@ -157,6 +151,10 @@ const GatewaysView = () => {
 
       if (missing.length > 0) {
         return `${missing.map(([label]) => label).join(', ')} required when LP credentials are enabled.`;
+      }
+
+      if (!form.all_symbols && !form.symbols.trim()) {
+        return 'Select at least one symbol or enable "Subscribe to all symbols".';
       }
     }
 
@@ -227,40 +225,38 @@ const GatewaysView = () => {
   };
 
   return (
-    <div className="flex-1 min-h-0 bg-[color:var(--bg-app)] overflow-y-auto text-[color:var(--text-primary)]">
-      <div className="border-b border-black/40 bg-[color:var(--bg-surface-1)] px-5 py-4">
-        <div>
-          <h1 className="mb-1 text-[17px] font-semibold text-white">Gateways</h1>
-          <p className="text-[12px] text-[color:var(--text-muted)]">Enter your LP credentials.</p>
+    <div className="gateways-view">
+      <header className="gateways-header">
+        <div className="gateways-heading">
+          <Network size={15} aria-hidden="true" />
+          <h1>Gateways</h1>
+          <span className="gateways-header-description">Liquidity provider configuration</span>
         </div>
-      </div>
+        <span className="gateways-provider-badge">{providerLabel(form.feed_provider)}</span>
+      </header>
 
-      <div className="p-5 pb-12">
+      <div className="gateways-content">
         {import.meta.env.VITE_FIX_RELAY_ENABLED === 'true' && <FixRelayConfigPanel />}
         <form
           onSubmit={handleSubmit}
-          className="flex max-w-[980px] flex-col gap-4 rounded-xl border p-4"
-          style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}
+          className="gateways-form"
+          aria-labelledby="gateways-credentials-title"
+          aria-busy={disabled}
         >
-          <div className="flex flex-wrap items-start justify-between gap-3 border-b pb-3" style={{ borderColor: 'var(--border-3)' }}>
+          <div className="gateways-form-heading">
             <div>
-              <div className="text-sm font-semibold text-[color:var(--text-primary)]">Enter your LP credentials</div>
-              <div className="mt-1 text-[12px] text-[color:var(--text-muted)]">
-                Save the FIX quote-session credentials that the broker backend should use for upstream market data.
-              </div>
+              <h2 id="gateways-credentials-title">LP credentials</h2>
+              <p>Configure the FIX connection used for upstream market data.</p>
             </div>
-            <div
-              className="rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wide"
-              style={{ background: 'rgba(96,165,250,0.12)', color: '#ffffff', border: '1px solid rgba(96,165,250,0.25)' }}
-            >
-              {providerLabel(form.feed_provider)}
-            </div>
+            <span className="gateways-config-state">
+              {loadingConfig ? <><Loader2 size={12} className="animate-spin" /> Loading configuration</> : 'FIX quote session'}
+            </span>
           </div>
 
           <Notice tone="error">{error}</Notice>
           <Notice>{notice}</Notice>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="gateways-grid gateways-options">
             <Field label="Provider">
               <select className="ui-select ui-input-sm" value={form.feed_provider} onChange={setField('feed_provider')} disabled={disabled}>
                 {PROVIDER_OPTIONS.map((option) => (
@@ -270,78 +266,98 @@ const GatewaysView = () => {
             </Field>
 
             <Field label="Enabled">
-              <label className="flex h-[30px] items-center gap-2 rounded border px-2 text-[12px]" style={{ borderColor: 'var(--border-3)' }}>
-                <input type="checkbox" checked={form.enabled} onChange={setField('enabled')} disabled={disabled} className="accent-blue-500" />
-                Enable these LP credentials
-              </label>
+              <span className="gateways-toggle">
+                <input type="checkbox" checked={form.enabled} onChange={setField('enabled')} disabled={disabled} />
+                <span>Enable LP credentials</span>
+              </span>
             </Field>
 
-            <Field label="Use SSL">
-              <label className="flex h-[30px] items-center gap-2 rounded border px-2 text-[12px]" style={{ borderColor: 'var(--border-3)' }}>
-                <input type="checkbox" checked={form.use_ssl} onChange={setField('use_ssl')} disabled={disabled} className="accent-blue-500" />
-                SSL / TLS
-              </label>
-            </Field>
-
-            <Field label="Host" required>
-              <Input value={form.host} onChange={setField('host')} placeholder="Enter LP host" disabled={disabled} />
-            </Field>
-
-            <Field label="Port" required>
-              <Input type="number" value={form.port} onChange={setField('port')} placeholder="Enter LP port" disabled={disabled} />
-            </Field>
-
-            <Field label="Sender CompID" required>
-              <Input value={form.sender_comp_id} onChange={setField('sender_comp_id')} placeholder="Enter sender CompID" disabled={disabled} />
-            </Field>
-
-            <Field label="Target CompID" required>
-              <Input value={form.target_comp_id} onChange={setField('target_comp_id')} placeholder="Enter target CompID" disabled={disabled} />
-            </Field>
-
-            <Field label="Username" required>
-              <Input value={form.username} onChange={setField('username')} placeholder="Enter LP username" disabled={disabled} />
-            </Field>
-
-            <Field label="Password">
-              <Input
-                type="password"
-                value={form.password}
-                onChange={setField('password')}
-                placeholder={passwordSet ? 'Saved password set; leave blank to keep it' : 'Enter LP password'}
-                disabled={disabled}
-              />
-            </Field>
-
-            <Field label="Symbols Mode">
-              <label className="flex h-[30px] items-center gap-2 rounded border px-2 text-[12px]" style={{ borderColor: 'var(--border-3)' }}>
-                <input type="checkbox" checked={form.all_symbols} onChange={setField('all_symbols')} disabled={disabled} className="accent-blue-500" />
-                All symbols
-              </label>
-            </Field>
-
-            <Field label="Symbols">
-              <Input
-                value={form.symbols}
-                onChange={setField('symbols')}
-                placeholder="EURUSD, GBPUSD, XAUUSD"
-                disabled={disabled || form.all_symbols}
-              />
-            </Field>
-
-            <Field label="Catalog File">
-              <Input value={form.catalog_file} onChange={setField('catalog_file')} placeholder="Optional catalog file path" disabled={disabled} />
+            <Field label="Transport security">
+              <span className="gateways-toggle">
+                <input type="checkbox" checked={form.use_ssl} onChange={setField('use_ssl')} disabled={disabled} />
+                <span>Use SSL / TLS</span>
+              </span>
             </Field>
           </div>
 
-          <div className="flex justify-end gap-2 border-t pt-3" style={{ borderColor: 'var(--border-3)' }}>
-            <button type="button" onClick={handleApply} disabled={disabled} className="ui-btn ui-btn-secondary ui-btn-sm gap-1.5">
-              {applying ? <><Loader2 size={12} className="animate-spin" /> Applying</> : <><Zap size={12} /> Save & Apply</>}
-            </button>
-            <button type="submit" disabled={disabled} className="ui-btn ui-btn-primary ui-btn-sm gap-1.5">
-              {saving || loadingConfig ? <><Loader2 size={12} className="animate-spin" /> {loadingConfig ? 'Loading' : 'Saving'}</> : <><Save size={12} /> Save LP Credentials</>}
-            </button>
-          </div>
+          <section className="gateways-section" aria-labelledby="gateways-connection-title">
+            <h3 id="gateways-connection-title">Connection & authentication</h3>
+            <div className="gateways-grid">
+              <Field label="Host" required={form.enabled}>
+                <Input value={form.host} onChange={setField('host')} placeholder="LP hostname or IP address" disabled={disabled} />
+              </Field>
+
+              <Field label="Port" required={form.enabled}>
+                <Input type="number" value={form.port} onChange={setField('port')} placeholder="LP connection port" disabled={disabled} />
+              </Field>
+
+              <Field label="Sender CompID" required={form.enabled}>
+                <Input value={form.sender_comp_id} onChange={setField('sender_comp_id')} placeholder="Enter sender CompID" disabled={disabled} />
+              </Field>
+
+              <Field label="Target CompID" required={form.enabled}>
+                <Input value={form.target_comp_id} onChange={setField('target_comp_id')} placeholder="Enter target CompID" disabled={disabled} />
+              </Field>
+
+              <Field label="Username" required={form.enabled}>
+                <Input value={form.username} onChange={setField('username')} placeholder="Enter LP username" disabled={disabled} />
+              </Field>
+
+              <Field label="Password" required={form.enabled && !passwordSet}>
+                <Input
+                  type="password"
+                  value={form.password}
+                  onChange={setField('password')}
+                  placeholder={passwordSet ? 'Leave blank to keep saved password' : 'Enter LP password'}
+                  disabled={disabled}
+                />
+              </Field>
+            </div>
+          </section>
+
+          <section className="gateways-section" aria-labelledby="gateways-symbols-title">
+            <h3 id="gateways-symbols-title">Symbol subscription</h3>
+            <div className="gateways-grid">
+              <Field label="Symbols mode">
+                <span className="gateways-toggle">
+                  <input type="checkbox" checked={form.all_symbols} onChange={setField('all_symbols')} disabled={disabled} />
+                  <span>Subscribe to all symbols</span>
+                </span>
+              </Field>
+
+              <div className="gateways-field">
+                <span className="gateways-field-label">Symbols</span>
+                <GatewaySymbolPicker
+                  value={form.symbols}
+                  onChange={(symbols) => {
+                    setForm((current) => ({ ...current, symbols }));
+                    setError('');
+                    setNotice('');
+                  }}
+                  allSymbols={form.all_symbols}
+                  disabled={disabled || form.all_symbols}
+                />
+              </div>
+
+              <Field label="Catalog file">
+                <Input value={form.catalog_file} onChange={setField('catalog_file')} placeholder="Optional catalog file path" disabled={disabled} />
+              </Field>
+            </div>
+          </section>
+
+          <footer className="gateways-form-footer">
+            <span className="gateways-form-help">
+              {passwordSet ? 'Saved password is retained when left blank.' : 'Required fields are marked with *.'}
+            </span>
+            <div className="gateways-actions">
+              <button type="button" onClick={handleApply} disabled={disabled} className="ui-btn ui-btn-secondary ui-btn-sm gap-1.5">
+                {applying ? <><Loader2 size={12} className="animate-spin" /> Applying</> : <><Zap size={12} /> Save & Apply</>}
+              </button>
+              <button type="submit" disabled={disabled} className="ui-btn ui-btn-primary ui-btn-sm gap-1.5">
+                {saving || loadingConfig ? <><Loader2 size={12} className="animate-spin" /> {loadingConfig ? 'Loading' : 'Saving'}</> : <><Save size={12} /> Save LP Credentials</>}
+              </button>
+            </div>
+          </footer>
         </form>
       </div>
     </div>

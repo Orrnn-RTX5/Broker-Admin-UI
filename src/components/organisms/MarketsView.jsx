@@ -56,7 +56,7 @@ const MarketBrowser = () => {
 
 const MarketsView = ({ section = 'browser' }) => {
   return (
-    <div className="flex-1 min-w-0 min-h-0 bg-[color:var(--bg-app)] flex flex-col overflow-hidden text-[color:var(--text-primary)]">
+    <div className="symbols-workspace flex-1 min-w-0 min-h-0 bg-[color:var(--bg-app)] flex flex-col overflow-hidden text-[color:var(--text-primary)]">
       {section === 'management' ? (
         <SymbolManagementPage />
       ) : (

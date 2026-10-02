@@ -1,6 +1,8 @@
 import { api } from '../lib/api.js';
 import { normalizeArrayResponse } from '../utils/apiShapes.js';
 import { loadGroupTreePages } from '../utils/groupTreeData.js';
+import { useAuthStore } from '../store/authStore.js';
+import { groupAccessKey } from '../utils/groupAccess.js';
 
 const ACCOUNT_ARRAY_KEYS = ['accounts', 'data', 'answer', 'items', 'rows'];
 const ACCOUNT_TOTAL_PATHS = [
@@ -18,12 +20,20 @@ const ACCOUNT_TOTAL_PATHS = [
 const DEFAULT_ACCOUNT_LIMIT = 100;
 const LEGACY_ACCOUNT_CACHE_TTL_MS = 2 * 60 * 1000;
 const ALL_ACCOUNTS_TTL_MS = 60 * 1000;
+const ACCOUNT_PAGE_CACHE_TTL_MS = 60 * 1000;
+const MAX_CACHED_ACCOUNT_PAGES = 64;
 
 let legacyAccountsCache = null;
 let legacyAccountsProbePromise = null;
 let accountCacheGeneration = 0;
 let allAccountsLoad = null;
 const pendingAccountRequests = new Map();
+const accountPages = new Map();
+
+export const getAccountCacheIdentity = (state = useAuthStore.getState()) => JSON.stringify([
+  state.isAuthenticated, state.accessToken, groupAccessKey(state.user),
+  state.user?.role, state.user?.is_admin, state.user?.permissions,
+]);
 
 const invalidateAccountsCache = () => {
   accountCacheGeneration += 1;
@@ -31,6 +41,7 @@ const invalidateAccountsCache = () => {
   legacyAccountsProbePromise = null;
   allAccountsLoad = null;
   pendingAccountRequests.clear();
+  accountPages.clear();
 };
 
 const cleanParams = (params = {}) => Object.fromEntries(
@@ -168,11 +179,10 @@ const buildPagedAccountResponse = ({ template, arrayKey, rows, total, params }) 
   };
 };
 
-const getCachedAccountResponse = (params) => {
+const getCachedAccountResponse = (params, { allowStale = false } = {}) => {
   if (!legacyAccountsCache) return null;
 
-  if (Date.now() - legacyAccountsCache.cachedAt > LEGACY_ACCOUNT_CACHE_TTL_MS) {
-    legacyAccountsCache = null;
+  if (!allowStale && Date.now() - legacyAccountsCache.cachedAt > LEGACY_ACCOUNT_CACHE_TTL_MS) {
     return null;
   }
 
@@ -223,8 +233,33 @@ const normalizeAccountResponse = (response, params, requestGeneration) => {
   return response;
 };
 
+const rememberAccountPage = (params, response, cachedAt = Date.now()) => {
+  const key = JSON.stringify(params);
+  accountPages.delete(key);
+  accountPages.set(key, { response, cachedAt, firstPage: params.page === 1 && shouldShareLegacyProbe(params) });
+  if (accountPages.size > MAX_CACHED_ACCOUNT_PAGES) {
+    const evictionKey = [...accountPages].find(([, entry]) => !entry.firstPage)?.[0]
+      ?? accountPages.keys().next().value;
+    accountPages.delete(evictionKey);
+  }
+  return response;
+};
+
+// Keep account details in memory for this authenticated access scope. The
+// first render can use these rows while an expired page refreshes on the wire.
+const peekAccounts = (params = {}, { allowStale = false } = {}) => {
+  const accountParams = buildAccountParams(params);
+  const cached = accountPages.get(JSON.stringify(accountParams));
+  if (cached && (allowStale || Date.now() - cached.cachedAt < ACCOUNT_PAGE_CACHE_TTL_MS)) {
+    return cached.response;
+  }
+  const legacy = getCachedAccountResponse(accountParams, { allowStale });
+  return legacy ? rememberAccountPage(accountParams, legacy, legacyAccountsCache.cachedAt) : null;
+};
+
 export const AccountsService = {
   invalidateCache: invalidateAccountsCache,
+  peekAccounts,
 
   getAccount: async (login) => {
     const res = await api.get(`/api/v2/account/${login}`);
@@ -239,16 +274,23 @@ export const AccountsService = {
 
   getAccounts: async (params = {}) => {
     const accountParams = buildAccountParams(params);
-    const cachedResponse = getCachedAccountResponse(accountParams);
+    const cachedResponse = peekAccounts(accountParams);
     if (cachedResponse) return cachedResponse;
+
+    const requestKey = JSON.stringify(accountParams);
+    // The workspace census and Clients commonly request the same first page.
+    // Join that request before waiting on a legacy full-list probe; waiting
+    // first would discard a paginated result and fetch the page a second time.
+    if (pendingAccountRequests.has(requestKey)) {
+      return pendingAccountRequests.get(requestKey);
+    }
 
     if (shouldShareLegacyProbe(accountParams) && legacyAccountsProbePromise) {
       await legacyAccountsProbePromise.catch(() => null);
-      const nextCachedResponse = getCachedAccountResponse(accountParams);
+      const nextCachedResponse = peekAccounts(accountParams);
       if (nextCachedResponse) return nextCachedResponse;
     }
 
-    const requestKey = JSON.stringify(accountParams);
     if (pendingAccountRequests.has(requestKey)) {
       return pendingAccountRequests.get(requestKey);
     }
@@ -257,7 +299,11 @@ export const AccountsService = {
     const requestPromise = api.get('/manager/AccountDetailsMany', {
       params: accountParams,
       _allowAuthFailure: true,
-    }).then((res) => normalizeAccountResponse(res.data, accountParams, requestGeneration));
+    }).then((res) => {
+      const response = normalizeAccountResponse(res.data, accountParams, requestGeneration);
+      if (requestGeneration === accountCacheGeneration) rememberAccountPage(accountParams, response);
+      return response;
+    });
 
     const trackedPromise = requestPromise.finally(() => {
       if (pendingAccountRequests.get(requestKey) === trackedPromise) {
@@ -272,6 +318,7 @@ export const AccountsService = {
         if (legacyAccountsProbePromise === probePromise) legacyAccountsProbePromise = null;
       });
       legacyAccountsProbePromise = probePromise;
+      probePromise.catch(() => {});
     }
 
     return trackedPromise;
@@ -282,9 +329,16 @@ export const AccountsService = {
   // (e.g. group names that differ only in letter case).
   getAllAccounts: () => {
     if (allAccountsLoad && Date.now() - allAccountsLoad.startedAt < ALL_ACCOUNTS_TTL_MS) return allAccountsLoad.promise;
+    const generation = accountCacheGeneration;
+    const fetchPage = async params => {
+      if (generation !== accountCacheGeneration) throw new Error('Account access changed while loading.');
+      const response = await AccountsService.getAccounts(params);
+      if (generation !== accountCacheGeneration) throw new Error('Account access changed while loading.');
+      return response;
+    };
     const load = {
       startedAt: Date.now(),
-      promise: loadGroupTreePages(AccountsService.getAccounts, { arrayKeys: ACCOUNT_ARRAY_KEYS }),
+      promise: loadGroupTreePages(fetchPage, { arrayKeys: ACCOUNT_ARRAY_KEYS }),
     };
     load.promise.catch(() => {
       if (allAccountsLoad === load) allAccountsLoad = null;
@@ -323,3 +377,7 @@ export const AccountsService = {
     return res.data;
   }
 };
+
+useAuthStore.subscribe((state, previous) => {
+  if (getAccountCacheIdentity(state) !== getAccountCacheIdentity(previous)) invalidateAccountsCache();
+});

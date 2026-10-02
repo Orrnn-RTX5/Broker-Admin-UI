@@ -61,11 +61,11 @@ const CreateSpreadSchedulePopup = ({ onClose, onCreated }) => {
         className="w-[420px] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] shadow-2xl flex flex-col font-sans rounded-md overflow-hidden"
       >
         <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] select-none">
-          <div className="flex items-center gap-2 text-white text-[13px] font-medium">
-            <Activity size={16} className="text-white" />
+          <div className="flex items-center gap-2 text-[color:var(--text-primary)] text-[13px] font-medium">
+            <Activity size={16} className="text-[color:var(--text-secondary)]" />
             Create Spread Schedule
           </div>
-          <button onClick={onClose} className="text-white hover:text-white hover:bg-white/10 p-1 rounded-sm transition-colors">
+          <button onClick={onClose} className="text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] hover:bg-white/10 p-1 rounded-sm transition-colors">
             <X size={14} />
           </button>
         </div>
@@ -105,12 +105,12 @@ const CreateSpreadSchedulePopup = ({ onClose, onCreated }) => {
             <div className="flex flex-col gap-1.5">
               <label className="text-[color:var(--text-secondary)]">Time From</label>
               <input type="time" name="time_from" value={formData.time_from} onChange={handleChange}
-                className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors [color-scheme:dark]" />
+                className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors [color-scheme:inherit]" />
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-[color:var(--text-secondary)]">Time To</label>
               <input type="time" name="time_to" value={formData.time_to} onChange={handleChange}
-                className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors [color-scheme:dark]" />
+                className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors [color-scheme:inherit]" />
             </div>
           </div>
 

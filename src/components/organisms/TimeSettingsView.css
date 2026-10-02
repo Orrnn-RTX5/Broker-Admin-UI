@@ -1,0 +1,410 @@
+.admin-time-view {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 28px 30px 36px;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+.admin-time-layout {
+  width: 100%;
+  max-width: 1480px;
+  margin: 0 auto;
+}
+
+.admin-time-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 22px;
+}
+
+.admin-time-eyebrow {
+  margin: 0 0 7px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.admin-time-intro h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 21px;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+}
+
+.admin-time-intro-description {
+  margin: 7px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.admin-time-reference-badge,
+.admin-time-day-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-1);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.admin-time-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 18px;
+  overflow: hidden;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-1);
+}
+
+.admin-time-overview-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  min-height: 108px;
+  padding: 21px 20px;
+}
+
+.admin-time-overview-item + .admin-time-overview-item {
+  border-left: 1px solid var(--border-subtle);
+}
+
+.admin-time-overview-icon,
+.admin-time-panel-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border: 1px solid color-mix(in srgb, var(--accent-500) 35%, var(--border-default));
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--info-500);
+}
+
+.admin-time-overview-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.admin-time-overview-label {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.admin-time-overview-copy strong {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-time-overview-note {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.admin-time-content {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.78fr) minmax(540px, 1.22fr);
+  align-items: start;
+  gap: 18px;
+}
+
+.admin-time-panel {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-1);
+}
+
+.admin-time-panel-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 78px;
+  padding: 17px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.admin-time-panel-heading h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.admin-time-panel-heading p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.admin-time-detail-list {
+  margin: 0;
+  padding: 3px 20px;
+}
+
+.admin-time-detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 58px;
+}
+
+.admin-time-detail-row + .admin-time-detail-row {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.admin-time-detail-row dt {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.admin-time-detail-row dd {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.admin-time-enabled-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--success-500);
+}
+
+.admin-time-mono {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.015em;
+}
+
+.admin-time-hosts {
+  margin: 7px 20px 20px;
+  padding: 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-2);
+}
+
+.admin-time-hosts-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: var(--text-secondary);
+}
+
+.admin-time-hosts-heading h4 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.admin-time-hosts ol {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-time-hosts li {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  padding: 10px 0;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.admin-time-hosts li + li {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.admin-time-host-index {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.admin-time-schedule-heading .admin-time-day-count {
+  margin-left: auto;
+  min-height: 25px;
+  padding: 0 8px;
+  background: var(--bg-surface-2);
+}
+
+.admin-time-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.admin-time-table {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.admin-time-table thead {
+  background: var(--bg-surface-2);
+}
+
+.admin-time-table thead th {
+  height: 38px;
+  padding: 0 16px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-time-table thead th:first-child { width: 34%; }
+.admin-time-table thead th:nth-child(2),
+.admin-time-table thead th:nth-child(3) { width: 18%; }
+.admin-time-table thead th:last-child { width: 30%; }
+
+.admin-time-table tbody tr {
+  height: 49px;
+  border-top: 1px solid var(--border-subtle);
+  transition: background-color 0.12s ease;
+}
+
+.admin-time-table tbody tr:hover {
+  background: var(--bg-surface-2);
+}
+
+.admin-time-table tbody th,
+.admin-time-table tbody td {
+  padding: 0 16px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.admin-time-table tbody th {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.admin-time-table tbody td.admin-time-mono {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.admin-time-day-marker {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 11px;
+  border-radius: 50%;
+  background: var(--info-500);
+  vertical-align: 2px;
+}
+
+.admin-time-coverage {
+  display: inline-flex;
+  align-items: center;
+  min-height: 23px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--info-500) 38%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--info-500) 10%, transparent);
+  color: var(--info-500);
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.admin-time-table-note {
+  margin: 0;
+  padding: 15px 18px;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.admin-time-source-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 17px 0 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.admin-time-source-note svg { flex: 0 0 auto; }
+
+@media (max-width: 1250px) {
+  .admin-time-content { grid-template-columns: 1fr; }
+  .admin-time-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-time-overview-item:nth-child(3) { border-left: 0; }
+  .admin-time-overview-item:nth-child(n + 3) { border-top: 1px solid var(--border-subtle); }
+}
+
+@media (max-width: 700px) {
+  .admin-time-view { padding: 20px 16px 28px; }
+  .admin-time-intro { align-items: flex-start; flex-direction: column; gap: 12px; }
+  .admin-time-intro h2 { font-size: 18px; }
+  .admin-time-overview-item { min-height: 90px; padding: 16px 13px; }
+  .admin-time-overview-copy strong { font-size: 16px; }
+  .admin-time-panel-heading { padding-inline: 15px; }
+  .admin-time-detail-list { padding-inline: 15px; }
+  .admin-time-hosts { margin-inline: 15px; }
+}
+
+@media (max-width: 480px) {
+  .admin-time-overview { grid-template-columns: 1fr; }
+  .admin-time-overview-item + .admin-time-overview-item { border-left: 0; border-top: 1px solid var(--border-subtle); }
+  .admin-time-overview-item { min-height: 82px; }
+}

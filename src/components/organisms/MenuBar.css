@@ -1,18 +1,23 @@
 .admin-unified-header {
-  height: 52px;
-  min-height: 52px;
-  flex: 0 0 52px;
+  --header-control: 30px;
+  --header-gap: 4px;
+  --header-type: 12px;
+  --header-weight: 500;
+  height: 44px;
+  min-height: 44px;
+  flex: 0 0 44px;
   display: flex;
   align-items: center;
   min-width: 0;
   background: var(--bg-chrome, #181818);
   border-bottom: 1px solid var(--border-default, #333333);
   font-family: var(--font-sans);
-  font-size: 11px;
+  font-size: var(--header-type);
+  font-weight: var(--header-weight);
+  line-height: 1;
+  color: var(--text-primary);
   user-select: none;
 }
-
-[data-theme="dark"] .admin-unified-header { background: var(--bg-chrome, #181818); }
 
 .admin-menu-bar {
   height: 100%;
@@ -20,59 +25,121 @@
   align-items: center;
   flex: 0 0 auto;
   min-width: 0;
-  gap: 1px;
-  padding: 0 7px 0 8px;
-  border-right: 1px solid var(--border-default, #333333);
+  gap: var(--header-gap);
+  padding: 0 10px;
+  border-right: 1px solid var(--border-subtle, #333333);
   white-space: nowrap;
 }
 
-.admin-menu-brand {
-  display: flex;
-  flex-direction: column;
+.admin-menu-trigger {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 68px;
-  width: 68px;
-  height: 100%;
-  gap: 1px;
-  padding: 0 6px;
-  margin-right: 4px;
+  height: var(--header-control);
+  margin: 0;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--header-type) !important;
+  font-weight: var(--header-weight) !important;
+  line-height: 1;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.admin-menu-trigger:hover,
+.admin-menu-trigger[data-state="open"] {
+  background: var(--bg-surface-3);
+  color: var(--text-primary);
+}
+
+.admin-menu-brand {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  height: var(--header-control);
+  gap: 7px;
+  padding: 0 9px 0 2px;
+  margin-right: 2px;
   color: var(--text-primary, #cccccc);
   background: transparent;
   border: 0;
   cursor: pointer;
 }
 
-.admin-menu-brand img { display: block; width: 36px; height: 24px; object-fit: contain; mix-blend-mode: lighten; }
-.admin-menu-brand span { font-size: 11px; line-height: 11px; font-weight: 600; letter-spacing: .03em; color: var(--text-primary, #f5f5f5); }
+.admin-menu-brand img { display: block; width: 25px; height: 18px; object-fit: contain; }
+[data-theme="dark"] .admin-menu-brand img { mix-blend-mode: lighten; }
+.admin-menu-brand span { font-size: var(--header-type); line-height: 1; font-weight: var(--header-weight); letter-spacing: 0; color: var(--text-primary, #f5f5f5); }
 
-.admin-menu-actions { height: 100%; display: flex; align-items: center; flex: 0 0 auto; gap: 4px; padding: 0 8px; border-left: 1px solid var(--border-default, #333333); }
+.admin-menu-actions { height: 100%; display: flex; align-items: center; flex: 0 0 auto; gap: var(--header-gap); padding: 0 10px; border-left: 1px solid var(--border-subtle, #333333); }
+.view-session-actions { display: flex; align-items: center; gap: 4px; }
 .admin-menu-icon, .admin-profile-avatar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 24px;
-  height: 24px;
+  width: var(--header-control);
+  height: var(--header-control);
   padding: 0;
   border: 1px solid transparent;
   border-radius: 4px;
   background: transparent;
-  color: var(--text-secondary, #9d9d9d);
+  color: var(--text-primary, #e4e4e4);
   cursor: pointer;
   transition: all 0.12s ease;
 }
-.admin-profile-avatar { border-radius: 50%; border-color: var(--border-default); background: var(--bg-surface-2); font-size: 10.5px; font-weight: 600; color: var(--text-primary); }
+.admin-profile-avatar { width: var(--header-control); height: var(--header-control); border-radius: 50%; border-color: var(--border-default); background: var(--bg-surface-2); font-size: var(--header-type) !important; font-weight: var(--header-weight) !important; line-height: 1; color: var(--text-primary); }
 .admin-menu-icon:hover, .admin-profile-avatar:hover,
-.admin-menu-actions [data-state="open"] { background: var(--bg-surface-3); color: var(--text-primary); }
+.admin-menu-actions [data-state="open"],
+.view-session-actions [data-state="open"] { background: var(--bg-surface-3); color: var(--text-primary); }
 .admin-menu-bar button:focus-visible,
-.admin-menu-actions button:focus-visible { outline: 2px solid var(--accent-600); outline-offset: -2px; }
+.admin-menu-actions button:focus-visible,
+.view-session-actions button:focus-visible { outline: 2px solid var(--accent-600); outline-offset: -2px; }
+.admin-header-menu-content {
+  --header-type: 12px;
+  --header-weight: 500;
+}
+.admin-header-menu-content .admin-header-menu-item {
+  height: 32px;
+  gap: 8px;
+  font-family: var(--font-sans);
+  font-size: var(--header-type) !important;
+  font-weight: var(--header-weight) !important;
+  color: var(--text-primary);
+}
+.admin-header-menu-content .admin-header-menu-item[data-disabled] {
+  opacity: 0.5;
+}
+.admin-header-menu-content .admin-menu-option-icon {
+  display: inline-flex;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  color: var(--text-primary);
+}
+.admin-header-menu-content .admin-header-menu-item > span {
+  font-size: var(--header-type, 12px) !important;
+  font-weight: var(--header-weight, 500) !important;
+  color: var(--text-primary);
+}
+.admin-header-menu-content .admin-header-menu-item > span.is-active {
+  color: var(--accent-500);
+}
+.admin-account-menu { min-width: 208px; }
+.admin-account-summary { display: flex; flex-direction: column; gap: 5px; padding: 10px 8px; font-size: var(--header-type); font-weight: var(--header-weight); line-height: 1.3; }
+.admin-account-summary strong { font: inherit; color: var(--text-primary); overflow-wrap: anywhere; }
+.admin-account-summary span { color: var(--text-secondary); }
 
 @media (max-width: 700px) {
   .admin-menu-bar { flex: 0 0 180px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; padding-inline: 4px; }
   .admin-menu-bar::-webkit-scrollbar { display: none; }
-  .admin-menu-brand { flex-basis: 60px; width: 60px; }
-  .admin-menu-bar > button { padding-inline: 5px; }
+  .admin-menu-brand { padding-inline: 3px; }
+  .admin-menu-trigger { padding-inline: 6px; }
   .admin-menu-actions { gap: 2px; padding-inline: 4px; }
 }
 

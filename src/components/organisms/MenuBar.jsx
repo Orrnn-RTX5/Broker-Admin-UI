@@ -1,9 +1,9 @@
 import {
-  BarChart2, PieChart, UserCheck, User, FileText,
-  Files, Loader, Activity, Percent, Users, Puzzle, Mail, BookOpen,
+  BarChart2, UserCheck, Briefcase, FileText, Folder, HelpCircle,
+  Files, BookOpen, Maximize2,
   ArrowLeft, ArrowRight, RefreshCcw,
-  Upload, Download, Printer, LogOut, Undo2, Redo2, Palette, Power,
-  Rows3, FileSpreadsheet, Info, Keyboard, Clock, Bell, Settings, ShieldCheck,
+  Download, FileCheck, Printer, LogOut, Palette, Power,
+  Rows3, FileSpreadsheet, Info, Clock, Settings, ShieldCheck,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import './MenuBar.css';
@@ -16,31 +16,29 @@ import {
 
 const MenuTrigger = ({ label }) => (
   <DropdownMenuTrigger asChild>
-    <button
-      className="px-2 h-full text-[11px] font-semibold text-[color:var(--text-primary)] hover:text-[color:var(--accent-600)] hover:bg-[color:var(--bg-surface-2)] data-[state=open]:bg-[color:var(--accent-100)] data-[state=open]:text-[color:var(--text-primary)] transition-colors focus:outline-none"
-    >
+    <button type="button" className="admin-menu-trigger">
       {label}
     </button>
   </DropdownMenuTrigger>
 );
 
 const Item = ({ icon: Icon, label, shortcut, onClick, disabled, active }) => (
-  <DropdownMenuItem disabled={disabled} shortcut={shortcut} onSelect={() => onClick && onClick(label)}>
+  <DropdownMenuItem className="admin-header-menu-item" disabled={disabled} shortcut={shortcut} onSelect={() => onClick && onClick(label)}>
     {Icon ? (
-      <Icon size={12} className={active ? 'text-[color:var(--accent-600)]' : 'text-[color:var(--text-muted)]'} />
+      <Icon size={16} strokeWidth={1.75} className="admin-menu-option-icon" />
     ) : (
-      <span className="w-3" />
+      <span className="admin-menu-option-icon" />
     )}
-    <span className={active ? 'font-semibold' : ''}>{label}</span>
+    <span className={active ? 'is-active' : undefined}>{label}</span>
   </DropdownMenuItem>
 );
 
 const SubTrigger = ({ icon: Icon, label }) => (
-  <DropdownMenuSubTrigger>
+  <DropdownMenuSubTrigger className="admin-header-menu-item">
     {Icon ? (
-      <Icon size={12} className="text-[color:var(--text-muted)]" />
+      <Icon size={16} strokeWidth={1.75} className="admin-menu-option-icon" />
     ) : (
-      <span className="w-3" />
+      <span className="admin-menu-option-icon" />
     )}
     <span>{label}</span>
   </DropdownMenuSubTrigger>
@@ -48,14 +46,15 @@ const SubTrigger = ({ icon: Icon, label }) => (
 
 const MenuBar = ({
   onMenuSelect, onThemeSelect, currentTheme,
-  density, onDensityToggle,
+  density, onDensityToggle, onResetLayout,
   onUndo, onRedo, onRefresh, onExport, onExportCsv, onImport, onHelp, onAbout,
-  canUndo, canRedo, children,
+  canUndo, canRedo, autoRefresh = false, onStartAutomation, onPauseAutomation, children,
 }) => {
   const user = useAuthStore((state) => state.user);
   const adminName = String(user?.name || user?.login || 'Admin');
   const adminLogin = String(user?.login || user?.id || '');
   const initials = adminName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
+  const isDesktop = Boolean(window.rtx5Electron);
   const handleLogout = () => AuthService.logout();
 
   const handleExit = () => {
@@ -71,68 +70,69 @@ const MenuBar = ({
     <header className="admin-unified-header">
       <nav className="admin-menu-bar" aria-label="Admin navigation">
       <button type="button" className="admin-menu-brand" onClick={onAbout} aria-label="About RTX5 Admin">
-        <img src="./admin-symbol.png" alt="" />
+        <img src={`${import.meta.env.BASE_URL}admin-symbol.png`} alt="" />
         <span>Admin</span>
       </button>
       {/* FILE */}
       <DropdownMenu>
         <MenuTrigger label="File" />
-        <DropdownMenuContent align="start" sideOffset={0}>
-          <Item icon={Upload}          label="Export JSON"  shortcut="Ctrl+E"       onClick={onExport} />
+        <DropdownMenuContent align="start" sideOffset={0} className="admin-header-menu-content">
+          <Item icon={Download}        label="Export JSON"  shortcut="Ctrl+E"       onClick={onExport} />
           <Item icon={FileSpreadsheet} label="Export CSV"   shortcut="Ctrl+Shift+E" onClick={onExportCsv} />
-          <Item icon={Download}        label="Import"       onClick={onImport} />
+          <Item icon={FileCheck}       label="Validate import file" onClick={onImport} />
           <DropdownMenuSeparator />
           <Item icon={Printer} label="Print" shortcut="Ctrl+P" onClick={() => window.print()} />
           <DropdownMenuSeparator />
           <Item icon={LogOut}  label="Logout" onClick={handleLogout} />
-          <DropdownMenuSeparator />
-          <Item icon={Power}   label="Exit"   shortcut="Alt+F4" onClick={handleExit} />
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      {/* EDIT */}
-      <DropdownMenu>
-        <MenuTrigger label="Edit" />
-        <DropdownMenuContent align="start">
-          <Item icon={Undo2}      label="Undo"    shortcut="Alt+Left"  onClick={onUndo} disabled={!canUndo} />
-          <Item icon={Redo2}      label="Redo"    shortcut="Alt+Right" onClick={onRedo} disabled={!canRedo} />
-          <DropdownMenuSeparator />
-          <Item icon={RefreshCcw} label="Refresh" shortcut="Ctrl+R"    onClick={onRefresh} />
+          {isDesktop && <>
+            <DropdownMenuSeparator />
+            <Item icon={Power} label="Exit" shortcut="Alt+F4" onClick={handleExit} />
+          </>}
         </DropdownMenuContent>
       </DropdownMenu>
 
       {/* VIEW */}
       <DropdownMenu>
         <MenuTrigger label="View" />
-        <DropdownMenuContent align="start">
+        <DropdownMenuContent align="start" className="admin-header-menu-content">
+          <Item icon={ArrowLeft} label="Back" shortcut="Alt+Left" onClick={onUndo} disabled={!canUndo} />
+          <Item icon={ArrowRight} label="Forward" shortcut="Alt+Right" onClick={onRedo} disabled={!canRedo} />
+          <Item icon={RefreshCcw} label="Refresh view" shortcut="Ctrl+R" onClick={onRefresh} />
+          <DropdownMenuSeparator />
           <DropdownMenuSub>
-            <SubTrigger icon={Palette} label="Color Themes" />
-            <DropdownMenuSubContent>
+            <SubTrigger icon={Palette} label="Color theme" />
+            <DropdownMenuSubContent className="admin-header-menu-content">
               <Item label="Dark"       active={currentTheme === 'dark'}      onClick={() => onThemeSelect && onThemeSelect('dark')} />
               <Item label="Light"      active={currentTheme === 'light'}     onClick={() => onThemeSelect && onThemeSelect('light')} />
               <Item label="System"     active={currentTheme === 'system'}    onClick={() => onThemeSelect && onThemeSelect('system')} />
-              <Item icon={Clock} label="Auto by time (06–18 light)" active={currentTheme === 'auto-time'} onClick={() => onThemeSelect && onThemeSelect('auto-time')} />
+              <Item icon={Clock} label="Automatic (daylight hours)" active={currentTheme === 'auto-time'} onClick={() => onThemeSelect && onThemeSelect('auto-time')} />
             </DropdownMenuSubContent>
           </DropdownMenuSub>
           <DropdownMenuSub>
             <SubTrigger icon={Rows3} label="Density" />
-            <DropdownMenuSubContent>
+            <DropdownMenuSubContent className="admin-header-menu-content">
               <Item label="Compact" active={density === 'compact'} onClick={() => density !== 'compact' && onDensityToggle?.()} />
               <Item label="Cozy"    active={density === 'cozy'}    onClick={() => density !== 'cozy'    && onDensityToggle?.()} />
             </DropdownMenuSubContent>
           </DropdownMenuSub>
           <DropdownMenuSeparator />
-          <Item icon={ArrowLeft}  label="Navigate Backward" shortcut="Alt+Left"  onClick={onUndo} disabled={!canUndo} />
-          <Item icon={ArrowRight} label="Navigate Forward"  shortcut="Alt+Right" onClick={onRedo} disabled={!canRedo} />
+          <Item icon={Rows3} label="Reset layout" onClick={onResetLayout} />
+          <Item icon={Maximize2} label="Fullscreen" onClick={() => {
+            if (document.fullscreenElement) document.exitFullscreen?.();
+            else document.documentElement.requestFullscreen?.();
+          }} />
         </DropdownMenuContent>
       </DropdownMenu>
 
       <DropdownMenu>
         <MenuTrigger label="Tools" />
-        <DropdownMenuContent align="start">
-          <Item icon={Users} label="Managers" onClick={onMenuSelect} />
-          <Item icon={Puzzle} label="Plugins" onClick={onMenuSelect} />
-          <Item icon={BookOpen} label="Journal" onClick={onMenuSelect} />
+        <DropdownMenuContent align="start" className="admin-header-menu-content">
+          <Item
+            icon={RefreshCcw}
+            label={autoRefresh ? 'Pause auto-refresh' : 'Start auto-refresh'}
+            active={autoRefresh}
+            onClick={() => { if (autoRefresh) onPauseAutomation?.(); else onStartAutomation?.(); }}
+          />
           <DropdownMenuSeparator />
           <Item icon={ShieldCheck} label="Platform Super Admin" onClick={() => onMenuSelect?.('SuperAdmin')} />
         </DropdownMenuContent>
@@ -142,28 +142,24 @@ const MenuBar = ({
       {/* WINDOW */}
       <DropdownMenu>
         <MenuTrigger label="Window" />
-        <DropdownMenuContent align="start">
-          <Item icon={BarChart2} label="Analytics"               onClick={onMenuSelect} />
-          <Item icon={PieChart}  label="Server Reports"          onClick={onMenuSelect} />
-          <Item icon={UserCheck} label="Online Users"            onClick={onMenuSelect} />
-          <Item icon={User}      label="Accounts"                onClick={onMenuSelect} />
-          <Item icon={FileText}  label="Positions"               onClick={onMenuSelect} />
-          <Item icon={Files}     label="Orders"                  onClick={onMenuSelect} />
-          <Item icon={Loader}    label="Ultency Matching Engine" onClick={onMenuSelect} />
-          <Item icon={Activity}  label="Dealer"                  onClick={onMenuSelect} />
-          <Item icon={Percent}   label="Leverages"               onClick={onMenuSelect} />
-          <Item icon={Users}     label="Groups"                  onClick={onMenuSelect} />
-          <Item icon={Puzzle}    label="Plugins"                 onClick={onMenuSelect} />
-          <Item icon={Mail}      label="Mailbox"                 onClick={onMenuSelect} />
-          <Item icon={BookOpen}  label="Journal"                 onClick={onMenuSelect} />
+        <DropdownMenuContent align="start" className="admin-header-menu-content">
+          <Item icon={BarChart2} label="Dashboard" onClick={onMenuSelect} />
+          <Item icon={Folder} label="Groups" onClick={onMenuSelect} />
+          <Item icon={Briefcase} label="Managers" onClick={onMenuSelect} />
+          <Item icon={UserCheck} label="Online Users" onClick={onMenuSelect} />
+          <Item icon={FileText} label="Positions" onClick={onMenuSelect} />
+          <Item icon={Files} label="Orders" onClick={onMenuSelect} />
+          <DropdownMenuSeparator />
+          <Item icon={BarChart2} label="Analytics" onClick={onMenuSelect} />
+          <Item icon={BookOpen} label="Journal" onClick={onMenuSelect} />
         </DropdownMenuContent>
       </DropdownMenu>
 
       {/* HELP */}
       <DropdownMenu>
         <MenuTrigger label="Help" />
-        <DropdownMenuContent align="start">
-          <Item icon={Keyboard}   label="Keyboard shortcuts" shortcut="?" onClick={onHelp} />
+        <DropdownMenuContent align="start" className="admin-header-menu-content">
+          <Item icon={HelpCircle} label="Keyboard shortcuts" shortcut="?" onClick={onHelp} />
           <Item icon={Info} label="About RTX 5" onClick={onAbout} />
         </DropdownMenuContent>
       </DropdownMenu>
@@ -172,42 +168,24 @@ const MenuBar = ({
       {children}
 
       <div className="admin-menu-actions">
+        <ViewSessionActions
+          onMenuSelect={onMenuSelect}
+          onThemeSelect={onThemeSelect}
+          currentTheme={currentTheme}
+          density={density}
+          onDensityToggle={onDensityToggle}
+        />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button type="button" className="admin-menu-icon" aria-label="Notifications" title="Notifications"><Bell size={14} /></button>
-
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-64">
-            <div className="px-3 py-2 text-[11px] font-semibold">Notifications</div>
-            <div className="px-3 pb-3 text-[11px] text-[color:var(--text-muted)]">Check Mailbox and Journal for broker updates.</div>
-            <Item icon={Mail} label="Mailbox" onClick={onMenuSelect} />
-            <Item icon={BookOpen} label="Journal" onClick={onMenuSelect} />
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button type="button" className="admin-menu-icon" aria-label="Quick settings" title="Quick settings"><Settings size={14} /></button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <Item icon={Palette} label="Dark theme" active={currentTheme === 'dark'} onClick={() => onThemeSelect?.('dark')} />
-            <Item icon={Palette} label="Light theme" active={currentTheme === 'light'} onClick={() => onThemeSelect?.('light')} />
-            <Item icon={Palette} label="System theme" active={currentTheme === 'system'} onClick={() => onThemeSelect?.('system')} />
-            <DropdownMenuSeparator />
-            <Item icon={Rows3} label={density === 'compact' ? 'Use cozy spacing' : 'Use compact spacing'} onClick={onDensityToggle} />
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button type="button" className="admin-profile-avatar" aria-label={`Signed in as ${adminName}`} title={`${adminName}${adminLogin ? ' ? ' + adminLogin : ''}`}>
+            <button type="button" className="admin-profile-avatar" aria-label="Account menu" title={adminName}>
               {initials || 'A'}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-60">
-            <div className="px-3 py-3">
-              <div className="text-[10px] uppercase tracking-wider text-[color:var(--text-muted)]">Signed-in admin</div>
-              <div className="mt-1 break-words text-[11px] font-semibold">{adminName}</div>
-              {adminLogin && <div className="mt-1 text-[11px] text-[color:var(--text-muted)]">Login: {adminLogin}</div>}
-              {user?.broker_id && <div className="mt-1 text-[11px] text-[color:var(--text-muted)]">Broker: {user.broker_id}</div>}
+          <DropdownMenuContent align="end" className="admin-header-menu-content admin-account-menu">
+            <div className="admin-account-summary">
+              <span>Signed in as</span>
+              <strong>{adminName}</strong>
+              {adminLogin && <span>Login: {adminLogin}</span>}
             </div>
             <DropdownMenuSeparator />
             <Item icon={LogOut} label="Logout" onClick={handleLogout} />
@@ -217,5 +195,23 @@ const MenuBar = ({
     </header>
   );
 };
+
+const ViewSessionActions = ({ onMenuSelect, onThemeSelect, currentTheme, density, onDensityToggle }) => (
+  <div className="view-session-actions" role="group" aria-label="View actions">
+    <button type="button" className="admin-menu-icon" aria-label="Open Journal" title="Journal" onClick={() => onMenuSelect?.('Journal')}><BookOpen size={16} strokeWidth={1.75} /></button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button type="button" className="admin-menu-icon" aria-label="Theme and spacing" title="Theme and spacing"><Settings size={16} strokeWidth={1.75} /></button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="admin-header-menu-content">
+        <Item icon={Palette} label="Dark theme" active={currentTheme === 'dark'} onClick={() => onThemeSelect?.('dark')} />
+        <Item icon={Palette} label="Light theme" active={currentTheme === 'light'} onClick={() => onThemeSelect?.('light')} />
+        <Item icon={Palette} label="System theme" active={currentTheme === 'system'} onClick={() => onThemeSelect?.('system')} />
+        <DropdownMenuSeparator />
+        <Item icon={Rows3} label={density === 'compact' ? 'Use cozy spacing' : 'Use compact spacing'} onClick={onDensityToggle} />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  </div>
+);
 
 export default MenuBar;

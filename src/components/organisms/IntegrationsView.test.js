@@ -24,11 +24,19 @@ test('Integration view exposes summary and setup state clearly', () => {
 });
 
 test('Integration styling uses the restrained enterprise visual system', () => {
-  assert.match(css, /--integration-text-meta: 10px/);
-  assert.match(css, /--integration-text-page: 16px/);
+  assert.match(css, /--integration-text-meta: 11px/);
+  assert.match(css, /--integration-text-page: 18px/);
+  assert.match(css, /--integration-text-title: 14px/);
   assert.match(css, /background: var\(--bg-surface-1\)/);
   assert.doesNotMatch(css, /font-weight: (?:550|650)/);
   assert.doesNotMatch(src, /integration-card-accent|integration-service-icon-glow|data-service=/);
+});
+
+test('Integration operations show failed deliveries without dead guide links', () => {
+  assert.match(src, /const OperationsOverview = \(\) =>/);
+  assert.match(src, /integration-activity-bar-failure/);
+  assert.match(src, /integration-delivery-failure/);
+  assert.doesNotMatch(src, /href="#"/);
 });
 
 test('Integration view preserves existing service content', () => {

@@ -71,8 +71,22 @@ const server = http.createServer((req, res) => {
       safePath = path.join(safePath, 'index.html');
     }
 
-    // SPA fallback: if file does not exist or was directory without index.html
+    // Only document navigations may use the SPA fallback. Returning index.html
+    // for a missing build asset makes a stale CSS/JS URL look successful while
+    // the browser rejects its content type and fails the lazy import.
     if (err || !fs.existsSync(safePath)) {
+      const requestedExtension = path.extname(decodedPath).toLowerCase();
+      const isAssetRequest = decodedPath === '/assets' || decodedPath.startsWith('/assets/') ||
+        (requestedExtension !== '' && requestedExtension !== '.html');
+      const acceptsHtml = (req.headers.accept || '').includes('text/html');
+      if (isAssetRequest || !acceptsHtml) {
+        res.writeHead(404, {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Cache-Control': 'no-store',
+          'X-Content-Type-Options': 'nosniff'
+        });
+        return res.end('Not Found');
+      }
       safePath = path.join(DIST_DIR, 'index.html');
     }
 
@@ -96,8 +110,9 @@ const server = http.createServer((req, res) => {
       headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, proxy-revalidate';
       headers['Pragma'] = 'no-cache';
       headers['Expires'] = '0';
-    } else if (safePath.endsWith('index.html')) {
-      headers['Cache-Control'] = 'no-cache';
+    } else if (ext === '.html') {
+      // An old document can reference assets removed by a newer deployment.
+      headers['Cache-Control'] = 'no-store, no-cache, must-revalidate';
     } else if (decodedPath.startsWith('/assets/')) {
       // Hashed assets can be safely cached forever
       headers['Cache-Control'] = 'public, max-age=31536000, immutable';
@@ -121,7 +136,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`[Broker-Admin-UI] React frontend server listening on http://${HOST}:${PORT}`);
+  console.log(`[Broker-Admin-UI] React frontend server listening on http://${HOST}:${server.address().port}`);
   console.log(`[Broker-Admin-UI] Serving static build from: ${DIST_DIR}`);
 });
 

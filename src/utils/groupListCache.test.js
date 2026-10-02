@@ -26,6 +26,19 @@ test('loading normalizes the rows and stores a per-broker snapshot for the next 
   assert.equal(readGroupListSnapshot(), null);
 });
 
+test('two callers that overlap share one group-list request', async () => {
+  let calls = 0;
+  const fetchRows = async () => {
+    calls += 1;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    return [{ name: 'shared' }];
+  };
+  const [first, second] = await Promise.all([loadGroupList(fetchRows), loadGroupList(fetchRows)]);
+  assert.equal(calls, 1);
+  assert.equal(first, second);
+  assert.deepEqual(first.map((group) => group.groupName), ['shared']);
+});
+
 test('corrupt or foreign snapshots are ignored instead of breaking the tree', () => {
   browserStorage.set('rtx5-admin-group-list:9001', '{not json');
   assert.equal(readGroupListSnapshot(), null);

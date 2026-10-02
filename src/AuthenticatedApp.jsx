@@ -5,18 +5,9 @@ import MenuBar from './components/organisms/MenuBar';
 import ActionToolBar from './components/organisms/ActionToolBar';
 import SidebarNavTree from './components/organisms/SidebarNavTree';
 import MarketWatchDock from './components/organisms/MarketWatchDock';
-import AdminDataTable from './components/organisms/AdminDataTable';
-import GroupsExplorer from './components/organisms/GroupsExplorer';
-import GroupPropertiesPopup from './components/RIGHTCLICKJPOPUPS/GroupPropertiesPopup';
-import ManagerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ManagerPropertiesPopup';
-import ServerPropertiesPopup from './components/RIGHTCLICKJPOPUPS/ServerPropertiesPopup';
-import CreateGroupPopup from './components/RIGHTCLICKJPOPUPS/CreateGroupPopup';
-import AccountEditPopup from './components/RIGHTCLICKJPOPUPS/AccountEditPopup';
-import TradeDetailsPopup from './components/RIGHTCLICKJPOPUPS/TradeDetailsPopup';
-import { HelpModal } from './components/organisms/HelpModal';
-import BugReportDialog from './components/BugReportDialog';
-import { AboutModal } from './components/organisms/AboutModal';
-import { SuperAdminConsole } from './components/organisms/SuperAdminConsole';
+import OperationsTerminal from './components/organisms/OperationsTerminal';
+import { WorkspaceDataProvider } from './hooks/useWorkspaceData';
+import './styles/adminWorkspace.css';
 
 import {
   getSearchesStorageKey,
@@ -40,13 +31,37 @@ import {
   getLatestDesktopInstaller,
 } from './config/desktopRelease';
 import { getViewCapabilityToast, shouldBlockViewNavigation } from './config/viewCapabilities';
+import { DEFAULT_WORKSPACE_LAYOUT } from './config/workspaceLayout';
 import { resolveGroupExplorerNode, sameGroupExplorerLocation, getHistoryEntryView } from './utils/groupExplorerNavigation';
 import { Download, FolderTree, Network, RefreshCcw, ShieldAlert, Users } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { TooltipProvider } from './components/ui/Tooltip';
 import { ToastProvider, ToastViewport } from './components/ui/Toast';
+import ServerConfigWorkspace from './components/organisms/ServerConfigWorkspace';
 import { useToast } from './components/ui/useToast';
 import { StatusDot } from './components/ui/Badge';
+
+// Keep the terminal and navigation available while a requested view or dialog
+// downloads. Screens that are never opened do not belong in the startup path.
+const AdminDataTable = React.lazy(() => import('./components/organisms/AdminDataTable'));
+const BrokerDashboard = React.lazy(() => import('./components/organisms/BrokerDashboard'));
+const GroupsExplorer = React.lazy(() => import('./components/organisms/GroupsExplorer'));
+const GroupPropertiesPopup = React.lazy(() => import('./components/RIGHTCLICKJPOPUPS/GroupPropertiesPopup'));
+const ManagerPropertiesPopup = React.lazy(() => import('./components/RIGHTCLICKJPOPUPS/ManagerPropertiesPopup'));
+const ServerPropertiesPopup = React.lazy(() => import('./components/RIGHTCLICKJPOPUPS/ServerPropertiesPopup'));
+const CreateGroupPopup = React.lazy(() => import('./components/RIGHTCLICKJPOPUPS/CreateGroupPopup'));
+const AccountEditPopup = React.lazy(() => import('./components/RIGHTCLICKJPOPUPS/AccountEditPopup'));
+const TradeDetailsPopup = React.lazy(() => import('./components/RIGHTCLICKJPOPUPS/TradeDetailsPopup'));
+const HelpModal = React.lazy(() => import('./components/organisms/HelpModal').then(module => ({ default: module.HelpModal })));
+const BugReportDialog = React.lazy(() => import('./components/BugReportDialog'));
+const AboutModal = React.lazy(() => import('./components/organisms/AboutModal').then(module => ({ default: module.AboutModal })));
+const SuperAdminConsole = React.lazy(() => import('./components/organisms/SuperAdminConsole').then(module => ({ default: module.SuperAdminConsole })));
+
+const WorkspaceViewFallback = () => (
+  <div className="flex flex-1 items-center justify-center text-xs text-[color:var(--text-muted)]" role="status">
+    Loading view…
+  </div>
+);
 
 const formatTime = (d) =>
   `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
@@ -92,7 +107,7 @@ const getInitialServerTabForLabel = (label) => (
     : null
 );
 
-const AuthenticatedAppInner = ({ navigate }) => {
+const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetLayout }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const accessToken = useAuthStore((state) => state.accessToken);
   const currentUser = useAuthStore((state) => state.user);
@@ -120,23 +135,25 @@ const AuthenticatedAppInner = ({ navigate }) => {
   const [aboutOpen, setAboutOpen] = React.useState(false);
   const [isSuperAdminOpen, setIsSuperAdminOpen] = React.useState(false);
   const [rowCount, setRowCount] = React.useState({ total: 0, filtered: 0, visible: 0, bytes: 0 });
+  const reportClientRowCount = React.useCallback((counts) => {
+    React.startTransition(() => setRowCount(counts));
+  }, []);
   const [desktopReleaseState, setDesktopReleaseState] = React.useState({
     status: 'idle',
     installer: null,
     error: null,
   });
 
-  const [globalTheme, setGlobalTheme] = useLocalStorage('rtx5.theme', 'light');
-  const [density, setDensity] = useLocalStorage('rtx5.density', 'compact');
+  const [density, setDensity] = React.useState(DEFAULT_WORKSPACE_LAYOUT.density);
   // Searches last for this tab and broker only, so a filter typed in an earlier
   // session (or for another broker) can never silently hide this session's rows.
   const [savedSearches, setSavedSearches] = useLocalStorage(getSearchesStorageKey(), {}, 'sessionStorage');
   React.useEffect(() => {
     try { localStorage.removeItem(LEGACY_SEARCHES_KEY); } catch { /* noop */ }
   }, []);
-  const defaultLandingView = canAccessView(currentUser, 'Integrations') ? 'Integrations' : 'Groups';
-  // Keep the existing storage key so the last selected page still restores.
-  const [activeTab, setActiveTab] = useLocalStorage('rtx5.activeTab', defaultLandingView);
+  const defaultLandingView = DEFAULT_WORKSPACE_LAYOUT.view;
+  // Navigation lasts until the workspace is reopened, reloaded, or reset.
+  const [activeTab, setActiveTab] = React.useState(defaultLandingView);
   const [serverTargetTab, setServerTargetTab] = React.useState(() => getInitialServerTabForLabel(activeTab));
   const [groupExplorerLocation, setGroupExplorerLocation] = React.useState(() => resolveGroupExplorerNode('Groups'));
   const [groupExplorerReveal, setGroupExplorerReveal] = React.useState(() => (
@@ -145,7 +162,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
   const [history, setHistory] = React.useState([activeTab || defaultLandingView]);
   const [currentIndex, setCurrentIndex] = React.useState(0);
-  const [tableSortDirection, setTableSortDirection] = React.useState('');
+  const tableSortDirection = '';
   const [autoRefresh, setAutoRefresh] = React.useState(false);
   const [isDeletingTarget, setIsDeletingTarget] = React.useState(false);
   const activeNode = activeTab || getHistoryEntryView(history[currentIndex]);
@@ -162,7 +179,12 @@ const AuthenticatedAppInner = ({ navigate }) => {
 
 
   const groupIdentity=groupAccessKey(currentUser);
+  const previousGroupIdentity = React.useRef(groupIdentity);
   React.useEffect(()=>{
+    // Initial state already belongs to this user. Restart data loaders only
+    // when access changes, rather than invalidating their first request.
+    if (previousGroupIdentity.current === groupIdentity) return;
+    previousGroupIdentity.current = groupIdentity;
     setSelectedGroup(null);setIsPopupOpen(false);setIsCreatingGroup(false);
     setSelectedEditTarget(target=>target?.type==='group'?null:target);
     setRefreshKey(value=>value+1);
@@ -237,31 +259,6 @@ const AuthenticatedAppInner = ({ navigate }) => {
     const scheduler = startSessionRefreshScheduler();
     return () => scheduler.stop();
   }, [isAuthenticated, tokenExpiresAt]);
-
-  React.useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const applyTheme = () => {
-      let resolved = globalTheme;
-      if (globalTheme === 'system') resolved = mediaQuery.matches ? 'dark' : 'light';
-      else if (globalTheme === 'auto-time') {
-        const h = new Date().getHours();
-        resolved = (h >= 6 && h < 18) ? 'light' : 'dark';
-      }
-      document.documentElement.setAttribute('data-theme', resolved);
-    };
-    applyTheme();
-    const mqHandler = () => { if (globalTheme === 'system') applyTheme(); };
-    mediaQuery.addEventListener('change', mqHandler);
-
-    let timeTick;
-    if (globalTheme === 'auto-time') {
-      timeTick = setInterval(applyTheme, 60_000);
-    }
-    return () => {
-      mediaQuery.removeEventListener('change', mqHandler);
-      if (timeTick) clearInterval(timeTick);
-    };
-  }, [globalTheme]);
 
   React.useEffect(() => {
     document.documentElement.setAttribute('data-density', density);
@@ -578,14 +575,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
   };
 
   const handleAddClick = () => {
-    if (activeNode === 'Groups') {
-      if(!canCreateDeleteGroups) return;
-      setIsCreatingGroup(true);
-      return;
-    }
-    setSelectedGroup({ group: 'New Group\\Demo' });
-    setGroupPopupFromAccount(false);
-    setIsPopupOpen(true);
+    if (activeNode === 'Groups' && canCreateDeleteGroups) setIsCreatingGroup(true);
   };
 
   const openAccountGroupProperties = React.useCallback((group) => {
@@ -728,37 +718,6 @@ const AuthenticatedAppInner = ({ navigate }) => {
     });
   }, [notify]);
 
-  const handleDisconnect = React.useCallback(() => {
-    if (window.confirm('Disconnect and log out of RTX 5 Admin?')) {
-      AuthService.logout();
-    }
-  }, []);
-
-  const handleForceSync = React.useCallback(() => {
-    try {
-      useSymbolStore.getState().initWebSocket();
-    } catch { /* noop */ }
-    setRefreshKey((prev) => prev + 1);
-    notify({
-      title: 'Workspace synchronized',
-      description: 'Real-time feed reconnected and cache refreshed',
-      tone: 'success',
-    });
-  }, [notify]);
-
-  const handleSort = React.useCallback(() => {
-    setTableSortDirection((prev) => {
-      const next = prev === '' ? 'asc' : prev === 'asc' ? 'desc' : '';
-      const label = next === 'asc' ? 'Ascending' : next === 'desc' ? 'Descending' : 'Default';
-      notify({
-        title: 'Table sort updated',
-        description: `Order set to ${label}`,
-        tone: 'info',
-      });
-      return next;
-    });
-  }, [notify]);
-
   const canDeleteSelectedTarget = Boolean(selectedEditTarget?.type === 'group' && canCreateDeleteGroups);
   const handleToolbarDelete = React.useCallback(async (explicitTarget) => {
     const target = explicitTarget?.type === 'group' || explicitTarget?.type === 'group-branch' ? explicitTarget : selectedEditTarget;
@@ -805,9 +764,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
     }
   }, [selectedEditTarget, canCreateDeleteGroups, notify]);
 
-  const canAdd = Boolean((activeNode === 'Groups' && canCreateDeleteGroups) || activeNode === 'Trading Accounts' || activeNode === 'Clients' || activeNode === 'Managers');
-  const canImport = activeNode === 'Groups' && canCreateDeleteGroups;
-  const canSort = true;
+  const canAdd = activeNode === 'Groups' && canCreateDeleteGroups;
 
   const handleCheckForUpdates = React.useCallback(() => {
     const checkForUpdates = window.rtx5Electron?.checkForUpdates;
@@ -932,6 +889,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
         currentTheme={globalTheme}
         density={density}
         onDensityToggle={() => setDensity((d) => d === 'compact' ? 'cozy' : 'compact')}
+        onResetLayout={onResetLayout}
         onUndo={handleUndo}
         onRedo={handleRedo}
         onRefresh={handleRefresh}
@@ -943,47 +901,34 @@ const AuthenticatedAppInner = ({ navigate }) => {
         onAbout={() => setAboutOpen(true)}
         canUndo={currentIndex > 0}
         canRedo={currentIndex < history.length - 1}
+        autoRefresh={autoRefresh}
+        onStartAutomation={handleStartAutoRefresh}
+        onPauseAutomation={handlePauseAutoRefresh}
       >
 
       <ActionToolBar
-        onDisconnect={handleDisconnect}
         onAddClick={handleAddClick}
         canAdd={canAdd}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        canUndo={currentIndex > 0}
-        canRedo={currentIndex < history.length - 1}
         onRefresh={handleRefresh}
-        onSync={handleForceSync}
         onExport={handleExport}
         onExportCsv={handleExportCsv}
-        onImport={handleImport}
-        canImport={canImport}
         onEditClick={handleToolbarEdit}
         canEdit={canEditSelectedTarget}
         onDeleteClick={handleToolbarDelete}
         canDelete={canDeleteSelectedTarget}
         deleting={isDeletingTarget}
-        onSort={handleSort}
-        canSort={canSort}
-        sortDirection={tableSortDirection}
-        autoRefresh={autoRefresh}
-        onStart={handleStartAutoRefresh}
-        onPause={handlePauseAutoRefresh}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         searchInputRef={searchInputRef}
         activeNode={activeNode}
         onNodeSelect={handleNodeSelect}
-        density={density}
-        onDensityToggle={() => setDensity((d) => (d === 'compact' ? 'cozy' : 'compact'))}
-        onHelp={() => setHelpOpen(true)}
         onReportBug={() => setBugReportOpen(true)}
-        connStatus={connStatus}
       />
       </MenuBar>
 
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <WorkspaceDataProvider refreshTrigger={refreshKey}>
+      <div className="admin-workspace-body">
+      <div className="admin-workspace-upper">
         <MarketWatchDock>
         <SidebarNavTree
           onNodeSelect={handleNodeSelect}
@@ -996,8 +941,8 @@ const AuthenticatedAppInner = ({ navigate }) => {
         />
         </MarketWatchDock>
 
-        <div className={`flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden border-l border-[color:var(--border-default)] bg-[color:var(--bg-app)]${activeNode === 'Allocations' ? ' allocation-typography' : ''}`}>
-          {!(canViewActive && ['Integrations', 'Market Overview', 'Symbols Browser', 'Symbol Management'].includes(activeNode)) && (
+        <div className="admin-workspace-main">
+          {!(canViewActive && ['Dashboard', 'Managers', 'Integrations', 'Gateways', 'Market Overview', 'Symbols Browser', 'Symbol Management', 'Allocations'].includes(activeNode)) && (
           <div className="min-h-10 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] flex items-center px-4 gap-3 text-xs text-[color:var(--text-muted)] shadow-[var(--shadow-sm)] select-none">
             <div role="heading" aria-level="1" className="flex items-center gap-2 text-[color:var(--text-primary)] font-semibold tracking-wide" style={{ fontSize: '14px', lineHeight: '18px' }}>
               {activeNode === 'Groups' ? (
@@ -1021,8 +966,10 @@ const AuthenticatedAppInner = ({ navigate }) => {
           </div>
 
           )}
-
-          {canViewActive && activeNode === 'Groups' ? (
+          <React.Suspense fallback={<WorkspaceViewFallback />}>
+          {canViewActive && (activeNode === 'Server Config' || activeNode === 'Server Configuration') ? (
+            <ServerConfigWorkspace key={groupIdentity} refreshTrigger={refreshKey} />
+          ) : canViewActive && activeNode === 'Dashboard' ? <BrokerDashboard onNavigate={handleNodeSelect} /> : canViewActive && activeNode === 'Groups' ? (
             <GroupsExplorer
               dummyActionsRef={dummyGroupsRef}
               key={`${groupIdentity}:${groupExplorerLocation.id}`}
@@ -1052,7 +999,7 @@ const AuthenticatedAppInner = ({ navigate }) => {
               refreshTrigger={refreshKey}
               searchQuery={searchQuery}
               sortDirection={tableSortDirection}
-              onCountChange={setRowCount}
+              onCountChange={activeNode === 'Clients' ? reportClientRowCount : setRowCount}
               onRowsChange={handleRowsChange}
               onEditableTargetSelect={handleEditableTargetSelect}
               selectedEditableTargetId={selectedEditTarget?.id}
@@ -1061,9 +1008,14 @@ const AuthenticatedAppInner = ({ navigate }) => {
           ) : (
             <AccessDeniedPanel viewName={activeNode} permission={activeViewPermission} />
           )}
+          </React.Suspense>
         </div>
       </div>
+      <OperationsTerminal onNavigate={handleNodeSelect} />
+      </div>
+      </WorkspaceDataProvider>
 
+      <React.Suspense fallback={null}>
       <AnimatePresence>
         {isPopupOpen && activeNode === 'Managers' && (
           <ManagerPropertiesPopup manager={selectedGroup} onClose={() => setIsPopupOpen(false)} />
@@ -1110,17 +1062,18 @@ const AuthenticatedAppInner = ({ navigate }) => {
         )}
       </AnimatePresence>
 
-      <HelpModal open={helpOpen} onOpenChange={setHelpOpen} />
+      {helpOpen && <HelpModal open={helpOpen} onOpenChange={setHelpOpen} />}
       {bugReportOpen && <BugReportDialog onClose={() => setBugReportOpen(false)} />}
-      <AboutModal open={aboutOpen} onOpenChange={setAboutOpen} />
+      {aboutOpen && <AboutModal open={aboutOpen} onOpenChange={setAboutOpen} />}
       {isSuperAdminOpen && (
         <div className="fixed inset-0 z-[10000]">
           <SuperAdminConsole onClose={() => setIsSuperAdminOpen(false)} />
         </div>
       )}
+      </React.Suspense>
 
 
-      <footer className="h-6 bg-[color:var(--bg-chrome)] border-t border-[color:var(--border-subtle)] flex items-center gap-2 px-3 justify-between select-none text-[11px] text-[color:var(--text-secondary)]">
+      <footer className="admin-workspace-status h-6 bg-[color:var(--bg-chrome)] border-t border-[color:var(--border-subtle)] flex items-center gap-2 px-3 justify-between select-none text-[11px] text-[color:var(--text-secondary)]">
         <div className="flex min-w-0 items-center gap-2" title={connText}>
           <StatusDot tone={connTone} />
           <span className="truncate font-normal text-[11px]">{connText}</span>
@@ -1170,10 +1123,10 @@ const AuthenticatedAppInner = ({ navigate }) => {
   );
 };
 
-const AuthenticatedApp = ({ navigate }) => (
+const AuthenticatedApp = ({ navigate, globalTheme, setGlobalTheme, onResetLayout }) => (
   <TooltipProvider>
     <ToastProvider>
-      <AuthenticatedAppInner navigate={navigate} />
+      <AuthenticatedAppInner navigate={navigate} globalTheme={globalTheme} setGlobalTheme={setGlobalTheme} onResetLayout={onResetLayout} />
     </ToastProvider>
   </TooltipProvider>
 );

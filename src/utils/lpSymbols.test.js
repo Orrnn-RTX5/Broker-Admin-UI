@@ -35,6 +35,22 @@ test('loadLpSymbols keeps working when one source fails and caches results', asy
   assert.equal(calls, 2);
 });
 
+test('mergeLpSymbols preserves fetched category metadata and configured overrides', () => {
+  const rows = mergeLpSymbols([
+    { symbol: 'EURUSD', category: 'Broker/Forex' },
+    { symbol: 'GBPUSD', category: '', Category: 'Forex/Majors' },
+    { symbol: 'BTCUSD', path: 'Digital Assets/Coins' },
+    { symbol: 'ETHUSD', Path: 'Crypto/Spot' },
+    { symbol: 'CUSTOM', category: 'Catalogue only' },
+    'USDJPY',
+  ], [{ symbol: 'EURUSD', category: 'Configured/Forex' }, { symbol: 'CUSTOM', category: ' ' }]);
+  const categories = Object.fromEntries(rows.map(row => [row.symbol, row.category]));
+  assert.deepEqual(categories, {
+    BTCUSD: 'Digital Assets/Coins', CUSTOM: 'Catalogue only', ETHUSD: 'Crypto/Spot',
+    EURUSD: 'Configured/Forex', GBPUSD: 'Forex/Majors', USDJPY: 'Forex',
+  });
+});
+
 test('loadLpSymbols rejects only when both sources fail', async () => {
   invalidateLpSymbols();
   const services = {

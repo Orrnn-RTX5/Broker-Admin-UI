@@ -159,7 +159,7 @@ test('buildDemoGroupStatus: admin switch off takes precedence over the group sta
   const expected = { tone: 'warning', message: 'Demo signup is disabled — guests cannot create demo accounts.' };
   assert.deepEqual(buildDemoGroupStatus(normalizeDemoAccountGroupState(response({ signup_enabled: false }))), expected);
   assert.deepEqual(buildDemoGroupStatus(normalizeDemoAccountGroupState(response({
-    signup_enabled: false, server_enabled: false, group: 'demo\gone', valid: false,
+    signup_enabled: false, server_enabled: false, group: 'demo\\gone', valid: false,
   }))), expected);
   assert.equal(DEMO_SIGNUP_DISABLED_MESSAGE, expected.message);
 });
@@ -185,12 +185,12 @@ test('buildDemoServerWarning only when the server switch is off', () => {
 });
 
 test('buildDemoAccountGroupSetBody sends only the provided keys', () => {
-  assert.deepEqual(buildDemoAccountGroupSetBody({ group: 'demo\pro' }), { group: 'demo\pro' });
+  assert.deepEqual(buildDemoAccountGroupSetBody({ group: 'demo\\pro' }), { group: 'demo\\pro' });
   assert.deepEqual(buildDemoAccountGroupSetBody({ group: '' }), { group: '' });
   assert.deepEqual(buildDemoAccountGroupSetBody({ group: null }), { group: '' });
   assert.deepEqual(buildDemoAccountGroupSetBody({ signupEnabled: false }), { signup_enabled: false });
   assert.deepEqual(buildDemoAccountGroupSetBody({ signupEnabled: true }), { signup_enabled: true });
-  assert.deepEqual(buildDemoAccountGroupSetBody({ group: 'demo\a', signupEnabled: true }), { group: 'demo\a', signup_enabled: true });
+  assert.deepEqual(buildDemoAccountGroupSetBody({ group: 'demo\\a', signupEnabled: true }), { group: 'demo\\a', signup_enabled: true });
   assert.deepEqual(buildDemoAccountGroupSetBody({ group: undefined, signupEnabled: false }), { signup_enabled: false });
   for (const bad of [undefined, null, {}, { group: undefined }, { signupEnabled: 'yes' }]) {
     assert.throws(() => buildDemoAccountGroupSetBody(bad), /requires a group and\/or signupEnabled/);
@@ -205,7 +205,7 @@ test('service and view are wired to the DemoAccountGroup endpoints', () => {
   assert.match(workspace, /\{tab === 'demo' && <DemoAccountsTab \/>\}/);
   assert.match(service, /\/DemoAccountGroupGet`,\s*\{\s*timeout:\s*SERVER_CONFIG_READ_TIMEOUT_MS/);
   assert.match(service, /setDemoAccountGroup:\s*\(changes\)\s*=>\s*api\.post\(`\$\{MANAGER\}\/DemoAccountGroupSet`,\s*buildDemoAccountGroupSetBody\(changes\)\)/);
-  assert.match(service, /import \{ buildDemoAccountGroupSetBody \} from '\.\.\/utils\/demoAccountGroup'/);
+  assert.match(service, /import \{ buildDemoAccountGroupSetBody \} from '\.\.\/utils\/demoAccountGroup(?:\.js)?'/);
   assert.match(service, /const MANAGER = '\/manager'/);
   assert.match(view, /Demo accounts created from the web terminal are opened in this group\./);
   assert.match(view, /Demo account group failed to load\./);

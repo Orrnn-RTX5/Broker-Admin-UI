@@ -112,6 +112,11 @@ export const formatMarketPrice = value => {
   return num.toFixed(5);
 };
 
+export const formatMarketSpread = (bid, ask) => {
+  if (!validMarketPrice(bid) || !validMarketPrice(ask)) return '—';
+  return Math.abs(Number(ask) - Number(bid)).toFixed(5);
+};
+
 
 export const isMarketQuoteFresh = (quote, connected, now = Date.now()) => Boolean(connected && quote?.live && quote.lastUpdate && now - quote.lastUpdate < 30000);
 

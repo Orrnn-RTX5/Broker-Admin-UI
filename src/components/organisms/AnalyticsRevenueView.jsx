@@ -9,7 +9,7 @@ const REVENUE_LOADERS = {
 };
 
 const fmt = (v) => typeof v === 'number' ? v.toFixed(2) : String(v ?? '—');
-const pnlColor = (v) => (v > 0 ? 'text-[color:var(--success-500)]' : v < 0 ? 'text-[color:var(--danger-500)]' : 'text-[color:var(--text-primary)]');
+const pnlColor = (v) => (v > 0 ? 'text-[color:var(--market-profit)]' : v < 0 ? 'text-[color:var(--market-loss)]' : 'text-[color:var(--text-primary)]');
 
 const AnalyticsRevenueView = () => {
   const { data, loading, error, refresh } = useCachedTabRequest('revenue', REVENUE_LOADERS, {

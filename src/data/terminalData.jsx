@@ -32,6 +32,11 @@ import {
   RotateCcw,
   Hash,
   Users,
+  Layers,
+  Briefcase,
+  IdCard,
+  Wallet,
+  ArrowLeftRight,
   Newspaper,
   FileText,
   Monitor,
@@ -75,12 +80,14 @@ const YellowFolderIcon = (props) => (
   </svg>
 );
 
-const BlueUserIcon = (props) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="#3B82F6" stroke="#1D4ED8" strokeWidth="1" {...props}>
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />  
-  </svg>
-);
+const BlueLayersIcon = (props) => <Layers stroke="#3b82f6" size={14} {...props} />;
+const BlueClientIcon = (props) => <IdCard stroke="#3b82f6" size={14} {...props} />;
+const BlueManagerIcon = (props) => <Briefcase stroke="#3b82f6" size={14} {...props} />;
+const BlueAccountsIcon = (props) => <Wallet stroke="#3b82f6" size={14} {...props} />;
+const BlueLinkIcon = (props) => <Link stroke="#3b82f6" size={14} {...props} />;
+const BlueOrdersIcon = (props) => <FileText stroke="#3b82f6" size={14} {...props} />;
+const BluePositionsIcon = (props) => <Activity stroke="#3b82f6" size={14} {...props} />;
+const BlueDealsIcon = (props) => <ArrowLeftRight stroke="#3b82f6" size={14} {...props} />;
 
 const GreenHexagonIcon = (props) => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#238d3cff" strokeWidth="1.5" {...props}>
@@ -158,6 +165,7 @@ const GreenLockIcon = (props) => (
 );
 
 export const sidebarData = [
+  { label: 'Dashboard', icon: Layout },
   {
     label: "Servers",
     icon: Server,
@@ -166,7 +174,7 @@ export const sidebarData = [
       {
         label: "Server Configuration",
         icon: Settings,
-        initiallyExpanded: false,
+        initiallyExpanded: true,
         children: [
           { label: "Server Config", icon: Activity },
         ]
@@ -268,11 +276,11 @@ export const sidebarData = [
                 icon: UserCheck,
                 initiallyExpanded: true,
                 children: [
-                   { label: "Allocations", icon: BlueUserIcon },
-                   { label: "Clients", icon: BlueUserIcon },
-                   { label: "Managers", icon: BlueUserIcon },
-                   { label: "Trading Accounts", icon: BlueUserIcon },
-                   { label: "Corporate links", icon: BlueUserIcon },
+                   { label: "Allocations", icon: BlueLayersIcon },
+                   { label: "Clients", icon: BlueClientIcon },
+                   { label: "Managers", icon: BlueManagerIcon },
+                   { label: "Trading Accounts", icon: BlueAccountsIcon },
+                   { label: "Corporate links", icon: BlueLinkIcon },
                 ]
               },
               {
@@ -280,9 +288,9 @@ export const sidebarData = [
                 icon: Layout,
                 initiallyExpanded: true,
                 children: [
-                   { label: "Orders", icon: BlueUserIcon },
-                   { label: "Positions", icon: BlueUserIcon },
-                   { label: "Deals", icon: BlueUserIcon },
+                   { label: "Orders", icon: BlueOrdersIcon },
+                   { label: "Positions", icon: BluePositionsIcon },
+                   { label: "Deals", icon: BlueDealsIcon },
                 ]
               },
               {

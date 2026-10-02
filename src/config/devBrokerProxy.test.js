@@ -12,7 +12,8 @@ test('real Vite proxy routes each POST to its selected broker and strips routing
       for await (const chunk of req) body += chunk;
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({ name, path: req.url, body, host: req.headers.host,
-        origin: req.headers.origin, referer: req.headers.referer, cookie: req.headers.cookie || '' }));
+        origin: req.headers.origin, referer: req.headers.referer, cookie: req.headers.cookie || '',
+        ...(req.method === 'GET' ? { authorization: req.headers.authorization || '' } : {}) }));
     });
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     t.after(() => { server.closeAllConnections(); return new Promise(resolve => server.close(resolve)); });
@@ -24,6 +25,7 @@ test('real Vite proxy routes each POST to its selected broker and strips routing
     optimizeDeps: { noDiscovery: true, include: [] },
     server: { host: '127.0.0.1', port: 0, hmr: false, watch: null, proxy: {
       '/manager': createBrokerProxy(a, DEV_PROXY_BACKEND_COOKIE),
+      '/api/v1': createBrokerProxy(a, DEV_PROXY_BACKEND_COOKIE),
       '/api/v2': createBrokerProxy(a, DEV_PROXY_BACKEND_COOKIE),
       '/ext-api': createBrokerProxy(a, DEV_PROXY_EXT_COOKIE, { rewrite: p => p.replace(/^\/ext-api/, '') }),
     } },
@@ -57,6 +59,20 @@ test('real Vite proxy routes each POST to its selected broker and strips routing
   assert.equal(direct.path, '/api/v2/admin/login');
   assert.equal(direct.cookie, '');
   assert.equal((await request('/manager/GroupList', directCookies)).path, '/GroupList');
+  for (const [name, target] of [['A', a], ['B', b]]) {
+    const response = await fetch(local + '/api/v1/manager/journal?limit=200', {
+      headers: { Authorization: 'Bearer test-journal-session', Origin: local,
+        Cookie: `${DEV_PROXY_BACKEND_COOKIE}=${encodeURIComponent(target)}; ${DEV_PROXY_DIRECT_MANAGER_COOKIE}=${encodeURIComponent(target)}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    assert.equal(response.status, 200);
+    const journal = await response.json();
+    assert.equal(journal.name, name);
+    assert.equal(journal.path, '/api/v1/manager/journal?limit=200');
+    assert.equal(journal.authorization, 'Bearer test-journal-session');
+    assert.equal(journal.origin, target);
+    assert.equal(journal.cookie, '');
+  }
   const otherBroker = await request('/manager/api/v2/admin/login',
     `${DEV_PROXY_BACKEND_COOKIE}=${encodeURIComponent(a)}; ${DEV_PROXY_DIRECT_MANAGER_COOKIE}=${encodeURIComponent(b)}`);
   assert.equal(otherBroker.name, 'A');

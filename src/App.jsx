@@ -1,14 +1,21 @@
 import React from 'react';
-import { AdminLogin, ManagerLogin, ManualBrokerEntry } from './components/organisms/BrokerAuthScreens';
-import { SuperAdminAuthScreen } from './components/organisms/SuperAdminAuthScreen';
-import { SuperAdminConsole } from './components/organisms/SuperAdminConsole';
-import { useAuthStore } from './store/authStore';
+import { useAuthStore, validateAuthSession } from './store/authStore';
+import { primeServerJournalStartup, discardServerJournalStartup } from './services/journalStartup';
+import { clearServerJournalCache } from './services/serverJournalCache';
+import { getServerStatusScope, primeServerStatus } from './services/serverConfig.service';
+import { serverJournalSessionKey } from './utils/serverJournal';
 import { buildUserFromAuthPayload } from './utils/sessionUser';
 import { getAuthAccessToken, getAuthExpiresAt, getAuthExpiresIn, getAuthRefreshToken } from './utils/authSession';
 import { buildNavigationTarget, readAppPath } from './lib/routerPath';
+import { DEFAULT_WORKSPACE_LAYOUT } from './config/workspaceLayout';
 import { getSuperAdminSession, SUPER_ADMIN_SESSION_EVENT } from './services/superAdmin.service';
 
 const AuthenticatedApp = React.lazy(() => import('./AuthenticatedApp.jsx'));
+const AdminLogin = React.lazy(() => import('./components/organisms/BrokerAuthScreens').then(module => ({ default: module.AdminLogin })));
+const ManagerLogin = React.lazy(() => import('./components/organisms/BrokerAuthScreens').then(module => ({ default: module.ManagerLogin })));
+const ManualBrokerEntry = React.lazy(() => import('./components/organisms/BrokerAuthScreens').then(module => ({ default: module.ManualBrokerEntry })));
+const SuperAdminAuthScreen = React.lazy(() => import('./components/organisms/SuperAdminAuthScreen').then(module => ({ default: module.SuperAdminAuthScreen })));
+const SuperAdminConsole = React.lazy(() => import('./components/organisms/SuperAdminConsole').then(module => ({ default: module.SuperAdminConsole })));
 const AUTH_PATHS = new Set([
   '/',
   '/manager-login',
@@ -46,13 +53,78 @@ const AuthenticatedAppFallback = () => (
   <div className="h-screen w-screen bg-[color:var(--bg-app)]" aria-hidden="true" />
 );
 
-const App = () => {
+const AppRoutes = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
   const setToken = useAuthStore((state) => state.setToken);
   const setUser = useAuthStore((state) => state.setUser);
   const { pathname, navigate } = useBrowserPath();
+  const [globalTheme, setGlobalTheme] = React.useState(DEFAULT_WORKSPACE_LAYOUT.theme);
+  const [workspaceRevision, setWorkspaceRevision] = React.useState(0);
+  const startupPrimed = React.useRef(false);
+  const journalSession = serverJournalSessionKey(user);
+  const statusScope = getServerStatusScope();
+
+  React.useEffect(() => {
+    if (!statusScope || AUTH_PATHS.has(pathname) || validateAuthSession()) return;
+    // Start the landing view's request while the workspace bundle downloads.
+    // The mounted panel shares this request and restores its saved snapshot.
+    void primeServerStatus().catch(() => {});
+  }, [statusScope, accessToken, pathname]);
+
+  React.useEffect(() => {
+    if (!isAuthenticated) {
+      startupPrimed.current = false;
+      clearServerJournalCache();
+      return undefined;
+    }
+    if (!accessToken || pathname.startsWith('/super-admin') || startupPrimed.current
+      || DEFAULT_WORKSPACE_LAYOUT.operationsTab !== 'Journal' || DEFAULT_WORKSPACE_LAYOUT.operationsCollapsed) return undefined;
+    // Overlap the first server request with the workspace download. This is a
+    // one-shot request handoff, so every reload still reads the current server.
+    const timer = setTimeout(() => {
+      if (validateAuthSession()) return;
+      startupPrimed.current = true;
+      primeServerJournalStartup(journalSession);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      discardServerJournalStartup(journalSession);
+    };
+  }, [accessToken, isAuthenticated, journalSession, pathname]);
+
+  const resetWorkspaceLayout = React.useCallback(() => {
+    setGlobalTheme(DEFAULT_WORKSPACE_LAYOUT.theme);
+    setWorkspaceRevision((revision) => revision + 1);
+  }, []);
 
   const [superAdminSession, setSuperAdminSession] = React.useState(() => getSuperAdminSession());
+
+  React.useLayoutEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const applyTheme = () => {
+      let resolved = globalTheme;
+      if (globalTheme === 'system') resolved = mediaQuery.matches ? 'dark' : 'light';
+      else if (globalTheme === 'auto-time') {
+        const h = new Date().getHours();
+        resolved = (h >= 6 && h < 18) ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', resolved);
+    };
+    applyTheme();
+    const mqHandler = () => { if (globalTheme === 'system') applyTheme(); };
+    mediaQuery.addEventListener('change', mqHandler);
+
+    let timeTick;
+    if (globalTheme === 'auto-time') {
+      timeTick = setInterval(applyTheme, 60_000);
+    }
+    return () => {
+      mediaQuery.removeEventListener('change', mqHandler);
+      if (timeTick) clearInterval(timeTick);
+    };
+  }, [globalTheme]);
 
   React.useEffect(() => {
     const handleSuperAdminSessionChange = (e) => {
@@ -71,11 +143,14 @@ const App = () => {
     const expiresIn = getAuthExpiresIn(session);
 
     if (accessToken) {
+      const nextUser = buildUserFromAuthPayload(session);
       setToken(accessToken, refreshToken, expiresAt, expiresIn);
-      setUser(buildUserFromAuthPayload(session));
+      setUser(nextUser);
+      primeServerJournalStartup(serverJournalSessionKey(nextUser));
+      resetWorkspaceLayout();
       navigate(redirectPath, { replace: true });
     }
-  }, [navigate, setToken, setUser]);
+  }, [navigate, resetWorkspaceLayout, setToken, setUser]);
 
   React.useEffect(() => {
     if (!isAuthenticated && !AUTH_PATHS.has(pathname)) {
@@ -130,10 +205,22 @@ const App = () => {
 
   return (
     <React.Suspense fallback={<AuthenticatedAppFallback />}>
-      <AuthenticatedApp navigate={navigate} />
+      <AuthenticatedApp
+        key={workspaceRevision}
+        navigate={navigate}
+        globalTheme={globalTheme}
+        setGlobalTheme={setGlobalTheme}
+        onResetLayout={resetWorkspaceLayout}
+      />
     </React.Suspense>
   );
 };
 
+
+const App = () => (
+  <React.Suspense fallback={<AuthenticatedAppFallback />}>
+    <AppRoutes />
+  </React.Suspense>
+);
 
 export default App;

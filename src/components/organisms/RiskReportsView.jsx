@@ -7,7 +7,7 @@ const TAB_TOXIC = 'Toxic Flow';
 
 const toUnix = (dateStr) => dateStr ? Math.floor(new Date(dateStr).getTime() / 1000) : '';
 const fmt = (v) => (typeof v === 'number' ? v.toFixed(2) : '—');
-const pnlColor = (v) => (v > 0 ? 'text-[color:var(--success-500)]' : v < 0 ? 'text-[color:var(--danger-500)]' : 'text-[color:var(--text-primary)]');
+const pnlColor = (v) => (v > 0 ? 'text-[color:var(--market-profit)]' : v < 0 ? 'text-[color:var(--market-loss)]' : 'text-[color:var(--text-primary)]');
 
 const today = () => new Date().toISOString().split('T')[0];
 const monthAgo = () => { const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().split('T')[0]; };

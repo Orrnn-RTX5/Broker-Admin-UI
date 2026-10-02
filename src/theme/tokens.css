@@ -1,46 +1,46 @@
-/* RTX5 Admin workspace — slate night palette.
-   Layered blue-graphite surfaces, restrained blue actions, and readable status colours. */
+/* RTX5 Admin workspace. A black dark canvas carries raised charcoal controls;
+   market movement, operational status, and action colors stay separate. */
 
 :root,
-[data-theme="light"],
 [data-theme="dark"] {
   /* Workspace, cards, controls, and application chrome. */
-  --bg-app: #10151d;
-  --bg-surface-1: #161d29;
-  --bg-surface-2: #1d2836;
-  --bg-surface-3: #263445;
-  --bg-chrome: #0d131c;
-  --bg-toolbar: #182330;
-  --bg-overlay: rgba(3, 9, 16, 0.78);
+  --bg-app: #000000;
+  --bg-surface-1: #1e1e1e;
+  --bg-surface-2: #292929;
+  --bg-surface-3: #333333;
+  --bg-chrome: #0b0b0b;
+  --bg-toolbar: #202020;
+  --bg-overlay: rgba(0, 0, 0, 0.76);
 
-  /* Borders separate dense controls without bright outlines. */
-  --border-subtle: #2b3949;
-  --border-default: #344659;
-  --border-strong: #4a6177;
+  /* The three gray borders define panels, rows, and focused controls. */
+  --border-subtle: #303030;
+  --border-default: #3b3b3b;
+  --border-strong: #575757;
 
-  /* Main copy, supporting copy, and quiet labels on the dark workspace. */
-  --text-primary: #e7eff9;
-  --text-secondary: #b8c8d9;
-  --text-muted: #93a6bb;
-  --text-tertiary: #8497aa;
-  --text-placeholder: #93a6bb;
-  --line-muted: #74879b;
-  --text-inverse: #10151d;
+  /* Graded neutral text remains legible in the compact workspace. */
+  --text-primary: #e4e4e4;
+  --text-secondary: #c7c7c7;
+  --text-muted: #b2b2b2;
+  --text-tertiary: #9c9c9c;
+  --text-placeholder: #8b8b8b;
+  --line-muted: #7e7e7e;
+  --text-inverse: #121212;
 
-  /* Blue actions use a deep enough fill for white button text. */
-  --accent-50:  rgba(45, 108, 223, 0.10);
-  --accent-100: rgba(45, 108, 223, 0.18);
-  --accent-500: #2d6cdf;
-  --accent-600: #2563eb;
-  --accent-700: #1d4ed8;
+  /* Action blue is distinct from the market profit blue below. */
+  --accent-50:  rgba(0, 117, 194, 0.10);
+  --accent-100: rgba(0, 117, 194, 0.18);
+  --accent-500: #0075c2;
+  --accent-600: #006eaf;
+  --accent-700: #005f99;
   --accent-contrast: #ffffff;
-  --accent-soft: rgba(45, 108, 223, 0.18);
+  --accent-soft: rgba(0, 117, 194, 0.18);
 
-  /* Keep the market's blue positive convention; amber and coral stay distinct. */
-  --success-500: #6db3f2;
-  --warning-500: #f5c76b;
-  --danger-500:  #f27d86;
-  --info-500:    #76b8f8;
+  --success-500: #8fbd9d;
+  --warning-500: #fec84b;
+  --danger-500:  #ed968a;
+  --info-500:    #66b8ed;
+  --market-profit: #4a95e0;
+  --market-loss: #f06464;
 
   /* Shadows — subtle dark elevation */
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
@@ -71,6 +71,49 @@
   --ui-weight-semibold: 600;
 
   color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg-app: #f3f6fa;
+  --bg-surface-1: #ffffff;
+  --bg-surface-2: #f7f9fc;
+  --bg-surface-3: #eaf1fb;
+  --bg-chrome: #f8fafc;
+  --bg-toolbar: #f3f7fc;
+  --bg-overlay: rgba(20, 30, 45, 0.38);
+
+  --border-subtle: #e3eaf1;
+  --border-default: #c9d5e2;
+  --border-strong: #9eafc1;
+
+  --text-primary: #172033;
+  --text-secondary: #4f6074;
+  --text-muted: #65788e;
+  --text-tertiary: #75869a;
+  --text-placeholder: #75869a;
+  --line-muted: #8fa1b3;
+  --text-inverse: #ffffff;
+
+  --accent-50: rgba(29, 78, 216, 0.08);
+  --accent-100: rgba(29, 78, 216, 0.14);
+  --accent-500: #1d4ed8;
+  --accent-600: #1e40af;
+  --accent-700: #1e3a8a;
+  --accent-contrast: #ffffff;
+  --accent-soft: rgba(29, 78, 216, 0.14);
+
+  --success-500: #24724d;
+  --warning-500: #946200;
+  --danger-500: #b42318;
+  --info-500: #1762a3;
+  --market-profit: #1e5ea8;
+  --market-loss: #b42318;
+
+  --shadow-sm: 0 1px 3px rgba(28, 45, 74, 0.08);
+  --shadow-md: 0 6px 18px rgba(28, 45, 74, 0.12);
+  --shadow-lg: 0 12px 32px rgba(28, 45, 74, 0.16);
+
+  color-scheme: light;
 }
 
 /* ============================================================

@@ -1,0 +1,42 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+const records = new Map();
+globalThis.localStorage = { getItem: key => records.get(key) ?? null, setItem: (key, value) => records.set(key, value), removeItem: key => records.delete(key) };
+globalThis.sessionStorage = globalThis.localStorage;
+const { api } = await import('../lib/api.js');
+const { useAuthStore } = await import('../store/authStore.js');
+const { ServerConfigService, peekServerStatus, getServerStatusScope, primeServerStatus } = await import('./serverConfig.service.js');
+const user = { id: 9001, login: 9001, broker_id: 'a', role: 'manager', permissions: ['server_admin'] };
+let requests = 0;
+api.interceptors.request.use(config => ({ ...config, adapter: async request => {
+  requests++;
+  assert.equal(request.url, '/ext-api/ServerStatus');
+  assert.equal(request.timeout, 8000);
+  return { data: { active_sessions: 28 }, status: 200, statusText: 'OK', headers: {}, config: request };
+} }));
+
+test('authorized startup and view share metrics, with isolation for broker, permission, token, and logout', async () => {
+  useAuthStore.setState({ user, isAuthenticated: true, accessToken: 'synthetic-a' });
+  const scope = getServerStatusScope();
+  assert(!scope.includes('synthetic-a'), 'saved ownership never includes credentials');
+  await Promise.all([primeServerStatus(), ServerConfigService.getServerStatus()]);
+  assert.equal(requests, 1);
+  assert.equal(peekServerStatus().data.active_sessions, 28);
+  useAuthStore.setState({ user: { ...user, broker_id: 'b' } });
+  assert.equal(peekServerStatus(), null);
+  await ServerConfigService.getServerStatus();
+  useAuthStore.setState({ accessToken: 'synthetic-b' });
+  assert.equal(peekServerStatus(), null);
+  await ServerConfigService.getServerStatus();
+  useAuthStore.setState({ user: { ...user, permissions: [] } });
+  assert.equal(peekServerStatus(), null);
+  assert.equal(getServerStatusScope(), '');
+  const count = requests;
+  await primeServerStatus();
+  await assert.rejects(ServerConfigService.getServerStatus(), /authorized session/);
+  assert.equal(requests, count);
+  useAuthStore.setState({ user }); await ServerConfigService.getServerStatus();
+  useAuthStore.getState().logout();
+  assert.equal(peekServerStatus(), null);
+  assert.equal(records.get('rtx5-server-status-v1'), undefined);
+});

@@ -35,9 +35,18 @@ export const clearGroupListSnapshot = () => {
   try { globalThis.localStorage?.removeItem(snapshotKey()); } catch { /* ignore */ }
 };
 
+let groupListInflight = null;
+
 /** Fetch every page once, normalize, and remember the result for the next start-up. */
-export const loadGroupList = async (fetchRows) => {
-  const groups = normalizeNavigationGroups(await fetchRows());
-  writeGroupListSnapshot(groups);
-  return groups;
+export const loadGroupList = (fetchRows) => {
+  if (groupListInflight) return groupListInflight;
+  groupListInflight = Promise.resolve()
+    .then(fetchRows)
+    .then((rows) => {
+      const groups = normalizeNavigationGroups(rows);
+      writeGroupListSnapshot(groups);
+      return groups;
+    })
+    .finally(() => { groupListInflight = null; });
+  return groupListInflight;
 };

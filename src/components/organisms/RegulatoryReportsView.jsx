@@ -7,7 +7,7 @@ const TABS = ['EMIR', 'MiFID', 'Reconciliation', 'Daily Transactions', 'Generate
 const today = () => new Date().toISOString().split('T')[0];
 const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().split('T')[0]; };
 const fmt = (v) => (v == null ? '—' : typeof v === 'number' ? v.toFixed(4) : String(v));
-const pnlColor = (v) => (v > 0 ? 'text-[color:var(--success-500)]' : v < 0 ? 'text-[color:var(--danger-500)]' : 'text-[color:var(--text-primary)]');
+const pnlColor = (v) => (v > 0 ? 'text-[color:var(--market-profit)]' : v < 0 ? 'text-[color:var(--market-loss)]' : 'text-[color:var(--text-primary)]');
 
 const DataTable = ({ data }) => {
   if (!Array.isArray(data) || data.length === 0)

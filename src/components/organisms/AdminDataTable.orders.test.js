@@ -66,7 +66,7 @@ test('Orders date filters use native calendar pickers', () => {
   assert.match(src, /ref=\{orderFromDateInputRef\}/);
   assert.match(src, /ref=\{orderToDateInputRef\}/);
   assert.match(src, /className="order-date-input bg-transparent border-none outline-none w-\[140px\] text-\[11px\] pl-2"/);
-  assert.match(indexCss, /\.order-date-input\s*\{\s*color-scheme: dark;/);
+  assert.match(indexCss, /\.order-date-input\s*\{\s*color-scheme: inherit;/);
   assert.match(indexCss, /\.order-date-input::-webkit-calendar-picker-indicator\s*\{\s*display: none;/);
   assert.match(src, /aria-label="Select orders from date"/);
   assert.match(src, /aria-label="Select orders to date"/);
@@ -74,7 +74,7 @@ test('Orders date filters use native calendar pickers', () => {
 
 test('Orders filter dropdown arrows open the native picker and use tokenized theme colors', () => {
   assert.match(src, /const orderFilterSelectShellClassName = '.*cursor-pointer.*hover:bg-\[color:var\(--bg-surface-3\)\]/);
-  assert.match(src, /const orderFilterSelectClassName = '.*text-\[color:var\(--text-primary\)\].*\[color-scheme:dark\]/);
+  assert.match(src, /const orderFilterSelectClassName = '.*text-\[color:var\(--text-primary\)\]';/);
   assert.match(src, /const orderFilterSelectOptionClassName = '.*bg-\[color:var\(--bg-surface-2\)\].*text-\[color:var\(--text-primary\)\]/);
   assert.match(src, /const orderFilterSelectOptionStyle = \{\s*backgroundColor: 'var\(--bg-surface-2\)',\s*color: 'var\(--text-primary\)'/);
   assert.match(src, /const handleOrderFilterSelectMouseDown = \(event\) => \{/);

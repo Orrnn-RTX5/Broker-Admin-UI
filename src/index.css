@@ -135,7 +135,7 @@ body {
   }
 
   .order-date-input {
-    color-scheme: dark;
+    color-scheme: inherit;
   }
 
   .order-date-input::-webkit-calendar-picker-indicator {

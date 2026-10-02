@@ -12,7 +12,7 @@ const TRADER_RANKING_LOADERS = {
 };
 
 const fmt = (v) => typeof v === 'number' ? v.toFixed(2) : String(v ?? '—');
-const pnlColor = (v) => (v > 0 ? 'text-[color:var(--success-500)]' : v < 0 ? 'text-[color:var(--danger-500)]' : 'text-[color:var(--text-primary)]');
+const pnlColor = (v) => (v > 0 ? 'text-[color:var(--market-profit)]' : v < 0 ? 'text-[color:var(--market-loss)]' : 'text-[color:var(--text-primary)]');
 
 const TradersTable = ({ data }) => {
   if (!data) return <div className="flex items-center justify-center h-24 text-white text-[11px]">Loading…</div>;

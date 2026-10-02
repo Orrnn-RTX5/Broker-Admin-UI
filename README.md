@@ -18,14 +18,22 @@ npm run dev
 npm run build
 ```
 
+Local browser development uses Vite's HTTP proxy. Keep
+`VITE_USE_DEV_PROXY=true` in `.env.development.local` so the Journal and other
+authenticated APIs go through the local origin. Disabling it makes the browser
+call the broker directly; a backend that does not allow the localhost origin
+will produce a CORS `Network Error`. Restart Vite if an environment change has
+not been applied automatically.
+
 For a broker that exposes manager/admin endpoints at the root, list its exact
 origin in `VITE_DIRECT_MANAGER_ORIGINS` in `.env.local` (comma separated). For
 example, TEST uses `https://fxtrustbrokerbackend.orrnn.com`. Other brokers keep
 their existing `/manager` paths. Discovery's explicit `direct_manager_paths`
 setting takes precedence when supplied.
 
-Local requests stay under `/manager` so Vite can proxy login and flat routes such
-as `GroupList`. The selected broker and direct-path mode travel in local routing
+Login and flat routes such as `GroupList` stay under `/manager` locally. Native
+routes such as `/api/v1/manager/journal` keep their versioned path through the
+same Vite proxy. The selected broker and direct-path mode travel in local routing
 cookies; Vite strips those cookies and, where configured, the path prefix before
 forwarding. Authentication fetches use `same-origin` credentials so those local
 cookies reach Vite without including cookies on cross-origin login requests.
@@ -62,6 +70,19 @@ file, restart or redeploy the container to apply changes. Runtime configuration
 is public in the browser, so keep passwords and tokens in a separate secret
 store, not in this file.
 
+Missing build assets must return an uncached `404`, never the SPA document.
+The Node runtime and optional Nginx configuration enforce this, while HTML and
+runtime configuration stay uncached. On web, a failed lazy CSS or JavaScript
+download triggers at most one automatic reload per minute in a tab. If the
+download still fails, the error screen offers a document reload; React's cached
+failed lazy import cannot be retried by simply resetting the error boundary.
+
+To release a web fix, build an isolated `release-candidate/**` commit and
+validate its exported image on Nexa. Set `ADMIN_RELEASE_SOURCE_SHA` and
+`ADMIN_RELEASE_IMAGE_REF` to that exact commit and immutable image digest, then
+promote the same commit to `main`. The `main` workflow deploys the validated
+image without rebuilding it. Pushing to other branches does not deploy the app.
+
 ## Windows Desktop App
 
 Run the Electron desktop app locally:
@@ -83,7 +104,7 @@ Desktop updates are manual. Publishing a GitHub release does not make running ap
 
 ## Desktop Releases
 
-The checked-in GitHub Actions workflow builds and deploys the web Docker image on pushes to `main`. Desktop publishing is currently a local command. Set `GH_TOKEN` in the shell environment, then run:
+The checked-in GitHub Actions workflow builds web candidate images on `release-candidate/**` branches and deploys a validated image on pushes to `main`. Desktop publishing is currently a local command. Set `GH_TOKEN` in the shell environment, then run:
 
 ```bash
 npm run release

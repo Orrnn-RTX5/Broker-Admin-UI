@@ -1,5 +1,5 @@
 import { sortToolbarRows } from '../../utils/toolbarActions';
-import React, { useState } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import {
   clientsAccountsTableData,
   automationsTableData,
@@ -9,6 +9,7 @@ import { useGroups } from '../../hooks/useAdmin';
 import { usePositions, useOrders, useDealsSummary } from '../../hooks/usePositions';
 import { useInstruments } from '../../hooks/useInstruments';
 import { useAccounts } from '../../hooks/useAccounts';
+import { useClientRowWindow } from '../../hooks/useClientRowWindow';
 import { ManagerService } from '../../services/manager.service';
 import { PositionsService } from '../../services/positions.service';
 import { InstrumentsService } from '../../services/instruments.service';
@@ -25,8 +26,6 @@ import { canAccessView } from '../../utils/permissions';
 import { useToast } from '../ui/useToast';
 import {
   Clock,
-  CornerUpRight,
-  Server,
   Calendar,
   Search,
   ChevronDown,
@@ -38,53 +37,57 @@ import {
 } from 'lucide-react';
 
 import AdminContextMenu from './AdminContextMenu';
-import NetworkCluster from './NetworkCluster';
-import AllocationsView from './AllocationsView';
-import GatewaysView from './GatewaysView';
-import ServerStatusPanel from './ServerStatusPanel';
-import ServerPropertiesPopup from '../RIGHTCLICKJPOPUPS/ServerPropertiesPopup';
-import CreateGroupPopup from '../RIGHTCLICKJPOPUPS/CreateGroupPopup';
+import './AdminDataTable.clients.css';
 
-import FeedTenantsView from './FeedTenantsView';
-import IntegrationsView from './IntegrationsView';
-import AntiDDoSView from './AntiDDoSView';
-import SupportCenterView from './SupportCenterView';
-import ManagersView from './ManagersView';
-import SwapFreeGroupsView from './SwapFreeGroupsView';
-import LeveragesView from './LeveragesView';
-import LeverageScheduleView from './LeverageScheduleView';
-import HolidaysView from './HolidaysView';
-import MarketDepthView from './MarketDepthView';
-import SpreadsView from './SpreadsView';
-import SessionOverridesView from './SessionOverridesView';
-import CustomFieldsView from './CustomFieldsView';
-import FeatureFlagsView from './FeatureFlagsView';
-import SymbolVisibilityView from './SymbolVisibilityView';
-import TradingTerminalConfigView from './TradingTerminalConfigView';
-import ExposureView from './ExposureView';
-import RiskEventsView from './RiskEventsView';
-import RiskLimitsView from './RiskLimitsView';
-import SuspiciousActivityView from './SuspiciousActivityView';
-import RiskReportsView from './RiskReportsView';
-import AnalyticsClientView from './AnalyticsClientView';
-import AnalyticsTradingView from './AnalyticsTradingView';
-import AnalyticsTradersView from './AnalyticsTradersView';
-import AnalyticsRevenueView from './AnalyticsRevenueView';
-import DataExportsView from './DataExportsView';
-import RegulatoryReportsView from './RegulatoryReportsView';
-import ComplaintsView from './ComplaintsView';
-import ServerConfigView from './ServerConfigView';
-import PaymentMethodsView from './PaymentMethodsView';
-import DepositsView from './DepositsView';
-import WithdrawalsView from './WithdrawalsView';
-import TransactionHistoryView from './TransactionHistoryView';
-import PaymentGatewayView from './PaymentGatewayView';
-import PaymentReconciliationView from './PaymentReconciliationView';
-import ChargebacksView from './ChargebacksView';
-import CommunicationsView from './CommunicationsView';
-import SecurityAccessView from './SecurityAccessView';
-import MarketsView from './MarketsView';
-import LPRoutingView from './LPRoutingView';
+// Optional workspaces load when selected so their charts, maps, and editors do
+// not delay the first table or the independently mounted journal.
+const NetworkCluster = lazy(() => import('./NetworkCluster'));
+const AllocationsView = lazy(() => import('./AllocationsView'));
+const GatewaysView = lazy(() => import('./GatewaysView'));
+const ServerStatusPanel = lazy(() => import('./ServerStatusPanel'));
+const FeedTenantsView = lazy(() => import('./FeedTenantsView'));
+const IntegrationsView = lazy(() => import('./IntegrationsView'));
+const TimeSettingsView = lazy(() => import('./TimeSettingsView'));
+const AntiDDoSView = lazy(() => import('./AntiDDoSView'));
+const SupportCenterView = lazy(() => import('./SupportCenterView'));
+const ManagersView = lazy(() => import('./ManagersView'));
+const SwapFreeGroupsView = lazy(() => import('./SwapFreeGroupsView'));
+const LeveragesView = lazy(() => import('./LeveragesView'));
+const LeverageScheduleView = lazy(() => import('./LeverageScheduleView'));
+const HolidaysView = lazy(() => import('./HolidaysView'));
+const MarketDepthView = lazy(() => import('./MarketDepthView'));
+const SpreadsView = lazy(() => import('./SpreadsView'));
+const SessionOverridesView = lazy(() => import('./SessionOverridesView'));
+const CustomFieldsView = lazy(() => import('./CustomFieldsView'));
+const FeatureFlagsView = lazy(() => import('./FeatureFlagsView'));
+const SymbolVisibilityView = lazy(() => import('./SymbolVisibilityView'));
+const TradingTerminalConfigView = lazy(() => import('./TradingTerminalConfigView'));
+const ExposureView = lazy(() => import('./ExposureView'));
+const RiskEventsView = lazy(() => import('./RiskEventsView'));
+const RiskLimitsView = lazy(() => import('./RiskLimitsView'));
+const SuspiciousActivityView = lazy(() => import('./SuspiciousActivityView'));
+const RiskReportsView = lazy(() => import('./RiskReportsView'));
+const AnalyticsClientView = lazy(() => import('./AnalyticsClientView'));
+const AnalyticsTradingView = lazy(() => import('./AnalyticsTradingView'));
+const AnalyticsTradersView = lazy(() => import('./AnalyticsTradersView'));
+const AnalyticsRevenueView = lazy(() => import('./AnalyticsRevenueView'));
+const DataExportsView = lazy(() => import('./DataExportsView'));
+const RegulatoryReportsView = lazy(() => import('./RegulatoryReportsView'));
+const ComplaintsView = lazy(() => import('./ComplaintsView'));
+const ServerConfigView = lazy(() => import('./ServerConfigView'));
+const PaymentMethodsView = lazy(() => import('./PaymentMethodsView'));
+const DepositsView = lazy(() => import('./DepositsView'));
+const WithdrawalsView = lazy(() => import('./WithdrawalsView'));
+const TransactionHistoryView = lazy(() => import('./TransactionHistoryView'));
+const PaymentGatewayView = lazy(() => import('./PaymentGatewayView'));
+const PaymentReconciliationView = lazy(() => import('./PaymentReconciliationView'));
+const ChargebacksView = lazy(() => import('./ChargebacksView'));
+const CommunicationsView = lazy(() => import('./CommunicationsView'));
+const SecurityAccessView = lazy(() => import('./SecurityAccessView'));
+const MarketsView = lazy(() => import('./MarketsView'));
+const LPRoutingView = lazy(() => import('./LPRoutingView'));
+const ServerPropertiesPopup = lazy(() => import('../RIGHTCLICKJPOPUPS/ServerPropertiesPopup'));
+const CreateGroupPopup = lazy(() => import('../RIGHTCLICKJPOPUPS/CreateGroupPopup'));
 
 // Custom icons for MT5 style table
 const YellowFolderIcon = (props) => (
@@ -137,7 +140,7 @@ const NON_GROUP_LOOKUP_VIEWS = new Set([
   'Time',
 ]);
 const orderFilterSelectShellClassName = 'flex border border-[color:var(--border-strong)] bg-[color:var(--bg-surface-1)] h-[26px] items-center text-[color:var(--text-primary)] cursor-pointer hover:bg-[color:var(--bg-surface-3)] rounded-[2px]';
-const orderFilterSelectClassName = 'bg-[color:var(--bg-surface-1)] border-none outline-none w-full h-full text-[11px] px-1 appearance-none cursor-pointer text-[color:var(--text-primary)] [color-scheme:dark]';
+const orderFilterSelectClassName = 'bg-[color:var(--bg-surface-1)] border-none outline-none w-full h-full text-[11px] px-1 appearance-none cursor-pointer text-[color:var(--text-primary)]';
 const orderFilterSelectOptionClassName = 'bg-[color:var(--bg-surface-2)] text-[color:var(--text-primary)]';
 const orderFilterSelectOptionStyle = {
   backgroundColor: 'var(--bg-surface-2)',
@@ -520,29 +523,49 @@ const matchesRecordSearch = (record, query) => {
 const getBrokerClientRow = (account, idx) => {
   const id = pickDefined(account, ['id', 'ID', 'login', 'Login', 'account_login', 'accountLogin', 'email', 'Email', 'phone', 'Phone'], idx);
   const login = pickDefined(account, ['login', 'Login', 'account_login', 'accountLogin']);
-  const name = pickDefined(account, ['name', 'Name', 'client_name', 'clientName', 'full_name', 'fullName', 'user_name', 'userName'], login || '-');
+  const name = pickDefined(account, ['name', 'Name', 'client_name', 'clientName', 'full_name', 'fullName', 'user_name', 'userName'], login);
   const email = pickDefined(account, ['email', 'Email']);
   const phone = pickDefined(account, ['phone', 'Phone']);
   const group = pickDefined(account, ['group', 'Group', 'group_name', 'groupName', 'account_group', 'accountGroup', 'accountGroupName']);
-  const status = pickDefined(account, ['status', 'Status'], account.enabled === false || account.Enabled === false ? 'disabled' : 'active');
+  const explicitStatus = pickDefined(account, ['status', 'Status'], null);
+  const enabled = pickDefined(account, ['enabled', 'Enabled'], null);
+  const enabledText = String(enabled).toLowerCase();
+  const status = explicitStatus ?? (
+    enabledText === 'true' || enabledText === '1' ? 'active'
+      : enabledText === 'false' || enabledText === '0' ? 'disabled' : 'unknown'
+  );
 
   return {
     id,
     raw: account,
     login,
+    email,
+    phone,
     group,
     status,
     iconType: 'user',
     name,
-    description: [
-      email,
-      phone,
-      group ? `Group: ${group}` : '',
-      status ? `Status: ${status}` : '',
-    ].filter(Boolean).join(' | '),
   };
 };
 
+const getClientStatusTone = (status) => {
+  const normalized = String(status ?? '').trim().toLowerCase();
+  if (normalized === 'active' || normalized === 'enabled') return 'active';
+  if (normalized === 'pending' || normalized === 'in review' || normalized === 'under review') return 'pending';
+  if (normalized === 'inactive' || normalized === 'disabled' || normalized === 'blocked') return 'inactive';
+  return 'neutral';
+};
+
+const formatClientStatus = (status) => {
+  const value = String(status ?? 'unknown').trim().replaceAll('_', ' ');
+  return value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : 'Unknown';
+};
+
+const renderClientField = (value) => (
+  value !== undefined && value !== null && value !== ''
+    ? value
+    : <span className="admin-client-empty">—</span>
+);
 const getAccountRow = (account, idx) => ({
   id: pickDefined(account, ['login', 'Login', 'account_login', 'accountLogin'], idx),
   raw: account,
@@ -630,6 +653,15 @@ const CLIENTS_COLUMNS = [
   { label: 'Description', key: 'description', width: 'flex-1' },
 ];
 
+const BROKER_CLIENT_COLUMNS = [
+  { label: 'Name', key: 'name' },
+  { label: 'Login', key: 'login' },
+  { label: 'Email', key: 'email' },
+  { label: 'Phone', key: 'phone' },
+  { label: 'Group', key: 'group' },
+  { label: 'Status', key: 'status' },
+];
+
 const ACCOUNT_COLUMNS = [
   { label: 'Login', key: 'login', width: 'w-32' },
   { label: 'Name', key: 'name', width: 'w-48' },
@@ -694,27 +726,6 @@ const DEAL_COLUMNS = [
   { label: 'Profit', width: 'flex-1' },
 ];
 
-const TimePropertyRow = ({ idx, icon, label, value }) => (
-  <div className={`flex min-h-[var(--row-h)] items-center text-[12px] border-b border-[color:var(--border-subtle)] ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'} hover:bg-[color:var(--bg-surface-3)] cursor-default`}>
-    <div className="w-[320px] flex items-center gap-2 px-3 py-[5px] border-r border-[color:var(--border-subtle)] shrink-0">
-      {React.createElement(icon, { size: 13, className: 'text-[color:var(--text-primary)]' })}
-      <span className="text-[color:var(--text-primary)]">{label}</span>
-    </div>
-    <div className="flex-1 px-3 py-[5px] text-[color:var(--text-primary)]">
-      {value}
-    </div>
-  </div>
-);
-
-const TimeGroupHeader = ({ title }) => (
-  <div className="flex border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface-2)] cursor-default">
-    <div className="w-[320px] px-3 py-1.5 text-[11px] font-bold text-[color:var(--text-primary)] border-r border-[color:var(--border-subtle)] shrink-0">
-      {title}
-    </div>
-    <div className="flex-1"></div>
-  </div>
-);
-
 const PaginationIconButton = ({ 'aria-label': ariaLabel, onClick, disabled, children }) => (
   <button
     type="button"
@@ -728,7 +739,7 @@ const PaginationIconButton = ({ 'aria-label': ariaLabel, onClick, disabled, chil
   </button>
 );
 
-const AdminDataTable = ({
+const AdminDataTableContent = ({
   onRowDoubleClick,
   viewType,
   onAddClick,
@@ -1101,7 +1112,7 @@ const AdminDataTable = ({
         mapFn: getBrokerClientRow,
       });
 
-      columns = CLIENTS_COLUMNS;
+      columns = BROKER_CLIENT_COLUMNS;
       data = pageData.rows;
       pagination = pageData;
       isClientsViewTemp = true;
@@ -1275,6 +1286,10 @@ const AdminDataTable = ({
     pagination,
   } = tableState;
   const data = React.useMemo(() => sortToolbarRows(unsortedData, sortDirection, viewType), [unsortedData, sortDirection, viewType]);
+  const clientWindow = useClientRowWindow(viewType === 'Clients', `${pagingScopeKey}|${activePage}`, data.length);
+  const rowsToRender = React.useMemo(() => viewType === 'Clients'
+    ? data.slice(clientWindow.start, clientWindow.end) : data,
+  [data, viewType, clientWindow.start, clientWindow.end]);
 
   const knownTotalCount = pagination?.hasKnownTotal ? pagination.total : undefined;
   const renderedTotalCount = Number.isFinite(knownTotalCount) ? knownTotalCount : data.length;
@@ -1570,6 +1585,7 @@ const AdminDataTable = ({
     : '';
 
   const isPagedView = PAGED_VIEW_TYPES.has(viewType);
+  const isBrokerClientsView = viewType === 'Clients';
   const totalCount = renderedTotalCount;
   const activeFooterTabLabel = viewType === 'Clients & Accounts'
     ? 'Clients & Accounts'
@@ -1654,36 +1670,20 @@ const AdminDataTable = ({
 
  
   if (viewType === 'Time') {
-    return (
-      <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative" onContextMenu={(e) => e.preventDefault()}>
-        <div className="flex border-b border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-2)] sticky top-0 z-10 shadow-sm h-[30px] items-center">
-          <div className="w-[320px] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] hover:bg-[color:var(--bg-surface-3)] cursor-default shrink-0">Property</div>
-          <div className="flex-1 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-surface-3)] cursor-default">Value</div>
-        </div>
-        <div className="flex-1 overflow-auto no-scrollbar bg-[color:var(--bg-app)]">
-          <TimeGroupHeader title="Common settings" />
-          <TimePropertyRow idx={0} icon={Clock} label="Time zone" value="GMT+01:00" />
-          <TimePropertyRow idx={1} icon={CornerUpRight} label="Daylight Saving time correction" value="Yes" />
-          <TimePropertyRow idx={2} icon={Server} label="Time synchronization with" value="time.cloudflare.com, pool.ntp.org" />
-
-          <TimeGroupHeader title="Day settings" />
-          {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, idx) => (
-            <TimePropertyRow key={day} idx={idx} icon={Calendar} label={day} value="00:00-24:00" />
-          ))}
-        </div>
-      </div>
-    );
+    return <TimeSettingsView />;
   }
 
   return (
     <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative" onContextMenu={handleContextMenu}>
       {serverPopupData && (
-        <ServerPropertiesPopup
-          isOpen={serverPopupData.isOpen}
-          onClose={() => setServerPopupData(null)}
-          serverName={serverPopupData.target}
-          serverId={serverPopupData.id}
-        />
+        <Suspense fallback={null}>
+          <ServerPropertiesPopup
+            isOpen={serverPopupData.isOpen}
+            onClose={() => setServerPopupData(null)}
+            serverName={serverPopupData.target}
+            serverId={serverPopupData.id}
+          />
+        </Suspense>
       )}
       {viewType === 'Orders' && (
         <div className="flex items-center px-3 py-2 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] text-[11px] shrink-0 overflow-x-auto no-scrollbar whitespace-nowrap shadow-[var(--shadow-sm)]">
@@ -1863,13 +1863,17 @@ const AdminDataTable = ({
       )}
 
       {/* Header and rows share one scroll surface so columns stay aligned. */}
-      <div className="flex-1 min-h-0 overflow-auto bg-[color:var(--bg-app)]">
-        <div className="w-max min-w-full">
-      <div data-export-header="true" className="sticky top-0 z-10 flex h-[30px] w-full items-center border-b border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-2)] shadow-sm">
+      <div
+        ref={isBrokerClientsView ? clientWindow.scrollRef : undefined}
+        onScroll={isBrokerClientsView ? clientWindow.onScroll : undefined}
+        className="flex-1 min-h-0 overflow-auto bg-[color:var(--bg-app)]"
+      >
+        <div className={isBrokerClientsView ? 'w-full min-w-[1160px]' : 'w-max min-w-full'}>
+      <div data-export-header="true" className={isBrokerClientsView ? 'admin-clients-header sticky top-0 z-10' : 'sticky top-0 z-10 flex h-[30px] w-full items-center border-b border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-2)] shadow-sm'}>
         {columns.map((col, idx) => (
           <div
             key={idx}
-            className={`admin-column-header ${col.width} px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] hover:bg-[color:var(--bg-surface-3)] cursor-default flex items-center shrink-0 ${NUMERIC_COLUMN_LABELS.has(col.label) ? 'justify-end tabular-nums text-right' : ''}`}
+            className={isBrokerClientsView ? 'admin-column-header admin-client-column' : `admin-column-header ${col.width} px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] hover:bg-[color:var(--bg-surface-3)] cursor-default flex items-center shrink-0 ${NUMERIC_COLUMN_LABELS.has(col.label) ? 'justify-end tabular-nums text-right' : ''}`}
           >
             {col.label}
           </div>
@@ -1878,16 +1882,50 @@ const AdminDataTable = ({
         {viewType === 'Groups' && <div className="flex-1 border-b border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-2)]"></div>}
       </div>
 
-        {data.map((row, idx) => (
+        {isBrokerClientsView && clientWindow.before > 0 && <div aria-hidden="true" style={{ height: clientWindow.before }} />}
+        {rowsToRender.map((row, idx) => (
           <div
             key={row.id}
             data-export-row="true"
+            data-row-index={isBrokerClientsView ? clientWindow.start + idx : undefined}
             onClick={() => handleRowClick(row)}
             onDoubleClick={() => onRowDoubleClick && onRowDoubleClick(row)}
             onContextMenu={(e) => { e.stopPropagation(); handleContextMenu(e, row); }}
-            className={`flex min-h-[var(--row-h)] w-full cursor-pointer group border-b border-[color:var(--border-subtle)] transition-colors ${isSelectedEditableRow(row) ? 'bg-[#04395e] text-[color:var(--text-primary)] shadow-[inset_2px_0_0_0_#0078d4]' : (idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]')} hover:bg-[color:var(--bg-surface-3)]`}
+            onKeyDown={isBrokerClientsView ? (event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                handleRowClick(row);
+                onRowDoubleClick?.(row);
+              } else if (event.key === ' ') {
+                event.preventDefault();
+                handleRowClick(row);
+              }
+            } : undefined}
+            role={isBrokerClientsView ? 'button' : undefined}
+            tabIndex={isBrokerClientsView ? 0 : undefined}
+            aria-label={isBrokerClientsView ? `Select ${row.name || row.login || 'client'} account; press Enter to edit` : undefined}
+            aria-pressed={isBrokerClientsView ? Boolean(isSelectedEditableRow(row)) : undefined}
+            data-selected={isBrokerClientsView ? Boolean(isSelectedEditableRow(row)) : undefined}
+            data-stripe={isBrokerClientsView ? ((clientWindow.start + idx) % 2 === 0 ? 'even' : 'odd') : undefined}
+            className={isBrokerClientsView ? 'admin-clients-row' : `flex min-h-[var(--row-h)] w-full cursor-pointer group border-b border-[color:var(--border-subtle)] transition-colors ${isSelectedEditableRow(row) ? 'bg-[color:var(--bg-surface-2)] text-[color:var(--text-primary)]' : (idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]')} hover:bg-[color:var(--bg-surface-3)]`}
+            style={!isBrokerClientsView && isSelectedEditableRow(row) ? { boxShadow: 'inset 2px 0 0 var(--accent-500)' } : undefined}
           >
-            {isClientsView ? (
+            {isBrokerClientsView ? (
+              <>
+                <div className="admin-client-cell admin-client-cell--name" title={String(row.name ?? '')}>
+                  <span className="admin-client-name">{renderClientField(row.name)}</span>
+                </div>
+                <div className="admin-client-cell admin-client-cell--login" title={String(row.login ?? '')}><span className="admin-client-value">{renderClientField(row.login)}</span></div>
+                <div className="admin-client-cell admin-client-cell--email" title={String(row.email ?? '')}><span className="admin-client-value">{renderClientField(row.email)}</span></div>
+                <div className="admin-client-cell admin-client-cell--phone" title={String(row.phone ?? '')}><span className="admin-client-value">{renderClientField(row.phone)}</span></div>
+                <div className="admin-client-cell admin-client-cell--group" title={String(row.group ?? '')}>
+                  <span className="admin-client-value">{renderClientField(row.group)}</span>
+                </div>
+                <div className="admin-client-cell admin-client-cell--status">
+                  <span className="admin-client-status" data-tone={getClientStatusTone(row.status)} title={String(row.status ?? '')}>{formatClientStatus(row.status)}</span>
+                </div>
+              </>
+            ) : isClientsView ? (
               <>
                 <div className="w-64 px-3 py-1.5 text-[12px] flex items-center gap-2 border-r border-[color:var(--border-subtle)] shrink-0">
                   {row.iconType === 'group' ? <YellowFolderIcon /> : <BlueUserIcon />}
@@ -1936,11 +1974,15 @@ const AdminDataTable = ({
                   const sideIsBuy = isSideCol && String(val).toLowerCase() === 'buy';
                   const sideIsSell = isSideCol && String(val).toLowerCase() === 'sell';
                   const isNumeric = NUMERIC_COLUMN_LABELS.has(col.label);
-                  const cellToneClass = (col.label === 'Profit' && row.profit > 0) || sideIsBuy
-                    ? 'text-[color:var(--success-500)]'
-                    : (col.label === 'Profit' && row.profit < 0) || sideIsSell
-                      ? 'text-[color:var(--danger-500)]'
-                      : 'text-[color:var(--text-primary)]';
+                  const cellToneClass = col.label === 'Profit' && row.profit > 0
+                    ? 'text-[color:var(--market-profit)]'
+                    : col.label === 'Profit' && row.profit < 0
+                      ? 'text-[color:var(--market-loss)]'
+                      : sideIsBuy
+                        ? 'text-[color:var(--success-500)]'
+                        : sideIsSell
+                          ? 'text-[color:var(--danger-500)]'
+                          : 'text-[color:var(--text-primary)]';
 
                   return (
                     <div key={cIdx} title={String(renderTableValue(val))} className={`${col.width} px-3 py-1.5 text-[11px] ${cellToneClass} border-r border-[color:var(--border-subtle)] shrink-0 ${isNumeric ? 'text-right tabular-nums' : ''} truncate`}>
@@ -1982,6 +2024,7 @@ const AdminDataTable = ({
             )}
           </div>
         ))}
+        {isBrokerClientsView && clientWindow.after > 0 && <div aria-hidden="true" style={{ height: clientWindow.after }} />}
         {isLoading && data.length === 0 && (
           <div role="status" className="m-4 w-fit rounded-[4px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] px-4 py-3 text-[12px] text-[color:var(--text-secondary)]">
             Loading {viewType.toLowerCase()}...
@@ -2028,9 +2071,11 @@ const AdminDataTable = ({
               >
                 <span className="truncate">{activeFooterTabLabel}</span>
               </div>
-              <div className="hidden h-8 max-w-[160px] truncate px-2 text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] text-[11px] sm:flex items-center cursor-default transition-colors">
-                All {viewType}
-              </div>
+              {!isBrokerClientsView && (
+                <div className="hidden h-8 max-w-[160px] truncate px-2 text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] text-[11px] sm:flex items-center cursor-default transition-colors">
+                  All {viewType}
+                </div>
+              )}
             </>
           )}
         </div>
@@ -2117,14 +2162,30 @@ const AdminDataTable = ({
         />
       )}
       {editingGroup && (
-        <CreateGroupPopup
-          initialData={editingGroup}
-          onClose={() => setEditingGroup(null)}
-          onCreated={() => { setEditingGroup(null); refetchGroups(); onGroupsChanged?.(); }}
-        />
+        <Suspense fallback={null}>
+          <CreateGroupPopup
+            initialData={editingGroup}
+            onClose={() => setEditingGroup(null)}
+            onCreated={() => { setEditingGroup(null); refetchGroups(); onGroupsChanged?.(); }}
+          />
+        </Suspense>
       )}
     </div>
   );
 };
+
+const AdminDataTable = (props) => (
+  <Suspense fallback={(
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex-1 min-h-0 flex items-center justify-center bg-[color:var(--bg-app)] text-[12px] text-[color:var(--text-secondary)]"
+    >
+      Loading {props.viewType || 'workspace'}...
+    </div>
+  )}>
+    <AdminDataTableContent {...props} />
+  </Suspense>
+);
 
 export default AdminDataTable;

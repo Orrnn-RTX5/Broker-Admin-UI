@@ -51,7 +51,7 @@ test('Windows afterPack hook stamps the RTX icon without the legacy winCodeSign 
 });
 
 test('Web favicon points at the same RTX app icon copied into dist', () => {
-  assert.match(indexHtml, /<link rel="icon" href="\.\/logo V2\.ico" \/>/);
+  assert.match(indexHtml, /<link rel="icon" href="%BASE_URL%logo V2\.ico" \/>/);
 });
 
 test('RTX app icon uses a dark mark with the green 5 for light taskbar surfaces', async () => {

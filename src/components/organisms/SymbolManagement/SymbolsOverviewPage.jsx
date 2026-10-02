@@ -1,55 +1,65 @@
-import { LayoutGrid, TrendingUp, Coins, BarChart3, Droplets, Hash, ChevronRight } from 'lucide-react';
 import { marketGroupCounts } from '../../../utils/marketCatalogue';
+import './SymbolWorkspace.css';
 
-const CATEGORY_META = {
-  'Metals': { icon: TrendingUp, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-  'Forex': { icon: LayoutGrid, color: 'text-white', bg: 'bg-blue-500/10' },
-  'Indices': { icon: BarChart3, color: 'text-purple-500', bg: 'bg-purple-500/10' },
-  'Crypto': { icon: Coins, color: 'text-orange-500', bg: 'bg-orange-500/10' },
-  'Commodities': { icon: Droplets, color: 'text-white', bg: 'bg-green-500/10' },
-  'Others': { icon: Hash, color: 'text-white', bg: 'bg-gray-500/10' },
+const CATEGORY_DESCRIPTIONS = {
+  Metals: 'Precious metals and metal pairs',
+  Forex: 'Major, minor and cross currency pairs',
+  Indices: 'Global stock and market indices',
+  Crypto: 'Digital assets and cryptocurrency pairs',
+  Commodities: 'Energy, agriculture and commodity markets',
+  Others: 'Additional instruments and custom symbols',
 };
 
 const SymbolsOverviewPage = ({ onSelectCategory, catalogue = [] }) => {
   const counts = marketGroupCounts(catalogue);
 
   return (
-    <div className="p-6 w-full h-full flex flex-col gap-6 overflow-y-auto" style={{ background: 'var(--bg)' }}>
-      <div>
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--text)' }}>Symbols Browser</h1>
-        <p className="text-sm" style={{ color: 'var(--text-3)' }}>Select a category to view live market symbols</p>
-      </div>
+    <div className="symbols-browser">
+      <header className="symbols-page-header">
+        <div className="symbols-page-heading">
+          <h1>Symbols Browser</h1>
+          <p>Browse the symbol catalogue by market category.</p>
+        </div>
+        <div className="symbols-page-summary" role="group" aria-label="Catalogue summary">
+          <span>{catalogue.length} {catalogue.length === 1 ? 'symbol' : 'symbols'}</span>
+          <span>{Object.keys(counts).length} categories</span>
+        </div>
+      </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {Object.keys(counts).map(name => {
-          const meta = CATEGORY_META[name] || CATEGORY_META.Others;
-          const count = counts[name] || 0;
-          return (
-            <div
-              key={name}
-              onClick={() => onSelectCategory?.(name)}
-              className="ui-card p-5 cursor-pointer transition-all hover:translate-y-[-2px] hover:shadow-lg group border border-transparent hover:border-accent/30"
-              style={{ background: 'var(--surface)' }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-xl ${meta.bg}`}>
-                  <meta.icon size={24} className={meta.color} />
-                </div>
-                <div className="bg-surface-2 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ color: 'var(--text-3)' }}>
-                  {count} Symbols
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-bold" style={{ color: 'var(--text)' }}>{name}</h3>
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>View all {name.toLowerCase()} related symbols</p>
-                </div>
-                <ChevronRight size={18} className="translate-x-0 group-hover:translate-x-1 transition-transform opacity-50 group-hover:opacity-100" style={{ color: 'var(--accent)' }} />
-              </div>
-            </div>
-          );
-        })}
+      <div className="symbols-browser-content">
+        <div className="symbols-section-heading">
+          <h2>Market categories</h2>
+          <span>Select a category to view its symbols</span>
+        </div>
+        <section className="symbols-category-grid" aria-label="Market categories">
+          {Object.entries(counts).map(([name, count]) => {
+            const names = catalogue.filter((entry) => entry.category === name).map((entry) => entry.symbol);
+            const preview = names.slice(0, 3).join(', ');
+            return (
+              <button
+                key={name}
+                type="button"
+                onClick={() => onSelectCategory?.(name)}
+                className="symbols-category-card"
+                aria-label={`Open ${name} symbols, ${count} ${count === 1 ? 'symbol' : 'symbols'}`}
+              >
+                <span className="symbols-category-topline">
+                  <span className="symbols-category-title">{name}</span>
+                  <span className="symbols-category-count">{count} {count === 1 ? 'symbol' : 'symbols'}</span>
+                </span>
+                <span className="symbols-category-description">
+                  {Object.hasOwn(CATEGORY_DESCRIPTIONS, name) ? CATEGORY_DESCRIPTIONS[name] : `Symbols in the ${name} category`}
+                </span>
+                <span className="symbols-category-footer">
+                  <span className="symbols-category-preview" title={names.join(', ')}>
+                    {preview || 'No symbols assigned'}{names.length > 3 ? ` +${names.length - 3}` : ''}
+                  </span>
+                  <span className="symbols-category-action">View symbols</span>
+                </span>
+              </button>
+            );
+          })}
+        </section>
       </div>
     </div>
   );

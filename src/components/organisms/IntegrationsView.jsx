@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
   Activity,
-  ArrowUpRight,
   BarChart3,
   Mail,
   MessageSquare,
@@ -34,7 +33,6 @@ const integrationSections = [
       { label: 'MasterSite ID', value: 'Not specified', muted: true },
       { label: 'Data export', value: 'Not configured', muted: true },
     ],
-    linkText: 'More about the service',
   },
   {
     id: 'vps',
@@ -48,7 +46,6 @@ const integrationSections = [
       { label: 'Spent', value: '0 USD' },
       { label: 'Latency', value: 'Not available', muted: true },
     ],
-    linkText: 'More about the service',
   },
   {
     id: 'mail',
@@ -62,7 +59,6 @@ const integrationSections = [
       { label: 'Mail accounts', value: '1' },
       { label: 'Mail servers', value: '1' },
     ],
-    linkText: 'How to set up a mail server',
     activity: { successful: 51, unsuccessful: 510 },
   },
   {
@@ -79,7 +75,6 @@ const integrationSections = [
       { label: 'Spent', value: '0 USD' },
       { label: 'Average price', value: '0.00 USD' },
     ],
-    linkText: 'How to set up SMS verification',
     activity: { successful: 0, unsuccessful: 452 },
   },
   {
@@ -91,9 +86,8 @@ const integrationSections = [
     statusLabel: 'Setup required',
     description: 'Receive platform performance data via messenger channels.',
     metrics: [
-      { label: 'Channels', value: 'Telegram, Slack, Teams' },
+      { label: 'Supported channels', value: 'Telegram, Slack, Teams' },
     ],
-    linkText: 'How to set up messenger channels',
     activity: { successful: 0, unsuccessful: 0 },
   },
   {
@@ -109,7 +103,6 @@ const integrationSections = [
       { label: 'Groups', value: '0' },
       { label: 'Accounts checked', value: '0' },
     ],
-    linkText: 'How to set up KYC checks',
   },
 ];
 
@@ -127,6 +120,14 @@ const filters = [
   { id: 'active', label: 'Connected', count: statusTotals.active },
   { id: 'attention', label: 'Needs setup', count: statusTotals.attention },
 ];
+
+const connectedServices = integrationSections.filter((item) => item.state === 'active');
+const setupServices = integrationSections.filter((item) => item.state === 'attention');
+
+const getSuccessRate = ({ successful = 0, unsuccessful = 0 } = {}) => {
+  const total = successful + unsuccessful;
+  return total ? Math.round((successful / total) * 100) : 0;
+};
 
 const ServiceLogo = ({ icon }) => {
   const Icon = serviceIcons[icon];
@@ -164,21 +165,24 @@ const ActivityMeter = ({ activity, isConfigured }) => {
   }
 
   const successWidth = (successful / total) * 100;
-  const successRate = Math.round(successWidth);
+  const successRate = getSuccessRate(activity);
 
   return (
     <div className="integration-activity">
       <div className="integration-activity-heading">
-        <span>Recent activity</span>
+        <span>Recorded activity</span>
         <strong>{successRate}% success</strong>
       </div>
       <div
         className="integration-activity-bar"
         role="img"
-        aria-label={`${successful} successful and ${unsuccessful} unsuccessful events`}
+        aria-label={`${successful} successful and ${unsuccessful} failed events`}
       >
         {successful > 0 && (
           <span className="integration-activity-bar-success" style={{ width: `${successWidth}%` }} />
+        )}
+        {unsuccessful > 0 && (
+          <span className="integration-activity-bar-failure" style={{ width: `${100 - successWidth}%` }} />
         )}
       </div>
       <div className="integration-activity-legend">
@@ -188,13 +192,6 @@ const ActivityMeter = ({ activity, isConfigured }) => {
     </div>
   );
 };
-
-const ServiceLink = ({ linkText }) => (
-  <a href="#" className="integration-service-link">
-    <span>{linkText}</span>
-    <ArrowUpRight size={14} strokeWidth={1.8} aria-hidden="true" />
-  </a>
-);
 
 const IntegrationCard = ({ item }) => (
   <article className={`integration-card integration-card--${item.state}`}>
@@ -221,11 +218,61 @@ const IntegrationCard = ({ item }) => (
     </dl>
 
     <ActivityMeter activity={item.activity} isConfigured={item.state === 'active'} />
-
-    <footer className="integration-card-footer">
-      <ServiceLink linkText={item.linkText} />
-    </footer>
   </article>
+);
+
+const OperationsOverview = () => (
+  <section className="integration-operations" aria-label="Integration operations">
+    <section className="integration-operations-panel" aria-labelledby="integration-delivery-title">
+      <div className="integration-operations-heading">
+        <div>
+          <h2 id="integration-delivery-title">Delivery outcomes</h2>
+          <p>Recorded results from connected services</p>
+        </div>
+        <span className="integration-operations-count">{connectedServices.length} connected</span>
+      </div>
+      <div className="integration-delivery-list">
+        {connectedServices.map((item) => {
+          const { successful = 0, unsuccessful = 0 } = item.activity ?? {};
+          const successRate = getSuccessRate(item.activity);
+          const hasActivity = successful + unsuccessful > 0;
+          return (
+            <div className="integration-delivery-row" key={item.id}>
+              <span className="integration-delivery-name">{item.title}</span>
+              <div
+                className="integration-delivery-meter"
+                role="img"
+                aria-label={`${item.title}: ${successful} successful and ${unsuccessful} failed events`}
+              >
+                {successful > 0 && <span className="integration-delivery-success" style={{ width: `${successRate}%` }} />}
+                {unsuccessful > 0 && <span className="integration-delivery-failure" style={{ width: `${100 - successRate}%` }} />}
+              </div>
+              <span className="integration-delivery-total">{successful} successful · {unsuccessful} failed</span>
+              <strong className="integration-delivery-rate">{hasActivity ? `${successRate}%` : '—'}</strong>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+
+    <section className="integration-operations-panel" aria-labelledby="integration-setup-title">
+      <div className="integration-operations-heading">
+        <div>
+          <h2 id="integration-setup-title">Configuration required</h2>
+          <p>Services awaiting setup</p>
+        </div>
+        <span className="integration-operations-count">{setupServices.length} services</span>
+      </div>
+      <div className="integration-setup-list">
+        {setupServices.map((item) => (
+          <div className="integration-setup-item" key={item.id}>
+            <span className="integration-setup-name">{item.title}</span>
+            <span className="integration-setup-category">{item.category}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  </section>
 );
 
 const SummaryStat = ({ label, value, tone }) => (
@@ -264,7 +311,6 @@ const IntegrationsView = () => {
         <div className="integrations-toolbar">
           <div>
             <h2>Service catalog</h2>
-            <p>Review configuration and delivery activity across your workspace.</p>
           </div>
           <div className="integration-filters" role="group" aria-label="Filter integrations">
             {filters.map((filter) => (
@@ -287,6 +333,8 @@ const IntegrationsView = () => {
             <IntegrationCard key={item.id} item={item} />
           ))}
         </div>
+
+        <OperationsOverview />
       </div>
     </section>
   );

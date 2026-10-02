@@ -6,8 +6,10 @@ import {
 } from 'lucide-react';
 import useSymbolStore from '../../store/useSymbolStore';
 import { InstrumentsService } from '../../services/instruments.service';
+import { DEFAULT_WORKSPACE_LAYOUT } from '../../config/workspaceLayout';
 import {
   formatMarketPrice,
+  formatMarketSpread,
   getSymbolFriendlyDescription,
   isMarketQuoteFresh,
   readMarketWatchViewCache,
@@ -67,6 +69,7 @@ const MarketSymbolRow = memo(function MarketSymbolRow({
       </td>
       <td className={`market-bid-cell admin-quote-value ${quotePriceClass(quote?.bidDir, live)}`}>{formatMarketPrice(quote?.bid)}</td>
       <td className={`market-ask-cell admin-quote-value ${quotePriceClass(quote?.askDir, live)}`}>{formatMarketPrice(quote?.ask)}</td>
+      <td className={`market-spread-cell admin-quote-value ${live ? '' : 'market-quote-neutral'}`}>{formatMarketSpread(row?.bid, row?.ask)}</td>
     </tr>
   );
 });
@@ -76,20 +79,8 @@ export default function MarketWatchDock({ children }) {
   const feedSymbolNames = useSymbolStore(state => state.feedSymbolNames);
   const connected = useSymbolStore(state => state.isConnected);
   const feedError = useSymbolStore(state => state.feedError);
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem('rtx5.marketWatchCollapsed') === 'true';
-    } catch {
-      return false;
-    }
-  });
-  const [navigatorCollapsed, setNavigatorCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem('rtx5.navigatorCollapsed') === 'true';
-    } catch {
-      return false;
-    }
-  });
+  const [collapsed, setCollapsed] = useState(DEFAULT_WORKSPACE_LAYOUT.marketWatchCollapsed);
+  const [navigatorCollapsed, setNavigatorCollapsed] = useState(DEFAULT_WORKSPACE_LAYOUT.navigatorCollapsed);
   const [search, setSearch] = useState('');
   const cacheScopeRef = useRef('');
   const initialViewRef = useRef(null);
@@ -112,44 +103,24 @@ export default function MarketWatchDock({ children }) {
   const [names, setNames] = useState(() => symbolMetadata.map((entry) => entry.symbol).filter(Boolean));
   const [metadataState, setMetadataState] = useState(() => symbolMetadata.length ? 'ready' : 'loading');
   const [selected, setSelected] = useState(initialViewRef.current.selected);
-  const [tab, setTab] = useState(initialViewRef.current.tab);
+  const [tab, setTab] = useState(DEFAULT_WORKSPACE_LAYOUT.marketWatchTab);
   const [now, setNow] = useState(Date.now);
   const [history, setHistory] = useState(initialViewRef.current.history);
   const [scrollTop, setScrollTop] = useState(0);
   const liveQuote = useSymbolStore((state) => selected ? state.symbols[selected] : undefined);
 
   const toggleMarketWatchCollapsed = (forced) => {
-    setCollapsed(prev => {
-      const next = typeof forced === 'boolean' ? forced : !prev;
-      try {
-        localStorage.setItem('rtx5.marketWatchCollapsed', String(next));
-      } catch { /* noop */ }
-      return next;
-    });
+    setCollapsed(prev => typeof forced === 'boolean' ? forced : !prev);
   };
 
   const toggleNavigatorCollapsed = (forced) => {
-    setNavigatorCollapsed(prev => {
-      const next = typeof forced === 'boolean' ? forced : !prev;
-      try {
-        localStorage.setItem('rtx5.navigatorCollapsed', String(next));
-      } catch { /* noop */ }
-      return next;
-    });
+    setNavigatorCollapsed(prev => typeof forced === 'boolean' ? forced : !prev);
   };
 
 
   // Vertical Resizer State between Market Watch and Navigator
   const dockRef = useRef(null);
-  const [marketWatchHeight, setMarketWatchHeight] = useState(() => {
-    try {
-      const saved = localStorage.getItem('rtx5.marketWatchHeight');
-      const val = Number(saved);
-      return Number.isFinite(val) && val >= 130 && val <= 850 ? val : 340;
-    } catch {
-      return 340;
-    }
-  });
+  const [marketWatchHeight, setMarketWatchHeight] = useState(DEFAULT_WORKSPACE_LAYOUT.marketWatchHeight);
   const [isDragging, setIsDragging] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const mobileTriggerRef = useRef(null);
@@ -344,9 +315,6 @@ export default function MarketWatchDock({ children }) {
       const finalH = Math.max(130, Math.min(maxH, startH + delta));
       setMarketWatchHeight(finalH);
       setIsDragging(false);
-      try {
-        localStorage.setItem('rtx5.marketWatchHeight', String(finalH));
-      } catch { /* noop */ }
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = '';
@@ -387,11 +355,7 @@ export default function MarketWatchDock({ children }) {
   };
 
   const handleResizerDoubleClick = () => {
-    const defaultH = 340;
-    setMarketWatchHeight(defaultH);
-    try {
-      localStorage.setItem('rtx5.marketWatchHeight', String(defaultH));
-    } catch { /* noop */ }
+    setMarketWatchHeight(DEFAULT_WORKSPACE_LAYOUT.marketWatchHeight);
   };
 
   return (
@@ -487,18 +451,19 @@ export default function MarketWatchDock({ children }) {
             {/* View 1: Symbols Quotes Table */}
             {tab === 'Symbols' && (
               <>
-                <table className="admin-market-table">
+                <table className="admin-market-table admin-market-symbols-table">
                   <thead>
                     <tr>
                       <th className="market-col-symbol">Symbol</th>
                       <th className="market-col-bid">Bid</th>
                       <th className="market-col-ask">Ask</th>
+                      <th className="market-col-spread" title="Difference between Ask and Bid">Spread</th>
                     </tr>
                   </thead>
                   <tbody>
                     {first > 0 && (
                       <tr aria-hidden="true">
-                        <td colSpan={3} style={{ height: first * 27, padding: 0 }} />
+                        <td colSpan={4} style={{ height: first * 27, padding: 0 }} />
                       </tr>
                     )}
                     {displayed.map(name => (
@@ -514,7 +479,7 @@ export default function MarketWatchDock({ children }) {
                     ))}
                     {rows.length > first + displayed.length && (
                       <tr aria-hidden="true">
-                        <td colSpan={3} style={{ height: (rows.length - first - displayed.length) * 27, padding: 0 }} />
+                        <td colSpan={4} style={{ height: (rows.length - first - displayed.length) * 27, padding: 0 }} />
                       </tr>
                     )}
                   </tbody>
@@ -566,7 +531,7 @@ export default function MarketWatchDock({ children }) {
 
                   <dl className="market-specs-list">
                     {[
-                      ['Spread', quote?.bid && quote?.ask ? Math.abs(Number(quote.ask) - Number(quote.bid)).toFixed(5) : '—'],
+                      ['Spread', formatMarketSpread(quote?.bid, quote?.ask)],
                       ['Contract Size', '1.00 Lot (Standard)'],
                       ['Trade Mode', 'Full Access / Market Execution'],
                       ['Expiration', 'Good \'Til Cancelled (GTC)'],

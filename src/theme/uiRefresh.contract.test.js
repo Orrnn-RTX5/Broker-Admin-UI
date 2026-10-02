@@ -10,16 +10,25 @@ test('theme refresh keeps active and semantic colors readable in both themes', (
   const tokens = src('src/theme/tokens.css');
   const managerUi = src('src/theme/manager-ui.css');
   const typography = src('src/theme/typography.css');
+  const dark = tokens.match(/:root,\s*\[data-theme="dark"\]\s*\{([\s\S]*?)\n\}/)?.[1];
+  const light = tokens.match(/\[data-theme="light"\]\s*\{([\s\S]*?)\n\}/)?.[1];
 
-  assert.match(tokens, /--bg-app:\s*#10151d;/i, 'workspace uses the night canvas');
-  assert.match(tokens, /--text-primary:\s*#e7eff9;/i, 'main text is near-white on the dark workspace');
-  assert.match(tokens, /--text-secondary:\s*#b8c8d9;/i, 'supporting text is softer than main text');
-  assert.match(tokens, /--text-muted:\s*#93a6bb;/i, 'muted text is readable on dark surfaces');
-  assert.match(tokens, /--text-placeholder:\s*(?:#93a6bb|var\(--text-muted\));/i, 'placeholders use the muted tone');
+  assert.ok(dark && light, 'light and dark each define their own palette');
+  assert.match(dark, /--bg-app:\s*#000000;/i, 'dark workspace uses a black canvas');
+  assert.match(dark, /--text-primary:\s*#e4e4e4;/i, 'main text is readable on dark surfaces');
+  assert.match(dark, /--text-secondary:\s*#c7c7c7;/i, 'supporting text is softer than main text');
+  assert.match(dark, /--text-muted:\s*#b2b2b2;/i, 'muted text remains visible');
+  assert.match(dark, /--text-placeholder:\s*#8b8b8b;/i, 'placeholders remain distinct');
+  assert.match(light, /--bg-app:\s*#f3f6fa;/i, 'light theme has a light canvas');
+  assert.match(light, /--text-primary:\s*#172033;/i, 'light theme has dark text');
+  assert.match(light, /color-scheme:\s*light;/);
   assert.match(tokens, /--ui-font-base:\s*11px;/, 'workspace copy uses the compact manager scale');
   assert.match(typography, /:root:has\(\.admin-workspace\) :is\(\[role="dialog"\]/, 'only signed-in portals share the workspace type scale');
-  assert.match(typography, /\.text-white,\s*\[class~="text-\[\#fff\]"\]/, 'legacy white labels follow the foreground token');
-  assert.match(tokens, /--accent-500:\s*#2d6cdf;/i, 'accent matches theme blue');
+  assert.match(typography, /\.text-white,\s*\[class~="text-\[#fff\]"\]/, 'legacy white labels follow the foreground token');
+  assert.match(dark, /--accent-500:\s*#0075c2;/i, 'accent matches manager blue');
+  assert.match(dark, /--success-500:\s*#8fbd9d;/i, 'connected status is green');
+  assert.match(dark, /--market-profit:\s*#4a95e0;/i, 'market profit uses readable dark blue');
+  assert.match(dark, /--market-loss:\s*#f06464;/i, 'market loss uses red');
 
   assert.match(managerUi, /\[data-theme="dark"\]\s*\{[\s\S]*--accent-text:\s*#ffffff;/);
   assert.doesNotMatch(managerUi, /--accent-text:\s*var\(--accent-100\)/);
@@ -42,7 +51,7 @@ test('shared controls use accent focus and stable dense-table layout', () => {
   assert.match(managerUi, /\.ui-grid tbody td\s*\{[\s\S]*height:\s*var\(--row-h\);/);
 });
 
-test('positive and negative UI states use the reference market colors', () => {
+test('market prices use blue and red while service statuses retain semantic colors', () => {
   const tokens = src('src/theme/tokens.css');
   const index = src('src/index.css');
   const managerUi = src('src/theme/manager-ui.css');
@@ -52,13 +61,10 @@ test('positive and negative UI states use the reference market colors', () => {
   const symbolList = src('src/components/organisms/SymbolManagement/SymbolListPage.jsx');
   const symbolsTab = src('src/components/organisms/SymbolManagement/SymbolsTab.jsx');
 
-  // Buy/profit/success is a professional blue everywhere; green is never used.
-  assert.ok((tokens.match(/--success-500:\s*#6db3f2;/g) || []).length >= 1);
-  assert.doesNotMatch(tokens, /--success-500:\s*(#2ebd59|#4ec9b0)/);
-  assert.match(tokens, /--danger-500:\s*#f27d86;/i);
-  // Success words are white; the blue stays on arrows, dots and soft backgrounds.
-  assert.equal((managerUi.match(/--ok-text:\s*#ffffff;/g) || []).length, 2);
-  assert.equal((managerUi.match(/--danger-text:\s*var\(--danger-500\);/g) || []).length, 2);
+  assert.match(tokens, /--success-500:\s*#8fbd9d;/i);
+  assert.match(tokens, /--danger-500:\s*#ed968a;/i);
+  assert.match(managerUi, /--ok-text:\s*var\(--success-500\);/);
+  assert.match(managerUi, /--danger-text:\s*var\(--danger-500\);/);
 
   assert.match(index, /--color-green-400:\s*var\(--success-500\);/);
   assert.match(index, /--color-emerald-400:\s*var\(--success-500\);/);
@@ -66,17 +72,19 @@ test('positive and negative UI states use the reference market colors', () => {
   assert.match(index, /--color-rose-400:\s*var\(--danger-500\);/);
   assert.match(legacyOverrides, /Semantic color compatibility/);
 
-  assert.match(marketWatchCss, /--mw-success:\s*var\(--success-500\);/);
-  assert.match(marketWatchCss, /--mw-danger:\s*var\(--danger-500\);/);
+  assert.match(marketWatchCss, /--mw-profit:\s*var\(--market-profit\);/);
+  assert.match(marketWatchCss, /--mw-loss:\s*var\(--market-loss\);/);
   assert.match(marketWatchCss, /--mw-bg-1:\s*var\(--bg-app\);/);
   assert.match(marketWatchCss, /--mw-accent:\s*var\(--accent-500\);/);
-  assert.match(marketWatchCss, /\.quote-up svg\s*\{\s*color:\s*var\(--mw-success\);/);
-  assert.match(marketWatchCss, /\.market-quote-up\s*\{\s*color:\s*var\(--mw-success\);/);
-  assert.match(marketWatchCss, /\.market-quote-down\s*\{\s*color:\s*var\(--mw-danger\);/);
+  assert.match(marketWatchCss, /\.quote-up svg\s*\{\s*color:\s*var\(--mw-profit\);/);
+  assert.match(marketWatchCss, /\.market-quote-up\s*\{\s*color:\s*var\(--mw-profit\);/);
+  assert.match(marketWatchCss, /\.market-quote-down\s*\{\s*color:\s*var\(--mw-loss\);/);
   assert.match(marketWatch, /quotePriceClass\(quote\?\.bidDir, live\)/);
   assert.match(marketWatch, /quotePriceClass\(quote\?\.askDir, live\)/);
   assert.match(symbolList, /quoteColorClass\(item\.bidDir\)/);
   assert.match(symbolList, /quoteColorClass\(item\.askDir\)/);
+  assert.match(symbolList, /var\(--market-profit\)/);
+  assert.match(symbolList, /var\(--market-loss\)/);
   assert.doesNotMatch(symbolsTab, /var\(--success\)/, 'symbol toggles use the defined success token');
 });
 
@@ -92,7 +100,10 @@ test('app shell refresh preserves existing navigation and table wiring', () => {
   assert.match(app, /onSearchChange=\{setSearchQuery\}/);
   assert.match(app, /onEditableTargetSelect=\{handleEditableTargetSelect\}/);
 
-  assert.match(toolbar, /label="Integrations"\s+onClick=\{\(\) => onNodeSelect\?\.\('Integrations'\)\}/);
+  assert.doesNotMatch(app, /admin-workspace-tabs|aria-label="Workspace views"/, 'workspace selection uses the Navigator without a duplicate tab row');
+  assert.match(app, /selectedNodeLabel=\{activeNode === 'Market Overview' \? 'Symbols Browser' : activeNode\}/);
+  assert.match(app, /viewType=\{activeNode\}/, 'the selected Navigator view drives the main content');
+  assert.match(app, /<span>\{activeNode\}<\/span>/, 'the active view remains visible in its heading');
   assert.match(toolbar, /onClick=\{onAddClick\}/);
   assert.match(toolbar, /onChange=\{\(e\) => onSearchChange\?\.\(e\.target\.value\)\}/);
   assert.match(sidebar, /newNode\.blockedNavigation\s*=\s*shouldBlockViewNavigation\(newNode\.label\);/);

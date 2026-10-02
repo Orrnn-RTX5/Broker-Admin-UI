@@ -259,3 +259,132 @@ test('getAllAccounts reads every page without a group filter and shares the resu
     AccountsService.invalidateCache();
   }
 });
+
+test('Clients shares an in-flight census page and synchronously reuses completed pages', async () => {
+  AccountsService.invalidateCache();
+  const rows = Array.from({ length: 150 }, (_, index) => ({ Login: 2000 + index, Name: `Client ${index}` }));
+  const offsets = [];
+  let release;
+  let started;
+  const firstStarted = new Promise(resolve => { started = resolve; });
+  mockAdapter = async requestConfig => {
+    const { offset = 0, limit = 100 } = requestConfig.params;
+    offsets.push(offset);
+    if (offset === 0) await new Promise(resolve => { release = resolve; started(); });
+    return { data: { accounts: rows.slice(offset, offset + limit), total: rows.length }, status: 200, statusText: 'OK', headers: {}, config: requestConfig, request: {} };
+  };
+  try {
+    const census = AccountsService.getAllAccounts();
+    await firstStarted;
+    const clients = AccountsService.getAccounts({ page: 1, limit: 100 });
+    release();
+    const [all, first] = await Promise.all([census, clients]);
+    assert.equal(all.length, 150);
+    assert.deepEqual(offsets, [0, 100], 'the Clients request must reuse the census first page');
+    assert.equal(AccountsService.peekAccounts({ page: 1, limit: 100 }), first, 'ready rows are available synchronously');
+    assert.equal(await AccountsService.getAccounts({ page: 1, limit: 100 }), first);
+    const second = AccountsService.peekAccounts({ page: 2, limit: 100 });
+    assert.equal(second.accounts[0].Login, 2100);
+    assert.equal(second.accounts.length, 50);
+    assert.deepEqual(offsets, [0, 100], 'reopening either page must not issue another request');
+  } finally {
+    release?.();
+    mockAdapter = null;
+    AccountsService.invalidateCache();
+  }
+});
+
+test('account snapshots expire for fetching, retain display rows, and keep filters separate', async t => {
+  AccountsService.invalidateCache();
+  let now = Date.now();
+  t.mock.method(Date, 'now', () => now);
+  requestCount = 0;
+  mockResponseData = { accounts: [{ Login: 1, Name: 'Original' }], total: 200 };
+  try {
+    const first = await AccountsService.getAccounts({ page: 1, limit: 100 });
+    assert.equal(AccountsService.peekAccounts({ page: 2, limit: 100 }), null);
+    assert.equal(AccountsService.peekAccounts({ page: 1, limit: 100, search: 'other' }), null);
+    now += 61_000;
+    assert.equal(AccountsService.peekAccounts({ page: 1, limit: 100 }), null);
+    assert.equal(AccountsService.peekAccounts({ page: 1, limit: 100 }, { allowStale: true }), first);
+    mockResponseData = { accounts: [{ Login: 1, Name: 'Updated' }], total: 200 };
+    const refreshed = await AccountsService.getAccounts({ page: 1, limit: 100 });
+    assert.equal(refreshed.accounts[0].Name, 'Updated');
+    assert.equal(requestCount, 2, 'an expired snapshot must be fetched again');
+    AccountsService.invalidateCache();
+    assert.equal(AccountsService.peekAccounts({ page: 1, limit: 100 }, { allowStale: true }), null);
+  } finally {
+    mockAdapter = null;
+    AccountsService.invalidateCache();
+  }
+});
+
+test('changing broker access discards account snapshots and late responses cannot refill them', async () => {
+  AccountsService.invalidateCache();
+  const initialUser = { login: 'manager-a', broker_id: 'broker-a', role: 'admin', is_admin: true, permissions: ['*'], access_fingerprint: 'access-a' };
+  useAuthStore.setState({ accessToken: 'account-scope-a', isAuthenticated: true, user: initialUser });
+  mockResponseData = { accounts: [{ Login: 1 }], total: 200 };
+  await AccountsService.getAccounts({ page: 1, limit: 100 });
+  useAuthStore.setState({ user: { ...initialUser, access_fingerprint: 'access-restricted' } });
+  assert.equal(AccountsService.peekAccounts({ page: 1, limit: 100 }, { allowStale: true }), null);
+  let release;
+  let started;
+  const requestStarted = new Promise(resolve => { started = resolve; });
+  mockAdapter = requestConfig => new Promise(resolve => {
+    release = () => resolve({ data: { accounts: [{ Login: 1 }], total: 200 }, status: 200, statusText: 'OK', headers: {}, config: requestConfig, request: {} });
+    started();
+  });
+  try {
+    const oldRequest = AccountsService.getAccounts({ page: 1, limit: 100 });
+    await requestStarted;
+    useAuthStore.setState({ accessToken: 'account-scope-b', user: { ...initialUser, broker_id: 'broker-b' } });
+    mockAdapter = null;
+    mockResponseData = { accounts: [{ Login: 2 }], total: 200 };
+    await AccountsService.getAccounts({ page: 1, limit: 100 });
+    release();
+    await oldRequest;
+    assert.equal(AccountsService.peekAccounts({ page: 1, limit: 100 }).accounts[0].Login, 2);
+    useAuthStore.getState().logout();
+    assert.equal(AccountsService.peekAccounts({ page: 1, limit: 100 }, { allowStale: true }), null);
+  } finally {
+    release?.();
+    mockAdapter = null;
+    AccountsService.invalidateCache();
+    useAuthStore.setState({ accessToken: 'session-token', isAuthenticated: true, user: { role: 'admin', is_admin: true } });
+  }
+});
+
+test('failed account fetches can be retried without caching a failed response', async () => {
+  AccountsService.invalidateCache();
+  mockAdapter = async () => { throw new Error('Synthetic account request failure'); };
+  try {
+    await assert.rejects(AccountsService.getAccounts({ page: 1, limit: 100 }), /Synthetic account request failure/);
+    assert.equal(AccountsService.peekAccounts({ page: 1, limit: 100 }), null);
+    mockAdapter = null;
+    mockResponseData = { accounts: [{ Login: 3 }], total: 200 };
+    assert.equal((await AccountsService.getAccounts({ page: 1, limit: 100 })).accounts[0].Login, 3);
+  } finally {
+    mockAdapter = null;
+    AccountsService.invalidateCache();
+  }
+});
+
+test('large account censuses retain the first Clients page within a bounded page cache', async () => {
+  AccountsService.invalidateCache();
+  requestCount = 0;
+  mockAdapter = async requestConfig => ({
+    data: { accounts: [{ Login: requestConfig.params.offset + 1 }], total: 7000 },
+    status: 200, statusText: 'OK', headers: {}, config: requestConfig, request: {},
+  });
+  try {
+    const first = await AccountsService.getAccounts({ page: 1, limit: 100 });
+    for (let page = 2; page <= 70; page += 1) await AccountsService.getAccounts({ page, limit: 100 });
+    assert.equal(AccountsService.peekAccounts({ page: 1, limit: 100 }), first);
+    assert.equal(await AccountsService.getAccounts({ page: 1, limit: 100 }), first);
+    assert.equal(AccountsService.peekAccounts({ page: 2, limit: 100 }), null, 'older later pages are evicted');
+    assert.equal(requestCount, 70, 'the first page remains ready after more than 64 census pages');
+  } finally {
+    mockAdapter = null;
+    AccountsService.invalidateCache();
+  }
+});

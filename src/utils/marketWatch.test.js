@@ -5,6 +5,7 @@ import {
   extractMarketTicks,
   extractStreamedSymbols,
   formatMarketPrice,
+  formatMarketSpread,
   getMarketPriceDirection,
   getSymbolFriendlyDescription,
   isMarketQuoteFresh,
@@ -45,6 +46,21 @@ test('accepts manager feed single ticks, envelopes, arrays, and JSON lines', () 
 test('unavailable prices never render as a real zero or NaN quote', () => {
   for (const value of [null, undefined, '', 'NaN', Infinity, 0, -1]) assert.equal(formatMarketPrice(value), '—');
   assert.equal(formatMarketPrice('1.12345'), '1.12345');
+});
+
+test('spread displays the five-decimal price difference across forex, yen and crypto quotes', () => {
+  assert.equal(formatMarketSpread('0.98884', '0.98906'), '0.00022');
+  assert.equal(formatMarketSpread(109.948, 109.957), '0.00900');
+  assert.equal(formatMarketSpread('83789.72000', '83839.73000'), '50.01000');
+  assert.equal(formatMarketSpread(1.12, 1.12), '0.00000');
+  assert.equal(formatMarketSpread(1.12022, 1.12), '0.00022');
+});
+
+test('spread requires both available quote prices and never substitutes a missing side with zero', () => {
+  for (const value of [null, undefined, '', 'NaN', Infinity, 0, -1]) {
+    assert.equal(formatMarketSpread(value, 1.12), '—');
+    assert.equal(formatMarketSpread(1.12, value), '—');
+  }
 });
 
 test('cached, disconnected, and old quotes are never labelled fresh', () => {

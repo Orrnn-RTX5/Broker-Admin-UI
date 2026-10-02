@@ -1,11 +1,11 @@
-import { ArrowLeft, Search } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import useSymbolStore from '../../../store/useSymbolStore';
 import { isMarketQuoteFresh } from '../../../utils/marketWatch';
+import './SymbolWorkspace.css';
 
 const quoteColorClass = direction => {
-  if (direction === 'up') return 'text-[color:var(--success-500)]';
-  if (direction === 'down') return 'text-[color:var(--danger-500)]';
+  if (direction === 'up') return 'text-[color:var(--market-profit)]';
+  if (direction === 'down') return 'text-[color:var(--market-loss)]';
   return 'text-[color:var(--text-muted)]';
 };
 
@@ -36,76 +36,74 @@ const SymbolListPage = ({ group, onBack, catalogue = [] }) => {
   }, [symbols, search]);
 
   return (
-    <div className="p-4 w-full h-full flex flex-col gap-3 overflow-hidden text-[11px] font-normal text-[color:var(--text-primary)]" style={{ background: 'var(--bg)' }}>
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <button
-          onClick={() => onBack?.()}
-          className="ui-btn ui-btn-ghost ui-btn-sm p-2"
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <div>
-          <h1 className="text-[12px] font-semibold" style={{ color: 'var(--text)' }}>{group} Symbols</h1>
-          <p className="text-[11px]" style={{ color: 'var(--text-3)' }}>Showing {filteredSymbols.length} symbols in this category</p>
+    <div className="symbols-list-page">
+      <header className="symbols-page-header">
+        <div className="symbols-page-heading">
+          <h1>{group} Symbols</h1>
+          <p>Browse instruments and their latest available quotes.</p>
         </div>
-      </div>
+        <button
+          type="button"
+          onClick={() => onBack?.()}
+          className="ui-btn ui-btn-secondary ui-btn-sm symbols-back-button"
+        >
+          Back to categories
+        </button>
+      </header>
 
-      {/* Search Bar */}
-      <div className="relative w-full max-w-md">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
-        <input 
-          type="text" 
-          placeholder={`Search in ${group}...`}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="ui-input ui-input-sm w-full"
-          style={{ paddingLeft: '34px' }}
-        />
-      </div>
-
-      {/* List */}
-      <div className="ui-card flex-1 overflow-hidden flex flex-col border" style={{ borderColor: 'var(--border)' }}>
-        <div className="overflow-auto flex-1">
-          <table className="w-full text-left border-collapse text-[11px] font-normal">
-            <thead className="sticky top-0 z-10" style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)' }}>
-              <tr className="text-[11px] uppercase tracking-wider" style={{ color: 'var(--text-2)' }}>
-                <th className="px-3 py-2 font-semibold">Symbol</th>
-                <th className="px-3 py-2 font-semibold text-right">Bid</th>
-                <th className="px-3 py-2 font-semibold text-right">Ask</th>
-                <th className="px-3 py-2 font-semibold text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--border-3)]">
-              {filteredSymbols.length === 0 ? (
+      <div className="symbols-list-content">
+        <div className="symbols-list-panel">
+          <div className="symbols-list-toolbar">
+            <input
+              type="search"
+              aria-label={`Search ${group} symbols`}
+              placeholder={`Search ${group.toLowerCase()} symbols...`}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="ui-input ui-input-sm"
+            />
+            <span>{symbols.length} {symbols.length === 1 ? 'symbol' : 'symbols'} in this category</span>
+          </div>
+          <div className="symbols-table-scroll">
+            <table className="symbols-browser-table">
+              <thead>
                 <tr>
-                  <td colSpan="4" className="px-4 py-12 text-center" style={{ color: 'var(--text-3)' }}>
-                    No symbols found in this category.
-                  </td>
+                  <th scope="col">Symbol</th>
+                  <th scope="col" className="symbols-number-column">Bid</th>
+                  <th scope="col" className="symbols-number-column">Ask</th>
+                  <th scope="col">Status</th>
                 </tr>
-              ) : (
-                filteredSymbols.map((item) => (
-                  <tr key={item.symbol} className="hover:bg-[var(--surface-hover)] transition-colors">
-                    <td className="px-3 py-1.5 font-normal" style={{ color: 'var(--text)' }}>{item.symbol}</td>
-                    <td className={`admin-quote-value px-3 py-1.5 text-right tabular-nums ${quoteColorClass(item.bidDir)}`}>
-                       {item.bid}
-                    </td>
-                    <td className={`admin-quote-value px-3 py-1.5 text-right tabular-nums ${quoteColorClass(item.askDir)}`}>
-                       {item.ask}
-                    </td>
-                    <td className="px-3 py-1.5">
-                      <div className="flex justify-center items-center">
-                        <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-[var(--surface-2)] border border-[var(--border)]">
-                           <div className={`w-1.5 h-1.5 rounded-full ${item.live ? 'bg-[var(--success-500)] animate-pulse' : 'bg-[var(--text-muted)]'}`} />
-                           <span className="text-[11px] uppercase font-semibold" style={{ color: 'var(--text-3)' }}>{item.live ? 'Live' : 'No live quote'}</span>
-                        </div>
-                      </div>
+              </thead>
+              <tbody>
+                {filteredSymbols.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" className="symbols-list-empty">
+                      {search ? 'No symbols match your search.' : 'No symbols available in this category.'}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  filteredSymbols.map((item) => (
+                    <tr key={item.symbol}>
+                      <td>{item.symbol}</td>
+                      <td className={`admin-quote-value symbols-number-column ${quoteColorClass(item.bidDir)}`}>
+                         {item.bid}
+                      </td>
+                      <td className={`admin-quote-value symbols-number-column ${quoteColorClass(item.askDir)}`}>
+                         {item.ask}
+                      </td>
+                      <td>
+                        <span className={`symbols-quote-status${item.live ? ' symbols-quote-status--live' : ''}`}>{item.live ? 'Live' : 'No live quote'}</span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <footer className="symbols-list-footer">
+            <span>Showing {filteredSymbols.length} of {symbols.length} symbols</span>
+            <span>Live quotes appear when available</span>
+          </footer>
         </div>
       </div>
     </div>

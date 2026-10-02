@@ -1,59 +1,66 @@
-import React, { useState } from 'react';
-import { Settings2, List, FolderTree, ArrowLeftRight, Clock, DollarSign, Layers } from 'lucide-react';
+import { useId, useState } from 'react';
 import SymbolsTab from './SymbolsTab';
 import CategoriesTab from './CategoriesTab';
 import LpMappingsTab from './LpMappingsTab';
 import SessionsTab from './SessionsTab';
 import CommissionSwapTab from './CommissionSwapTab';
 import AdvancedTab from './AdvancedTab';
+import './SymbolWorkspace.css';
 
 const TABS = [
-  { id: 'symbols',    label: 'Symbols',          icon: List },
-  { id: 'categories', label: 'Categories',        icon: FolderTree },
-  { id: 'mappings',   label: 'LP Mappings',       icon: ArrowLeftRight },
-  { id: 'sessions',   label: 'Trading Sessions',  icon: Clock },
-  { id: 'commission', label: 'Commission & Swap',  icon: DollarSign },
-  { id: 'advanced',   label: 'Advanced',          icon: Layers },
+  { id: 'symbols', label: 'Symbols' },
+  { id: 'categories', label: 'Categories' },
+  { id: 'mappings', label: 'LP Mappings' },
+  { id: 'sessions', label: 'Trading Sessions' },
+  { id: 'commission', label: 'Commission & Swap' },
+  { id: 'advanced', label: 'Advanced' },
 ];
 
 const SymbolManagementPage = () => {
   const [activeTab, setActiveTab] = useState('symbols');
+  const tabsId = useId();
 
   return (
-    <div className="p-5 w-full h-full flex flex-col gap-4 overflow-hidden" style={{ background: 'var(--bg)' }}>
-      <div className="flex items-end justify-between shrink-0 border-b pb-4" style={{ borderColor: 'var(--border-2)' }}>
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Settings2 size={20} style={{ color: 'var(--accent)' }} />
-            <h1 className="text-2xl font-semibold" style={{ color: 'var(--text)' }}>Symbol Management</h1>
-          </div>
-          <p className="text-sm" style={{ color: 'var(--text-3)' }}>
+    <div className="symbol-management-page">
+      <header className="symbols-page-header">
+        <div className="symbols-page-heading">
+          <h1>Symbol Management</h1>
+          <p>
             Configure instruments, categories, LP mappings, sessions, commissions, and visibility.
           </p>
         </div>
-      </div>
+      </header>
 
-      {/* Tab bar */}
-      <div className="flex items-center gap-1 border-b shrink-0 overflow-x-auto no-scrollbar" style={{ borderColor: 'var(--border)' }}>
-        {TABS.map(({ id, label, icon }) => (
+      <div className="symbol-management-tabs" role="tablist" aria-label="Symbol management">
+        {TABS.map(({ id, label }, index) => (
           <button
             key={id}
+            type="button"
+            role="tab"
+            id={`${tabsId}-${id}`}
+            aria-selected={activeTab === id}
+            aria-controls={`${tabsId}-panel`}
+            tabIndex={activeTab === id ? 0 : -1}
             onClick={() => setActiveTab(id)}
-            className="flex h-10 shrink-0 items-center gap-1.5 px-3 text-[13px] font-medium rounded-t transition-colors"
-            style={{
-              color: activeTab === id ? 'var(--accent-text)' : 'var(--text-3)',
-              borderBottom: activeTab === id ? '2px solid var(--accent)' : '2px solid transparent',
-              background: activeTab === id ? 'var(--accent-soft-2)' : 'transparent',
+            className="symbol-management-tab"
+            onKeyDown={(event) => {
+              let next;
+              if (event.key === 'ArrowRight') next = (index + 1) % TABS.length;
+              else if (event.key === 'ArrowLeft') next = (index + TABS.length - 1) % TABS.length;
+              else if (event.key === 'Home') next = 0;
+              else if (event.key === 'End') next = TABS.length - 1;
+              else return;
+              event.preventDefault();
+              setActiveTab(TABS[next].id);
+              event.currentTarget.parentElement.querySelectorAll('[role="tab"]')[next]?.focus();
             }}
           >
-            {React.createElement(icon, { size: 13 })}
             {label}
           </button>
         ))}
       </div>
 
-      {/* Tab content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="symbol-management-content" role="tabpanel" id={`${tabsId}-panel`} aria-labelledby={`${tabsId}-${activeTab}`} tabIndex={0}>
         {activeTab === 'symbols'    && <SymbolsTab />}
         {activeTab === 'categories' && <CategoriesTab />}
         {activeTab === 'mappings'   && <LpMappingsTab />}

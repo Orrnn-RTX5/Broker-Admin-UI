@@ -25,7 +25,7 @@ const renderIcon = (type) => {
 };
 
 const NetworkOverviewMap = () => (
-   <div className="flex-1 bg-[#222222] relative flex items-center justify-center p-0 overflow-hidden">
+   <div className="flex-1 bg-[color:var(--bg-app)] relative flex items-center justify-center p-0 overflow-hidden">
       <div className="w-full h-full flex flex-col items-center justify-center relative">
          <ComposableMap
             projection="geoMercator"

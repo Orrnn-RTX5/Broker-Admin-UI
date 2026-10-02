@@ -58,13 +58,13 @@ const CreateHolidayPopup = ({ onClose, onCreated }) => {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] select-none">
-          <div className="flex items-center gap-2 text-white text-[13px] font-medium">
-            <Calendar size={16} className="text-white" />
+          <div className="flex items-center gap-2 text-[color:var(--text-primary)] text-[13px] font-medium">
+            <Calendar size={16} className="text-[color:var(--text-secondary)]" />
             Create Holiday
           </div>
           <button
             onClick={onClose}
-            className="text-white hover:text-white hover:bg-white/10 p-1 rounded-sm transition-colors"
+            className="text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] hover:bg-white/10 p-1 rounded-sm transition-colors"
           >
             <X size={14} />
           </button>
@@ -101,7 +101,7 @@ const CreateHolidayPopup = ({ onClose, onCreated }) => {
                 value={formData.date}
                 onChange={handleChange}
                 required
-                className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors [color-scheme:dark]"
+                className="bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors [color-scheme:inherit]"
               />
             </div>
 

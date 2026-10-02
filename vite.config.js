@@ -68,7 +68,31 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
     ],
-    base: './',
+    // Web deep links resolve assets from the origin; Electron needs file URLs.
+    base: mode === 'electron' ? './' : '/',
+    build: {
+      rolldownOptions: {
+        output: {
+          // Consolidate shared imports so opening the workspace does not issue
+          // a separate request for every icon and small utility. Views retain
+          // their dynamic imports and download only when selected.
+          codeSplitting: {
+            groups: [
+              { name: 'react-vendor', test: /node_modules[\\/](?:react|react-dom|scheduler)[\\/]/, priority: 30 },
+              { name: 'icons', test: /node_modules[\\/]lucide-react[\\/]/, priority: 20 },
+              { name: 'ui-vendor', test: /node_modules[\\/](?:@radix-ui|@floating-ui|framer-motion|motion-dom|motion-utils)[\\/]/, priority: 15 },
+              { name: 'data-vendor', test: /node_modules[\\/](?:axios|zustand)[\\/]/, priority: 10 },
+              {
+                name: 'workspace-shared',
+                test: /[\\/]src[\\/](?:config|lib|services|store|utils|hooks|data)[\\/]/,
+                minShareCount: 2,
+                priority: 5,
+              },
+            ],
+          },
+        },
+      },
+    },
     server: {
       port: 5173,
       strictPort: true,

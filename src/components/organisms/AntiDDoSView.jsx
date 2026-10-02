@@ -30,7 +30,7 @@ const HackerIcon = ({ size=20, color="var(--danger-500)" }) => (
 
 const AntiDDoSView = () => {
   return (
-    <div className="flex-1 bg-[#222222] overflow-y-auto no-scrollbar py-6 px-8 rounded-tl-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] text-[color:var(--text-primary)]">
+    <div className="flex-1 bg-[color:var(--bg-app)] overflow-y-auto no-scrollbar py-6 px-8 rounded-tl-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] text-[color:var(--text-primary)]">
       <div className="max-w-[1300px] flex flex-col h-full">
         {/* Header */}
         <div className="flex justify-between items-start mb-6">

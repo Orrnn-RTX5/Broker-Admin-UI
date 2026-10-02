@@ -21,6 +21,30 @@ const installWindow = (config = {}) => {
 
 const importFreshEndpoints = () => import(`./endpoints.js?case=${++importId}`);
 
+test('native journal uses the selected broker root without the legacy manager prefix', async () => {
+  installWindow({ BACKEND_TARGET: 'web', USE_DEV_PROXY: 'false' });
+  installStorage({ broker_info: JSON.stringify({ broker_id: 'a', backend_url: 'https://broker-a.example' }) });
+  const endpoints = await importFreshEndpoints();
+  assert.equal(endpoints.buildBrokerApiUrl('/api/v1/manager/journal?limit=200'), 'https://broker-a.example/api/v1/manager/journal?limit=200');
+  assert.equal(endpoints.buildManagerApiUrl('/manager/GroupList'), 'https://broker-a.example/manager/GroupList');
+  sessionStorage.setItem('broker_info', JSON.stringify({ broker_id: 'b', backend_url: 'https://broker-b.example' }));
+  assert.equal(endpoints.buildBrokerApiUrl('/api/v1/manager/journal?limit=200'), 'https://broker-b.example/api/v1/manager/journal?limit=200');
+});
+
+test('native journal stays on the canonical versioned Vite proxy route', async () => {
+  installWindow({ BACKEND_TARGET: 'web', USE_DEV_PROXY: 'true' });
+  installStorage({ broker_info: JSON.stringify({ broker_id: 'a', backend_url: 'https://broker-a.example' }) });
+  const endpoints = await importFreshEndpoints();
+  assert.equal(endpoints.buildBrokerApiUrl('/api/v1/manager/journal?limit=200'), '/api/v1/manager/journal?limit=200');
+});
+
+test('desktop native journal follows discovered broker backend', async () => {
+  installWindow({ BACKEND_TARGET: 'desktop', USE_DEV_PROXY: 'true' });
+  installStorage({ broker_info: JSON.stringify({ broker_id: 'a', backend_url: 'https://broker-a.example' }) });
+  const endpoints = await importFreshEndpoints();
+  assert.equal(endpoints.buildBrokerApiUrl('/api/v1/manager/journal?limit=200'), 'https://broker-a.example/api/v1/manager/journal?limit=200');
+});
+
 test('configured direct broker keeps login and flat manager paths inside the local proxy namespace', async () => {
   installWindow({ BACKEND_TARGET: 'web', USE_DEV_PROXY: 'true', DIRECT_MANAGER_ORIGINS: 'https://broker.example' });
   installStorage({ broker_info: JSON.stringify({ broker_id: 'demo', backend_url: 'https://broker.example' }) });

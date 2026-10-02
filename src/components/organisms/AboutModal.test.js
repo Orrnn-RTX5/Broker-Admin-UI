@@ -17,7 +17,7 @@ test('AboutModal shows product details and Orrnn support contact', () => {
 });
 
 test('AuthenticatedApp wires About RTX 5 to in-app modal state', () => {
-  assert.match(appSrc, /import \{ AboutModal \} from '\.\/components\/organisms\/AboutModal';/);
+  assert.match(appSrc, /const AboutModal = React\.lazy\(\(\) => import\('\.\/components\/organisms\/AboutModal'\)\.then\(module => \(\{ default: module\.AboutModal \}\)\)\)/);
   assert.match(appSrc, /const \[aboutOpen,\s*setAboutOpen\] = React\.useState\(false\)/);
   assert.match(appSrc, /onAbout=\{\(\) => setAboutOpen\(true\)\}/);
   assert.match(appSrc, /<AboutModal open=\{aboutOpen\} onOpenChange=\{setAboutOpen\} \/>/);

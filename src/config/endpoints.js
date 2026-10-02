@@ -261,6 +261,16 @@ export const buildManagerApiUrl = (endpoint = '') => {
   return joinUrl(API_HOST, managerPath);
 };
 
+// Native broker routes, such as the server journal, do not use the legacy
+// /manager namespace. Vite proxies these versioned routes without rewriting.
+export const buildBrokerApiUrl = (endpoint = '') => {
+  const raw = String(endpoint || '');
+  if (/^https?:\/\//i.test(raw)) return raw;
+  updateDynamicEndpoints();
+  const path = raw.startsWith('/') ? raw : `/${raw}`;
+  return shouldUseLocalDevProxy() ? path : joinUrl(API_HOST, path);
+};
+
 export const buildExtApiUrl = (endpoint = '') => {
   const raw = String(endpoint || '');
   if (/^https?:\/\//i.test(raw)) return raw;

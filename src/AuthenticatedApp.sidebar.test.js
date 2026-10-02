@@ -42,13 +42,13 @@ test('Main Trade Server selection clears stale server-status target tab', () => 
   );
 });
 
-test('MainTrade Backup Server restores directly to the Status tab on first render', () => {
+test('initial server target tab follows the default workspace view', () => {
   const appSource = readSource('AuthenticatedApp.jsx');
 
   assert.match(
     appSource,
-    /const \[activeTab,\s*setActiveTab\] = useLocalStorage\('rtx5\.activeTab',[^)]*\);[\s\S]*?const \[serverTargetTab,\s*setServerTargetTab\] = React\.useState\(\(\) => getInitialServerTabForLabel\(activeTab\)\);/,
-    'server target tab should be initialized from the restored active tab'
+    /const \[activeTab,\s*setActiveTab\] = React\.useState\(defaultLandingView\);[\s\S]*?const \[serverTargetTab,\s*setServerTargetTab\] = React\.useState\(\(\) => getInitialServerTabForLabel\(activeTab\)\);/,
+    'server target tab should be initialized from the default active tab'
   );
 });
 

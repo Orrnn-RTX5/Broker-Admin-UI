@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Activity,
   ArrowRight,
@@ -16,9 +16,13 @@ import { ServerConfigService } from '../../services/serverConfig.service';
 import { getApiErrorMessage } from '../../utils/apiShapes';
 import ActionableErrorState from '../atoms/ActionableErrorState';
 import LpSymbolDatalist from '../atoms/LpSymbolDatalist';
-import { ServerSettingsTab, SwapRatesTab } from './ServerConfigTables';
-import DemoAccountsTab from './ServerConfigDemoAccounts';
+import { useServerStatus } from '../../hooks/useServerStatus';
 import './ServerConfigWorkspace.css';
+
+const ServerSettingsTab = React.lazy(() => import('./ServerConfigTables').then(module => ({ default: module.ServerSettingsTab })));
+const SwapRatesTab = React.lazy(() => import('./ServerConfigTables').then(module => ({ default: module.SwapRatesTab })));
+const DemoAccountsTab = React.lazy(() => import('./ServerConfigDemoAccounts'));
+const metricNumberFormats = [0, 1, 2, 3].map(maximumFractionDigits => new Intl.NumberFormat('en-US', { maximumFractionDigits }));
 
 const TABS = [
   { id: 'status', label: 'Server Status', icon: Activity },
@@ -40,9 +44,7 @@ const formatServerMetric = (key, value) => {
     return String(value).replace(/(\d+)h\s*(\d+)m\s*(\d+)(?:\.\d+)?s/i, '$1h $2m $3s');
   }
   if (typeof value === 'number' && Number.isFinite(value)) {
-    return new Intl.NumberFormat('en-US', {
-      maximumFractionDigits: key.endsWith('_mb') ? 2 : 3,
-    }).format(value);
+    return metricNumberFormats[key.endsWith('_mb') ? 2 : 3].format(value);
   }
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
@@ -68,27 +70,8 @@ const MetricRow = ({ label, value, tone = 'default' }) => (
   </div>
 );
 
-const StatusTab = ({ navigate }) => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [lastUpdated, setLastUpdated] = useState(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const response = await ServerConfigService.getServerStatus();
-      setData(response && typeof response === 'object' && !Array.isArray(response) ? response : {});
-      setLastUpdated(Date.now());
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Server status failed to load.'));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { void load(); }, [load]);
+const StatusTab = ({ navigate, refreshTrigger }) => {
+  const { data, loading, error, lastUpdated, saved, refresh: load } = useServerStatus(refreshTrigger);
 
   if (!data && loading) {
     return (
@@ -139,7 +122,7 @@ const StatusTab = ({ navigate }) => {
           <div className="server-config-head-actions">
             <span className="server-config-updated">
               <span className="server-config-updated-dot" />
-              {lastUpdated ? `Snapshot ${new Date(lastUpdated).toLocaleTimeString()}` : 'Awaiting snapshot'}
+              {lastUpdated ? `${saved ? 'Saved snapshot' : 'Snapshot'} ${new Date(lastUpdated).toLocaleTimeString()}` : 'Awaiting snapshot'}
             </span>
             <button type="button" className="server-config-button server-config-button-secondary" onClick={load} disabled={loading}>
               <RefreshCw size={13} className={loading ? 'server-config-spin' : ''} aria-hidden="true" />
@@ -309,7 +292,7 @@ const TradingHaltTab = () => {
   );
 };
 
-const ServerConfigWorkspace = () => {
+const ServerConfigWorkspace = ({ refreshTrigger = 0 }) => {
   const [tab, setTab] = useState('status');
   const current = TABS.find((item) => item.id === tab) ?? TABS[0];
 
@@ -331,11 +314,13 @@ const ServerConfigWorkspace = () => {
         ))}
       </div>
       <div id="server-config-panel" className="server-config-tab-panel" role="tabpanel" aria-labelledby={`server-config-tab-${current.id}`}>
-        {tab === 'status' && <StatusTab navigate={setTab} />}
+        <React.Suspense fallback={<div role="status" className="server-config-scroll">Loading section…</div>}>
+        {tab === 'status' && <StatusTab navigate={setTab} refreshTrigger={refreshTrigger} />}
         {tab === 'settings' && <ServerSettingsTab />}
         {tab === 'swaps' && <SwapRatesTab />}
         {tab === 'halt' && <TradingHaltTab />}
         {tab === 'demo' && <DemoAccountsTab />}
+        </React.Suspense>
       </div>
     </div>
   );

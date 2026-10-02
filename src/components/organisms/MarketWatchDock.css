@@ -22,8 +22,8 @@
   --mw-accent-hover: var(--accent-600);
   --mw-accent-soft: var(--accent-soft);
   --mw-accent-soft-border: var(--accent-border);
-  --mw-success: var(--success-500);
-  --mw-danger: var(--danger-500);
+  --mw-profit: var(--market-profit);
+  --mw-loss: var(--market-loss);
   --mw-warning: var(--warning-500);
 
   display: flex;
@@ -57,6 +57,8 @@
 }
 
 .admin-market-watch {
+  --mw-bg-1: var(--bg-surface-1);
+  background: var(--mw-bg-1);
   width: 100%;
   min-width: 0;
   min-height: 120px;
@@ -308,6 +310,12 @@
   width: 44%;
 }
 
+.admin-market-symbols-table { min-width: 280px; }
+.admin-market-symbols-table th.market-col-symbol { width: 28%; }
+.admin-market-symbols-table .market-col-bid,
+.admin-market-symbols-table .market-col-ask,
+.admin-market-symbols-table .market-col-spread { width: 24%; }
+
 .admin-market-table :is(th, td):last-child {
   border-right: 0;
 }
@@ -352,6 +360,8 @@
   font-weight: 400;
 }
 
+.admin-market-symbols-table :is(th, td):not(:first-child) { padding-inline: 4px; }
+
 .admin-market-table td:first-child {
   text-align: left;
   font-family: var(--font-sans);
@@ -370,8 +380,9 @@
 }
 
 .market-table-row.is-selected {
-  background: var(--mw-accent-soft) !important;
+  background: color-mix(in srgb, var(--mw-accent) 10%, var(--mw-bg-2)) !important;
   color: var(--mw-text);
+  box-shadow: inset 2px 0 0 var(--mw-accent);
 }
 
 .market-symbol-btn {
@@ -402,11 +413,11 @@
 
 /* Bid and Ask each follow their own latest price change. */
 .admin-market-table .quote-up svg {
-  color: var(--mw-success);
+  color: var(--mw-profit);
 }
 
 .admin-market-table .quote-down svg {
-  color: var(--mw-danger);
+  color: var(--mw-loss);
 }
 
 .admin-market-table .quote-neutral svg,
@@ -415,11 +426,11 @@
 }
 
 .admin-market-watch .market-quote-up {
-  color: var(--mw-success);
+  color: var(--mw-profit);
 }
 
 .admin-market-watch .market-quote-down {
-  color: var(--mw-danger);
+  color: var(--mw-loss);
 }
 
 .admin-market-watch .market-quote-neutral {
@@ -427,7 +438,8 @@
 }
 
 .admin-market-table td.market-bid-cell,
-.admin-market-table td.market-ask-cell {
+.admin-market-table td.market-ask-cell,
+.admin-market-table td.market-spread-cell {
   font-weight: 300;
 }
 
@@ -439,6 +451,23 @@
   line-height: 1.35;
   letter-spacing: normal;
   font-variant-numeric: tabular-nums;
+}
+
+/* Keep all four Market Watch columns clear with consistent medium-weight text. */
+#root .admin-market-symbols-table :is(.market-symbol-btn > span, td.market-bid-cell, td.market-ask-cell, td.market-spread-cell) {
+  font-family: var(--font-sans);
+  font-size: var(--ui-font-base);
+  font-weight: var(--ui-weight-medium);
+  line-height: 1.35;
+  letter-spacing: inherit;
+}
+
+#root .admin-market-symbols-table :is(.market-symbol-btn > span, td.market-spread-cell) {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] #root .admin-market-symbols-table :is(.market-symbol-btn > span, td.market-spread-cell) {
+  color: #fff;
 }
 
 .admin-market-watch .market-watch-empty {
@@ -492,14 +521,14 @@
 
 .admin-market-tabs button.is-active {
   background: var(--mw-bg-2);
-  color: #ffffff;
+  color: var(--mw-text);
   font-weight: 600;
   border-color: var(--mw-border);
   box-shadow: inset 0 -2px 0 0 var(--accent-500);
 }
 
 .admin-market-tabs button[aria-pressed="true"] {
-  color: #ffffff;
+  color: var(--mw-text);
   border-bottom-color: var(--mw-accent);
   background: var(--mw-bg-3);
   font-weight: 600;
@@ -535,7 +564,7 @@
   padding: 2px 6px;
   border-radius: 3px;
   background: var(--mw-accent-soft);
-  color: #ffffff;
+  color: var(--mw-text);
   border: 1px solid var(--mw-accent-soft-border);
 }
 

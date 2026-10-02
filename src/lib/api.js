@@ -11,7 +11,7 @@ import { refreshSession } from '../services/authService.js';
 import { redactForLog, redactUrlForLog } from './logRedaction.js';
 
 
-import { API_HOST, buildExtApiUrl, buildManagerApiUrl, shouldUseLocalDevProxy } from '../config/endpoints.js';
+import { API_HOST, buildBrokerApiUrl, buildExtApiUrl, buildManagerApiUrl, shouldUseLocalDevProxy } from '../config/endpoints.js';
 
 const AUTH_REJECTION_RE = /\b(not authenticated|unauthenticated|unauthorized|missing authorization|missing bearer|invalid token|token expired|expired token|invalid session|session expired|invalid jwt|jwt expired)\b/i;
 const AUTH_QUERY_PARAM_RE = /^(token|access_token|refresh_token|session|session_token|auth|authorization|jwt)$/i;
@@ -161,7 +161,7 @@ api.interceptors.request.use(async (config) => {
     if (config.url.startsWith('/ext-api')) {
       config.url = buildExtApiUrl(config.url);
     } else if (shouldRouteThroughManagerApi(config.url)) {
-      const resolvedUrl = buildManagerApiUrl(config.url);
+      const resolvedUrl = config._nativeBrokerApi ? buildBrokerApiUrl(config.url) : buildManagerApiUrl(config.url);
       if (isElectronDesktop() && !isAbsoluteHttpUrl(resolvedUrl)) {
         expireMissingBrokerBackendSession();
         return Promise.reject(createSilentError(DESKTOP_BACKEND_MISSING_MESSAGE, {
@@ -208,11 +208,13 @@ api.interceptors.request.use(async (config) => {
     }
   }
 
-  console.log(`%c[API Request] ${config.method?.toUpperCase()} ${redactUrlForLog(config.url)}`, 'color: #00bcd4; font-weight: bold;', {
-    headers: redactForLog(config.headers),
-    params: redactForLog(config.params),
-    data: redactForLog(config.data)
-  });
+  if (import.meta.env?.DEV) {
+    console.log(`%c[API Request] ${config.method?.toUpperCase()} ${redactUrlForLog(config.url)}`, 'color: #00bcd4; font-weight: bold;', {
+      headers: redactForLog(config.headers),
+      params: redactForLog(config.params),
+      data: redactForLog(config.data)
+    });
+  }
 
   return config;
 }, (error) => {
@@ -222,10 +224,14 @@ api.interceptors.request.use(async (config) => {
 
 api.interceptors.response.use((response) => {
   useConnectionStore.getState().markOk();
-  console.log(`%c[API Response Success] ${response.config.method?.toUpperCase()} ${redactUrlForLog(response.config.url)}`, 'color: #2ebd59; font-weight: bold;', {
-    status: response.status,
-    data: redactForLog(response.data)
-  });
+  // Large account/position responses should go directly to the view in the
+  // production app instead of copying their contents for debug logs.
+  if (import.meta.env?.DEV) {
+    console.log(`%c[API Response Success] ${response.config.method?.toUpperCase()} ${redactUrlForLog(response.config.url)}`, 'color: #2ebd59; font-weight: bold;', {
+      status: response.status,
+      data: redactForLog(response.data)
+    });
+  }
   return response;
 }, async (error) => {
   const originalRequest = error.config;

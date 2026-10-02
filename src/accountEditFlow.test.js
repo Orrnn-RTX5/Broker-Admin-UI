@@ -6,8 +6,8 @@ const appSrc = readFileSync(new URL('./AuthenticatedApp.jsx', import.meta.url), 
 const toolbarSrc = readFileSync(new URL('./components/organisms/ActionToolBar.jsx', import.meta.url), 'utf8');
 
 test('row double-click edit routing is explicit by target type', () => {
-  assert.match(appSrc, /import AccountEditPopup from '\.\/components\/RIGHTCLICKJPOPUPS\/AccountEditPopup';/);
-  assert.match(appSrc, /import TradeDetailsPopup from '\.\/components\/RIGHTCLICKJPOPUPS\/TradeDetailsPopup';/);
+  assert.match(appSrc, /const AccountEditPopup = React\.lazy\(\(\) => import\('\.\/components\/RIGHTCLICKJPOPUPS\/AccountEditPopup'\)\)/);
+  assert.match(appSrc, /const TradeDetailsPopup = React\.lazy\(\(\) => import\('\.\/components\/RIGHTCLICKJPOPUPS\/TradeDetailsPopup'\)\)/);
   assert.match(appSrc, /const ACCOUNT_EDIT_VIEW_TYPES = new Set\(\['Clients', 'Trading Accounts'\]\)/);
   assert.match(appSrc, /const TRADE_DETAIL_VIEW_TYPES = new Set\(\['Orders', 'Positions', 'Deals'\]\)/);
   assert.match(appSrc, /if \(ACCOUNT_EDIT_VIEW_TYPES\.has\(viewType\)\) return 'account';/);
@@ -23,7 +23,7 @@ test('toolbar edit is driven by one selected edit target state', () => {
   assert.match(appSrc, /onEditClick=\{handleToolbarEdit\}/);
   assert.match(appSrc, /canEdit=\{canEditSelectedTarget\}/);
   assert.match(toolbarSrc, /onEditClick, canEdit = false/);
-  assert.match(toolbarSrc, /<Tool icon=\{Pencil\} label="Edit" onClick=\{onEditClick\} disabled=\{!canEdit\} \/>/);
+  assert.match(toolbarSrc, /<Tool\b(?=[^>]*\bicon=\{Pencil\})(?=[^>]*\bonClick=\{onEditClick\})(?=[^>]*\bdisabled=\{!canEdit\})[^>]*\/>/);
 });
 
 test('trade detail popup is mounted for order position and deal rows', () => {

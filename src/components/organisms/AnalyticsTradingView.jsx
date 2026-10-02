@@ -73,7 +73,20 @@ const getCellAlignment = (key, value) => (
   isNumericColumn(key, value) ? 'text-right tabular-nums' : 'text-left'
 );
 
-const ResultTable = ({ data }) => {
+const getPnlTone = (key, value, tab) => {
+  const neutral = 'text-[color:var(--text-primary)]';
+  if (tab !== 'pnl' || value == null || value === '') return neutral;
+  const name = String(key).toLowerCase();
+  if (!/(pnl|profit|revenue|gain|loss)/.test(name) || /(count|rate|percent|trades|orders|volume|balance)/.test(name)) return neutral;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric === 0) return neutral;
+  if (name.includes('loss')) return 'text-[color:var(--market-loss)]';
+  return numeric > 0
+    ? 'text-[color:var(--market-profit)]'
+    : 'text-[color:var(--market-loss)]';
+};
+
+const ResultTable = ({ data, tab }) => {
   if (!data) {
     return <div className="flex items-center justify-center h-24 text-[color:var(--text-muted)] text-[11px]">Loading...</div>;
   }
@@ -116,7 +129,7 @@ const ResultTable = ({ data }) => {
                 return (
                   <div
                     key={column}
-                    className={`flex items-center px-3 text-[11px] text-[color:var(--text-primary)] font-mono border-r border-[color:var(--border-subtle)] last:border-r-0 min-w-0 ${getCellAlignment(column, row[column])}`}
+                    className={`flex items-center px-3 text-[11px] ${getPnlTone(column, row[column], tab)} font-mono border-r border-[color:var(--border-subtle)] last:border-r-0 min-w-0 ${getCellAlignment(column, row[column])}`}
                     title={value}
                   >
                     <span className="truncate w-full">{value}</span>
@@ -136,7 +149,7 @@ const ResultTable = ({ data }) => {
         {Object.entries(data).map(([key, value]) => (
           <div key={key} className="flex items-center px-4 h-[32px]">
             <span className="text-[11px] text-[color:var(--text-muted)] flex-1">{formatHeader(key)}</span>
-            <span className="text-[12px] font-mono text-white">{fmt(key, value)}</span>
+            <span className={`text-[12px] font-mono ${getPnlTone(key, value, tab)}`}>{fmt(key, value)}</span>
           </div>
         ))}
       </div>
@@ -181,7 +194,7 @@ const AnalyticsTradingView = () => {
           onAction={refresh}
         />
       ) : (
-        <ResultTable data={data} />
+        <ResultTable data={data} tab={tab} />
       )}
     </div>
   );

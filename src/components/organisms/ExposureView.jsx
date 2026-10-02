@@ -9,7 +9,7 @@ const TAB_GROUP = 'By Group';
 const TAB_ACCOUNT = 'By Account';
 
 const fmt = (v) => (typeof v === 'number' ? v.toFixed(2) : '—');
-const pnlColor = (v) => (v > 0 ? 'text-[color:var(--success-500)]' : v < 0 ? 'text-[color:var(--danger-500)]' : 'text-[color:var(--text-primary)]');
+const pnlColor = (v) => (v > 0 ? 'text-[color:var(--market-profit)]' : v < 0 ? 'text-[color:var(--market-loss)]' : 'text-[color:var(--text-primary)]');
 
 const ExposureView = () => {
   const [tab, setTab] = useState(TAB_BOOK);
@@ -127,7 +127,7 @@ const ExposureView = () => {
                   <div className="w-32 text-[11px] text-white pr-3 font-mono">{row.symbol}</div>
                   <div className="w-28 text-[11px] text-white pr-3">{fmt(row.long_volume)}</div>
                   <div className="w-28 text-[11px] text-[color:var(--danger-500)] pr-3">{fmt(row.short_volume)}</div>
-                  <div className={`w-28 text-[11px] pr-3 ${pnlColor(row.net_volume)}`}>{fmt(row.net_volume)}</div>
+                  <div className="w-28 text-[11px] pr-3 text-[color:var(--text-primary)]">{fmt(row.net_volume)}</div>
                   <div className={`w-28 text-[11px] pr-3 ${pnlColor(row.net_pnl)}`}>{fmt(row.net_pnl)}</div>
                   <div className="w-20 text-[11px] text-[color:var(--text-primary)] pr-3">{row.long_count}</div>
                   <div className="w-20 text-[11px] text-[color:var(--text-primary)]">{row.short_count}</div>
@@ -164,7 +164,7 @@ const ExposureView = () => {
                   <div className="w-32 text-[11px] text-white pr-3 font-mono">{row.symbol}</div>
                   <div className="w-28 text-[11px] text-white pr-3">{fmt(row.long_volume)}</div>
                   <div className="w-28 text-[11px] text-[color:var(--danger-500)] pr-3">{fmt(row.short_volume)}</div>
-                  <div className={`w-28 text-[11px] pr-3 ${pnlColor(row.net_volume)}`}>{fmt(row.net_volume)}</div>
+                  <div className="w-28 text-[11px] pr-3 text-[color:var(--text-primary)]">{fmt(row.net_volume)}</div>
                   <div className={`w-28 text-[11px] pr-3 ${pnlColor(row.net_pnl)}`}>{fmt(row.net_pnl)}</div>
                   <div className="w-20 text-[11px] text-[color:var(--text-primary)] pr-3">{row.long_count}</div>
                   <div className="w-20 text-[11px] text-[color:var(--text-primary)]">{row.short_count}</div>
