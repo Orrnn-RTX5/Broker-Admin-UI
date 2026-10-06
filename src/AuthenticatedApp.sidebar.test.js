@@ -15,7 +15,7 @@ test('Downstream access is a sidebar view next to Gateways and dispatches to the
   const permissionSource = readSource('utils/permissions.js');
 
   assert.match(navSource, /\{ label: "Gateways", icon: Link \},\s*\{ label: "Downstream access", icon: Network \},/);
-  assert.match(tableSource, /import DownstreamAccessView from '\.\/DownstreamAccessView';/);
+  assert.match(tableSource, /const DownstreamAccessView = lazy\(\(\) => import\('\.\/DownstreamAccessView'\)\);/);
   assert.match(tableSource, /'Gateways',\s*'Downstream access',\s*'Feed Tenants',\s*\]\);/);
   assert.match(tableSource, /if \(viewType === 'Downstream access'\) \{\s*return \(\s*<div className="flex-1 min-h-0 flex flex-col overflow-hidden">\s*<DownstreamAccessView \/>/);
   assert.match(permissionSource, /'Downstream access': ADMIN_ONLY_VIEW,/);

@@ -189,19 +189,19 @@ const SymbolAddPicker = ({ groupName, existing, error, onAdd, onAddMany, onCance
   const [value, setValue] = useState('');
   const [mode, setMode] = useState('symbol');
   const [category, setCategory] = useState('');
-  const [symbols, setSymbols] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [catalogError, setCatalogError] = useState('');
+  const [catalog, setCatalog] = useState(null);
+  const currentCatalog = catalog?.groupName === groupName ? catalog : null;
+  const symbols = currentCatalog?.symbols || [];
+  const loading = !currentCatalog;
+  const catalogError = currentCatalog?.error || '';
   const [pickerError, setPickerError] = useState('');
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    setCatalogError('');
     ManagerService.getGroupFeedSymbols(groupName).then((response) => {
-      if (active) setSymbols(normalizeGroupFeedSymbols(response));
+      if (active) setCatalog({ groupName, symbols: normalizeGroupFeedSymbols(response), error: '' });
     }).catch((reason) => {
-      if (active) setCatalogError(getApiErrorMessage(reason, 'Could not load symbols for this group.'));
-    }).finally(() => { if (active) setLoading(false); });
+      if (active) setCatalog({ groupName, symbols: [], error: getApiErrorMessage(reason, 'Could not load symbols for this group.') });
+    });
     return () => { active = false; };
   }, [groupName]);
   const categories = useMemo(() => symbolCategoryOptions(symbols, existing), [symbols, existing]);

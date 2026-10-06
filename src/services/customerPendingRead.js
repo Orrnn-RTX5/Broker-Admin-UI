@@ -21,4 +21,3 @@ export function validateCustomerPendingPage(value){
  });
  return {orders,truncated:value.truncated};
 }
-

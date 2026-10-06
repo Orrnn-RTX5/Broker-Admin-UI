@@ -141,10 +141,10 @@ export const normalizeSessionRows = (response) =>
       return {
         ...row,
         day_of_week: normalizeDayIndex(firstDefined(row.day_of_week, row.dayOfWeek, row.day, row.Day)),
-        quoteStart: firstDefined(row.quoteStart, row.QuoteStart, row.quote_start, row.quote_start_time) || '',
-        quoteEnd: firstDefined(row.quoteEnd, row.QuoteEnd, row.quote_end, row.quote_end_time) || '',
-        tradeStart: firstDefined(row.tradeStart, row.TradeStart, row.trade_start, row.trade_start_time) || '',
-        tradeEnd: firstDefined(row.tradeEnd, row.TradeEnd, row.trade_end, row.trade_end_time) || '',
+        quoteStart: firstDefined(row.quoteStart, row.QuoteStart, row.quote_from, row.quote_start, row.quote_start_time) || '',
+        quoteEnd: firstDefined(row.quoteEnd, row.QuoteEnd, row.quote_to, row.quote_end, row.quote_end_time) || '',
+        tradeStart: firstDefined(row.tradeStart, row.TradeStart, row.trade_from, row.trade_start, row.trade_start_time) || '',
+        tradeEnd: firstDefined(row.tradeEnd, row.TradeEnd, row.trade_to, row.trade_end, row.trade_end_time) || '',
       };
     })
     .filter(Boolean);
@@ -159,10 +159,10 @@ export const normalizeOverrideRows = (response) =>
         id: firstDefined(row.id, row.ID, row.override_id, row.OverrideId, index),
         group: firstDefined(row.group, row.Group, row.group_name, row.groupName) || '',
         day_of_week: normalizeDayIndex(firstDefined(row.day_of_week, row.dayOfWeek, row.day, row.Day)),
-        quoteStart: firstDefined(row.quoteStart, row.QuoteStart, row.quote_start, row.quote_start_time) || '',
-        quoteEnd: firstDefined(row.quoteEnd, row.QuoteEnd, row.quote_end, row.quote_end_time) || '',
-        tradeStart: firstDefined(row.tradeStart, row.TradeStart, row.trade_start, row.trade_start_time) || '',
-        tradeEnd: firstDefined(row.tradeEnd, row.TradeEnd, row.trade_end, row.trade_end_time) || '',
+        quoteStart: firstDefined(row.quoteStart, row.QuoteStart, row.quote_from, row.quote_start, row.quote_start_time) || '',
+        quoteEnd: firstDefined(row.quoteEnd, row.QuoteEnd, row.quote_to, row.quote_end, row.quote_end_time) || '',
+        tradeStart: firstDefined(row.tradeStart, row.TradeStart, row.trade_from, row.trade_start, row.trade_start_time) || '',
+        tradeEnd: firstDefined(row.tradeEnd, row.TradeEnd, row.trade_to, row.trade_end, row.trade_end_time) || '',
       };
     })
     .filter(Boolean);

@@ -5,13 +5,16 @@ import { getApiErrorMessage } from '../../../utils/apiShapes';
 import { buildActionableErrorState } from '../../../utils/errorState';
 import ActionableErrorState from '../../atoms/ActionableErrorState';
 import { normalizeCategoryRows, normalizeSymbolOptions } from './symbolManagementData';
+import { categoryCatalogue } from '../../../utils/categoryCatalogue.js';
+import { createCategoryWithParent } from '../../../utils/categoryCreation.js';
+import { useLpSymbols } from '../../../hooks/useLpSymbols';
 
 // ─── Category Form Modal ───────────────────────────────────────────────────────
 const CategoryFormModal = ({ category: existing, allCategories, onClose, onSuccess }) => {
   const isEdit = !!existing;
   const [form, setForm] = useState({
     name: existing?.name || '',
-    parentId: existing?.parentId || '',
+    parentKey: '',
     path: existing?.path || '',
     description: existing?.description || '',
     enabled: existing?.enabled ?? true,
@@ -29,7 +32,11 @@ const CategoryFormModal = ({ category: existing, allCategories, onClose, onSucce
       if (isEdit) {
         await symbolCategoryUpdate({ id: existing.id, name: form.name, path: form.path, description: form.description, enabled: form.enabled });
       } else {
-        await symbolCategoryCreate({ name: form.name, parentId: form.parentId || undefined, path: form.path, description: form.description });
+        const parent = allCategories.find(category => category.key === form.parentKey) || null;
+        await createCategoryWithParent(form, parent, {
+          list: async () => normalizeCategoryRows(await symbolCategoryList()),
+          create: symbolCategoryCreate,
+        });
       }
       onSuccess();
     } catch (e) {
@@ -56,9 +63,9 @@ const CategoryFormModal = ({ category: existing, allCategories, onClose, onSucce
           {!isEdit && (
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium" style={{ color: 'var(--text-2)' }}>Parent Category</label>
-              <select className="ui-input ui-input-sm" value={form.parentId} onChange={e => set('parentId', e.target.value)}>
+              <select className="ui-input ui-input-sm" value={form.parentKey} onChange={e => set('parentKey', e.target.value)}>
                 <option value="">— top level —</option>
-                {parents.map(c => <option key={c.id || c.name} value={c.id || c.name}>{c.name}</option>)}
+                {parents.map(c => <option key={c.key} value={c.key}>{c.name}</option>)}
               </select>
             </div>
           )}
@@ -190,6 +197,7 @@ const CategoryTreeNode = ({ cat, allCategories, depth = 0, onEdit, onDelete, del
 
 
 const CategoriesTab = () => {
+  const symbolSource = useLpSymbols();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);
@@ -230,6 +238,7 @@ const CategoriesTab = () => {
   };
 
   const roots = categories.filter(c => !c.parentId);
+  const folders = categoryCatalogue(categories, symbolSource.symbols);
 
   return (
     <div className="h-full flex flex-col gap-3 overflow-hidden">
@@ -269,7 +278,7 @@ const CategoriesTab = () => {
       {(modal === 'add' || modal === 'edit') && (
         <CategoryFormModal
           category={editTarget}
-          allCategories={categories}
+          allCategories={folders}
           onClose={() => { setModal(null); setEditTarget(null); }}
           onSuccess={() => { setModal(null); setEditTarget(null); load(); }}
         />

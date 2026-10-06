@@ -19,4 +19,3 @@
 .lp-routing .lpr-error{color:var(--danger-text,#e45b61)}
 .lpr-conflict{border-left:3px solid var(--danger-text,#e45b61);padding-left:10px}
 .lpr-group-symbol-list{max-height:120px;overflow:auto;overflow-wrap:anywhere;line-height:1.7;padding:8px;border:1px solid var(--border,#64748b);border-radius:3px}
-

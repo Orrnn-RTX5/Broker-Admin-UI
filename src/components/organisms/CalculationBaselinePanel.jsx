@@ -122,4 +122,3 @@ export default function CalculationBaselinePanel({sessionKey}) {
   {busy&&<p role="status">Waiting for the current result...</p>}
  </section>;
 }
-

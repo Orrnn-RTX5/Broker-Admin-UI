@@ -37,12 +37,15 @@ test('server config initial loads are bounded and fail into retryable states', (
   const service = readRoot('services/serverConfig.service.js');
   const view = readRoot('components/organisms/ServerConfigView.jsx');
   const workspace = readRoot('components/organisms/ServerConfigWorkspace.jsx');
+  const statusHook = readRoot('hooks/useServerStatus.js');
   const tables = readRoot('components/organisms/ServerConfigTables.jsx');
 
   assert.match(service, /SERVER_CONFIG_READ_TIMEOUT_MS\s*=\s*8000/);
   assert.match(service, /timeout:\s*SERVER_CONFIG_READ_TIMEOUT_MS/);
   assert.match(view, /ServerConfigWorkspace/);
-  assert.match(workspace, /Server status failed to load\./);
+  assert.match(workspace, /useServerStatus\(refreshTrigger\)/);
+  assert.match(statusHook, /Server status failed to load\./);
+  assert.match(workspace, /title="Unable to load server health" message=\{error\} actionLabel="Refresh" onAction=\{load\}/);
   assert.match(tables, /Server settings failed to load\./);
   assert.match(tables, /Swap rates failed to load\./);
   assert.match(workspace, /ActionableErrorState/);

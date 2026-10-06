@@ -165,6 +165,7 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
   };
 
   const removeSymbol = index => {
+    changedFields.current.add('symbolsAllowed');
     setFormData(prev => ({ ...prev, symbolsAllowed: parseCsvList(prev.symbolsAllowed).filter((_, itemIndex) => itemIndex !== index).join(', ') }));
     window.requestAnimationFrame(() => {
       const buttons = dialogRef.current?.querySelectorAll('.group-create-selected-symbols button');
@@ -205,7 +206,7 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
                 <header><h2 id="group-details-title">General settings</h2><p>Define the group identity and base account currency.</p></header>
                 <div className="group-create-grid">
                   {!initialData && <>
-                    <GroupField label="Parent group" hint="Parent settings stay current until overridden."><input aria-label="New group parent" value={parentGroup} disabled={isLoading} onChange={event => setParentGroup(event.target.value)} placeholder="No parent" /></GroupField>
+                    <GroupField label="Parent group" hint="Parent settings stay current until overridden."><input aria-label="New group parent" value={parentGroup} disabled={isLoading} onChange={event => { setParentGroup(event.target.value); setParentLoading(Boolean(event.target.value.trim())); }} placeholder="No parent" /></GroupField>
                     <GroupField label="Purpose for new accounts">{select('groupPurpose', [['customer', 'Customer'], ['coverage', 'Coverage']])}</GroupField>
                   </>}
                   <GroupField label="Group name *" hint="Use a clear name, such as Broker/real-standard." className="group-create-field-wide">{input('name', 'text', { required: true, autoComplete: 'off', placeholder: 'Broker/real-standard' })}</GroupField>
@@ -240,8 +241,8 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
               <section className="group-create-section group-create-symbols" data-section="symbols" data-active={activeSection === 'symbols'} aria-labelledby="group-symbols-title">
                 <header><h2 id="group-symbols-title">Allowed instruments</h2><p>Choose the symbols available to accounts in this group.</p></header>
                 <div className="group-create-symbol-fields">
-                <GroupSymbolCategories value={formData.symbolsAllowed} symbolSource={symbolSource} disabled={isLoading} onChange={symbolsAllowed => setFormData(prev => ({ ...prev, symbolsAllowed }))} />
-                <GroupSymbolPicker value={formData.symbolsAllowed} symbolSource={symbolSource} disabled={isLoading} onChange={symbolsAllowed => setFormData(prev => ({ ...prev, symbolsAllowed }))} />
+                <GroupSymbolCategories value={formData.symbolsAllowed} symbolSource={symbolSource} disabled={isLoading} onChange={symbolsAllowed => { changedFields.current.add('symbolsAllowed'); setFormData(prev => ({ ...prev, symbolsAllowed })); }} />
+                <GroupSymbolPicker value={formData.symbolsAllowed} symbolSource={symbolSource} disabled={isLoading} onChange={symbolsAllowed => { changedFields.current.add('symbolsAllowed'); setFormData(prev => ({ ...prev, symbolsAllowed })); }} />
                 </div>
                 <div className="group-create-instrument-preview"><span aria-live="polite">Added symbols ({allowedSymbols.length})</span>{allowedSymbols.length > 0 ? <div className="group-create-selected-symbols"><table aria-label="Added symbols"><thead><tr><th scope="col">Symbol or pattern</th><th scope="col">Category</th><th scope="col">Action</th></tr></thead><tbody>{allowedSymbols.map((symbol, index) => <tr key={`${symbol}-${index}`}><td>{symbol}</td><td className="group-create-selected-category">{symbolCategories.get(symbol.toUpperCase()) || 'Manual entry'}</td><td><button type="button" disabled={isLoading} aria-label={`Remove ${symbol}`} onClick={() => removeSymbol(index)}>Remove</button></td></tr>)}</tbody></table></div> : <p>Select a category above or add symbols individually.</p>}</div>
               </section>

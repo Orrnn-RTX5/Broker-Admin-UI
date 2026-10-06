@@ -1,4 +1,5 @@
 import apiClient from './apiClient';
+import { categoryPayload, sessionPayload } from '../utils/symbolManagementContracts.js';
 
 const query = (params) => new URLSearchParams(
   Object.entries(params).reduce((acc, [key, value]) => {
@@ -320,30 +321,31 @@ export const symbolCloneBulk = (body) => apiClient.post('/SymbolCloneBulk', body
 export const symbolsByCategory = (category) => apiClient.get(`/SymbolsByCategory?category=${encodeURIComponent(category)}`);
 
 export const symbolCategoryList = () => apiClient.get('/SymbolCategoryList');
-export const symbolCategoryCreate = (body) => apiClient.post('/SymbolCategoryCreate', body);
+export const symbolCategoryCreate = (body) => apiClient.post('/SymbolCategoryCreate', categoryPayload(body));
 export const symbolCategoryUpdate = (body) => apiClient.post('/SymbolCategoryUpdate', body);
-export const symbolCategoryDelete = (name) => apiClient.get(`/SymbolCategoryDelete?name=${encodeURIComponent(name)}`);
+export const symbolCategoryDelete = (name) => apiClient.post(`/SymbolCategoryDelete?name=${encodeURIComponent(name)}`, {});
 
 export const symbolMappingList = () => apiClient.get('/SymbolMappingList');
 export const symbolMappingCreate = (body) => apiClient.post('/SymbolMappingCreate', body);
+export const symbolMappingDelete = (mappingId) => apiClient.post(`/SymbolMappingDelete?mapping_id=${encodeURIComponent(mappingId)}`, {});
 
 export const sessionOverrideList = (params) => apiClient.get(`/SessionOverrideList?${new URLSearchParams(params).toString()}`);
-export const sessionOverrideSet = (params, body) => apiClient.post(`/SessionOverrideSet?${new URLSearchParams(params).toString()}`, body);
-export const sessionOverrideDelete = (overrideId) => apiClient.get(`/SessionOverrideDelete?override_id=${encodeURIComponent(overrideId)}`);
+export const sessionOverrideSet = (params, body) => apiClient.post(`/SessionOverrideSet?${new URLSearchParams(params).toString()}`, sessionPayload(body));
+export const sessionOverrideDelete = (overrideId) => apiClient.post(`/SessionOverrideDelete?override_id=${encodeURIComponent(overrideId)}`, {});
 export const symbolSessionGet = (symbol) => apiClient.get(`/SymbolSessionGet?symbol=${encodeURIComponent(symbol)}`);
-export const symbolSessionSet = (body) => apiClient.post('/SymbolSessionSet', body);
+export const symbolSessionSet = (body) => apiClient.post(`/SymbolSessionSet?symbol=${encodeURIComponent(body.symbol)}`, sessionPayload(body.sessions));
 
 export const dynamicLeverageList = (symbol) => apiClient.get(`/DynamicLeverageList?symbol=${encodeURIComponent(symbol)}`);
 export const dynamicLeverageCreate = (body) => apiClient.post('/DynamicLeverageCreate', body);
-export const dynamicLeverageDelete = (tierId) => apiClient.get(`/DynamicLeverageDelete?tier_id=${encodeURIComponent(tierId)}`);
+export const dynamicLeverageDelete = (tierId) => apiClient.post(`/DynamicLeverageDelete?tier_id=${encodeURIComponent(tierId)}`, {});
 
 export const commissionScheduleList = (symbol) => apiClient.get(`/CommissionScheduleList?symbol=${encodeURIComponent(symbol)}`);
 export const commissionScheduleCreate = (body) => apiClient.post('/CommissionScheduleCreate', body);
-export const commissionScheduleDelete = (scheduleId) => apiClient.get(`/CommissionScheduleDelete?schedule_id=${encodeURIComponent(scheduleId)}`);
+export const commissionScheduleDelete = (scheduleId) => apiClient.post(`/CommissionScheduleDelete?schedule_id=${encodeURIComponent(scheduleId)}`, {});
 
 export const swapFreeGroupList = () => apiClient.get('/SwapFreeGroupList');
 export const swapFreeGroupSet = (body) => apiClient.post('/SwapFreeGroupSet', body);
-export const swapFreeGroupDelete = (groupId) => apiClient.get(`/SwapFreeGroupDelete?group_id=${encodeURIComponent(groupId)}`);
+export const swapFreeGroupDelete = (groupId) => apiClient.post(`/SwapFreeGroupDelete?group_id=${encodeURIComponent(groupId)}`, {});
 
 export const marketDepthConfigGet = (symbol) => apiClient.get(`/MarketDepthConfigGet?symbol=${encodeURIComponent(symbol)}`);
 export const marketDepthConfigSet = (body) => apiClient.post('/MarketDepthConfigSet', body);

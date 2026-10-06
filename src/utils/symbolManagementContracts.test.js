@@ -42,9 +42,12 @@ test('actual service wrappers send matching session arrays and POST deletion req
 });
 test('actual response normalization and selector keep all allowed symbols and session times',async () => {
   const shapes=new URL('./apiShapes.js',import.meta.url).href;
+  const rowsUrl=new URL('../components/organisms/SymbolManagement/symbolRows.js',import.meta.url).href;
   const source=readFileSync(new URL('../components/organisms/SymbolManagement/symbolManagementData.js',import.meta.url),'utf8')
     .replace(/import \{ InstrumentsService \}[^\n]+/, 'const InstrumentsService={getAllowedInstruments:async()=>({data:[{symbol:"EURUSD",configurationStatus:"Configured"},{symbol:"ETHUSD",configurationStatus:"Setup required"}]})};')
-    .replace('../../../utils/apiShapes',shapes);
+    .replace(/import \{ loadLpSymbols \}[^\n]+/, 'const loadLpSymbols=async()=>[{symbol:"EURUSD",configured:true},{symbol:"ETHUSD",configured:false}];')
+    .replace('../../../utils/apiShapes',shapes)
+    .replace('./symbolRows',rowsUrl);
   const helpers=await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
   assert.equal((await helpers.loadSymbolOptions()).length,2);
   const row={day_of_week:1,quote_from:'09:00:00',quote_to:'24:00:00',trade_from:'10:00:00',trade_to:'23:00:00'};
