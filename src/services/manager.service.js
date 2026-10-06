@@ -116,8 +116,17 @@ export const ManagerService = {
 
   // Atomically replaces the group's ordered allowed-symbol list; an empty
   // array makes the group unrestricted. Returns the GroupSymbolsGet shape.
-  saveGroupAllowedSymbols: async (groupName, symbols) => {
-    const res = await api.post('/manager/GroupSymbolsSave', { group: groupName, symbols });
+  // expectedRevision (GroupSymbolsGet `revision`, G8) is sent only when known.
+  saveGroupAllowedSymbols: async (groupName, symbols, expectedRevision) => {
+    const body = { group: groupName, symbols };
+    if (expectedRevision) body.expected_revision = expectedRevision;
+    const res = await api.post('/manager/GroupSymbolsSave', body);
+    return res.data;
+  },
+
+  // One group with its G8 `revision` (the expected_revision for GroupUpdate).
+  getGroup: async (groupName) => {
+    const res = await api.get('/manager/GroupGet', { params: { group: groupName } });
     return res.data;
   },
 
@@ -199,10 +208,11 @@ export const ManagerService = {
     return res.data;
   },
 
-  deleteCommissionSchedule: async (scheduleId) => {
-    const res = await api.post('/manager/CommissionScheduleDelete', {
-      schedule_id: Number(scheduleId),
-    });
+  // expectedRevision is the CommissionScheduleList row `revision` (G8).
+  deleteCommissionSchedule: async (scheduleId, expectedRevision) => {
+    const body = { schedule_id: Number(scheduleId) };
+    if (expectedRevision) body.expected_revision = expectedRevision;
+    const res = await api.post('/manager/CommissionScheduleDelete', body);
     return res.data;
   },
 

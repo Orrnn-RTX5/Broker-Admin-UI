@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
+import LPFeedsPanel from './LPFeedsPanel.jsx';
 import {
   ArrowDownRight, ArrowUpRight, ChartNoAxesCombined, ChevronUp, ChevronDown, Minus,
   Folder, Search, ArrowLeft, Activity, Info, Clock, CheckCircle2, PanelLeftOpen, X,
@@ -426,7 +427,7 @@ export default function MarketWatchDock({ children }) {
             </div>
           </header>
 
-          <label className="admin-market-search">
+          <label className="admin-market-search" style={tab === 'Named feeds' ? {display:'none'} : undefined}>
             <Search size={14} />
             <input
               value={search}
@@ -438,6 +439,7 @@ export default function MarketWatchDock({ children }) {
 
           <div
             className={`admin-market-status ${connected ? 'is-connected' : ''}`}
+            style={tab === 'Named feeds' ? {display:'none'} : undefined}
             role="status"
           >
             {feedError || (connected ? 'Connected · awaiting or receiving ticks' : 'Connecting to market feed…')}
@@ -449,6 +451,7 @@ export default function MarketWatchDock({ children }) {
             onScroll={e => setScrollTop(e.currentTarget.scrollTop)}
           >
             {/* View 1: Symbols Quotes Table */}
+            {tab === 'Named feeds' && <LPFeedsPanel compact />}
             {tab === 'Symbols' && (
               <>
                 <table className="admin-market-table admin-market-symbols-table">
@@ -634,12 +637,12 @@ export default function MarketWatchDock({ children }) {
             )}
           </div>
 
-          <div className="admin-market-footer">
+          <div className="admin-market-footer" style={tab === 'Named feeds' ? {display:'none'} : undefined}>
             {rows.length} symbols <span>Muted = awaiting tick</span>
           </div>
 
           <nav className="admin-market-tabs" aria-label="Market Watch views">
-            {['Symbols', 'Details', 'Ticks'].map(value => (
+            {['Symbols', 'Details', 'Ticks', 'Named feeds'].map(value => (
               <button
                 key={value}
                 type="button"

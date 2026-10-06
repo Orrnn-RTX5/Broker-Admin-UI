@@ -2,7 +2,7 @@ import React from 'react';
 import {
   ExternalLink, Plus, Pencil, X,
   IdCard, Wallet, RefreshCcw, Search, FileSpreadsheet, Download,
-  Folder, ArrowUpDown, BarChart3, Server, Bug,
+  Folder, ArrowUpDown, BarChart3, Server, Bug, BookOpen,
 } from 'lucide-react';
 import { Tooltip } from '../ui/Tooltip';
 import {
@@ -46,6 +46,7 @@ const ActionToolBar = ({
   onAddClick, canAdd = false,
   onRefresh, onExport, onExportCsv,
   onEditClick, canEdit = false, onDeleteClick, canDelete = false, deleting = false,
+  onNativePending, canViewNativePending = false,
   searchQuery = '', onSearchChange, searchInputRef,
   activeNode = 'Groups', onNodeSelect, onReportBug,
 }) => {
@@ -80,6 +81,7 @@ const ActionToolBar = ({
                 variant="add"
               />}
               <Tool icon={Pencil} label={isTradeView ? 'View selected details' : 'Edit selected record'} reason={isTradeView ? 'Select a trade' : 'Select an editable record'} onClick={onEditClick} disabled={!canEdit} />
+              <Tool icon={BookOpen} label="Native pending orders" reason="Select an account you can view" onClick={onNativePending} disabled={!canViewNativePending} />
               {showGroupActions && <Tool
                 icon={X}
                 label={deleting ? 'Deleting…' : 'Delete selected group'}

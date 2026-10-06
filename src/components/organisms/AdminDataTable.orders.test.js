@@ -19,7 +19,9 @@ test('Orders view is wired to backend data instead of the coming-soon placeholde
 test('Orders rows are rendered with order-specific fields', () => {
   assert.match(src, /const getOrderRow = \(order, idx\) => \(\{/);
   assert.match(src, /raw:\s*order/);
-  assert.match(src, /ticket:\s*pickDefined\(order, \['ticket', 'Ticket', 'order', 'Order', 'orderTicket', 'OrderTicket'\]\)/);
+  // Exact string tickets (above 2^53) come first so the row never carries a rounded number.
+  assert.match(src, /ticket:\s*pickDefined\(order, \['ticket_text', 'order_ticket_text', 'ticket', 'Ticket', 'order', 'Order', 'orderTicket', 'OrderTicket'\]\)/);
+  assert.match(src, /id:\s*pickDefined\(order, \['ticket_text', 'order_ticket_text', 'ticket', 'Ticket', 'order', 'Order', 'orderTicket', 'OrderTicket'\], idx\)/);
   assert.match(src, /side:\s*pickDefined\(order, \['side', 'Side', 'action', 'Action', 'type', 'Type', 'cmd', 'Cmd'\]\)/);
   assert.match(src, /status:\s*pickDefined\(order, \['status', 'Status', 'state', 'State'\]\)/);
   assert.match(src, /comment:\s*pickDefined\(order, \['comment', 'Comment'\]\)/);

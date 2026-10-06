@@ -2,8 +2,16 @@ import { useAuthStore } from '../../store/authStore';
 import { canEditGroup } from '../../utils/groupAccess';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
-import { X, HelpCircle, Users, ChevronUp, ChevronDown, ChevronRight, Plus, Pencil, Trash2, Save, Info, AlertTriangle } from 'lucide-react';
+import { X, HelpCircle, Users, ChevronUp, ChevronDown, ChevronRight, Plus, Pencil, Trash2, Save, Info, AlertTriangle, UserPlus } from 'lucide-react';
 import { ManagerService } from '../../services/manager.service';
+import AccountCreatePopup from './AccountCreatePopup';
+import {
+  buildGroupLeverageChange,
+  describeConfigError,
+  readConfigError,
+  readRevision,
+  withExpectedRevision,
+} from '../../utils/legacyConfig';
 import { getApiErrorMessage, normalizeArrayResponse } from '../../utils/apiShapes';
 import { useLpSymbols } from '../../hooks/useLpSymbols';
 import { useToast } from '../ui/useToast';
@@ -35,6 +43,7 @@ import {
   isMarginFormDirty,
   moveGroupSymbolRow,
   normalizeGroupSymbolsResponse,
+  rebaseMarginForm,
   removeGroupSymbolRow,
   updateGroupSymbolRow,
   validateGroupSymbolEdit,
@@ -67,7 +76,7 @@ const TAB_INTRO = {
 
 const TAB_HELP = {
   Accounts: 'Every trading account in this group. Double-click an account to open its properties. This tab is read-only; OK and Cancel do not affect it.',
-  Margin: 'Execution mode selects market or instant execution for the group. Margin call and stop out levels are margin levels in percent; the stop out level must not exceed the margin call level. "Compensate negative balance after stop out" resets a negative balance to zero after a stop out. When you press OK, changed values are also applied to the accounts already in the group. Greyed-out options are not available yet.',
+  Margin: 'Execution mode selects market or instant execution for the group. Margin call and stop out levels are margin levels in percent; the stop out level must not exceed the margin call level. "Compensate negative balance after stop out" resets a negative balance to zero after a stop out. When you press OK, changed values are also applied to the accounts already in the group. Leverage cannot change while any account in the group has an open position, a pending order or an unfinished order; the server names those accounts. If someone else saved the group after you opened it, reload and apply your change again. Settings under "Additional settings" are not supported by the server yet.',
   Symbols: 'All global symbols. "Global" means the group follows Symbol Management; turning a symbol off here blocks it for this group only and never changes the group\'s symbol list. A symbol disabled globally (or excluded by the blocked list or a legacy allow-list) cannot be turned on here. Changes are kept until you press OK, and Cancel discards them.',
   'Symbol List': 'The ordered list of symbols that accounts in this group see and trade in the terminal. An empty list means all broker symbols are allowed; a non-empty list restricts the group to exactly those symbols. Each symbol has its own spread markup (points), commission, swap multiplier and trading switch. Use Add, Edit (or double-click a row), Delete, Up and Down; changes are kept until you press OK, and Cancel discards them.',
 
@@ -288,7 +297,36 @@ const GroupPropertiesPopup = ({
   // --- Margin (staged, saved on OK) ---
   const [initialMargin, setInitialMargin] = useState(() => buildMarginForm(group));
   const [marginForm, setMarginForm] = useState(initialMargin);
-  const marginDirty = isMarginFormDirty(initialMargin, marginForm);
+  // G8: group revision (expected_revision for GroupUpdate) and leverage come
+  // from GroupGet; '' revision (older backend) keeps the legacy write.
+  const [groupRevision, setGroupRevision] = useState(() => readRevision(group));
+  const [initialLeverage, setInitialLeverage] = useState(() => String(group?.leverage ?? ''));
+  const [leverage, setLeverage] = useState(initialLeverage);
+  const [showCreateAccount, setShowCreateAccount] = useState(false);
+  const leverageTouchedRef = useRef(false);
+  const leverageChange = useMemo(() => buildGroupLeverageChange(initialLeverage, leverage), [initialLeverage, leverage]);
+  const leverageDirty = leverage.trim() !== initialLeverage.trim();
+  const marginDirty = isMarginFormDirty(initialMargin, marginForm) || leverageDirty;
+
+  useEffect(() => {
+    if (!currentGroupName) return undefined;
+    let active = true;
+    ManagerService.getGroup(currentGroupName).then((fresh) => {
+      if (!active || !fresh) return;
+      setGroupRevision(readRevision(fresh));
+      if (fresh.leverage !== undefined && fresh.leverage !== null) {
+        const value = String(fresh.leverage);
+        setInitialLeverage(value);
+        if (!leverageTouchedRef.current) setLeverage(value);
+      }
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [currentGroupName]);
+
+  const changeLeverage = (event) => {
+    leverageTouchedRef.current = true;
+    setLeverage(event.target.value);
+  };
   // Only flag problems once the admin has touched the Margin fields.
   const marginErrors = useMemo(
     () => (marginDirty ? validateMarginForm(marginForm).errors : {}),
@@ -343,6 +381,7 @@ const GroupPropertiesPopup = ({
   const [isAddingSymbol, setIsAddingSymbol] = useState(false);
   const [addSymbolError, setAddSymbolError] = useState('');
   const [symbolEditor, setSymbolEditor] = useState(null);
+  const [symbolsRevision, setSymbolsRevision] = useState('');
   const symbolsLoaded = symbolsBaseline !== null;
   const symbolsDirty = symbolsLoaded && isGroupSymbolListDirty(symbolsBaseline, symbolRows);
   const listedSymbols = useMemo(() => symbolRows.map((row) => row.symbol), [symbolRows]);
@@ -381,7 +420,9 @@ const GroupPropertiesPopup = ({
     setSymbolsLoading(true);
     setSymbolsError('');
     try {
-      const { rows } = normalizeGroupSymbolsResponse(await ManagerService.getGroupAllowedSymbols(currentGroupName));
+      const response = await ManagerService.getGroupAllowedSymbols(currentGroupName);
+      const { rows } = normalizeGroupSymbolsResponse(response);
+      setSymbolsRevision(readRevision(response));
       setSymbolsBaseline(rows);
       setSymbolRows(rows);
       setSelectedSymbolIndex(-1);
@@ -519,7 +560,7 @@ const GroupPropertiesPopup = ({
     const target = row || selectedCommission;
     if (!target) return;
     setSelectedCommissionId(getScheduleId(target));
-    setCommissionEditor({ mode: 'edit', id: getScheduleId(target), form: commissionFormFromSchedule(target), error: '' });
+    setCommissionEditor({ mode: 'edit', id: getScheduleId(target), revision: readRevision(target), form: commissionFormFromSchedule(target), error: '' });
   };
 
   const setCommissionField = (field) => (event) => {
@@ -541,14 +582,15 @@ const GroupPropertiesPopup = ({
 
     setIsSubmittingCommission(true);
     try {
-      if (isEdit) await ManagerService.updateCommissionSchedule(payload);
+      if (isEdit) await ManagerService.updateCommissionSchedule(withExpectedRevision(payload, commissionEditor.revision));
       else await ManagerService.createCommissionSchedule(payload);
       notify({ title: isEdit ? 'Commission updated' : 'Commission created', description: `${payload.name} · ${payload.symbol}`, tone: 'success' });
       setCommissionEditor(null);
       loadCommissions();
     } catch (error) {
-      const message = getApiErrorMessage(error, isEdit ? 'Failed to update commission.' : 'Failed to create commission.');
+      const message = describeConfigError(error, isEdit ? 'Failed to update commission.' : 'Failed to create commission.');
       setCommissionEditor((current) => (current ? { ...current, error: message } : current));
+      if (readConfigError(error).kind === 'conflict') loadCommissions();
     } finally {
       setIsSubmittingCommission(false);
     }
@@ -563,12 +605,13 @@ const GroupPropertiesPopup = ({
     setIsDeletingCommission(true);
     setCommissionsError('');
     try {
-      await ManagerService.deleteCommissionSchedule(getScheduleId(row));
+      await ManagerService.deleteCommissionSchedule(getScheduleId(row), readRevision(row));
       notify({ title: 'Commission deleted', description: `${row.name} · ${row.symbol}`, tone: 'success' });
       setSelectedCommissionId(null);
       loadCommissions();
     } catch (error) {
-      const message = getApiErrorMessage(error, 'Failed to delete commission.');
+      const message = describeConfigError(error, 'Failed to delete commission.');
+      if (readConfigError(error).kind === 'conflict') loadCommissions();
       setCommissionsError(message);
       notify({ title: 'Delete failed', description: message, tone: 'danger' });
     } finally {
@@ -581,6 +624,30 @@ const GroupPropertiesPopup = ({
     if (isSaving) return;
     if (persistedRef.current) onSaved?.();
     onClose();
+  };
+
+  // G8 revision conflict on GroupUpdate: reload the group (fresh revision and
+  // values), keep the admin's own edits staged and take the fresh value for
+  // every untouched field. Nothing is re-sent: the admin reviews the reloaded
+  // values and presses OK again. Returns the message for the dialog footer.
+  const reloadGroupAfterConflict = async (conflictReason) => {
+    try {
+      const fresh = await ManagerService.getGroup(currentGroupName);
+      const revision = readRevision(fresh);
+      if (!fresh || !revision) throw new Error('the server returned no group revision.');
+      const freshMargin = buildMarginForm({ ...initialMargin, ...fresh });
+      setMarginForm((current) => rebaseMarginForm(initialMargin, current, freshMargin));
+      setInitialMargin(freshMargin);
+      if (fresh.leverage !== undefined && fresh.leverage !== null) {
+        const value = String(fresh.leverage);
+        setLeverage((current) => (current.trim() === initialLeverage.trim() ? value : current));
+        setInitialLeverage(value);
+      }
+      setGroupRevision(revision);
+      return 'Not saved: someone else changed this group after you opened it. The group was reloaded — review the current values and your edits, then press OK again.';
+    } catch (reloadError) {
+      return `Failed to save margin settings: ${conflictReason} Reloading the group failed: ${getApiErrorMessage(reloadError, 'request failed.')} Close and reopen the dialog.`;
+    }
   };
 
   const handleOk = async () => {
@@ -597,7 +664,12 @@ const GroupPropertiesPopup = ({
         setSaveError(firstError);
         return;
       }
-      marginChanges = changes;
+      if (leverageChange.error) {
+        setActiveTab('Margin');
+        setSaveError(leverageChange.error);
+        return;
+      }
+      marginChanges = { ...changes, ...leverageChange.changes };
     }
 
     const saveMargin = Object.keys(marginChanges).length > 0;
@@ -612,9 +684,11 @@ const GroupPropertiesPopup = ({
     let failedTab = 'Margin';
     try {
       if (saveMargin) {
-        const res = await ManagerService.updateGroup({ originalName: currentGroupName, ...marginChanges });
+        const res = await ManagerService.updateGroup(withExpectedRevision({ originalName: currentGroupName, ...marginChanges }, groupRevision));
         persistedRef.current = true;
         setInitialMargin(marginForm);
+        setInitialLeverage(leverage.trim());
+        setGroupRevision(readRevision(res));
         summary.push(describeAccountsUpdated(res) || 'Margin settings saved.');
       }
 
@@ -623,7 +697,8 @@ const GroupPropertiesPopup = ({
       if (symbolsDirty) {
         failedTab = 'Symbol List';
         const payload = buildGroupSymbolsSavePayload(currentGroupName, symbolRows);
-        const res = await ManagerService.saveGroupAllowedSymbols(payload.group, payload.symbols);
+        const res = await ManagerService.saveGroupAllowedSymbols(payload.group, payload.symbols, symbolsRevision);
+        setSymbolsRevision(readRevision(res));
         persistedRef.current = true;
         const saved = normalizeGroupSymbolsResponse(res).rows;
         const count = res && Array.isArray(res.symbols) ? saved.length : payload.symbols.length;
@@ -649,12 +724,16 @@ const GroupPropertiesPopup = ({
       onSaved?.();
       onClose();
     } catch (error) {
-      const reason = getApiErrorMessage(error, 'request failed.');
+      const reason = describeConfigError(error, 'request failed.');
       const what = { Margin: 'margin settings', Symbols: 'symbol overrides', 'Symbol List': 'symbol list' }[failedTab];
       setActiveTab(failedTab);
-      setSaveError(summary.length > 0
-        ? `${summary.join(' ')} But saving the ${what} failed: ${reason}`
-        : `Failed to save ${what}: ${reason}`);
+      if (failedTab === 'Margin' && readConfigError(error).kind === 'conflict') {
+        setSaveError(await reloadGroupAfterConflict(reason));
+      } else {
+        setSaveError(summary.length > 0
+          ? `${summary.join(' ')} But saving the ${what} failed: ${reason}`
+          : `Failed to save ${what}: ${reason}`);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -795,6 +874,14 @@ const GroupPropertiesPopup = ({
                       onChange={setMarginField('negativeBalanceProtection')}
                       disabled={marginLoading}
                     />
+                  </Section>
+
+                  <Section title="Leverage" description="Leverage for accounts in this group. Locked while accounts in the group are trading.">
+                    <div className="gpp-grid">
+                      <Field label="Leverage (1 : N)" htmlFor="group-leverage" error={leverageDirty ? leverageChange.error : ''}>
+                        <input id="group-leverage" type="number" min="1" max="10000" step="1" value={leverage} onChange={changeLeverage} aria-invalid={Boolean(leverageDirty && leverageChange.error)} disabled={marginLoading} className="gpp-input" />
+                      </Field>
+                    </div>
                   </Section>
 
                   <details className="gpp-disclosure">
@@ -1074,6 +1161,9 @@ const GroupPropertiesPopup = ({
           <button type="button" onClick={() => setShowHelp((value) => !value)} aria-pressed={showHelp} className="gpp-btn is-ghost">
             <HelpCircle size={13} aria-hidden="true" /> Help
           </button>
+          <button type="button" onClick={() => setShowCreateAccount(true)} disabled={isSaving || !currentGroupName} title={`Create a customer account in ${currentGroupName}`} className="gpp-btn">
+            <UserPlus size={13} aria-hidden="true" /> New account
+          </button>
           <div className={`gpp-footer-status${saveError ? ' is-error' : hasUnsavedChanges ? ' is-dirty' : ''}`}>
             {saveError ? (
               <><AlertTriangle size={13} aria-hidden="true" /><span role="alert" title={saveError}>{saveError}</span></>
@@ -1178,6 +1268,15 @@ const GroupPropertiesPopup = ({
           </ModalShell>
         )}
       </AnimatePresence>
+
+      {showCreateAccount && (
+        <AccountCreatePopup
+          group={currentGroupName}
+          defaultLeverage={initialLeverage}
+          onClose={() => setShowCreateAccount(false)}
+          onCreated={() => { persistedRef.current = true; }}
+        />
+      )}
     </div>
   );
 };

@@ -10,7 +10,23 @@ import {
   requirePermission,
   canAccessView,
   requiredPermissionForView,
+  ADMIN_ONLY_VIEW,
+  isBrokerAdmin,
 } from './permissions.js';
+
+test('Downstream access is broker Admin only: no manager permission, wildcard or SuperAdmin opens it', () => {
+  assert.equal(requiredPermissionForView('Downstream access'), ADMIN_ONLY_VIEW);
+  assert.equal(canAccessView({ role: 'admin', is_admin: true, permissions: ['*'] }, 'Downstream access'), true);
+  assert.equal(canAccessView({ role: 'admin', permissions: null }, 'Downstream access'), true);
+  assert.equal(canAccessView({ role: 'manager', permissions: [WILDCARD_PERMISSION] }, 'Downstream access'), false);
+  assert.equal(canAccessView({ role: 'manager', permissions: Object.values(PERMISSION_KEYS) }, 'Downstream access'), false);
+  assert.equal(canAccessView({ role: 'super_admin', is_admin: true, permissions: ['*'] }, 'Downstream access'), false);
+  assert.equal(canAccessView({ role: 'dealer', is_admin: 'true' }, 'Downstream access'), false);
+  assert.equal(canAccessView(null, 'Downstream access'), false);
+  assert.equal(isBrokerAdmin({ role: 'Admin' }), true);
+  assert.equal(ROLE_PERMISSION_OPTIONS.some((option) => option.key === ADMIN_ONLY_VIEW), false);
+  assert.equal(hasPermission({ role: 'manager', permissions: [WILDCARD_PERMISSION] }, ADMIN_ONLY_VIEW), false);
+});
 
 test('normalizePermissions keeps backend keys and aliases execute_deals to manage_trades', () => {
   const set = normalizePermissions(['manage_groups', ' execute_deals ', 'unknown_permission', '']);

@@ -6,6 +6,7 @@ import { ManagerService } from '../../services/manager.service';
 import { useRoles } from '../../hooks/useManager';
 import { useAuthStore } from '../../store/authStore';
 import { buildManagerCreatePayload, canGrantAdminRole } from '../../utils/adminValidation';
+import { normalizeArrayResponse } from '../../utils/apiShapes';
 
 const MotionDiv = motion.div;
 
@@ -24,7 +25,7 @@ const CreateManagerPopup = ({ onClose, onCreated }) => {
   const currentUser = useAuthStore((state) => state.user);
   const canCreateAdmin = canGrantAdminRole(currentUser);
   const { data: rolesResponse } = useRoles();
-  const roles = rolesResponse?.roles || [];
+  const roles = normalizeArrayResponse(rolesResponse, ['roles', 'data', 'items']);
 
   const handleSubmit = async () => {
     setIsLoading(true);

@@ -126,7 +126,7 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
           ws: true,
-          rewriteWsOrigin: true,
+          rewriteWsOrigin: false,
         },
 
         // Gateway LP API

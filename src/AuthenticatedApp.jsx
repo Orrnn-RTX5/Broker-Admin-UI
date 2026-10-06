@@ -8,6 +8,9 @@ import MarketWatchDock from './components/organisms/MarketWatchDock';
 import OperationsTerminal from './components/organisms/OperationsTerminal';
 import { WorkspaceDataProvider } from './hooks/useWorkspaceData';
 import './styles/adminWorkspace.css';
+import AccountNativePendingDialog from './components/RIGHTCLICKJPOPUPS/AccountNativePendingDialog';
+import {nativePendingAccountTarget} from './utils/nativePendingAccountTarget';
+import {getManagerTradeScope} from './services/managerTradeApi';
 
 import {
   getSearchesStorageKey,
@@ -126,6 +129,7 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
   const [selectedEditTarget, setSelectedEditTarget] = React.useState(null);
   const [selectedSidebarNodeId, setSelectedSidebarNodeId] = React.useState(null);
   const [editingAccount, setEditingAccount] = React.useState(null);
+  const [nativePendingTargetKey,setNativePendingTargetKey]=React.useState(null);
   const [viewingTrade, setViewingTrade] = React.useState(null);
   const [serverPopupData, setServerPopupData] = React.useState(null);
   const [isCreatingGroup, setIsCreatingGroup] = React.useState(false);
@@ -314,6 +318,8 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
   const activeViewPermission = requiredPermissionForView(activeNode);
   const isAccountEditView = ACCOUNT_EDIT_VIEW_TYPES.has(activeNode) || (activeNode === 'Groups' && groupExplorerLocation.type === 'group');
   const canEditAccounts = hasPermission(currentUser, PERMISSION_KEYS.EDIT_ACCOUNTS);
+  const nativePendingTarget=nativePendingAccountTarget({selected:selectedEditTarget,activeView:activeNode,accountView:isAccountEditView,canView:canViewActive,user:currentUser,scope:isAuthenticated?getManagerTradeScope():''});
+  React.useEffect(()=>{if(nativePendingTargetKey!==nativePendingTarget?.key)setNativePendingTargetKey(null);},[nativePendingTargetKey,nativePendingTarget?.key]);
   const canEditGroups = canViewGroups(currentUser);
   const canCreateDeleteGroups=canManageGroupLifecycle(currentUser);
   const canEditSelectedTarget =
@@ -914,6 +920,8 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
         onExportCsv={handleExportCsv}
         onEditClick={handleToolbarEdit}
         canEdit={canEditSelectedTarget}
+        onNativePending={()=>{if(nativePendingTarget)setNativePendingTargetKey(nativePendingTarget.key);}}
+        canViewNativePending={Boolean(nativePendingTarget)}
         onDeleteClick={handleToolbarDelete}
         canDelete={canDeleteSelectedTarget}
         deleting={isDeletingTarget}
@@ -1017,6 +1025,7 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
 
       <React.Suspense fallback={null}>
       <AnimatePresence>
+        {nativePendingTarget&&nativePendingTargetKey===nativePendingTarget.key&&<AccountNativePendingDialog target={nativePendingTarget} onClose={()=>setNativePendingTargetKey(null)}/>}
         {isPopupOpen && activeNode === 'Managers' && (
           <ManagerPropertiesPopup manager={selectedGroup} onClose={() => setIsPopupOpen(false)} />
         )}

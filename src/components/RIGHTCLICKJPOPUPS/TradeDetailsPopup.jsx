@@ -1,6 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
+import AccountTradeControls from './AccountTradeControls.jsx';
+import PendingTradeControls from './PendingTradeControls.jsx';
+import PositionProtectionControls from './PositionProtectionControls.jsx';
+import {useAuthStore} from '../../store/authStore.js';
+import {hasPermission,PERMISSION_KEYS} from '../../utils/permissions.js';
 
 const MotionDiv = motion.div;
 
@@ -81,6 +86,7 @@ const DetailField = ({ label, value, multiline = false }) => (
 );
 
 const TradeDetailsPopup = ({ viewType, row, onClose }) => {
+  const user=useAuthStore(state=>state.user);
   const fields = TRADE_DETAIL_FIELDS[viewType] || [];
   const title = singularTitle[viewType] || 'Trade';
   const identifier = row?.ticket || row?.id;
@@ -115,6 +121,9 @@ const TradeDetailsPopup = ({ viewType, row, onClose }) => {
               multiline={key === 'comment'}
             />
           ))}
+          {viewType === 'Positions' && <PositionProtectionControls login={row?.login} ticket={row?.raw?.position_ticket_text ?? row?.raw?.ticket_text ?? identifier} canTrade={hasPermission(user,PERMISSION_KEYS.MANAGE_TRADES)}/> }
+          {viewType === 'Positions' && <AccountTradeControls key={identifier} login={row?.login} ticket={row?.raw?.position_ticket_text ?? row?.raw?.ticket_text ?? identifier} />}
+          {viewType === 'Orders' && <PendingTradeControls key={identifier} login={row?.login} ticket={row?.raw?.ticket_text ?? row?.raw?.order_ticket_text ?? identifier} />}
         </div>
 
         <div className="flex h-12 shrink-0 select-none items-center justify-end border-t border-white/5 bg-[color:var(--bg-app)] px-4">
