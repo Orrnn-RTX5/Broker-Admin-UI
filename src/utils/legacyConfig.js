@@ -160,10 +160,7 @@ export const buildAccountTradingChanges = (original, form) => {
   }
   const mode = String(form?.accountMode ?? '').trim().toLowerCase();
   const storedMode = String(original?.accountMode || 'hedging').toLowerCase();
-  if (mode !== storedMode) {
-    if (!ACCOUNT_MODE_OPTIONS.some((option) => option.value === mode)) errors.accountMode = 'Account mode must be hedging or netting.';
-    else changes.account_mode = mode;
-  }
+  if (mode !== storedMode) errors.accountMode = 'Account mode is fixed at creation and cannot be changed.';
   return { changes: Object.keys(errors).length ? {} : changes, errors };
 };
 

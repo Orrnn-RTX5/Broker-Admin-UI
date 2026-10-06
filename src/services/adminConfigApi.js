@@ -16,6 +16,7 @@ export const createAdminConfigApi = (client = api, payments = PaymentService) =>
   },
 
   updateAccountTrading: async (login, changes, revision, reason) => {
+    if (['AccountMode', 'accountMode', 'account_mode', 'marginMode', 'margin_mode'].some(key => Object.hasOwn(changes, key))) throw new Error('Account mode is fixed at creation and cannot be changed.');
     const body = withExpectedRevision({ ...changes }, revision);
     if (reason) body.reason = String(reason).slice(0, 500);
     const res = await client.patch(`/api/v1/manager/accounts/${encodeURIComponent(String(login))}`, body, { _noRetry: true });

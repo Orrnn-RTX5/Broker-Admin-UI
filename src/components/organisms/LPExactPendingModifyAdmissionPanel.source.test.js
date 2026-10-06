@@ -23,6 +23,8 @@ test('input is an integer 1-128 and save uses the loaded revision, locking after
 
 test('mounted once in GatewaysView right after the recovery policy panel',()=>{
  assert.equal(view.match(/<LPExactPendingModifyAdmissionPanel \/>/g)?.length,1);
- assert.match(view,/<LPRecoveryPolicyPanel \/><LPExactPendingModifyAdmissionPanel \/>/);
+ assert.equal(view.match(/<LPRecoveryPolicyPanel \/>/g)?.length,1);
+ // Disclosures may separate the panels, but their order and single mounts must remain.
+ assert.ok(view.indexOf('<LPRecoveryPolicyPanel />') < view.indexOf('<LPExactPendingModifyAdmissionPanel />'));
  assert.match(view,/import LPExactPendingModifyAdmissionPanel from '\.\/LPExactPendingModifyAdmissionPanel\.jsx';/);
 });

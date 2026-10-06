@@ -1,1 +1,53 @@
-.lp-journal{margin:12px 0;padding:14px;border:1px solid #ccd4de;border-radius:5px;background:var(--panel-bg,#fff);color:var(--text-primary,#25354a)}.lp-journal,.lp-journal *{font-size:11px;font-weight:400}.lp-journal header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.lp-journal h2,.lp-journal h3{margin:0 0 8px}.lp-journal p{margin:7px 0;line-height:1.5}.lp-journal-scroll{overflow:auto;max-height:340px;margin:10px 0}.lp-journal table{border-collapse:collapse;width:100%;white-space:nowrap}.lp-journal th,.lp-journal td{padding:7px 9px;border-bottom:1px solid #dce2e9;text-align:left}.lp-journal th{background:#eef2f7;position:sticky;top:0}.lp-journal button{padding:6px 10px;border:1px solid #adb9c8;border-radius:3px;background:#f4f7fa;cursor:pointer}.lp-journal button:disabled{opacity:.55;cursor:default}.lp-journal dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px}.lp-journal dt{color:#5a687a}.lp-journal dd{margin:3px 0;overflow-wrap:anywhere}.lp-journal [role=alert]{color:#a52525}.lp-journal article{margin-top:16px;border-top:1px solid #ccd4de;padding-top:12px}
+.lp-journal {
+  min-width: 0;
+  margin: 0 0 20px;
+  padding: 20px;
+  border: 1px solid var(--border, #333);
+  border-radius: 10px;
+  background: var(--bg-surface-2, #252526);
+  color: var(--text-primary, #eee);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.lp-journal header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.lp-journal h2 { margin: 0 0 5px; font-size: 16px; font-weight: 700; }
+.lp-journal h3 { margin: 0 0 9px; font-size: 14px; font-weight: 650; }
+.lp-journal p { margin: 0; }
+.lp-journal header p, .lp-journal-note { color: var(--text-secondary, var(--text-muted, #aab4c2)); font-size: 12px; line-height: 1.55; }
+.lp-journal-note { margin: 12px 0 !important; }
+.lp-journal button { min-height: 36px; padding: 7px 11px; border: 1px solid var(--border-strong, #454545); border-radius: 6px; background: var(--bg-surface-1, #1e1e1e); color: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.lp-journal button:hover:not(:disabled) { border-color: var(--accent-600, #60a5fa); }
+.lp-journal button:focus-visible, .lp-journal-scroll:focus-visible { outline: 2px solid var(--accent-600, #60a5fa); outline-offset: 2px; }
+.lp-journal button:disabled { opacity: .55; cursor: default; }
+.lp-journal-progress { margin: 12px 0 !important; color: var(--text-secondary, var(--text-muted)); }
+.lp-journal-message { margin: 12px 0 !important; padding: 10px 12px; border-radius: 6px; border-left: 3px solid currentColor; background: var(--bg-surface-1, #1e1e1e); }
+.lp-journal-error { color: var(--danger-text, #f39797); }
+.lp-journal-list-heading, .lp-journal-detail-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 16px; }
+.lp-journal-list-heading span { color: var(--text-secondary, var(--text-muted)); font-size: 12px; }
+.lp-journal-scroll { max-width: 100%; max-height: 390px; overflow: auto; margin: 8px 0 12px; border: 1px solid var(--border, #333); border-radius: 7px; }
+.lp-journal table { min-width: 880px; width: 100%; border-collapse: collapse; white-space: nowrap; }
+.lp-journal th, .lp-journal td { padding: 10px 12px; border-bottom: 1px solid var(--border, #333); text-align: left; vertical-align: top; font-size: 12px; }
+.lp-journal th { position: sticky; top: 0; z-index: 1; background: var(--bg-surface-1, #1e1e1e); color: var(--text-secondary, var(--text-muted, #aab4c2)); font-weight: 650; }
+.lp-journal tbody tr[aria-current=true] { background: var(--accent-soft, rgba(96, 165, 250, .1)); }
+.lp-journal tbody tr:hover { background: var(--bg-surface-1, #1e1e1e); }
+.lp-journal tbody tr[aria-current=true]:hover { background: var(--accent-soft, rgba(96, 165, 250, .1)); }
+.lp-journal-empty { padding: 14px; border: 1px dashed var(--border, #333); border-radius: 7px; color: var(--text-secondary, var(--text-muted)); }
+.lp-journal-empty strong { display: block; margin-bottom: 4px; color: var(--text-primary, #eee); }
+.lp-journal-pagination { display: flex; justify-content: flex-end; margin-top: 10px; }
+.lp-journal article { min-width: 0; margin-top: 22px; padding-top: 17px; border-top: 1px solid var(--border, #333); }
+.lp-journal article > h3 { margin-top: 18px; }
+.lp-journal-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); gap: 8px; margin: 12px 0; }
+.lp-journal-details > div { min-width: 0; padding: 9px 11px; border: 1px solid var(--border, #333); border-radius: 6px; background: var(--bg-surface-1, #1e1e1e); }
+.lp-journal-details dt { color: var(--text-secondary, var(--text-muted, #aab4c2)); font-size: 11px; }
+.lp-journal-details dd { margin: 3px 0 0; overflow-wrap: anywhere; font-size: 12px; font-weight: 600; }
+.lp-position-reconciliation { min-width: 0; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border, #333); }
+.lp-position-reconciliation-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin: 12px 0; }
+.lp-position-reconciliation-controls label { display: flex; flex: 1 1 220px; flex-direction: column; gap: 5px; min-width: 0; }
+.lp-position-reconciliation-controls select { width: 100%; min-width: 0; min-height: 36px; padding: 7px 10px; border: 1px solid var(--border-strong, #454545); border-radius: 6px; background: var(--bg-surface-1, #1e1e1e); color: inherit; }
+.lp-position-reconciliation-controls select:focus-visible { outline: 2px solid var(--accent-600, #60a5fa); outline-offset: 2px; }
+@media (max-width: 600px) {
+  .lp-journal { padding: 14px; }
+  .lp-journal header button { width: 100%; }
+  .lp-journal-pagination button { width: 100%; }
+  .lp-position-reconciliation-controls button { width: 100%; }
+}

@@ -88,6 +88,10 @@ test('admin API paths are routed through the manager backend namespace', () => {
   assert.equal(shouldRouteThroughManagerApi('/api/v2/accounts?page=1'), true);
   assert.equal(shouldRouteThroughManagerApi('/api/v2/account/990701'), true);
   assert.equal(shouldRouteThroughManagerApi('/manager/GroupList'), true);
+  assert.equal(shouldRouteThroughManagerApi('/api/v1/lp/downstream/status'), true);
+  assert.equal(shouldRouteThroughManagerApi('/api/v1/lp/downstream/access/dsa_test/credentials/trade'), true);
+  assert.equal(isProtectedApiRequest('/api/v1/lp/downstream/access'), true);
+  assert.equal(shouldRouteThroughManagerApi('/api/v1/lp/routing'), false);
   assert.equal(shouldRouteThroughManagerApi('/api/v2/broker/servers'), false);
   assert.equal(shouldRouteThroughManagerApi('/uploads/logo.png'), false);
 });

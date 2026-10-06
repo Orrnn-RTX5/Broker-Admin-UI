@@ -8,8 +8,102 @@ const pendingActions=['place_pending_order','cancel_pending_order','modify_pendi
 const vocabulary={modify_position:['position_modify_accepted','position_modified','position_modify_rejected'],place_order:['order_accepted','order_filled','order_rejected'],close_position:['position_close_accepted','position_closed','position_close_rejected'],place_pending_order:['pending_order_accepted','pending_order_placed','pending_order_rejected'],cancel_pending_order:['pending_order_cancel_accepted','pending_order_cancelled','pending_order_cancel_rejected'],modify_pending_order:['pending_order_modify_accepted','pending_order_modified','pending_order_modify_rejected']};
 const pendingVersion=value=>{if(typeof value!=='string'||!/^[1-9][0-9]*$/.test(value)||BigInt(value)>9223372036854775807n)throw new Error('The expected pending version must be an exact int64 string.');return value;};
 const decimal=(value,positive=false)=>{const text=String(value??'');if(!/^(0|[1-9][0-9]*)(\.[0-9]{1,18})?$/.test(text)||text.length>58||(positive&&!/[1-9]/.test(text)))throw new Error('Enter an exact decimal with up to 18 places.');return text;};
-export function createManagerTradeSocket({requestTicket,buildUrl,getScope,storage=globalThis.sessionStorage,createSocket=url=>new WebSocket(url),deadlineMs=20000,pollMs=1000}){
- const memory=new Map(),active=new Map(),storageKey='rtx5.manager-ws-commands.v1';
+export function createManagerTradeSocket({requestTicket,buildUrl,getScope,getTransportScope=()=>'',storage=globalThis.sessionStorage,createSocket=url=>new WebSocket(url),deadlineMs=20000,pollMs=1000,idleSocketMs=30000}){
+ const memory=new Map(),active=new Map(),sessions=new Map(),storageKey='rtx5.manager-ws-commands.v1';
+ // A physical socket is bound to one authenticated session scope and one account.
+ // Leases keep each command's existing request-ID and client-order-ID correlation.
+ const retire=(entry)=>{
+  clearTimeout(entry.idleTimer);entry.retired=true;
+  if(sessions.get(entry.key)===entry)sessions.delete(entry.key);
+  entry.controller.abort();
+  try{entry.ws?.close();}catch{/* a connecting transport may already be closing */}
+ };
+ const idle=(entry)=>{
+  clearTimeout(entry.idleTimer);
+  if(entry.retired||entry.leases.size||entry.ws?.readyState!==1)return;
+  entry.idleTimer=setTimeout(()=>{if(!entry.leases.size)retire(entry);},idleSocketMs);
+  entry.idleTimer.unref?.();
+ };
+ const establish=(scope,transportScope,account,key)=>{
+  const entry={scope,transportScope,account,key,ws:null,leases:new Set(),idleTimer:null,retired:false,ready:null,waiters:0,controller:new AbortController()};
+  sessions.set(key,entry);
+  entry.ready=(async()=>{
+   const ticketStartedAt=performance.now();
+   const ticket=await requestTicket(account,{signal:entry.controller.signal});
+   entry.ticketMs=performance.now()-ticketStartedAt;
+   if(entry.retired||getScope()!==scope||getTransportScope()!==transportScope)throw new Error('The authenticated session or transport changed.');
+   const ws=createSocket(buildUrl(ticket));entry.ws=ws;
+   entry.socketCreatedAt=performance.now();
+   ws.onopen=()=>{entry.openedAt=performance.now();for(const lease of [...entry.leases]){lease.readyState=1;lease.onopen?.();}idle(entry);};
+   ws.onmessage=event=>{for(const lease of [...entry.leases])lease.onmessage?.(event);};
+   ws.onerror=()=>ws.close();
+   ws.onclose=()=>{
+    if(sessions.get(key)===entry)sessions.delete(key);
+    entry.retired=true;clearTimeout(entry.idleTimer);
+    for(const lease of [...entry.leases]){lease.readyState=3;lease.onclose?.();}
+    entry.leases.clear();
+   };
+   return entry;
+  })().catch(error=>{if(sessions.get(key)===entry)sessions.delete(key);entry.retired=true;throw error;});
+  return entry;
+ };
+ const acquire=async(scope,transportScope,account,{signal}={})=>{
+  if(!scope||getScope()!==scope||getTransportScope()!==transportScope)throw new Error('The authenticated session or transport changed.');
+  for(const entry of [...sessions.values()])if(entry.scope!==scope||entry.transportScope!==transportScope)retire(entry);
+  const key=JSON.stringify([scope,transportScope,account]);let entry=sessions.get(key),created=false;
+  if(!entry||entry.retired||entry.ws?.readyState===3){entry=establish(scope,transportScope,account,key);created=true;}
+  entry.waiters++;
+  let abortHandler,ready=false;
+  const cancelled=signal&&new Promise((_,reject)=>{
+   abortHandler=()=>reject(new Error('Connection acquisition cancelled.'));
+   if(signal.aborted)abortHandler();else signal.addEventListener('abort',abortHandler,{once:true});
+  });
+  try{await (cancelled?Promise.race([entry.ready,cancelled]):entry.ready);ready=true;}
+  finally{
+   if(abortHandler)signal.removeEventListener('abort',abortHandler);
+   entry.waiters--;
+   if(!ready&&!entry.waiters&&!entry.leases.size&&entry.ws?.readyState!==1&&!entry.retired)retire(entry);
+  }
+  if(signal?.aborted){if(!entry.waiters&&!entry.leases.size&&entry.ws?.readyState!==1&&!entry.retired)retire(entry);throw new Error('Connection acquisition cancelled.');}
+  if(entry.retired||sessions.get(key)!==entry||getScope()!==scope||getTransportScope()!==transportScope)throw new Error('The authenticated session or transport changed.');
+  clearTimeout(entry.idleTimer);
+  const lease={readyState:entry.ws.readyState,onopen:null,onmessage:null,onerror:null,onclose:null,
+   send(raw){
+    if(getScope()!==scope||getTransportScope()!==transportScope||entry.retired||entry.ws.readyState!==1)throw new Error('The authenticated session or transport changed.');
+    const frame=JSON.parse(raw);
+    if(Number(frame.account_login)!==account)throw new Error('Command is outside this account-bound socket.');
+    entry.ws.send(raw);
+   },
+   close(){if(!entry.leases.delete(lease))return;lease.readyState=3;
+    if(!entry.waiters&&!entry.leases.size&&entry.ws?.readyState!==1&&!entry.retired)retire(entry);else idle(entry);},
+  };
+  entry.leases.add(lease);
+  return {socket:lease,alreadyOpen:entry.ws.readyState===1,entry,created};
+ };
+ const warmup=account=>{
+  const login=Number(account),scope=getScope(),transportScope=getTransportScope(),startedAt=performance.now();
+  if(!scope||!Number.isSafeInteger(login)||login<=0)return Promise.reject(new Error('Authenticated account scope is required.'));
+  return new Promise((resolve,reject)=>{
+   let settled=false,lease=null;const acquireAbort=new AbortController();
+   const finish=error=>{
+    if(settled)return;settled=true;clearTimeout(timer);acquireAbort.abort();lease?.socket.close();
+    if(error){reject(error);return;}
+    resolve({account_login:login,reused:!lease.created,ticket_ms:lease.created?lease.entry.ticketMs:0,
+     socket_open_ms:lease.created?lease.entry.openedAt-lease.entry.socketCreatedAt:0,total_ms:performance.now()-startedAt});
+   };
+   // Start before ticket acquisition, which may never resolve.
+   const timer=setTimeout(()=>finish(new Error('Trade socket warmup timed out.')),deadlineMs);
+   acquire(scope,transportScope,login,{signal:acquireAbort.signal}).then(value=>{
+    if(settled){value.socket.close();return;}
+    lease=value;const socket=value.socket;
+    socket.onopen=()=>finish(getScope()===scope&&getTransportScope()===transportScope?undefined:new Error('The authenticated session or transport changed.'));
+    socket.onerror=()=>finish(new Error('Trade socket warmup failed.'));
+    socket.onclose=()=>finish(new Error('Trade socket warmup disconnected.'));
+    // The physical open event may have fired after acquire made its snapshot.
+    if(socket.readyState===1)socket.onopen();
+   }).catch(error=>finish(error));
+  });
+ };
  const load=()=>{try{for(const [key,value]of Object.entries(JSON.parse(storage?.getItem(storageKey)||'{}')))memory.set(key,value);}catch{/* unreadable recovery storage starts empty */}};
  const persist=(required=false)=>{try{if(required&&!storage)throw new Error('Command recovery storage is unavailable.');storage?.setItem(storageKey,JSON.stringify(Object.fromEntries(memory)));}catch(error){if(required)throw error;}};
  load();
@@ -49,27 +143,27 @@ export function createManagerTradeSocket({requestTicket,buildUrl,getScope,storag
  };
  const run=(record,key,statusOnly=false)=>{
   if(active.has(key))return active.get(key);
-  const scope=getScope();if(!scope||scope!==record.scope)return Promise.reject(new Error('The authenticated session changed.'));
+  const scope=getScope(),transportScope=getTransportScope();if(!scope||scope!==record.scope)return Promise.reject(new Error('The authenticated session changed.'));
   const promise=new Promise((resolve,reject)=>{
-   let socket,timer,poll,done=false,attempt=0,requestID='',generation=0;
-   const finish=(error,value,terminal=false)=>{if(done)return;done=true;generation++;clearTimeout(timer);clearTimeout(poll);if(socket)socket.close();if(terminal){memory.delete(key);persist();if(record.action==='place_pending_order')placementChanged();}error?reject(error):resolve(value);};
+   let socket,timer,poll,done=false,attempt=0,requestID='',generation=0;const acquireAbort=new AbortController();
+   const finish=(error,value,terminal=false)=>{if(done)return;done=true;generation++;clearTimeout(timer);clearTimeout(poll);acquireAbort.abort();if(socket)socket.close();if(terminal){memory.delete(key);persist();if(record.action==='place_pending_order')placementChanged();}error?reject(error):resolve(value);};
    const unknown=cause=>Object.assign(new Error('Execution status is unresolved. Keep command '+record.id+' for account '+record.payload.account_login+' and check its status before another trade.'),{code:'ORDER_STATUS_UNKNOWN',statusUnknown:true,orderWasSent:record.sent,client_order_id:record.id,clientOrderId:record.id,account_login:record.payload.account_login,cause,checkStatus:()=>run(record,key,true)});
    const query=()=>{if(done||!socket||socket.readyState!==1)return;requestID=tradeUUID();socket.send(JSON.stringify({action:'get_order_status',request_id:requestID,client_order_id:record.id,account_login:record.payload.account_login}));};
    const schedule=()=>{clearTimeout(poll);poll=setTimeout(()=>{try{query();}catch(e){finish(unknown(e));}},pollMs);};
    const connect=async()=>{
     const current=++generation;attempt++;
     try{
-     if(getScope()!==scope)throw new Error('Authenticated session changed.');
-     const ticket=await requestTicket(record.payload.account_login);if(done||generation!==current)return;
-     if(getScope()!==scope)throw new Error('Authenticated session changed.');
-     socket=createSocket(buildUrl(ticket));const ws=socket;
-     ws.onopen=()=>{if(done||generation!==current)return;if(getScope()!==scope){finish(unknown());return;}try{
+     if(getScope()!==scope||getTransportScope()!==transportScope)throw new Error('Authenticated session or transport changed.');
+     const lease=await acquire(scope,transportScope,record.payload.account_login,{signal:acquireAbort.signal});if(done||generation!==current){lease.socket.close();return;}
+     if(getScope()!==scope||getTransportScope()!==transportScope){lease.socket.close();throw new Error('Authenticated session or transport changed.');}
+     socket=lease.socket;const ws=socket;let openHandled=false;
+   ws.onopen=()=>{if(openHandled||done||generation!==current)return;openHandled=true;if(getScope()!==scope||getTransportScope()!==transportScope){finish(unknown());return;}try{
       requestID=tradeUUID();const recover=statusOnly||record.sent;
       if(!recover){record.sent=true;memory.set(key,record);persist(record.durable===true);}
       ws.send(JSON.stringify(recover?{action:'get_order_status',request_id:requestID,client_order_id:record.id,account_login:record.payload.account_login}:{action:record.action,request_id:requestID,client_order_id:record.id,...record.payload}));
      }catch(e){finish(unknown(e));}};
      ws.onmessage=event=>{
-      if(done||generation!==current||getScope()!==scope){if(!done)finish(unknown());return;}
+      if(done||generation!==current||getScope()!==scope||getTransportScope()!==transportScope){if(!done)finish(unknown());return;}
       let message;try{message=JSON.parse(event.data);}catch{return;}
       if(message.request_id!==requestID||message.client_order_id!==record.id)return;
       if([message.account_login,message.data?.account_login].some(value=>value!==undefined&&String(value)!==String(record.payload.account_login)))return;
@@ -87,14 +181,18 @@ export function createManagerTradeSocket({requestTicket,buildUrl,getScope,storag
        const readback=protection||(record.action==='modify_pending_order'&&record.payload.expected_version)?{awaiting_readback:true,checkStatus:()=>run(record,key,true)}:{};
        finish(null,{...data,success:true,ok:true,status:message.status,client_order_id:record.id,account_login:record.payload.account_login,...readback},true);return;
       }
-      const terminalExpiredClose=close&&type==='position_close_rejected'&&message.status==='expired'&&message.error?.code==='ORDER_EXPIRED';
-      if(type===rejected&&['rejected','expired'].includes(message.status)&&(message.error?.retryable!==true||terminalExpiredClose)){
+      // Matching rejection events carry a durable terminal status. A retryable
+      // error describes future requests; it cannot make this command nonterminal.
+      // Pre-admission order_error and unknown status still use read-only recovery.
+      if(type===rejected&&['rejected','expired'].includes(message.status)){
        finish(Object.assign(new Error(message.error?.message||'Trade command rejected.'),{code:message.error?.code,client_order_id:record.id,account_login:record.payload.account_login,commandStatus:message.status}),null,true);return;
       }
       if(['order_error','order_status_error','error'].includes(type)||message.status==='accepted'||message.status==='processing')schedule();
      };
      ws.onerror=()=>ws.close();
      ws.onclose=()=>{if(done||generation!==current)return;clearTimeout(poll);if(attempt<3)connect();else finish(unknown());};
+     // A physical open between acquire's snapshot and handler attachment is still actionable.
+     if(ws.readyState===1)ws.onopen();
     }catch(e){if(done||generation!==current)return;finish(statusOnly||record.sent?unknown(e):Object.assign(e,{client_order_id:record.id,orderWasSent:false}),null,!(statusOnly||record.sent));}
    };
    timer=setTimeout(()=>finish(unknown()),deadlineMs);connect();
@@ -205,7 +303,7 @@ export function createManagerTradeSocket({requestTicket,buildUrl,getScope,storag
    ||record.signature!==JSON.stringify({action:record.action,payload:normalize(record.action,record.payload)}))throw new Error('Original pending command identity is invalid.');
   return {record,key};
  };
- return {listDemoCloses:account=>savedDemoCloses(account).map(({record})=>({...record.payload,client_order_id:record.id})),
+ return {warmup,listDemoCloses:account=>savedDemoCloses(account).map(({record})=>({...record.payload,client_order_id:record.id})),
  closeDemo:input=>{for(const saved of savedDemoCloses(input.account_login))if(!active.has(saved.key))memory.set(saved.key,saved.record);return submit('close_position',input,true,true);},
  recoverDemoClose:(account,id)=>{const saved=savedDemoCloses(account).find(({record})=>record.id===id);if(!saved)throw new Error('Original demo close identity is required for recovery.');memory.set(saved.key,saved.record);return run(saved.record,saved.key,true);},
  listDemos:account=>savedDemos(account).map(({record})=>({...record.payload,lp_demo_test:copyLPDemoMarker(record.payload.lp_demo_test),client_order_id:record.id})),

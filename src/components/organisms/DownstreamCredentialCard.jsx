@@ -36,7 +36,7 @@ export default function DownstreamCredentialCard({role, grant, profile, profileE
           <dt>TargetCompID</dt><dd>{profile.target_comp_id}</dd>
         </dl>
       ) : (
-        <p>Connection profile unavailable{profile?.status ? ` (${profile.status})` : ''}.</p>
+        <p>Connection profile unavailable{profile?.status ? ` (${profile.status})` : ''}. A credential can be issued, but the receiving broker cannot connect until the downstream FIX listener publishes this role's endpoint.</p>
       )}
       <div className="lp-downstream-actions">
         {!active && <button type="button" disabled={busy || !hasOperations} onClick={() => onAction(role, 'issue')}>Issue {role} credential</button>}

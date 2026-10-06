@@ -1,7 +1,8 @@
-import React, { useId, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { AlertCircle, ChevronDown, LoaderCircle, ShieldCheck, X } from 'lucide-react';
 import './CreateGroupPopup.css';
+import { subgroupCreatePayload } from '../../utils/groupAuthority.js';
 import { ManagerService } from '../../services/manager.service';
 import { buildGroupRiskPayload, parseCsvList } from '../../utils/adminValidation';
 import { validateGroupForm, validateGroupSection } from '../../utils/groupFormSteps';
@@ -54,6 +55,7 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
     }
     return {
       name: '',
+      groupPurpose: 'customer',
       description: '',
       accountType: 'standard',
       bookType: 'b',
@@ -78,6 +80,15 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
     };
   });
   
+  const [parentGroup, setParentGroup] = useState(draftData?.parentGroup || initialData?.parentGroup || '');
+  const [parentLoading, setParentLoading] = useState(false);
+  const changedFields = useRef(new Set());
+  useEffect(() => {
+    if (initialData || !parentGroup.trim()) return;
+    let disposed = false; setParentLoading(true);
+    ManagerService.getGroup(parentGroup.trim()).then(fresh => { if (!disposed) setFormData(current => ({ ...current, ...Object.fromEntries(Object.entries(fresh).filter(([key]) => key !== 'name' && key !== 'parentGroup' && key !== 'overriddenFields' && !changedFields.current.has(key))), ...(changedFields.current.has('symbolsAllowed') ? {} : { symbolsAllowed: Array.isArray(fresh.symbolsAllowed) ? fresh.symbolsAllowed.join(', ') : fresh.symbolsAllowed || '' }), ...(changedFields.current.has('symbolsBlocked') ? {} : { symbolsBlocked: Array.isArray(fresh.symbolsBlocked) ? fresh.symbolsBlocked.join(', ') : fresh.symbolsBlocked || '' }) })); }).catch(e => { if (!disposed) setError(e.message); }).finally(() => { if (!disposed) setParentLoading(false); });
+    return () => { disposed = true; };
+  }, [parentGroup, initialData]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [errorField, setErrorField] = useState(null);
@@ -116,14 +127,15 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
   };
 
   const handleSubmit = async () => {
-    if (isLoading || !isLastStep || furthestStep < FORM_SECTIONS.length - 1) return;
+    if (isLoading || parentLoading || !isLastStep || furthestStep < FORM_SECTIONS.length - 1) return;
     const validation = validateGroupForm(formData);
     if (validation) { showValidation(validation); return; }
 
     setIsLoading(true);
     setError(null);
     try {
-      const payload = buildGroupRiskPayload({ ...formData, name: formData.name.trim(), currency: formData.currency.trim() });
+      const validated = buildGroupRiskPayload({ ...formData, name: formData.name.trim(), currency: formData.currency.trim() });
+      const payload = initialData ? validated : subgroupCreatePayload(validated, parentGroup.trim(), [...changedFields.current]);
 
       if (initialData) {
         await ManagerService.updateGroup(payload);
@@ -143,6 +155,7 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    changedFields.current.add(name);
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
@@ -191,6 +204,10 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
               <section className="group-create-section" data-section="details" data-active={activeSection === 'details'} aria-labelledby="group-details-title">
                 <header><h2 id="group-details-title">General settings</h2><p>Define the group identity and base account currency.</p></header>
                 <div className="group-create-grid">
+                  {!initialData && <>
+                    <GroupField label="Parent group" hint="Parent settings stay current until overridden."><input aria-label="New group parent" value={parentGroup} disabled={isLoading} onChange={event => setParentGroup(event.target.value)} placeholder="No parent" /></GroupField>
+                    <GroupField label="Purpose for new accounts">{select('groupPurpose', [['customer', 'Customer'], ['coverage', 'Coverage']])}</GroupField>
+                  </>}
                   <GroupField label="Group name *" hint="Use a clear name, such as Broker/real-standard." className="group-create-field-wide">{input('name', 'text', { required: true, autoComplete: 'off', placeholder: 'Broker/real-standard' })}</GroupField>
                   <GroupField label="Description (optional)" className="group-create-field-wide">{input('description', 'text', { placeholder: 'Add a short description' })}</GroupField>
                   <GroupField label="Currency *">{input('currency', 'text', { required: true, placeholder: 'USD', className: 'group-create-mono' })}</GroupField>

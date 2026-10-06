@@ -15,14 +15,21 @@ export const newExecutionSettings = () => ({default_policy:'FOK',markup_points:'
 export const newRoutingRule = () => ({id:'',version:'0',enabled:false,connection_id:'',scope:{groups:{include:[],exclude:[]},accounts:{include:[],exclude:[]},symbols:{include:[],exclude:[]},min_lots:'0',max_lots:''},policy:{mode:'volume',volume_percent:'0'},execution:newExecutionSettings()});
 const identity = role => ({connection_id:'',provider:'',environment:'',upstream_account:'',symbol:'',provider_symbol_id:'',symbol_mapping_version:'',pairing_id:'',role,verified:false});
 export const newRoutingEvidence = () => ({verified_at:'',valid_until:'',connection_id:'',connection_revision:'',symbol:'',feed_id:'',revision:'0',source:'',evidence_id:'',capability_evidence_id:'',account_mode:'',effective_time_in_force:'',quote:identity('quote'),trade:identity('trade'),grid:{verified:false,evidence_id:'',min_lots:'',max_lots:'',step_lots:'',grid_origin_lots:'',units_per_lot:''}});
+export const hasAccountRoutingScope = value => Boolean(value?.scope?.accounts?.include?.length || value?.scope?.accounts?.exclude?.length);
+export function disableLegacyRulePayload(value) {
+ if (!idPattern.test(value?.id) || !revisionOK(value?.version) || value.version === '0' || value.enabled !== true || !hasAccountRoutingScope(value)) throw new Error('Reload an enabled saved legacy account-scoped rule before disabling it.');
+ return {expected_revision:value.version,rule:{...structuredClone(value),enabled:false}};
+}
 export function rulePayload(value) {
  if (!idPattern.test(value.id) || !revisionOK(value.version)) throw new Error('Enter a valid rule ID and revision.');
  const rule = structuredClone(value);
+ if (rule.scope.accounts?.include?.length || rule.scope.accounts?.exclude?.length) throw new Error('Account-specific routing is not supported. Convert this rule to group configuration through migration.');
  if(rule.execution){const e=rule.execution;if(!['FOK','IOC'].includes(e.default_policy)||!decimalOK(e.markup_points)||!decimalOK(e.max_adverse_gap_bps)||exactUnits(e.max_adverse_gap_bps)>10000n*10n**18n||!Number.isSafeInteger(e.dispatch_delay_ms)||e.dispatch_delay_ms<0||e.dispatch_delay_ms>60000||!Number.isSafeInteger(e.quote_max_age_ms)||e.quote_max_age_ms<1||e.quote_max_age_ms>60000)throw new Error('Execution settings require FOK/IOC, nonnegative exact markup, delay 0-60000 ms, quote age 1-60000 ms and adverse gap 0-10000 bps.');}
  for (const name of ['groups','accounts','symbols']) for (const kind of ['include','exclude']) {
-  const list = rule.scope[name][kind] || [];
+  const list = rule.scope[name]?.[kind] || [];
   if (list.some(item => !item || item.trim() !== item || item === '*')) throw new Error('Use explicit scope values. Empty includes mean all; do not enter an asterisk.');
  }
+ delete rule.scope.accounts;
  if (!decimalOK(rule.scope.min_lots) || (rule.scope.max_lots && (!decimalOK(rule.scope.max_lots) || exactUnits(rule.scope.max_lots) <= exactUnits(rule.scope.min_lots)))) throw new Error('Lot bounds must be exact nonnegative decimals; maximum must exceed minimum.');
  let external;
  if (rule.policy.mode === 'volume') {
@@ -89,6 +96,10 @@ export const routingErrorMessage = code => ({
  FORBIDDEN:'A broker administrator session for this tenant is required.',
  LP_CONFIGURATION_UNAVAILABLE:'Routing configuration is unavailable.',
  ROUTING_NOT_FOUND:'This saved configuration no longer exists.',
+ ROUTING_ARCHIVED:'This rule was removed from active configuration. Refresh the saved rules.',
+ ROUTING_DERIVED_RULE:'This rule is managed through its group configuration. Change the group route there.',
+ GROUP_CONFIGURATION_REQUIRED:'This rule is managed through group configuration. Update the group route there.',
+ ROUTING_ARCHIVE_UNAVAILABLE:'Rule removal is unavailable. The routing archive backend and schema must be ready before removing a saved rule.',
 }[code] || 'The routing request could not be completed.');
 export function createLPRoutingAPI(request = defaultRequest) {
  const call = async (path,method='GET',payload) => {
@@ -102,6 +113,8 @@ export function createLPRoutingAPI(request = defaultRequest) {
   rules:()=>call(base+'/rules'), evidence:()=>call(base+'/evidence'), connections:()=>call('/api/v1/manager/lp-connections'),
   nativeCloseRenewal:(connection,symbol)=>call(base+'/evidence/'+encodeURIComponent(connection)+'/'+encodeURIComponent(symbol)+'/native-close-renewals'),
   renewNativeClose:record=>{if(!revisionOK(record.renewal_revision)||!record.evidence?.native_close)throw new Error('Refresh the original native close evidence before renewal.');const payload=evidencePayload(record.evidence,{preserveCleanup:true,closeRenewal:true});payload.expected_revision=record.renewal_revision;return call(base+'/evidence/'+encodeURIComponent(record.evidence.connection_id)+'/'+encodeURIComponent(record.evidence.symbol)+'/native-close-renewals','POST',payload);},
+  disableLegacyRule:value=>{const payload=disableLegacyRulePayload(value);return call(base+'/rules/'+encodeURIComponent(value.id),'PUT',payload);},
+  archiveRule:async value=>{if(!idPattern.test(value?.id)||!revisionOK(value?.version)||value.version==='0'||value.id.startsWith('legacy-internal-'))throw new Error('Reload an ordinary saved routing rule before removing it.');const result=await call(base+'/rules/'+encodeURIComponent(value.id),'DELETE',{expected_revision:value.version});if(result?.rule_id!==value.id||result.archived!==true||!revisionOK(result.revision)||BigInt(result.revision)!==BigInt(value.version)+1n)throw new Error('The rule removal response changed. Refresh the saved rules before continuing.');return result;},
   saveRule:value=>{const payload=rulePayload(value);return call(base+'/rules'+(value.version==='0'?'':'/'+encodeURIComponent(value.id)),value.version==='0'?'POST':'PUT',payload);},
   saveEvidence:value=>{const payload=evidencePayload(value);return call(base+'/evidence'+(value.revision==='0'?'':'/'+encodeURIComponent(value.connection_id)+'/'+encodeURIComponent(value.symbol)),value.revision==='0'?'POST':'PUT',payload);}
  };

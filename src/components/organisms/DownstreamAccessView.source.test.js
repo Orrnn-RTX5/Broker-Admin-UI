@@ -69,3 +69,14 @@ test('profile endpoint fields render only for an available profile', () => {
   assert.match(card, /Connection profile unavailable/);
   assert.match(modal, /profile\?\.status === 'available'/);
 });
+
+test('server deployment status gates lists and changes, while an empty ready deployment has setup guidance', () => {
+  assert.match(view, /const deployment = await api\.status\(\);/);
+  assert.match(view, /if \(!deployment\.ready\) \{/);
+  assert.match(view, /availability === 'ready' && <>/);
+  assert.match(view, /disabled=\{busy \|\| availability !== 'ready'/);
+  assert.match(view, /No receiving brokers yet\. Create a counterparty to begin setup\./);
+  assert.match(view, /No access grants yet\. Create one for an active receiving broker and coverage account\./);
+  assert.match(view, /Missing migrations:/);
+  assert.match(view, /RTX5_C09_DOWNSTREAM_ADMIN_ENABLED=1/);
+});

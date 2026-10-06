@@ -4,8 +4,28 @@ import LPExactPendingModifyAdmissionPanel from './LPExactPendingModifyAdmissionP
 import LPNativePendingEnablementPanel from './LPNativePendingEnablementPanel.jsx';
 import BrokerCapabilitiesPanel from './BrokerCapabilitiesPanel.jsx';
 import PrivateFIXReadinessPanel from './PrivateFIXReadinessPanel.jsx';
-import React, { useEffect, useState } from 'react';
-import { AlertCircle, CheckCircle2, Loader2, Network, Save, Zap } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Activity,
+  AlertCircle,
+  Archive,
+  ArrowRight,
+  BookOpen,
+  CheckCircle2,
+  ChevronDown,
+  Eye,
+  EyeOff,
+  GitBranch,
+  ListChecks,
+  Loader2,
+  Plug,
+  RefreshCw,
+  Save,
+  Search,
+  ShieldCheck,
+  Zap,
+  X,
+} from 'lucide-react';
 import {
   gatewayApplyFeedConfig,
   gatewayGetFeedConfig,
@@ -15,7 +35,6 @@ import { buildFeedConfigPayload, normalizeFeedProvider } from '../../lib/feedCon
 import { useToast } from '../ui/useToast';
 import FixRelayConfigPanel from './FixRelayConfigPanel';
 import GatewaySymbolPicker from './GatewaySymbolPicker';
-import './GatewaysView.css';
 import NamedLPConnectionsPanel from './NamedLPConnectionsPanel';
 import NamedLPRoutingPanel from './NamedLPRoutingPanel';
 import LPFeedsPanel from './LPFeedsPanel';
@@ -23,6 +42,110 @@ import LPManagerPermissionsPanel from './LPManagerPermissionsPanel';
 import LPJournalPanel from './LPJournalPanel';
 import LPDemoMarketWorkspace from './LPDemoMarketWorkspace.jsx';
 import CalculationBaselineWorkspace from './CalculationBaselineWorkspace.jsx';
+import './gateways-view.css';
+
+// Keep every workspace mounted so navigation preserves unsaved form drafts.
+const GATEWAY_SECTIONS = [
+  {
+    id: 'connections',
+    label: 'Connections',
+    icon: Plug,
+    description: 'Add and manage the FIX sessions that link this broker to each liquidity provider.',
+  },
+  {
+    id: 'quotes',
+    label: 'Quotes',
+    icon: Activity,
+    description: 'Choose which connection supplies prices for each symbol and check that quotes are arriving.',
+  },
+  {
+    id: 'routing',
+    label: 'Routing & execution',
+    icon: GitBranch,
+    description: 'Decide where client orders are sent and how failed, recovered or pending orders are handled.',
+  },
+  {
+    id: 'journal',
+    label: 'Journal & exposure',
+    icon: BookOpen,
+    description: 'Review what was sent to each provider, track exposure, place demo orders and manage calculation baselines.',
+  },
+  {
+    id: 'permissions',
+    label: 'Permissions',
+    icon: ShieldCheck,
+    description: 'Control which managers can view or change liquidity-provider settings.',
+  },
+  {
+    id: 'readiness',
+    label: 'Readiness',
+    icon: ListChecks,
+    description: 'Check which gateway features are switched on and whether each one is ready to use.',
+  },
+  {
+    id: 'legacy',
+    label: 'Legacy price feed',
+    icon: Archive,
+    tag: 'Legacy',
+    description: 'The older single-LP market-data feed. Kept for existing setups; new providers belong under Connections.',
+  },
+];
+
+const sectionDomId = (id) => `gw-section-${id}`;
+
+const GatewaySection = ({ section, active, children }) => {
+  const Icon = section.icon;
+  const headingId = `${sectionDomId(section.id)}-title`;
+  return (
+    <div id={sectionDomId(section.id)} data-gw-section={section.id} role="region" aria-labelledby={headingId} className="gw-section" hidden={!active}>
+      <div className="gw-section-head">
+        <span className="gw-section-icon" aria-hidden="true"><Icon size={15} /></span>
+        <div className="min-w-0">
+          <h2 id={headingId} tabIndex={-1} className="gw-section-title">{section.label}</h2>
+          <p className="gw-section-desc">{section.description}</p>
+        </div>
+        {section.tag && <span className="gw-section-tag">{section.tag}</span>}
+      </div>
+      <div className="gw-section-body">{children}</div>
+    </div>
+  );
+};
+
+const SECTION_BY_ID = Object.fromEntries(GATEWAY_SECTIONS.map((section) => [section.id, section]));
+
+const SETUP_STEPS = [
+  { id: 'connections', title: 'Connect a provider', description: 'Add your quote and trade sessions.' },
+  { id: 'quotes', title: 'Choose your prices', description: 'Check live quotes and assign a source.' },
+  { id: 'routing', title: 'Set up order routing', description: 'Choose where client orders go.' },
+];
+
+const GATEWAY_TOOLS = [
+  { section: 'connections', title: 'Provider connections', description: 'FIX sessions, credentials, connect and disconnect' },
+  { section: 'quotes', title: 'Price sources & quotes', description: 'Symbol mappings, live prices and feed health' },
+  { section: 'routing', title: 'Order routing', description: 'Execution routes, groups and symbol rules' },
+  { section: 'routing', id: 'cleanup', title: 'Rejected-order cleanup', description: 'Partial execution and cleanup limits' },
+  { section: 'routing', id: 'recovery', title: 'Recovery policies', description: 'Interrupted processing and FIX read limits' },
+  { section: 'routing', id: 'pending-modify', title: 'Pending-order changes', description: 'Admission settings for pending modifications' },
+  { section: 'routing', id: 'native-pending', title: 'Native pending orders', description: 'Provider pending orders and enablement' },
+  { section: 'journal', title: 'Journal & exposure', description: 'Provider requests, history, positions and exposure' },
+  { section: 'journal', id: 'demo', title: 'Demo order workspace', description: 'Demo market orders and execution' },
+  { section: 'journal', id: 'baselines', title: 'Calculation baselines', description: 'Broker calculation settings and revisions' },
+  { section: 'permissions', title: 'Manager permissions', description: 'Manager access, configuration and grants' },
+  { section: 'readiness', title: 'Gateway readiness', description: 'B-book private FIX session health and capabilities' },
+  ...(import.meta.env.VITE_FIX_RELAY_ENABLED === 'true' ? [{ section: 'readiness', id: 'relay', title: 'Superadmin FIX relay', description: 'Relay credentials, subscriptions and connection status' }] : []),
+  { section: 'legacy', title: 'Legacy price feed', description: 'Single provider, market data credentials and SSL' },
+];
+
+// Native disclosures keep form drafts mounted while reducing the initial page length.
+const GatewayDetails = ({ id, title, description, children }) => (
+  <details id={`gw-tool-${id}`} className="gw-details">
+    <summary>
+      <span><span className="gw-details-title">{title}</span><span className="gw-details-desc">{description}</span></span>
+      <ChevronDown size={16} aria-hidden="true" />
+    </summary>
+    <div className="gw-details-body">{children}</div>
+  </details>
+);
 
 const PROVIDER_OPTIONS = [
   { value: 'rtxmd', label: 'RTX Market Data FIX' },
@@ -71,17 +194,21 @@ const formFromSavedConfig = (config) => {
   };
 };
 
-const Field = ({ label, required, children }) => (
-  <label className="gateways-field">
-    <span className="gateways-field-label">
-      {label}{required && <span className="gateways-required">*</span>}
-    </span>
+const Field = ({ label, required, hint, inputId, children }) => {
+  const Wrapper = inputId ? 'div' : 'label';
+  const Label = inputId ? 'label' : 'span';
+  return <Wrapper className="flex flex-col gap-1.5">
+    <Label htmlFor={inputId} className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--text-muted)]">
+      {label}{required && <span className="ml-0.5 text-red-400">*</span>}
+    </Label>
     {children}
-  </label>
-);
+    {hint && <span className="gw-field-hint">{hint}</span>}
+  </Wrapper>;
+};
 
-const Input = ({ type = 'text', value, onChange, placeholder, required, disabled }) => (
+const Input = ({ type = 'text', value, onChange, placeholder, required, disabled, ...props }) => (
   <input
+    {...props}
     type={type}
     className="ui-input ui-input-sm"
     value={value}
@@ -98,8 +225,17 @@ const Notice = ({ tone = 'info', children }) => {
   const isError = tone === 'error';
   return (
     <div
-      className={`gateways-notice gateways-notice--${isError ? 'error' : 'success'}`}
       role={isError ? 'alert' : 'status'}
+      className="flex items-start gap-2 rounded-lg px-3 py-2 text-xs"
+      style={{
+        background: isError
+          ? 'color-mix(in srgb, var(--danger-500) 10%, transparent)'
+          : 'color-mix(in srgb, var(--success-500) 10%, transparent)',
+        color: isError ? 'var(--danger-500)' : 'var(--success-500)',
+        border: `1px solid ${isError
+          ? 'color-mix(in srgb, var(--danger-500) 25%, transparent)'
+          : 'color-mix(in srgb, var(--success-500) 25%, transparent)'}`,
+      }}
     >
       {isError ? <AlertCircle size={14} /> : <CheckCircle2 size={14} />}
       <span>{children}</span>
@@ -110,35 +246,77 @@ const Notice = ({ tone = 'info', children }) => {
 const GatewaysView = () => {
   const { notify } = useToast();
   const [form, setForm] = useState(DEFAULT_FORM);
+  const [savedForm, setSavedForm] = useState(DEFAULT_FORM);
+  const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [applying, setApplying] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [configRefresh, setConfigRefresh] = useState(0);
   const [passwordSet, setPasswordSet] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  const disabled = saving || applying || loadingConfig;
+  const disabled = saving || applying || loadingConfig || Boolean(loadError);
+  const dirty = JSON.stringify(form) !== JSON.stringify(savedForm);
+
+  const scrollRef = useRef(null);
+  const legacyFormRef = useRef(null);
+  const searchRef = useRef(null);
+  const focusFrame = useRef(0);
+  const [activeSection, setActiveSection] = useState(GATEWAY_SECTIONS[0].id);
+  const [search, setSearch] = useState('');
+  const searchTerms = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const searchResults = searchTerms.length ? GATEWAY_TOOLS.filter((tool) => {
+    const text = `${tool.title} ${tool.description} ${SECTION_BY_ID[tool.section].label}`.toLowerCase();
+    return searchTerms.every((term) => text.includes(term));
+  }) : [];
+
+  useEffect(() => () => cancelAnimationFrame(focusFrame.current), []);
+
+  const jumpToSection = (id, toolId) => (event) => {
+    event.preventDefault();
+    setActiveSection(id);
+    setSearch('');
+    setShowPassword(false);
+    cancelAnimationFrame(focusFrame.current);
+    focusFrame.current = requestAnimationFrame(() => {
+      const root = scrollRef.current;
+      const node = root?.querySelector(`#${sectionDomId(id)}`);
+      if (!node) return;
+      const tool = toolId ? node.querySelector(`#gw-tool-${toolId}`) : null;
+      if (tool) tool.open = true;
+      const target = tool || node;
+      const top = root.scrollTop + target.getBoundingClientRect().top - root.getBoundingClientRect().top - 16;
+      root.scrollTo({ top: Math.max(0, top), behavior: 'instant' });
+      (tool?.querySelector('summary') || node.querySelector('.gw-section-title'))?.focus({ preventScroll: true });
+    });
+  };
 
   useEffect(() => {
     let mounted = true;
     setLoadingConfig(true);
+    setLoadError('');
+    setError('');
     gatewayGetFeedConfig()
       .then((config) => {
         if (!mounted) return;
-        setForm(formFromSavedConfig(config));
+        const loaded = formFromSavedConfig(config);
+        setForm(loaded);
+        setSavedForm(loaded);
         setPasswordSet(Boolean(config?.password_set));
       })
       .catch((err) => {
         if (!mounted) return;
         const message = err.message || 'Failed to load saved LP credentials.';
-        setError(message);
+        setLoadError(message);
       })
       .finally(() => {
         if (mounted) setLoadingConfig(false);
       });
 
     return () => { mounted = false; };
-  }, []);
+  }, [configRefresh]);
 
   const setField = (key) => (event) => {
     const { checked, type, value } = event.target;
@@ -175,23 +353,34 @@ const GatewaysView = () => {
       return 'Port must be a whole number.';
     }
 
-    if (form.port && Number(form.port) <= 0) {
-      return 'Port must be greater than zero.';
+    if (form.port && (Number(form.port) <= 0 || Number(form.port) > 65535)) {
+      return 'Port must be between 1 and 65535.';
+    }
+
+    if (form.enabled && !form.all_symbols && !form.symbols.trim()) {
+      return 'Enter at least one symbol, or turn on “Subscribe to all symbols”.';
     }
 
     return '';
   };
 
-  const saveCurrentCredentials = async ({ announce = true } = {}) => {
+  const validateBeforeSave = () => {
     const validationError = validateForm();
     if (validationError) {
       setError(validationError);
-      return null;
+      const inputs = Array.from(legacyFormRef.current?.querySelectorAll('input[required], input[type="number"]') || []);
+      inputs.find((input) => !input.disabled && (!input.validity.valid || (input.required && !input.value.trim())))?.focus();
+      return false;
     }
+    return true;
+  };
 
+  const saveCurrentCredentials = async ({ announce = true } = {}) => {
     const payload = buildFeedConfigPayload(form);
     await gatewaySaveFeedConfig(payload);
-    setForm((current) => ({ ...current, password: '' }));
+    const saved = { ...form, password: '' };
+    setForm(saved);
+    setSavedForm(saved);
     setPasswordSet(Boolean(payload.password || passwordSet));
     if (announce) {
       setNotice(`${providerLabel(payload.feed_provider)} LP credentials saved.`);
@@ -202,8 +391,10 @@ const GatewaysView = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (disabled) return;
     setError('');
     setNotice('');
+    if (!validateBeforeSave()) return;
     setSaving(true);
     try {
       await saveCurrentCredentials();
@@ -217,19 +408,25 @@ const GatewaysView = () => {
   };
 
   const handleApply = async () => {
+    if (disabled) return;
     setError('');
     setNotice('');
+    if (!validateBeforeSave()) return;
     setApplying(true);
+    let credentialsSaved = false;
 
     try {
       const payload = await saveCurrentCredentials({ announce: false });
-      if (!payload) return;
+      credentialsSaved = true;
+      setNotice('Settings saved. Activating the feed…');
       const result = await gatewayApplyFeedConfig();
       const activeProvider = result?.feed_provider || result?.provider || form.feed_provider;
       setNotice(`${providerLabel(payload.feed_provider)} LP credentials saved and applied.`);
       notify({ title: 'LP credentials applied', description: providerLabel(activeProvider), tone: 'success' });
     } catch (err) {
-      const message = err.message || 'Failed to apply LP credentials.';
+      const detail = err.message || 'Failed to apply LP credentials.';
+      const message = credentialsSaved ? `Settings were saved, but the feed could not be activated. ${detail}` : detail;
+      setNotice('');
       setError(message);
       notify({ title: 'Apply failed', description: message, tone: 'danger' });
     } finally {
@@ -238,148 +435,247 @@ const GatewaysView = () => {
   };
 
   return (
-    <div className="gateways-view">
-      <header className="gateways-header">
-        <div className="gateways-heading">
-          <Network size={15} aria-hidden="true" />
-          <h1>Gateways</h1>
-          <span className="gateways-header-description">Liquidity provider configuration</span>
+    <div
+      ref={scrollRef}
+      className="gw-view flex-1 min-h-0 bg-[color:var(--bg-app)] overflow-y-auto overflow-x-hidden text-[color:var(--text-primary)]"
+    >
+      <header className="gw-header">
+        <div className="gw-shell">
+          <div className="gw-heading"><span className="gw-heading-icon" aria-hidden="true"><Plug size={22} /></span><div>
+          <h1 className="gw-title">Gateways</h1>
+          <p className="gw-subtitle">
+            Connect liquidity providers, choose where prices come from, and control how orders are routed.
+          </p>
+          </div></div>
+          <div className="gw-setup" role="group" aria-label="Gateway setup shortcuts">
+            <div className="gw-setup-label">Setting up a gateway?<span>Start with these three steps.</span></div>
+            <ol className="gw-setup-list">
+              {SETUP_STEPS.map((step, index) => (
+                <li key={step.id}>
+                  <a href={`#${sectionDomId(step.id)}`} onClick={jumpToSection(step.id)} className="gw-setup-link">
+                    <span className="gw-step-number" aria-hidden="true">{index + 1}</span>
+                    <span><strong>{step.title}</strong><span>{step.description}</span></span>
+                    <ArrowRight size={15} aria-hidden="true" />
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
-        <span className="gateways-provider-badge">{providerLabel(form.feed_provider)}</span>
       </header>
 
-      <div className="gateways-content">
-        <NamedLPConnectionsPanel />
-        <LPFeedsPanel />
-        <LPDemoMarketWorkspace />
-        <CalculationBaselineWorkspace />
-        <LPJournalPanel />
-        <NamedLPRoutingPanel /><LPCleanupPolicyPanel /><LPRecoveryPolicyPanel /><LPExactPendingModifyAdmissionPanel /><LPNativePendingEnablementPanel />
-        <LPManagerPermissionsPanel />
-        <PrivateFIXReadinessPanel /><BrokerCapabilitiesPanel />
-        {import.meta.env.VITE_FIX_RELAY_ENABLED === 'true' && <FixRelayConfigPanel />}
-        <form
-          onSubmit={handleSubmit}
-          className="gateways-form"
-          aria-labelledby="gateways-credentials-title"
-          aria-busy={disabled}
-        >
-          <div className="gateways-form-heading">
-            <div>
-              <h2 id="gateways-credentials-title">LP credentials</h2>
-              <p>Configure the FIX connection used for upstream market data.</p>
+      <div className="gw-shell gw-workspace">
+      <aside className="gw-sidebar">
+        <div className="gw-search">
+          <label htmlFor="gw-search">Find a gateway tool</label>
+          <div className="gw-search-input">
+            <Search size={16} aria-hidden="true" />
+            <input ref={searchRef} id="gw-search" type="search" placeholder="Search tools…" value={search} onChange={(event) => setSearch(event.target.value)} autoComplete="off" aria-describedby={searchTerms.length ? 'gw-search-count' : undefined} />
+            {search && <button type="button" aria-label="Clear tool search" onClick={() => { setSearch(''); searchRef.current?.focus(); }}><X size={14} /></button>}
+          </div>
+        </div>
+        {searchTerms.length > 0 && <div className="gw-search-results">
+          <p id="gw-search-count" role="status">{searchResults.length ? `${searchResults.length} tool${searchResults.length === 1 ? '' : 's'} found` : 'No tools found. Try “quotes”, “routing” or “permissions”.'}</p>
+          <ul>{searchResults.map((tool) => <li key={tool.id || tool.section}>
+            <a href={`#${tool.id ? `gw-tool-${tool.id}` : sectionDomId(tool.section)}`} onClick={jumpToSection(tool.section, tool.id)}>
+              <strong>{tool.title}</strong><span>{SECTION_BY_ID[tool.section].label}</span>
+            </a>
+          </li>)}</ul>
+        </div>}
+        <nav className="gw-nav" aria-label="Gateway sections">
+          <p className="gw-nav-label">Workspace</p>
+          <ul className="gw-nav-list">
+            {GATEWAY_SECTIONS.map((section) => {
+              const Icon = section.icon;
+              const active = activeSection === section.id;
+              return (
+                <li key={section.id}>
+                  <a
+                    href={`#${sectionDomId(section.id)}`}
+                    data-gw-target={section.id}
+                    className="gw-nav-btn"
+                    aria-current={active ? 'location' : undefined}
+                    onClick={jumpToSection(section.id)}
+                  >
+                    <Icon size={17} aria-hidden="true" />
+                    <span>{section.label}</span>
+                    {section.id === 'legacy' && dirty && <span className="gw-draft-dot" aria-label="Unsaved changes" />}
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+        <p className="gw-sidebar-help">Switch sections freely. Your form drafts stay here until you save them or leave Gateways.</p>
+      </aside>
+
+      <div className="gw-body">
+        <GatewaySection section={SECTION_BY_ID.connections} active={activeSection === 'connections'}>
+          <NamedLPConnectionsPanel />
+        </GatewaySection>
+
+        <GatewaySection section={SECTION_BY_ID.quotes} active={activeSection === 'quotes'}>
+          <LPFeedsPanel />
+        </GatewaySection>
+
+        <GatewaySection section={SECTION_BY_ID.routing} active={activeSection === 'routing'}>
+          <NamedLPRoutingPanel />
+          <div className="gw-tools-label">Advanced execution settings</div>
+          <GatewayDetails id="cleanup" title="Rejected-order cleanup" description="Set limits for cleaning up partial execution of rejected orders.">
+            <LPCleanupPolicyPanel />
+          </GatewayDetails>
+          <GatewayDetails id="recovery" title="Recovery policies" description="Configure how interrupted order processing can recover.">
+            <LPRecoveryPolicyPanel />
+          </GatewayDetails>
+          <GatewayDetails id="pending-modify" title="Pending-order changes" description="Review admission settings for exact pending-order modifications.">
+            <LPExactPendingModifyAdmissionPanel />
+          </GatewayDetails>
+          <GatewayDetails id="native-pending" title="Native pending orders" description="Review provider-side pending-order enablement and readiness.">
+            <LPNativePendingEnablementPanel />
+          </GatewayDetails>
+        </GatewaySection>
+
+        <GatewaySection section={SECTION_BY_ID.journal} active={activeSection === 'journal'}>
+          <LPJournalPanel />
+          <GatewayDetails id="demo" title="Demo order workspace" description="Inspect demo execution and place demo market orders.">
+            <LPDemoMarketWorkspace />
+          </GatewayDetails>
+          <GatewayDetails id="baselines" title="Calculation baselines" description="Review and manage the calculation baseline used by the broker.">
+            <CalculationBaselineWorkspace />
+          </GatewayDetails>
+        </GatewaySection>
+
+        <GatewaySection section={SECTION_BY_ID.permissions} active={activeSection === 'permissions'}>
+          <LPManagerPermissionsPanel />
+        </GatewaySection>
+
+        <GatewaySection section={SECTION_BY_ID.readiness} active={activeSection === 'readiness'}>
+          <PrivateFIXReadinessPanel /><BrokerCapabilitiesPanel />
+          {import.meta.env.VITE_FIX_RELAY_ENABLED === 'true' && <GatewayDetails id="relay" title="Superadmin FIX relay" description="Configure the separate FIX relay and inspect its connection status."><FixRelayConfigPanel /></GatewayDetails>}
+        </GatewaySection>
+
+        <GatewaySection section={SECTION_BY_ID.legacy} active={activeSection === 'legacy'}>
+          <form
+            ref={legacyFormRef}
+            noValidate
+            onSubmit={handleSubmit}
+            className="gw-legacy-form flex w-full flex-col gap-4 rounded-lg border p-4"
+            style={{ borderColor: 'var(--border)', background: 'var(--bg-surface-2, var(--surface))' }}
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b pb-3" style={{ borderColor: 'var(--border-3)' }}>
+              <div>
+                <div className="text-sm font-semibold text-[color:var(--text-primary)]">Legacy feed settings</div>
+                <div className="mt-1 text-[12px] text-[color:var(--text-muted)]">
+                  Save the FIX quote-session credentials that the broker backend should use for upstream market data.
+                </div>
+              </div>
+              <div
+                className="rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wide"
+                style={{ background: 'rgba(96,165,250,0.12)', color: '#ffffff', border: '1px solid rgba(96,165,250,0.25)' }}
+              >
+                {providerLabel(form.feed_provider)}
+              </div>
             </div>
-            <span className="gateways-config-state">
-              {loadingConfig ? <><Loader2 size={12} className="animate-spin" /> Loading configuration</> : 'FIX quote session'}
-            </span>
-          </div>
 
-          <Notice tone="error">{error}</Notice>
-          <Notice>{notice}</Notice>
+            <Notice tone="error">{error}</Notice>
+            <Notice>{notice}</Notice>
+            {!loadingConfig && !loadError && <p className={`gw-draft-status${dirty ? ' is-dirty' : ''}`} role="status">{dirty ? 'You have unsaved feed settings.' : 'Showing saved feed settings.'}</p>}
+            {loadingConfig && <p className="gw-loading" role="status"><Loader2 size={15} className="animate-spin" /> Loading saved feed settings…</p>}
+            {loadError && <div className="gw-load-error"><Notice tone="error">{loadError}</Notice><button type="button" className="ui-btn ui-btn-secondary" onClick={() => setConfigRefresh((value) => value + 1)}><RefreshCw size={14} /> Retry loading settings</button></div>}
 
-          <div className="gateways-grid gateways-options">
-            <Field label="Provider">
-              <select className="ui-select ui-input-sm" value={form.feed_provider} onChange={setField('feed_provider')} disabled={disabled}>
-                {PROVIDER_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </Field>
+            <fieldset className="gw-form-group">
+              <legend>Feed & security</legend>
+              <div className="gw-form-grid">
+              <Field label="Provider">
+                <select className="ui-select ui-input-sm" value={form.feed_provider} onChange={setField('feed_provider')} disabled={disabled}>
+                  {PROVIDER_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </Field>
 
-            <Field label="Enabled">
-              <span className="gateways-toggle">
-                <input type="checkbox" checked={form.enabled} onChange={setField('enabled')} disabled={disabled} />
-                <span>Enable LP credentials</span>
-              </span>
-            </Field>
+                <label className="gw-toggle">
+                  <input type="checkbox" checked={form.enabled} onChange={setField('enabled')} disabled={disabled} className="accent-blue-500" />
+                  Enable this feed
+                </label>
 
-            <Field label="Transport security">
-              <span className="gateways-toggle">
-                <input type="checkbox" checked={form.use_ssl} onChange={setField('use_ssl')} disabled={disabled} />
-                <span>Use SSL / TLS</span>
-              </span>
-            </Field>
-          </div>
+                <label className="gw-toggle">
+                  <input type="checkbox" checked={form.use_ssl} onChange={setField('use_ssl')} disabled={disabled} className="accent-blue-500" />
+                  Use a secure connection (SSL / TLS)
+                </label>
+              </div>
+            </fieldset>
+            <fieldset className="gw-form-group">
+              <legend>Connection credentials</legend>
+              <p className="gw-field-hint">Use the quote-session details supplied by your liquidity provider. Fields marked * are required when the feed is enabled.</p>
+              <div className="gw-form-grid">
 
-          <section className="gateways-section" aria-labelledby="gateways-connection-title">
-            <h3 id="gateways-connection-title">Connection & authentication</h3>
-            <div className="gateways-grid">
               <Field label="Host" required={form.enabled}>
-                <Input value={form.host} onChange={setField('host')} placeholder="LP hostname or IP address" disabled={disabled} />
+                <Input required={form.enabled} value={form.host} onChange={setField('host')} placeholder="Enter LP host" disabled={disabled} />
               </Field>
 
               <Field label="Port" required={form.enabled}>
-                <Input type="number" value={form.port} onChange={setField('port')} placeholder="LP connection port" disabled={disabled} />
+                <Input required={form.enabled} type="number" min={1} max={65535} step={1} value={form.port} onChange={setField('port')} placeholder="Enter LP port" disabled={disabled} />
               </Field>
 
               <Field label="Sender CompID" required={form.enabled}>
-                <Input value={form.sender_comp_id} onChange={setField('sender_comp_id')} placeholder="Enter sender CompID" disabled={disabled} />
+                <Input required={form.enabled} value={form.sender_comp_id} onChange={setField('sender_comp_id')} placeholder="Enter sender CompID" disabled={disabled} />
               </Field>
 
               <Field label="Target CompID" required={form.enabled}>
-                <Input value={form.target_comp_id} onChange={setField('target_comp_id')} placeholder="Enter target CompID" disabled={disabled} />
+                <Input required={form.enabled} value={form.target_comp_id} onChange={setField('target_comp_id')} placeholder="Enter target CompID" disabled={disabled} />
               </Field>
 
               <Field label="Username" required={form.enabled}>
-                <Input value={form.username} onChange={setField('username')} placeholder="Enter LP username" disabled={disabled} />
+                <Input required={form.enabled} value={form.username} onChange={setField('username')} placeholder="Enter LP username" disabled={disabled} />
               </Field>
 
-              <Field label="Password" required={form.enabled && !passwordSet}>
-                <Input
-                  type="password"
+              <Field label="Password" inputId="gw-feed-password" required={form.enabled && !passwordSet} hint={passwordSet ? 'A password is saved. Leave this blank to keep it.' : 'Enter the password supplied by your provider.'}>
+                <span className="gw-password-input"><Input
+                  id="gw-feed-password"
+                  type={showPassword ? 'text' : 'password'}
+                  required={form.enabled && !passwordSet}
                   value={form.password}
                   onChange={setField('password')}
-                  placeholder={passwordSet ? 'Leave blank to keep saved password' : 'Enter LP password'}
+                  placeholder={passwordSet ? 'Keep saved password' : 'Enter LP password'}
+                  autoComplete="new-password"
                   disabled={disabled}
-                />
+                /><button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} disabled={disabled} onClick={() => setShowPassword((value) => !value)}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></span>
               </Field>
-            </div>
-          </section>
-
-          <section className="gateways-section" aria-labelledby="gateways-symbols-title">
-            <h3 id="gateways-symbols-title">Symbol subscription</h3>
-            <div className="gateways-grid">
-              <Field label="Symbols mode">
-                <span className="gateways-toggle">
-                  <input type="checkbox" checked={form.all_symbols} onChange={setField('all_symbols')} disabled={disabled} />
-                  <span>Subscribe to all symbols</span>
-                </span>
-              </Field>
-
-              <div className="gateways-field">
-                <span className="gateways-field-label">Symbols</span>
-                <GatewaySymbolPicker
-                  value={form.symbols}
-                  onChange={(symbols) => {
-                    setForm((current) => ({ ...current, symbols }));
-                    setError('');
-                    setNotice('');
-                  }}
-                  allSymbols={form.all_symbols}
-                  disabled={disabled || form.all_symbols}
-                />
               </div>
+            </fieldset>
+            <fieldset className="gw-form-group">
+              <legend>Symbols</legend>
+              <div className="gw-form-grid">
 
-              <Field label="Catalog file">
+                <label className="gw-toggle">
+                  <input type="checkbox" checked={form.all_symbols} onChange={setField('all_symbols')} disabled={disabled} className="accent-blue-500" />
+                  Subscribe to all symbols
+                </label>
+
+              <Field label="Selected symbols" hint="Turn off “all symbols” to enter a comma-separated list.">
+                <GatewaySymbolPicker value={form.symbols} onChange={(symbols) => setForm((current) => ({ ...current, symbols }))} disabled={disabled || form.all_symbols} allSymbols={form.all_symbols} />
+              </Field>
+
+              <Field label="Catalog file (optional)">
                 <Input value={form.catalog_file} onChange={setField('catalog_file')} placeholder="Optional catalog file path" disabled={disabled} />
               </Field>
-            </div>
-          </section>
+              </div>
+            </fieldset>
 
-          <footer className="gateways-form-footer">
-            <span className="gateways-form-help">
-              {passwordSet ? 'Saved password is retained when left blank.' : 'Required fields are marked with *.'}
-            </span>
-            <div className="gateways-actions">
+            <div className="gw-save-help"><strong>Save</strong> stores these settings. <strong>Save & Apply</strong> also activates them on the running feed.</div>
+            <div className="gw-form-actions">
+              <button type="button" disabled={disabled || !dirty} className="ui-btn ui-btn-secondary" onClick={() => { setForm(savedForm); setShowPassword(false); setError(''); setNotice('Draft discarded. Showing saved feed settings.'); }}>Discard changes</button>
               <button type="button" onClick={handleApply} disabled={disabled} className="ui-btn ui-btn-secondary ui-btn-sm gap-1.5">
                 {applying ? <><Loader2 size={12} className="animate-spin" /> Applying</> : <><Zap size={12} /> Save & Apply</>}
               </button>
               <button type="submit" disabled={disabled} className="ui-btn ui-btn-primary ui-btn-sm gap-1.5">
-                {saving || loadingConfig ? <><Loader2 size={12} className="animate-spin" /> {loadingConfig ? 'Loading' : 'Saving'}</> : <><Save size={12} /> Save LP Credentials</>}
+                {saving || loadingConfig ? <><Loader2 size={12} className="animate-spin" /> {loadingConfig ? 'Loading' : 'Saving'}</> : <><Save size={12} /> Save settings</>}
               </button>
             </div>
-          </footer>
-        </form>
+          </form>
+        </GatewaySection>
+      </div>
       </div>
     </div>
   );

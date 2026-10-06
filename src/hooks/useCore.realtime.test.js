@@ -25,11 +25,12 @@ globalThis.__adminHookRuntime = runtime;
 // Replace only import boundaries; every hook/cache statement below them is the
 // production implementation, executed rather than inspected as text.
 const source = (await readFile(new URL('./useCore.js', import.meta.url), 'utf8'))
+  .replace('../utils/groupAccess.js', new URL('../utils/groupAccess.js', import.meta.url).href)
   .replace(/import \{[^}]+\} from 'react';/, 'const {useState,useRef,useCallback,useEffect}=globalThis.__adminHookRuntime;')
   .replace("import { useAuthStore } from '../store/authStore';", 'const useAuthStore=globalThis.__adminHookRuntime.auth;');
 const { useDataFetch } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
 const setSession = next => { auth = next; for (const listener of subscribers) listener(auth); };
-const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
+const deferred = () => { let resolve, reject; const promise = new Promise((done, fail) => { resolve = done; reject = fail; }); return { promise, resolve, reject }; };
 const settle = () => new Promise(resolve => setImmediate(resolve));
 let hosts, requests, counter = 0;
 const fetchData = () => { const pending = deferred(); requests.push(pending); return pending.promise; };
@@ -92,4 +93,34 @@ test('session switch discards both cached data and late prior-session responses'
   assert.equal(requests.length, 3, 'logout must clear cache even when the next token is identical');
   requests[2].resolve({ owner: 'signed-in-again' }); await settle();
   assert.deepEqual(signedInAgain.values[0], { owner: 'signed-in-again' });
+});
+
+test('scoped denial clears displayed and cached rows; retry cannot reuse the denied snapshot', async () => {
+ const host=mount();requests[0].resolve({rows:[{login:'1001',group:'old'}]});await settle();
+ assert.equal(host.values[0].rows[0].group,'old');
+ const denied=Object.assign(Error('scope denied'),{__rtx5SuppressLog:true});
+ const deniedRead=host.result.mutate(); requests[1].reject(denied); await deniedRead;
+ assert.equal(host.values[0],null); assert.equal(host.values[2],denied);
+ const retry=mount(); assert.equal(requests.length,3);
+ requests[2].resolve({rows:[{login:'1001',group:'new'}]});await settle();
+ assert.equal(retry.values[0].rows[0].group,'new');
+});
+
+test('group access changes invalidate reads even if the original access is restored', async () => {
+  const original = { ...auth, user: { group_access_mode: 'restricted', allowed_groups: ['old'] } };
+  setSession(original);
+  const prior = mount();
+  const priorRequest = requests[0];
+  setSession({ ...original, user: { group_access_mode: 'restricted', allowed_groups: ['new'] } });
+  assert.equal(prior.values[0], null);
+  setSession(original);
+  const restored = mount();
+  assert.equal(requests.length, 2);
+  requests[1].resolve({ rows: [{ group: 'current' }] }); await settle();
+  priorRequest.resolve({ rows: [{ group: 'stale' }] }); await settle();
+  assert.equal(prior.values[0], null);
+  assert.deepEqual(restored.values[0], { rows: [{ group: 'current' }] });
+  const cached = mount(); await settle();
+  assert.deepEqual(cached.values[0], { rows: [{ group: 'current' }] });
+  assert.equal(requests.length, 2);
 });

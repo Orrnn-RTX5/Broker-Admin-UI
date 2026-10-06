@@ -34,3 +34,10 @@ test('atomic apply refusal distinguishes retained settings from uncertain commit
   assert.match(connectionError({response:{data:{error_code:'CONFIGURATION_RUNTIME_UNAVAILABLE'}}}), /not saved.*unavailable/);
   assert.match(connectionError({response:{data:{error_code:'CONFIGURATION_COMMIT_UNCERTAIN'}}}), /uncertain.*Refresh/);
 });
+
+test('only confirmed authentication failures ask for sign-in', () => {
+  assert.match(connectionError({ response: { status: 403, data: { code: 'MT_RET_ERR_PERMISSIONS', message: 'Not authenticated' } } }), /Sign in again/);
+  assert.match(connectionError({ response: { status: 401, data: {} } }), /Sign in again/);
+  assert.doesNotMatch(connectionError({ response: { status: 403, data: { code: 'MT_RET_ERR_PERMISSIONS', message: 'Permission denied' } } }), /Sign in again/);
+  assert.match(connectionError({ response: { status: 403, data: { error_code: 'LP_PERMISSION_DENIED' } } }), /LP_PERMISSION_DENIED/);
+});

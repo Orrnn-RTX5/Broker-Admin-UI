@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  buildDraft, draftFromAuthority, createLPDownstreamAPI, emergencyReasonError, validateProfile, validateGrant,
-  EMERGENCY_CONFIRM_TEXT, DOWNSTREAM_SUPPORT,
+  buildDraft, draftFromAuthority, createLPDownstreamAPI, emergencyReasonError, validateProfile, validateGrant, validateDownstreamStatus,
+  EMERGENCY_CONFIRM_TEXT, DOWNSTREAM_SUPPORT, validateCounterparty,
 } from './lpDownstream.js';
 import {redactForLog} from '../lib/logRedaction.js';
 
@@ -25,7 +25,7 @@ const grant = (overrides = {}) => ({
   tenant_id: 't', broker_id: 'b', access_id: ACCESS, authority: {...buildDraft(form())}, enabled: false, revision: '9007199254740997',
   quote_session: {role: 'quote', session_id: QSESSION}, trade_session: {role: 'trade', session_id: TSESSION},
   quote_credential: {revision: '0', state: 'none'}, trade_credential: {revision: '2', state: 'active'},
-  application_state: 'unapplied', ...overrides,
+  application_state: 'unapplied', deleted: false, ...overrides,
 });
 
 const unavailable = role => ({status: 'listener_profile_unavailable', access_id: ACCESS, role, credential_state: 'active', credential_revision: '3', applied: false, connection: 'not_observed', verification: 'not_verified'});
@@ -39,6 +39,41 @@ const recorder = responses => {
   };
   return {calls, api: createLPDownstreamAPI(request)};
 };
+
+test('delete uses the resource DELETE route and exact string revision, retaining a deleted read', async () => {
+  const party = {counterparty_id: 'broker-b', display_name: 'Broker B', status: 'suspended', revision: '2', deleted: true};
+  const archived = grant({deleted: true, quote_credential: {revision: '1', state: 'retired'}, trade_credential: {revision: '2', state: 'retired'}});
+  const {calls, api} = recorder([{body: party}, {body: archived}]);
+  assert.deepEqual(await api.deleteCounterparty('broker-b', {expected_revision: '1'}), party);
+  assert.deepEqual(await api.deleteGrant(ACCESS, {expected_revision: '9007199254740996'}), archived);
+  assert.deepEqual(calls.map(c => [c.path, c.method, JSON.parse(c.body)]), [
+    ['/api/v1/lp/downstream/counterparties/broker-b', 'DELETE', {expected_revision: '1'}],
+    [`/api/v1/lp/downstream/access/${ACCESS}`, 'DELETE', {expected_revision: '9007199254740996'}],
+  ]);
+  await assert.rejects(api.deleteGrant(ACCESS, {expected_revision: 1}), /Reload/);
+  assert.throws(() => validateGrant(grant({deleted: true, enabled: true})), /Invalid downstream access/);
+  assert.throws(() => validateGrant(grant({deleted: true})), /retired credentials/);
+  assert.throws(() => validateCounterparty({...party, status: 'active'}), /Invalid counterparty/);
+  assert.throws(() => validateCounterparty({...party, deleted: 'true'}), /Invalid counterparty/);
+});
+
+test('a successful HTTP response that did not delete is rejected', async () => {
+  const {api} = recorder([{body: grant()}]);
+  await assert.rejects(api.deleteGrant(ACCESS, {expected_revision: '1'}), /was not deleted/);
+});
+
+test('deployment status gates downstream administration without carrying credential material', async () => {
+  const unready = {admin_enabled: false, schema_ready: false, ready: false, missing_migrations: ['322_lp_c09_downstream_access_authority.sql'], missing_relations: ['lp_downstream_access']};
+  const {calls, api} = recorder([{body: unready}]);
+  assert.deepEqual(await api.status(), unready);
+  assert.equal(calls[0].path, '/api/v1/lp/downstream/status');
+  assert.equal(calls[0].method, 'GET');
+  assert.throws(() => validateDownstreamStatus({...unready, ready: true}), /Invalid downstream deployment status/);
+  assert.throws(() => validateDownstreamStatus({...unready, schema_ready: true}), /Invalid downstream deployment status/);
+  assert.deepEqual(validateDownstreamStatus({admin_enabled: true, schema_ready: true, ready: true, missing_migrations: [], missing_relations: []}),
+    {admin_enabled: true, schema_ready: true, ready: true, missing_migrations: [], missing_relations: []});
+  assert.throws(() => validateDownstreamStatus({...unready, missing_migrations: [SECRET]}), /Invalid downstream deployment status/);
+});
 
 test('draft is strict: canonical string revisions/login, B-book only, supported operations only, nothing preselected', () => {
   const draft = buildDraft(form());

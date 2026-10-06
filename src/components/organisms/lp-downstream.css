@@ -4,9 +4,19 @@
 .lp-downstream h3{font-size:12px;font-weight:600;margin:14px 0 6px}
 .lp-downstream h4{font-size:11px;font-weight:600;margin:8px 0 4px}
 .lp-downstream p{margin:4px 0}
+.lp-downstream-setup{margin:10px 0;padding:8px 10px;border:1px solid var(--border-color,#bcc8d8);border-radius:4px;background:var(--bg-secondary,rgba(59,130,246,.05))}
+.lp-downstream-setup h3{margin-top:0}
+.lp-downstream-setup ol{margin:6px 0;padding-left:20px}
+.lp-downstream-setup li{margin:3px 0}
+.lp-downstream-banner{overflow-wrap:anywhere}
 .lp-downstream table{border-collapse:collapse;width:100%;margin:4px 0}
 .lp-downstream th,.lp-downstream td{border:1px solid var(--border-color,#bcc8d8);padding:3px 6px;text-align:left;vertical-align:top}
 .lp-downstream tr[aria-selected=true] td{background:var(--bg-secondary,rgba(59,130,246,.08))}
+.lp-downstream .lp-downstream-show-deleted{display:flex;flex-direction:row;align-items:center;gap:5px;margin:10px 0}
+.lp-downstream-row-actions{display:flex;flex-wrap:wrap;gap:4px;white-space:nowrap}
+.lp-downstream-linked-grants{list-style:none;margin:4px 0;padding:0}
+.lp-downstream-linked-grants li{margin:3px 0}
+.lp-downstream-detail{margin:8px 0;padding:8px;border:1px solid var(--border-color,#bcc8d8);border-radius:4px}
 .lp-downstream label{display:inline-flex;flex-direction:column;gap:3px;margin:4px 10px 4px 0}
 .lp-downstream input,.lp-downstream select,.lp-downstream textarea,.lp-downstream button{padding:4px 6px;border:1px solid var(--border-color,#bcc8d8);border-radius:3px;background:var(--bg-secondary,transparent);color:inherit}
 .lp-downstream textarea{min-width:320px;min-height:64px}
@@ -30,6 +40,7 @@
 .lp-downstream-warning{font-weight:600;color:var(--danger-color,#d25454)}
 .lp-downstream-overlay{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45)}
 .lp-downstream-dialog{max-width:640px;width:calc(100% - 32px);max-height:90vh;overflow:auto;padding:14px;border:1px solid var(--border-color,#bcc8d8);border-radius:6px;background:var(--bg-primary,#fff);color:var(--text-primary,#111)}
+.lp-downstream-editor-dialog{max-width:920px}
 .lp-downstream-dialog,.lp-downstream-dialog *{font-size:11px}
 .lp-downstream-dialog input[readonly]{width:100%;font-family:monospace}
 .lp-downstream-dialog button,.lp-downstream-dialog input,.lp-downstream-dialog textarea{padding:4px 6px;border:1px solid var(--border-color,#bcc8d8);border-radius:3px;background:var(--bg-secondary,transparent);color:inherit}

@@ -1,17 +1,20 @@
+import GroupCoveragePanel from './GroupCoveragePanel.jsx';
 import LPExactDemoSizing from './LPExactDemoSizing.jsx';
 import LPNativeCloseRenewal from './LPNativeCloseRenewal.jsx';
 import LPNativeControlEvidence from './LPNativeControlEvidence.jsx';
 import LPCoveragePreview from './LPCoveragePreview.jsx';
+import LPGroupSymbols from './LPGroupSymbols.jsx';
+import LPEvidenceGroupSymbols from './LPEvidenceGroupSymbols.jsx';
 import { useEffect, useRef, useState } from 'react';
-import { lpRouting, newRoutingRule, newExecutionSettings, newRoutingEvidence, selectorValues } from '../../services/lpRouting.js';
+import { lpRouting, hasAccountRoutingScope, newRoutingRule, newExecutionSettings, newRoutingEvidence, selectorValues } from '../../services/lpRouting.js';
 import './LPRoutingPanel.css';
 import { useAuthStore } from '../../store/authStore.js';
 
 const clone = value => structuredClone(value);
-const scopeSummary = scope => ['groups','accounts','symbols'].map(key => {
+const scopeSummary = scope => ['groups','symbols'].map(key => {
  const selector=scope?.[key] || {};
  return key+': '+(selector.include?.length ? selector.include.join(', ') : 'all')+(selector.exclude?.length ? ' except '+selector.exclude.join(', ') : '');
-}).join(' · ')+' · lots ['+(scope?.min_lots || '0')+', '+(scope?.max_lots || 'unbounded')+')';
+}).join(' · ')+' · lots ['+(scope?.min_lots || '0')+', '+(scope?.max_lots || 'unbounded')+')'+(scope?.accounts?.include?.length || scope?.accounts?.exclude?.length ? ' - legacy account exceptions require migration' : '');
 function ScopeInput({label,values,onChange}) {
  const [text,setText]=useState((values || []).join(', '));
  return <label>{label}<input value={text} onChange={event=>{setText(event.target.value);onChange(selectorValues(event.target.value));}} placeholder="Comma-separated values" /></label>;
@@ -19,10 +22,12 @@ function ScopeInput({label,values,onChange}) {
 function RoutingWorkspace(){
  const [tab,setTab]=useState('rules'),[rules,setRules]=useState([]),[evidence,setEvidence]=useState([]),[connections,setConnections]=useState([]);
  const [renewalTarget,setRenewalTarget]=useState(null);
+ const [archiveTarget,setArchiveTarget]=useState(null);
  const [rule,setRule]=useState(null),[proof,setProof]=useState(null),[editKey,setEditKey]=useState(0);
+ const [symbolScopeKey,setSymbolScopeKey]=useState(0);
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[conflicts,setConflicts]=useState([]),[conflictIDs,setConflictIDs]=useState([]),[locked,setLocked]=useState(false);
  const generation=useRef(0);
- const clear=()=>{setError('');setNotice('');setConflicts([]);setConflictIDs([]);setLocked(false);setEditKey(v=>v+1);};
+ const clear=()=>{setError('');setNotice('');setConflicts([]);setConflictIDs([]);setLocked(false);setArchiveTarget(null);setEditKey(v=>v+1);};
  const chooseRule=value=>{clear();setRule(clone(value));};
  const chooseEvidence=value=>{clear();setProof(clone(value));};
  async function load(){
@@ -34,16 +39,37 @@ function RoutingWorkspace(){
  useEffect(()=>{load();return()=>{generation.current+=1;};},[]);
  async function save(event,kind){
   event.preventDefault();const token=++generation.current;setBusy(true);setError('');setNotice('');setConflicts([]);setConflictIDs([]);
-  try{const result=kind==='rules'?await lpRouting.saveRule(rule):await lpRouting.saveEvidence(proof);if(token!==generation.current)return;
-   if(kind==='rules'){setRule(result.rule);setRules(old=>[...old.filter(item=>item.id!==result.rule.id),result.rule]);setNotice('Rule saved at revision '+result.rule.version+'. Saving does not confirm runtime admission is enabled.');}
+  try{const result=kind==='disable'?await lpRouting.disableLegacyRule(rules.find(item=>item.id===rule.id&&item.version===rule.version)):kind==='rules'?await lpRouting.saveRule(rule):await lpRouting.saveEvidence(proof);if(token!==generation.current)return;
+   if(kind==='rules'||kind==='disable'){setRule(result.rule);setRules(old=>[...old.filter(item=>item.id!==result.rule.id),result.rule]);setNotice(kind==='disable'?'Legacy rule disabled at revision '+result.rule.version+'. Its account scope is preserved for review; create replacement group rules deliberately.':'Rule saved at revision '+result.rule.version+'. Saving does not confirm runtime admission is enabled.');}
    else{setProof(result.evidence);setEvidence(old=>[...old.filter(item=>item.connection_id!==result.evidence.connection_id||item.symbol!==result.evidence.symbol),result.evidence]);setNotice('Evidence saved at revision '+result.evidence.revision+'. Admission still checks freshness, account binding and execution capability.');}
   }catch(e){if(token===generation.current){setError(e.message);setConflicts(e.conflicts||[]);setConflictIDs(e.conflictIDs||[]);setLocked(['CONFIGURATION_CONFLICT','CONFIGURATION_IN_USE'].includes(e.code));}}
   finally{if(token===generation.current)setBusy(false);}
  }
  const patchRule=(key,value)=>setRule(old=>({...old,[key]:value}));
+ async function archiveRule(){
+  const saved=archiveTarget;if(!saved)return;
+  const token=++generation.current;setBusy(true);setError('');setNotice('');
+  try{await lpRouting.archiveRule(saved);if(token!==generation.current)return;
+   setRules(old=>old.filter(item=>item.id!==saved.id));setRule(old=>old?.id===saved.id?null:old);setArchiveTarget(null);
+   setNotice('Rule '+saved.id+' removed from active configuration. Its execution and configuration history are retained.');
+  }catch(e){if(token===generation.current){setError(e.message);setLocked(['CONFIGURATION_CONFLICT','CONFIGURATION_IN_USE'].includes(e.code));}}
+  finally{if(token===generation.current)setBusy(false);}
+ }
  const patchScope=(name,kind,values)=>setRule(old=>({...old,scope:{...old.scope,[name]:{...old.scope[name],[kind]:values}}}));
  const patchProof=(key,value)=>setProof(old=>({...old,[key]:value}));
  const pairField=(key,value)=>setProof(old=>({...old,quote:{...old.quote,[key]:value},trade:{...old.trade,[key]:value},...(key==='symbol'?{symbol:value}:{})}));
+ const evidenceGroups=[...new Set(rules.filter(item=>item.connection_id===proof?.connection_id).flatMap(item=>(item.scope.groups?.include||[]).filter(name=>!item.scope.groups?.exclude?.includes(name))))];
+ const selectEvidenceSymbol=symbol=>{
+  if(symbol===proof.symbol)return;
+  const saved=evidence.find(item=>item.connection_id===proof.connection_id&&item.symbol===symbol);
+  if(saved){chooseEvidence(saved);return;}
+  const next=newRoutingEvidence(), connection=connections.find(item=>item.id===proof.connection_id);
+  next.connection_id=proof.connection_id;next.symbol=symbol;
+  next.connection_revision=Number.isSafeInteger(connection?.revision)?String(connection.revision):'';
+  next.account_mode=connection?.account_mode||'';
+  for(const role of ['quote','trade'])next[role]={...next[role],connection_id:next.connection_id,symbol,provider:connection?.provider||'',environment:connection?.environment||''};
+  chooseEvidence(next);
+ };
  const selectConnection=id=>{
   const c=connections.find(item=>item.id===id);
   if(!c)return;
@@ -59,18 +85,21 @@ function RoutingWorkspace(){
   {locked&&<p>Refresh to load current saved settings before attempting another change.</p>}
   {tab==='rules'?<>
    <div className="lpr-actions"><button disabled={busy} onClick={()=>chooseRule(newRoutingRule())}>Add routing rule</button></div>
-   <div className="lpr-table"><table><caption>All saved routing rules</caption><thead><tr><th>Rule</th><th>Revision</th><th>Saved enabled</th><th>Scope</th><th>Coverage</th><th>Connection</th><th>Action</th></tr></thead><tbody>{rules.map(item=><tr key={item.id}><td>{item.id}</td><td>{item.version}</td><td>{item.enabled?'Yes':'No'}</td><td>{scopeSummary(item.scope)}</td><td>{item.policy.mode==='volume'?item.policy.volume_percent+'% volume':item.policy.selection_percent+'% of orders, '+item.policy.selected_coverage_percent+'% selected coverage'}</td><td>{item.connection_id||'Internal only'}</td><td><button disabled={busy} onClick={()=>chooseRule(item)}>Edit rule {item.id}</button></td></tr>)}</tbody></table></div>
+   <div className="lpr-table"><table><caption>All active saved routing rules</caption><thead><tr><th>Rule</th><th>Revision</th><th>Saved enabled</th><th>Scope</th><th>Coverage</th><th>Connection</th><th>Action</th></tr></thead><tbody>{rules.map(item=><tr key={item.id}><td>{item.id}</td><td>{item.version}</td><td>{item.enabled?'Yes':'No'}</td><td>{scopeSummary(item.scope)}</td><td>{item.policy.mode==='volume'?item.policy.volume_percent+'% volume':item.policy.selection_percent+'% of orders, '+item.policy.selected_coverage_percent+'% selected coverage'}</td><td>{item.connection_id||'Internal only'}</td><td><button disabled={busy} onClick={()=>chooseRule(item)}>Edit rule {item.id}</button>{item.id.startsWith('legacy-internal-')?<p>Managed through group routing</p>:<button type="button" disabled={busy||locked} onClick={()=>{setError('');setNotice('');setArchiveTarget(clone(item));}}>Remove rule {item.id}</button>}</td></tr>)}</tbody></table></div>
+   {archiveTarget&&<section className="lpr-conflict" aria-label="Confirm rule removal"><h3>Remove rule {archiveTarget.id}?</h3><p>Saved revision {archiveTarget.version}. Removal disables this rule and removes it from active configuration. Historical orders and configuration evidence are retained. Active orders, pending commands and unresolved exposure must be resolved before removal.</p><div className="lpr-actions"><button type="button" disabled={busy||locked} onClick={archiveRule}>Confirm removal of {archiveTarget.id}</button><button type="button" disabled={busy} onClick={()=>setArchiveTarget(null)}>Keep rule</button></div></section>}
    {!busy&&rules.length===0&&<p>No routing rules saved.</p>}
-   {rule&&<form key={'rule'+editKey} onSubmit={event=>save(event,'rules')} autoComplete="off"><fieldset disabled={busy||locked}><legend>{rule.version==='0'?'New routing rule':'Edit '+rule.id+' · revision '+rule.version}</legend>
+   <GroupCoveragePanel connections={connections} />
+   {rule&&<form key={'rule'+editKey} onSubmit={event=>save(event,'rules')} autoComplete="off"><fieldset disabled={busy||locked||hasAccountRoutingScope(rule)}><legend>{rule.version==='0'?'New routing rule':'Edit '+rule.id+' · revision '+rule.version}</legend>
     <div className="lpr-fields"><label>Rule ID<input required maxLength={128} value={rule.id} disabled={rule.version!=='0'} onChange={e=>patchRule('id',e.target.value)}/></label><label>Named LP connection<select value={rule.connection_id||''} onChange={e=>patchRule('connection_id',e.target.value)}>{connectionOptions(rule.connection_id)}</select></label><label className="lpr-check"><input type="checkbox" checked={rule.enabled} onChange={e=>patchRule('enabled',e.target.checked)}/>Saved rule enabled</label></div>
-    <p>Empty includes mean all values; exclusions remove exact matches. Separate entries with commas. Every enabled rule must have a non-overlapping scope.</p>
-    {['groups','accounts','symbols'].map(name=><fieldset key={name}><legend>{name[0].toUpperCase()+name.slice(1)} scope</legend><div className="lpr-fields"><ScopeInput label={'Include '+name} values={rule.scope[name]?.include} onChange={values=>patchScope(name,'include',values)}/><ScopeInput label={'Exclude '+name} values={rule.scope[name]?.exclude} onChange={values=>patchScope(name,'exclude',values)}/></div></fieldset>)}
+    {(rule.scope.accounts?.include?.length > 0 || rule.scope.accounts?.exclude?.length > 0) && <p role="alert">This legacy rule contains account-specific scope. Editing and enabling are blocked. Disable this saved rule without changing its scope, then deliberately configure replacement group rules and migrate accounts as needed.</p>}
+    <p>Rules apply to groups and symbols within those groups. Empty includes mean all values; exclusions remove exact matches. Separate entries with commas. Every enabled rule must have a non-overlapping scope.</p>
+    {['groups','symbols'].map(name=><fieldset key={name}><legend>{name[0].toUpperCase()+name.slice(1)} scope</legend>{name==='symbols'&&<LPGroupSymbols selector={rule.scope.groups} exclusions={rule.scope.symbols?.exclude} onApply={values=>{patchScope('symbols','include',values);setSymbolScopeKey(value=>value+1);}}/>}<div className="lpr-fields"><ScopeInput key={name==='symbols'?symbolScopeKey:name} label={'Include '+name} values={rule.scope[name]?.include} onChange={values=>patchScope(name,'include',values)}/><ScopeInput label={'Exclude '+name} values={rule.scope[name]?.exclude} onChange={values=>patchScope(name,'exclude',values)}/></div></fieldset>)}
     <div className="lpr-fields"><label>Minimum customer lots (inclusive)<input required inputMode="decimal" value={rule.scope.min_lots} onChange={e=>patchRule('scope',{...rule.scope,min_lots:e.target.value})}/></label><label>Maximum customer lots (exclusive, blank = unbounded)<input inputMode="decimal" value={rule.scope.max_lots||''} onChange={e=>patchRule('scope',{...rule.scope,max_lots:e.target.value})}/></label><label>Coverage mode<select value={rule.policy.mode} onChange={e=>patchRule('policy',{...rule.policy,mode:e.target.value})}><option value="volume">Split by volume</option><option value="whole_orders">Select whole orders</option></select></label>
      {rule.policy.mode==='volume'?<label>External volume coverage %<input required inputMode="decimal" value={rule.policy.volume_percent||''} onChange={e=>patchRule('policy',{...rule.policy,volume_percent:e.target.value})}/></label>:<><label>Orders selected % (0–100)<input required inputMode="decimal" value={rule.policy.selection_percent||''} onChange={e=>patchRule('policy',{...rule.policy,selection_percent:e.target.value})}/></label><label>Selected order coverage % (may exceed 100)<input required inputMode="decimal" placeholder="For example 200" value={rule.policy.selected_coverage_percent||''} onChange={e=>patchRule('policy',{...rule.policy,selected_coverage_percent:e.target.value})}/></label></>}
     </div><p>0% volume keeps the order internal. Coverage above 100% creates broker excess exposure. Whole-order selection is stable for the admitted command. Exact sizing and upward lot-grid rounding use saved provider evidence. The preview below shows quantities without submitting an order.</p>
 <fieldset><legend>Saved execution settings</legend><p>Saved settings require runtime application. Commission remains the separately approved customer policy. Markup adjusts the customer price and is not the original LP price.</p>{!rule.execution?<><p>Legacy rule: no explicit execution settings. Existing runtime defaults apply.</p><button type="button" onClick={()=>patchRule('execution',newExecutionSettings())}>Configure explicit execution settings</button></>:<><div className="lpr-fields"><label>Default requested policy<select value={rule.execution.default_policy} onChange={e=>patchRule('execution',{...rule.execution,default_policy:e.target.value})}><option>FOK</option><option>IOC</option></select></label>{[['markup_points','Customer markup points'],['dispatch_delay_ms','Dispatch delay ms (0-60000)'],['quote_max_age_ms','Maximum quote age ms (1-60000)'],['max_adverse_gap_bps','Maximum adverse quote gap bps (0-10000)']].map(([key,label])=><label key={key}>{label}<input required inputMode="decimal" value={rule.execution[key]} onChange={e=>patchRule('execution',{...rule.execution,[key]:key.endsWith('_ms')?(e.target.value===''?'':Number(e.target.value)):e.target.value})}/></label>)}</div><p>cServer market execution uses native IOC for either requested policy; FOK does not imply native atomic full-fill support. Other effective policies are provider-derived. The gap guard compares the same-source executable ask for buys or bid for sells before sending; it is not a final market-price cap.</p></>}</fieldset>
     <LPCoveragePreview connection={rule.connection_id} policy={rule.policy} evidence={evidence} draftKey={JSON.stringify(rule)} canPreview={true} isAdmin={true}/>
-    <button type="submit">Save routing rule</button></fieldset><button type="button" disabled={busy} onClick={()=>setRule(null)}>Close rule editor</button></form>}
+    <button type="submit">Save routing rule</button></fieldset>{hasAccountRoutingScope(rule)&&<button type="button" disabled={busy||locked||!rule.enabled} onClick={event=>save(event,'disable')}>Disable existing legacy rule</button>}<button type="button" disabled={busy} onClick={()=>setRule(null)}>Close rule editor</button></form>}
   </>:<>
    <div className="lpr-actions"><button disabled={busy} onClick={()=>chooseEvidence(newRoutingEvidence())}>Add instrument evidence</button></div>
    <div className="lpr-table"><table><caption>Saved instrument evidence</caption><thead><tr><th>Connection / symbol</th><th>Revision</th><th>Feed</th><th>Source</th><th>Validity</th><th>Native close evidence</th><th>Native cleanup evidence</th><th>Native pending evidence</th><th>Native cancellation evidence</th><th>Action</th></tr></thead><tbody>{evidence.map(item=><tr key={item.connection_id+':'+item.symbol}><td>{item.connection_id} / {item.symbol}</td><td>{item.revision} · connection {item.connection_revision}</td><td>{item.feed_id}</td><td>{item.source} · {item.evidence_id}</td><td>{item.verified_at} → {item.valid_until}{Date.parse(item.valid_until)<=Date.now()?' · Expired':''}</td><td>{item.native_close?`${item.native_close.evidence_id}; minimum remainder ${item.native_close.minimum_remainder_lots} lots; valid until ${item.native_close.valid_until}`:"Not recorded; no native close authority"}</td><td>{item.native_cleanup?`${item.native_cleanup.evidence_id}; price tick ${item.native_cleanup.price_tick}; valid until ${item.native_cleanup.valid_until}${Date.parse(item.native_cleanup.valid_until)<=Date.now()?"; expired":""}`:"Not recorded; no native cleanup authority"}</td><td>{item.native_pending?`${item.native_pending.evidence_id}; ${[item.native_pending.supports_limit?'limit':'',item.native_pending.supports_stop?'stop':'',item.native_pending.supports_gtc?'GTC':'',item.native_pending.supports_gtd?'GTD':''].filter(Boolean).join(', ')}; price tick ${item.native_pending.price_tick}; grid origin ${item.native_pending.price_grid_origin}; valid until ${item.native_pending.valid_until}${Date.parse(item.native_pending.valid_until)<=Date.now()?'; expired':''}`:'Not recorded; no native pending authority'}</td><td>{item.native_control?`${item.native_control.evidence_id}; verified by ${item.native_control.verifier}; source ${item.native_control.source_reference}; valid until ${item.native_control.valid_until}${Date.parse(item.native_control.valid_until)<=Date.now()?'; expired':''}`:'Not recorded; no native cancellation authority'}</td><td><button disabled={busy} onClick={()=>chooseEvidence(item)}>Edit evidence {item.symbol}</button>{item.native_close&&<button disabled={busy} onClick={()=>setRenewalTarget(item)}>Renew close verification {item.symbol}</button>}</td></tr>)}</tbody></table></div>
@@ -78,6 +107,7 @@ function RoutingWorkspace(){
    {renewalTarget&&<LPNativeCloseRenewal key={renewalTarget.connection_id+renewalTarget.symbol} connection={renewalTarget.connection_id} symbol={renewalTarget.symbol} canConfigure={true} onClose={()=>setRenewalTarget(null)}/>}
    {proof&&<form key={'evidence'+editKey} onSubmit={event=>save(event,'evidence')} autoComplete="off"><fieldset disabled={busy||locked}><legend>{proof.revision==='0'?'New instrument evidence':'Evidence revision '+proof.revision}</legend>
     <p>Record actual account-specific provider evidence. A connection logon alone proves neither symbol mapping nor execution capability. No quantity limit is assumed.</p>
+    <LPEvidenceGroupSymbols groups={evidenceGroups} symbol={proof.symbol} onSelect={selectEvidenceSymbol}/>
     <div className="lpr-fields"><label>Evidence connection<select required value={proof.connection_id} disabled={proof.revision!=='0'} onChange={e=>selectConnection(e.target.value)}>{connectionOptions(proof.connection_id)}</select></label><label>Verified connection revision<input required inputMode="numeric" value={proof.connection_revision} onChange={e=>patchProof('connection_revision',e.target.value)}/></label><label>Instrument symbol<input required value={proof.symbol} disabled={proof.revision!=='0'} onChange={e=>pairField('symbol',e.target.value)}/></label><label>Authoritative quote feed ID<input required value={proof.feed_id} onChange={e=>patchProof('feed_id',e.target.value)}/></label>
      <label>Evidence source<select required value={proof.source} onChange={e=>patchProof('source',e.target.value)}><option value="">Select provenance</option><option value="provider_demo">Provider demo verification</option><option value="provider_spec">Provider specification</option><option value="simulator">Isolated simulator only</option></select></label>
      {['evidence_id','capability_evidence_id','verified_at','valid_until'].map((key,index)=><label key={key}>{['Evidence reference','Capability evidence reference','Verified at (UTC RFC3339)','Valid until (UTC RFC3339)'][index]}<input required value={proof[key]} placeholder={key.endsWith('_at')||key==='valid_until'?'YYYY-MM-DDTHH:mm:ssZ':undefined} onChange={e=>patchProof(key,e.target.value)}/></label>)}

@@ -25,7 +25,10 @@ test('Symbol List: staged legacy list loads from GroupSymbolsGet and saves via G
   assert.match(src, /ManagerService\.getGroupAllowedSymbols\(currentGroupName\)/);
   assert.match(src, /await ManagerService\.saveGroupAllowedSymbols\(payload\.group, payload\.symbols, symbolsRevision\);/);
   assert.match(src, /isGroupSymbolListDirty\(symbolsBaseline, symbolRows\)/);
-  assert.match(src, /accounts in this group see ALL broker symbols/);
+  assert.match(src, /accounts in this group see all symbols available from its quote feed/);
+  assert.match(src, /ManagerService\.getGroupFeedSymbols\(groupName\)/);
+  assert.match(src, /findGroupFeedSymbol\(symbols, name\)/);
+  assert.match(serviceSrc, /api\.get\('\/manager\/SymbolList', \{ params: \{ group, catalog: 1 \} \}\)/);
   assert.match(src, /Saving a non-empty list restricts this group to exactly the listed symbols/, 'legacy list warns that it restricts');
   assert.doesNotMatch(src, /getSymbolSet\(/, 'ADD no longer upserts immediately via the legacy GET');
   assert.doesNotMatch(src, /SymbolPropertiesPopup/, 'rows no longer open the nested symbol popup');
@@ -62,7 +65,7 @@ test('Commissions: scoped to the group, editable, no alert()', () => {
 });
 
 test('Dialog chrome: Help works, dead tabs and window buttons are gone', () => {
-  assert.match(src, /const TABS = \['Accounts', 'Margin', 'Symbols', 'Commissions'\];/);
+  assert.match(src, /const TABS = \['Accounts', 'Margin', 'Symbols', 'Commissions', 'Inheritance', 'Migration'\];/);
   assert.match(src, /onClick=\{\(\) => setShowHelp\(\(value\) => !value\)\}/);
   for (const dead of ["'Statistics'", "'Company'", "'Reports'", "'News & Mail'", "'Permissions'", "'Common'"]) {
     assert.equal(src.includes(`activeTab === ${dead}`), false, `unreachable tab body ${dead} removed`);
@@ -77,7 +80,7 @@ test('GroupPropertiesPopup opens on an Accounts tab that lists every account of 
   const tab = readFileSync(join(here, 'GroupAccountsTab.jsx'), 'utf8');
 
   assert.match(src, /initialTab = 'Accounts',/);
-  assert.match(src, /const TABS = \['Accounts', 'Margin', 'Symbols', 'Commissions'\];/);
+  assert.match(src, /const TABS = \['Accounts', 'Margin', 'Symbols', 'Commissions', 'Inheritance', 'Migration'\];/);
   assert.match(src, /<GroupAccountsTab groupName=\{currentGroupName\} onOpenAccount=\{onOpenAccount\} \/>/);
   assert.match(tab, /loadGroupsExplorerNodes\(\s*\{ type: 'group', groupName \}/, 'accounts come from the paged, exact-group loader');
 });
@@ -89,7 +92,7 @@ test("Double-clicking an account opens its group's Margin / Symbols / Commission
   assert.match(explorer, /if \(node\.type === 'group-account'\) openAccountGroup\(node\);/);
   assert.match(explorer, /onSelect=\{\(\) => onAccountOpen\?\.\(node\)\}>Open account</, 'the account editor stays on the context menu');
   assert.match(app, /onAccountGroupOpen=\{openAccountGroupProperties\}/);
-  assert.match(app, /initialTab=\{groupPopupFromAccount \? 'Margin' : 'Accounts'\}/);
+  assert.match(app, /initialTab=\{groupPopupFromAccount \? 'Margin' : \(selectedGroup\?\.initialTab \|\| 'Accounts'\)\}/);
   assert.match(app, /showAccountsTab=\{!groupPopupFromAccount\}/);
   assert.match(src, /const tabs = showAccountsTab \? TABS : TABS\.filter\(\(tab\) => tab !== 'Accounts'\);/);
   assert.match(src, /loadGroupTreePages\(ManagerService\.getGroupList, \{ arrayKeys: GROUP_LIST_ARRAY_KEYS \}\)/, 'margin values are reloaded from the server');

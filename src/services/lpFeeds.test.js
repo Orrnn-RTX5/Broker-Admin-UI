@@ -25,10 +25,13 @@ test('exact FIX prices retain decimal text and only known valid observations pas
  }
  assert.throws(()=>matchingFeedSnapshot('real-fix',catalog,{...ticks,ticks:{OTHER:{...tick,symbol:'OTHER'}}}),/Feed observation is unavailable/);
 });
-test('only explicit selection API changes source, with expected revision',async()=>{
+test('group selection is the only source writer and account inspection stays read-only',async()=>{
  const requests=[];const api=createLPFeeds(async(path,options)=>{requests.push({path,...options});return {ok:true,json:async()=>({})};});
- await api.ticks('named-one');await api.saveAccount('00000000-0000-0000-0000-000000000001','4','named-one');
- assert.equal(requests[0].method,'GET');assert.equal(requests[1].method,'PUT');assert.deepEqual(JSON.parse(requests[1].body),{expected_revision:'4',connection_id:'named-one'});
+ await api.account('00000000-0000-0000-0000-000000000001');
+ assert.throws(()=>api.saveAccount('00000000-0000-0000-0000-000000000001','4','named-one'),/controlled by the group/);
+ assert.throws(()=>api.inheritAccount('00000000-0000-0000-0000-000000000001','4'),/controlled by the group/);
+ await api.saveGroup('group / one','9007199254740993','named-one');
+ assert.equal(requests.length,2);assert.equal(requests[0].method,'GET');assert.equal(requests[1].method,'PUT');
+ assert.equal(requests[1].path.endsWith('/groups/group%20%2F%20one'),true);
+ assert.deepEqual(JSON.parse(requests[1].body),{expected_revision:'9007199254740993',connection_id:'named-one'});
 });
-
-test('group defaults and inheritance preserve independent exact revisions',async()=>{const calls=[];const api=createLPFeeds(async(path,options)=>{calls.push({path,body:options.body&&JSON.parse(options.body)});return {ok:true,json:async()=>({})};});await api.saveGroup('group / one','9007199254740993','named-one');await api.inheritAccount('11111111-1111-1111-1111-111111111111','2');assert.equal(calls[0].path.endsWith('/groups/group%20%2F%20one'),true);assert.equal(calls[0].body.expected_revision,'9007199254740993');assert.deepEqual(calls[1].body,{expected_revision:'2',mode:'inherit'});assert.throws(()=>api.inheritAccount('11111111-1111-1111-1111-111111111111',2));});

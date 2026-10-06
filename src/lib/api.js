@@ -18,6 +18,7 @@ const AUTH_QUERY_PARAM_RE = /^(token|access_token|refresh_token|session|session_
 const MANAGER_API_PATH_RE = /^\/manager(?:\/|\?|$)|^\/api\/v\d+\/(?:admin|manager|accounts?)(?:\/|\?|$)/i;
 const PROTECTED_API_PATH_RE = /(?:^|\/)(?:manager)(?:\/|$)|\/api\/v\d+\/(?:admin|manager|accounts?)(?:\/|$)/i;
 const PUBLIC_AUTH_PATH_RE = /\/api\/v\d+\/(?:admin\/login|auth\/login|auth\/refresh|broker\/servers)(?:\/|\?|$)/i;
+const DOWNSTREAM_MANAGER_PATH_RE = /^(?:\/manager)?\/api\/v1\/lp\/downstream(?:\/|\?|$)/i;
 const AUTH_TOKEN_MISSING_MESSAGE = 'Missing auth token. Please log in again.';
 const DESKTOP_BACKEND_MISSING_MESSAGE = 'Broker backend URL is not configured. Sign out and select the broker again.';
 const SILENT_ERROR_FLAG = '__rtx5SuppressLog';
@@ -127,11 +128,11 @@ const getUrlPath = (url = '') => {
 
 export const isProtectedApiRequest = (url = '') => {
   const path = getUrlPath(url);
-  return PROTECTED_API_PATH_RE.test(path) && !PUBLIC_AUTH_PATH_RE.test(path);
+  return (PROTECTED_API_PATH_RE.test(path) || DOWNSTREAM_MANAGER_PATH_RE.test(path)) && !PUBLIC_AUTH_PATH_RE.test(path);
 };
 
 export const shouldRouteThroughManagerApi = (url = '') =>
-  MANAGER_API_PATH_RE.test(getUrlPath(url));
+  MANAGER_API_PATH_RE.test(getUrlPath(url)) || DOWNSTREAM_MANAGER_PATH_RE.test(getUrlPath(url));
 
 const shouldSuppressResponseErrorLog = (error, config, status) => {
   if (shouldSuppressApiErrorLog(error)) return true;

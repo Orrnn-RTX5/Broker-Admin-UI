@@ -21,7 +21,6 @@ import {
   getServerGroupCount,
   getServerGroupFolderNodes,
   getServerGroupParentPath,
-  listServerGroupContainerPaths,
   loadGroupsExplorerNodes,
 } from '../../utils/groupsExplorerData';
 
@@ -219,14 +218,14 @@ const ServerGroupsExplorer = ({
   };
   // The selected row wins over the open folder, so "Add group" lands inside what the user picked.
   const targetContainer = canContain(selectedNode) ? containerOf(selectedNode) : currentContainer;
-  const containers = useMemo(() => listServerGroupContainerPaths(groupNodes), [groupNodes]);
+
   const askSubgroup = (parent = targetContainer) => setSubgroupDraft({ parent, name: 'New subgroup' });
   const submitSubgroup = (event) => {
     event.preventDefault();
     const name = subgroupDraft.name.trim();
     if (!name) return;
     setSubgroupDraft(null);
-    onGroupCreate?.({ name: [subgroupDraft.parent, name].filter(Boolean).join(SEPARATOR) });
+    onGroupCreate?.({ name: [subgroupDraft.parent, name].filter(Boolean).join(SEPARATOR), parentGroup: subgroupDraft.parent || null });
   };
 
   const segments = isAccountFolder ? location.groupName.split(SEPARATOR) : folderPath ? folderPath.split(SEPARATOR) : [];
@@ -491,7 +490,7 @@ const ServerGroupsExplorer = ({
                 <label>Inside group
                   <select value={subgroupDraft?.parent ?? ''} onChange={event => setSubgroupDraft(draft => ({ ...draft, parent: event.target.value }))} style={SELECT_STYLE}>
                     <option value="">Groups (top level)</option>
-                    {containers.map(container => <option key={container} value={container}>{container}</option>)}
+                    {groupNodes.map(node => node.groupName).map(container => <option key={container} value={container}>{container}</option>)}
                   </select>
                 </label>
                 <label>Subgroup name

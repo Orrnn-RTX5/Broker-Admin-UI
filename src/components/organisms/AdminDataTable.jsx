@@ -1,3 +1,4 @@
+import { refreshGroupMembership } from '../../services/groupMembershipRefresh.js';
 import { sortToolbarRows } from '../../utils/toolbarActions';
 import { formatDealActionLabel, formatDealEntryLabel } from '../../utils/dealDisplayLabels';
 import React, { lazy, Suspense, useState } from 'react';
@@ -40,6 +41,7 @@ import {
 import AdminContextMenu from './AdminContextMenu';
 import './AdminDataTable.clients.css';
 const DownstreamAccessView = lazy(() => import('./DownstreamAccessView'));
+const GroupPropertiesPopup = lazy(() => import('../RIGHTCLICKJPOPUPS/GroupPropertiesPopup'));
 
 // Optional workspaces load when selected so their charts, maps, and editors do
 // not delay the first table or the independently mounted journal.
@@ -956,17 +958,9 @@ const AdminDataTableContent = ({
     }
   };
 
-  const handleDeleteGroup = async () => {
+  const handleDeleteGroup = () => {
     if (!contextMenu.selectedGroup) return;
-    if (window.confirm(`Are you sure you want to delete group ${contextMenu.selectedGroup.name}?`)) {
-      try {
-        await ManagerService.deleteGroup(contextMenu.selectedGroup.name);
-        refetchGroups();
-        onGroupsChanged?.();
-      } catch (err) {
-        alert(err.message || 'Error deleting group');
-      }
-    }
+    setEditingGroup({ ...contextMenu.selectedGroup, initialTab: 'Migration' });
     setContextMenu({ ...contextMenu, visible: false });
   };
 
@@ -2180,11 +2174,12 @@ const AdminDataTableContent = ({
       )}
       {editingGroup && (
         <Suspense fallback={null}>
-          <CreateGroupPopup
-            initialData={editingGroup}
-            onClose={() => setEditingGroup(null)}
-            onCreated={() => { setEditingGroup(null); refetchGroups(); onGroupsChanged?.(); }}
-          />
+        <GroupPropertiesPopup
+          group={editingGroup}
+          initialTab={editingGroup.initialTab}
+          onClose={() => setEditingGroup(null)}
+          onSaved={result => { if (result?.action) { if (!onGroupsChanged) refreshGroupMembership(result); onEditableTargetSelect?.(null); setContextMenu({ visible: false }); } else refetchGroups(); onGroupsChanged?.(result); }}
+        />
         </Suspense>
       )}
     </div>
