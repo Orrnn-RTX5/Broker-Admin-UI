@@ -40,16 +40,18 @@ cookies reach Vite without including cookies on cross-origin login requests.
 
 ## Production Docker configuration
 
-Give the production manager a broker-specific `.env` file and place it at
-`$HOME/broker-admin-ui.env` on the deployment server, where `$HOME` belongs to
-the SSH user used by the deploy workflow. At minimum, set `BROKER_ID` and
-`API_HOST` to the broker's ID and API origin. For example:
+The Docker image is shared across brokers. Supply each installation's runtime
+values in the GitHub environment secret `ADMIN_UI_ENV`. The deployment writes
+these values to `$HOME/broker-admin-ui.env` on its server (or the configured
+`ADMIN_UI_ENV_FILE`). For example:
 
 ```env
 BACKEND_TARGET=web
 BROKER_ID=your-broker-id
 API_HOST=https://api.your-broker.example
 WS_HOST=wss://api.your-broker.example
+FEED_WS_URL=wss://api.your-broker.example/ws/feed
+FEED_STATUS_URL=https://api.your-broker.example/ws/feed/status
 USE_MOCK_DISCOVERY=false
 ```
 
@@ -63,10 +65,10 @@ copy that file as-is and edit its broker values. Do not include both forms of
 the same key. The desktop mode file changes only `VITE_BACKEND_TARGET`, so it
 uses the same broker values from `.env`.
 
-The deploy workflow passes this file to Docker with `--env-file`. The image
+The deploy workflow passes these values to Docker with `--env-file`. The image
 excludes source `.env` files, and the container generates browser runtime
-configuration from the supplied values when it starts. After editing the server
-file, restart or redeploy the container to apply changes. Runtime configuration
+configuration from the supplied values when it starts. After editing the
+`ADMIN_UI_ENV` secret, redeploy the container to apply changes. Runtime configuration
 is public in the browser, so keep passwords and tokens in a separate secret
 store, not in this file.
 
@@ -77,11 +79,34 @@ download triggers at most one automatic reload per minute in a tab. If the
 download still fails, the error screen offers a document reload; React's cached
 failed lazy import cannot be retried by simply resetting the error boundary.
 
-To release a web fix, build an isolated `release-candidate/**` commit and
-validate its exported image on Nexa. Set `ADMIN_RELEASE_SOURCE_SHA` and
-`ADMIN_RELEASE_IMAGE_REF` to that exact commit and immutable image digest, then
-promote the same commit to `main`. The `main` workflow deploys the validated
-image without rebuilding it. Pushing to other branches does not deploy the app.
+### Web releases for multiple brokers
+
+Pushing to `main` builds the current commit and deploys its immutable image
+digest to the `production` GitHub environment. No broker approval SHA or
+previously validated image is required. `ADMIN_RELEASE_SOURCE_SHA` and
+`ADMIN_RELEASE_IMAGE_REF` are no longer used. Release-candidate pushes publish
+an image without deploying. Pull requests run a build only; the release path
+uses the Docker build, without a full unit-test run or server inventory scan.
+
+In GitHub **Settings > Environments**, configure `production` for the default
+installation and create one environment per additional broker. For each, set:
+
+- Secrets: `ADMIN_UI_ENV`, `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`,
+  `GHCR_USERNAME`, and `GHCR_TOKEN` (with package-read access).
+- Variables: `ADMIN_CONTAINER_NAME`, `ADMIN_PORT_MAPPING`, and
+  `ADMIN_UI_ENV_FILE` if overriding the defaults `broker-admin-ui`, `8080:80`,
+  and `$HOME/broker-admin-ui.env`.
+
+Existing repository secrets/variables remain fallbacks for `production`.
+For additional brokers, set all target secrets at environment level so they
+cannot fall back to another broker's server. When sharing a server, use distinct
+container names, host ports, and environment-file paths.
+
+To deploy another broker, open **Actions > CI - Build and Deploy Admin UI >
+Run workflow**, choose the `main` branch and that broker's environment. The
+workflow builds the selected commit and deploys only to the selected target.
+Server startup and runtime-configuration checks remain, with rollback on failure.
+There is no automatic deployment to every broker.
 
 ## Windows Desktop App
 
@@ -104,7 +129,7 @@ Desktop updates are manual. Publishing a GitHub release does not make running ap
 
 ## Desktop Releases
 
-The checked-in GitHub Actions workflow builds web candidate images on `release-candidate/**` branches and deploys a validated image on pushes to `main`. Desktop publishing is currently a local command. Set `GH_TOKEN` in the shell environment, then run:
+The checked-in GitHub Actions workflow builds web images on `main` and `release-candidate/**`, deploys `main` to `production`, and supports manual deployments to other broker environments. Desktop publishing is currently a local command. Set `GH_TOKEN` in the shell environment, then run:
 
 ```bash
 npm run release

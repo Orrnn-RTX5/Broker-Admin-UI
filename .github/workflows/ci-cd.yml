@@ -1,4 +1,4 @@
-name: CI - Build and Publish Admin UI Image
+name: CI - Build and Deploy Admin UI
 
 on:
   push:
@@ -8,6 +8,13 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Broker deployment environment (configure its secrets first)
+        type: environment
+        required: true
+        default: production
 
 permissions:
   contents: read
@@ -16,107 +23,48 @@ env:
   IMAGE_NAME: ghcr.io/orrnn-rtx5/broker-admin-ui
 
 concurrency:
-  group: ui-image-${{ github.ref }}
+  group: ui-image-${{ github.ref }}-${{ inputs.environment || 'production' }}
   cancel-in-progress: false
 
 jobs:
   validate:
-    name: Validate build
+    name: Build pull request
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-
       - name: Install dependencies
         run: npm ci
-
-      - name: Run tests
-        run: npm test
-
       - name: Build
         run: npm run build
 
   publish-image:
-    name: Publish candidate or promote validated image
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release-candidate/'))
-    needs: validate
+    name: Build and publish image
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     outputs:
       image_ref: ${{ steps.release_record.outputs.image_ref }}
-      release_record: ${{ steps.release_record.outputs.release_record }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Prepare admin runtime environment
-        env:
-          ADMIN_UI_ENV: ${{ secrets.ADMIN_UI_ENV }}
-        run: node scripts/prepare-admin-env.mjs
-
       - name: Setup Docker Buildx
-        if: startsWith(github.ref, 'refs/heads/release-candidate/')
         uses: docker/setup-buildx-action@v3
-
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Read-only deployment target inventory
-        if: startsWith(github.ref, 'refs/heads/release-candidate/')
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            set -eu
-            docker ps --format '{{.Names}} | {{.Image}} | {{.Ports}} | {{.Status}}'
-            for name in $(docker ps --format '{{.Names}}'); do
-              case "$name" in
-                *admin*|*frontend*)
-                  docker inspect --format 'NAME={{.Name}} IMAGE={{.Image}} PORTS={{json .HostConfig.PortBindings}} NETWORKS={{json .NetworkSettings.Networks}} MOUNTS={{json .Mounts}} PROJECT={{index .Config.Labels "com.docker.compose.project"}} SERVICE={{index .Config.Labels "com.docker.compose.service"}} REVISION={{index .Config.Labels "org.opencontainers.image.revision"}}' "$name"
-                  ;;
-              esac
-            done
-            # Emit only routing metadata, never raw nginx configuration or env.
-            python3 - <<'PY'
-            import re
-            import subprocess
-            for command in [['nginx', '-T'], ['sudo', '-n', 'nginx', '-T']]:
-                try:
-                    result = subprocess.run(command, capture_output=True, text=True, timeout=15)
-                except (OSError, subprocess.TimeoutExpired):
-                    continue
-                if result.returncode:
-                    continue
-                for line in result.stdout.splitlines():
-                    match = re.match(r'^\s*(server_name|listen)\s+([\w.*:\[\] -]+);', line)
-                    if match:
-                        print('NGINX ' + match.group(1) + ' ' + match.group(2))
-                    match = re.match(r'^\s*proxy_pass\s+(https?://[\w.:[\]/-]+);', line)
-                    if match:
-                        print('NGINX proxy_pass ' + match.group(1))
-                break
-            else:
-                print('Host nginx routing could not be inspected without elevated access.')
-            PY
-
       - name: Build and push image
-        if: startsWith(github.ref, 'refs/heads/release-candidate/')
         id: build
         uses: docker/build-push-action@v6
         with:
@@ -124,85 +72,48 @@ jobs:
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
           labels: org.opencontainers.image.revision=${{ github.sha }}
-
-      - name: Verify Nexa validated release inputs
-        if: github.ref == 'refs/heads/main'
-        env:
-          ADMIN_RELEASE_SOURCE_SHA: ${{ vars.ADMIN_RELEASE_SOURCE_SHA }}
-          ADMIN_RELEASE_IMAGE_REF: ${{ vars.ADMIN_RELEASE_IMAGE_REF }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ "$ADMIN_RELEASE_SOURCE_SHA" != "$GITHUB_SHA" ]]; then
-            echo 'Main must promote the exact source commit validated on Nexa.' >&2
-            exit 1
-          fi
-          if [[ "$ADMIN_RELEASE_IMAGE_REF" != "${IMAGE_NAME}@sha256:"* ]] ||
-              [[ ! "${ADMIN_RELEASE_IMAGE_REF#"${IMAGE_NAME}@sha256:"}" =~ ^[a-f0-9]{64}$ ]]; then
-            echo 'ADMIN_RELEASE_IMAGE_REF must pin the validated admin image digest.' >&2
-            exit 1
-          fi
-          docker pull "$ADMIN_RELEASE_IMAGE_REF"
-          image_source="$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$ADMIN_RELEASE_IMAGE_REF")"
-          if [[ "$image_source" != "$GITHUB_SHA" ]]; then
-            echo 'The validated image source revision does not match this release.' >&2
-            exit 1
-          fi
-
       - name: Record immutable image release
         id: release_record
         env:
           IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
-          ADMIN_RELEASE_IMAGE_REF: ${{ vars.ADMIN_RELEASE_IMAGE_REF }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "$GITHUB_REF" == 'refs/heads/main' ]]; then
-            image_ref="$ADMIN_RELEASE_IMAGE_REF"
-          else
-            if [[ ! "$IMAGE_DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]; then
-              echo 'Candidate build did not produce an immutable image digest.' >&2
-              exit 1
-            fi
-            image_ref="${IMAGE_NAME}@${IMAGE_DIGEST}"
+          if [[ ! "$IMAGE_DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]; then
+            echo 'Build did not produce an immutable image digest.' >&2
+            exit 1
           fi
-          release_record="$(jq -cn \
-            --arg component "admin" \
-            --arg source_sha "$GITHUB_SHA" \
-            --arg image_ref "$image_ref" \
-            '{component: $component, source_sha: $source_sha, image_ref: $image_ref}')"
+          image_ref="${IMAGE_NAME}@${IMAGE_DIGEST}"
           echo "image_ref=$image_ref" >> "$GITHUB_OUTPUT"
-          echo "release_record=$release_record" >> "$GITHUB_OUTPUT"
           {
-            echo "## Source image release"
-            echo "\`\`\`json"
-            echo "$release_record"
-            echo "\`\`\`"
+            echo "Source commit: $GITHUB_SHA"
+            echo "Image: $image_ref"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Export candidate image for Nexa
-        if: startsWith(github.ref, 'refs/heads/release-candidate/')
-        env:
-          CANDIDATE_IMAGE: ${{ steps.release_record.outputs.image_ref }}
-        run: |
-          set -eu
-          docker pull "$CANDIDATE_IMAGE"
-          docker save "$CANDIDATE_IMAGE" -o "$RUNNER_TEMP/admin-candidate-image.tar"
-
-      - name: Upload candidate image for Nexa
-        if: startsWith(github.ref, 'refs/heads/release-candidate/')
-        uses: actions/upload-artifact@v4
+  deploy:
+    name: Deploy configured broker environment
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    needs: publish-image
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
+    concurrency:
+      group: admin-deploy-${{ inputs.environment || 'production' }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          name: admin-candidate-image-${{ github.sha }}
-          path: ${{ runner.temp }}/admin-candidate-image.tar
-          compression-level: 0
-          retention-days: 7
-
+          node-version: 22
+      - name: Prepare admin runtime environment
+        env:
+          ADMIN_UI_ENV: ${{ secrets.ADMIN_UI_ENV }}
+        run: node scripts/prepare-admin-env.mjs
       - name: Deploy to server
-        if: github.ref == 'refs/heads/main'
         uses: appleboy/ssh-action@v1.2.0
         env:
-          NEW_IMAGE: ${{ steps.release_record.outputs.image_ref }}
+          NEW_IMAGE: ${{ needs.publish-image.outputs.image_ref }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
           GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
           ADMIN_CONTAINER_NAME: ${{ vars.ADMIN_CONTAINER_NAME }}

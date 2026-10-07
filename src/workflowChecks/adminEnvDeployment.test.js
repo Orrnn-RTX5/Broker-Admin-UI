@@ -109,7 +109,7 @@ function deploymentScript() {
   const deploy = Object.values(workflow.jobs).flatMap((job) => job.steps ?? []).find((step) => step.name === 'Deploy to server');
   assert.ok(deploy, 'workflow must include its deployment step');
   assert.match(deploy.with.envs, /ADMIN_UI_ENV_B64/);
-  assert.match(deploy.env.NEW_IMAGE, /release_record.outputs.image_ref/);
+  assert.equal(deploy.env.NEW_IMAGE, '${{ needs.publish-image.outputs.image_ref }}');
   return deploy.with.script_path ? readFileSync(path.join(root, deploy.with.script_path), 'utf8') : deploy.with.script;
 }
 
