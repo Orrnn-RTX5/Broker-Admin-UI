@@ -26,5 +26,5 @@ test('mounted once in GatewaysView right after the recovery policy panel',()=>{
  assert.equal(view.match(/<LPRecoveryPolicyPanel \/>/g)?.length,1);
  // Disclosures may separate the panels, but their order and single mounts must remain.
  assert.ok(view.indexOf('<LPRecoveryPolicyPanel />') < view.indexOf('<LPExactPendingModifyAdmissionPanel />'));
- assert.match(view,/import LPExactPendingModifyAdmissionPanel from '\.\/LPExactPendingModifyAdmissionPanel\.jsx';/);
+ assert.match(view,/const LPExactPendingModifyAdmissionPanel = gatewayPanel\(\(\) => import\('\.\/LPExactPendingModifyAdmissionPanel\.jsx'\)\);/);
 });

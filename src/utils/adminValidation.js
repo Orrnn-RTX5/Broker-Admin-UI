@@ -121,13 +121,14 @@ export const validateManagerLists = ({ allowedGroups = '', ipWhitelist = '' }) =
 // JSON contract names them. Empty group selections are omitted so choosing
 // No groups does not rewrite the separate account scope array. role_id is sent
 // only when it changed, as an integer (0 removes the role).
-export const buildManagerUpdateParams = (form, original = {}) => {
+// Forms without an IP editor omit that setting to preserve backend restrictions.
+export const buildManagerUpdateParams = (form, original = {}, { includeIpWhitelist = true } = {}) => {
   const name = String(form.name || '').trim();
   if (!name) throw new Error('Name is required.');
 
   const { allowed_groups, ip_whitelist } = validateManagerLists({
     allowedGroups: form.allowed_groups,
-    ipWhitelist: form.ip_whitelist,
+    ipWhitelist: includeIpWhitelist ? form.ip_whitelist : '',
   });
 
   const params = {
@@ -135,7 +136,7 @@ export const buildManagerUpdateParams = (form, original = {}) => {
     enabled: Boolean(form.enabled),
     group_access_mode: validateGroupAssignment(form.group_access_mode || (allowed_groups.length ? 'restricted' : 'none'), allowed_groups),
     ...(allowed_groups.length ? { 'allowed_groups[]': allowed_groups } : {}),
-    'ip_whitelist[]': ip_whitelist.length ? ip_whitelist : [''],
+    ...(includeIpWhitelist ? { 'ip_whitelist[]': ip_whitelist.length ? ip_whitelist : [''] } : {}),
   };
 
   const roleId = String(form.role_id ?? '');

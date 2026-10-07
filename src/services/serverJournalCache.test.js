@@ -125,3 +125,37 @@ test('sign-out clears ready pages and aborts pending work without retaining reco
   assert.equal(requests[1].signal.aborted, true);
   requests[1].resolve(page('late')); await assert.rejects(pending, { code: 'ERR_CANCELED' });
 });
+
+test('pausing prefetch cancels unused filters but preserves a request selected by the user', async () => {
+  const { cache, requests, setTime } = harness();
+  const warming = cache.warm('scope-a');
+  const selected = cache.read('scope-a', 'errors');
+  cache.pauseWarming('scope-a');
+  assert.equal(requests[0].signal.aborted, false, 'foreground promotion protects the selected request');
+  assert.equal(requests[1].signal.aborted, true);
+  requests[0].resolve(page('selected')); requests[1].resolve(page('canceled'));
+  await selected; await warming;
+  assert.equal(cache.peek('scope-a', 'warnings'), null);
+  await cache.warm('scope-a');
+  assert.equal(requests.length, 2, 'slow foreground reads get a quiet recovery window');
+  setTime(SERVER_JOURNAL_WARM_MS);
+  const resumed = cache.warm('scope-a');
+  assert.equal(requests.length, 4);
+  cache.clear();
+  requests.slice(2).forEach(request => request.resolve(page('obsolete')));
+  await resumed;
+});
+
+test('a foreground timeout retains its page and stops unrelated background traffic', async () => {
+  const { cache, requests } = harness();
+  const first = cache.read('scope-a'); requests[0].resolve(page('saved')); await first;
+  const warming = cache.warm('scope-a');
+  const refresh = cache.read('scope-a', 'all', { force: true });
+  requests[3].reject(Object.assign(new Error('timeout'), { code: 'ECONNABORTED' }));
+  await assert.rejects(refresh);
+  assert.equal(cache.peek('scope-a', 'all').data.entries[0].id, 'saved');
+  assert(requests[1].signal.aborted && requests[2].signal.aborted);
+  requests[1].resolve(page('obsolete')); requests[2].resolve(page('obsolete'));
+  await warming;
+  assert.equal(requests.length, 4);
+});

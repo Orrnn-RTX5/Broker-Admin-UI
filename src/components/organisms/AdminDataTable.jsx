@@ -2,6 +2,8 @@ import { refreshGroupMembership } from '../../services/groupMembershipRefresh.js
 import { sortToolbarRows } from '../../utils/toolbarActions';
 import { formatDealActionLabel, formatDealEntryLabel } from '../../utils/dealDisplayLabels';
 import React, { lazy, Suspense, useState } from 'react';
+import GatewaysView from './GatewayWorkspace.jsx';
+import { createPortal } from 'react-dom';
 import {
   clientsAccountsTableData,
   automationsTableData,
@@ -12,13 +14,16 @@ import { usePositions, useOrders, useDealsSummary } from '../../hooks/usePositio
 import { useInstruments } from '../../hooks/useInstruments';
 import { useAccounts } from '../../hooks/useAccounts';
 import { useClientRowWindow } from '../../hooks/useClientRowWindow';
+import { useDataFetch } from '../../hooks/useCore';
+import { formatAccountAmount } from '../../utils/accountAmountDisplay';
+import { formatOrderNumber, formatOrderTime } from '../../utils/orderDisplay';
 import { ManagerService } from '../../services/manager.service';
 import { PositionsService } from '../../services/positions.service';
 import { InstrumentsService } from '../../services/instruments.service';
 import { loadLpSymbols } from '../../utils/lpSymbols';
 import { getUnconfiguredSymbolRows, mergeUnconfiguredSymbolPage } from '../../utils/lpSymbolLists';
 import { useAuthStore } from '../../store/authStore';
-import { normalizePagedResponse, getApiErrorMessage } from '../../utils/apiShapes';
+import { normalizeArrayResponse, normalizePagedResponse, getApiErrorMessage } from '../../utils/apiShapes';
 import {
   getCloseAllActionState,
   getCloseAllConfirmationPrompt,
@@ -28,7 +33,6 @@ import { canAccessView } from '../../utils/permissions';
 import { useToast } from '../ui/useToast';
 import {
   Clock,
-  Calendar,
   Search,
   ChevronDown,
   ShieldAlert,
@@ -36,10 +40,18 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  X,
+  Hash,
 } from 'lucide-react';
 
 import AdminContextMenu from './AdminContextMenu';
+import OrderDateTimePicker from './OrderDateTimePicker';
+import PositionSymbolPicker from './PositionSymbolPicker';
 import './AdminDataTable.clients.css';
+import './AdminDataTable.accounts.css';
+import './AdminDataTable.orders.css';
+import './AdminDataTable.positions.css';
+import './AdminDataTable.symbols.css';
 const DownstreamAccessView = lazy(() => import('./DownstreamAccessView'));
 const GroupPropertiesPopup = lazy(() => import('../RIGHTCLICKJPOPUPS/GroupPropertiesPopup'));
 
@@ -47,7 +59,6 @@ const GroupPropertiesPopup = lazy(() => import('../RIGHTCLICKJPOPUPS/GroupProper
 // not delay the first table or the independently mounted journal.
 const NetworkCluster = lazy(() => import('./NetworkCluster'));
 const AllocationsView = lazy(() => import('./AllocationsView'));
-const GatewaysView = lazy(() => import('./GatewaysView'));
 const ServerStatusPanel = lazy(() => import('./ServerStatusPanel'));
 const FeedTenantsView = lazy(() => import('./FeedTenantsView'));
 const IntegrationsView = lazy(() => import('./IntegrationsView'));
@@ -104,13 +115,6 @@ const BlueUserIcon = (props) => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="#3B82F6" stroke="#1D4ED8" strokeWidth="1" {...props}>
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
     <circle cx="12" cy="7" r="4" />
-  </svg>
-);
-
-const OrangeSquareSIcon = (props) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="#D97706" stroke="#B45309" strokeWidth="1" {...props}>
-    <rect x="2" y="2" width="20" height="20" rx="3" ry="3" />
-    <text x="12" y="17" fontSize="13" fontWeight="bold" fill="white" stroke="none" textAnchor="middle" style={{ fontFamily: 'sans-serif' }}>S</text>
   </svg>
 );
 
@@ -296,6 +300,9 @@ const parseOrderDateInput = (value) => {
 
   const [, year, month, day, hour = '0', minute = '0'] = match;
   const date = new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), 0, 0);
+  date.setFullYear(Number(year));
+  if (date.getFullYear() !== Number(year) || date.getMonth() !== Number(month) - 1 || date.getDate() !== Number(day)
+    || Number(hour) > 23 || Number(minute) > 59) return null;
   return Number.isNaN(date.getTime()) ? null : date.getTime();
 };
 
@@ -395,6 +402,7 @@ const getPositionRow = (position, idx) => {
     ticket,
     login: pickDefined(position, ['login', 'Login', 'accountLogin', 'account_login']),
     time: position.timeCreateFormatted || formatTradeTimestamp(rawTime),
+    timeMs: getOrderTimestampMs({ time: rawTime }),
     symbol: pickDefined(position, ['symbol', 'Symbol']),
     side: getTradeSideLabel(pickDefined(position, ['side', 'Side', 'action', 'Action', 'type', 'Type', 'cmd', 'Cmd'])),
     volume: pickDefined(position, ['volume', 'Volume', 'lots', 'Lots', 'volumeExt', 'VolumeExt']),
@@ -500,6 +508,7 @@ const filterOrderRows = (rows, filters) => {
     if (filters.openOnly && !isOpenOrderRow(row)) return false;
     if (filters.symbol && row.symbol !== filters.symbol) return false;
     if (!orderMatchesQuery(row, filters.query)) return false;
+    if ((fromMs != null || inclusiveToMs != null) && row.timeMs == null) return false;
     if (fromMs != null && row.timeMs != null && row.timeMs < fromMs) return false;
     if (inclusiveToMs != null && row.timeMs != null && row.timeMs > inclusiveToMs) return false;
     return true;
@@ -556,12 +565,14 @@ const getBrokerClientRow = (account, idx) => {
 const getClientStatusTone = (status) => {
   const normalized = String(status ?? '').trim().toLowerCase();
   if (normalized === 'active' || normalized === 'enabled') return 'active';
+  if (normalized.replace(/[\s_-]+/g, '') === 'readonly') return 'readonly';
   if (normalized === 'pending' || normalized === 'in review' || normalized === 'under review') return 'pending';
   if (normalized === 'inactive' || normalized === 'disabled' || normalized === 'blocked') return 'inactive';
   return 'neutral';
 };
 
 const formatClientStatus = (status) => {
+  if (getClientStatusTone(status) === 'readonly') return 'Read only';
   const value = String(status ?? 'unknown').trim().replaceAll('_', ' ');
   return value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : 'Unknown';
 };
@@ -577,8 +588,8 @@ const getAccountRow = (account, idx) => ({
   login: pickDefined(account, ['login', 'Login', 'account_login', 'accountLogin']),
   name: pickDefined(account, ['name', 'Name', 'client_name', 'clientName', 'full_name', 'fullName', 'user_name', 'userName']),
   group: pickDefined(account, ['group', 'Group', 'group_name', 'groupName', 'account_group', 'accountGroup', 'accountGroupName']),
-  balance: pickDefined(account, ['balance', 'Balance'], 0),
-  equity: pickDefined(account, ['equity', 'Equity'], 0),
+  balance: pickDefined(account, ['balance', 'Balance']),
+  equity: pickDefined(account, ['equity', 'Equity']),
   currency: pickDefined(account, ['currency', 'Currency']),
   status: pickDefined(account, ['status', 'Status'], account.enabled === false || account.Enabled === false ? 'disabled' : 'active'),
 });
@@ -588,7 +599,7 @@ const getSymbolRow = (symbol, idx) => ({
   symbol: symbol.symbol || symbol.name || '',
   description: symbol.description || symbol.path || symbol.category || '',
   digits: symbol.digits ?? symbol.digits_currency ?? '',
-  type: symbol.trade_mode || symbol.type || symbol.mode || '',
+  type: symbol.trade_mode ?? symbol.type ?? symbol.mode ?? '',
   execution: symbol.enabled === false ? 'Disabled' : (symbol.execution || 'Enabled'),
   expiration: symbol.expiration || 'GTC',
   background: symbol.background || '',
@@ -681,10 +692,9 @@ const SYMBOL_COLUMNS = [
   { label: 'Symbol', key: 'symbol', width: 'w-48' },
   { label: 'Description', key: 'description', width: 'w-72' },
   { label: 'Digits', key: 'digits', width: 'w-24' },
-  { label: 'Type', key: 'type', width: 'w-32' },
+  { label: 'Trade mode', key: 'type', width: 'w-32' },
   { label: 'Execution', key: 'execution', width: 'w-48' },
   { label: 'Expiration', key: 'expiration', width: 'w-32' },
-  { label: 'Background', key: 'background', width: 'flex-1' },
 ];
 
 const POSITION_COLUMNS = [
@@ -744,9 +754,12 @@ const PaginationIconButton = ({ 'aria-label': ariaLabel, onClick, disabled, chil
   </button>
 );
 
+const OrderFilterPlacement = ({ host, children }) => host ? createPortal(children, host) : children;
+
 const AdminDataTableContent = ({
   onRowDoubleClick,
   viewType,
+  orderFilterHost,
   onAddClick,
   onGroupsChanged,
   initialServerTab,
@@ -764,7 +777,7 @@ const AdminDataTableContent = ({
   const [closeAllSymbol, setCloseAllSymbol] = useState('');
   const [closeAllBusy, setCloseAllBusy] = useState(false);
   const [closeAllNotice, setCloseAllNotice] = useState(null);
-  const [ordersMode, setOrdersMode] = useState('all');
+  const [symbolSelection, setSymbolSelection] = useState({ scope: null, id: null });
   const [orderFilters, setOrderFilters] = useState(() => createDefaultOrderFilters());
   const [page, setPage] = useState(1);
   const [pageInputValue, setPageInputValue] = useState('1');
@@ -782,8 +795,6 @@ const AdminDataTableContent = ({
   // Row count reporting is committed after render so delegated views can clear
   // the breadcrumb counter without render-time ref writes.
   const lastSentRef = React.useRef({ total: -1, filtered: -1 });
-  const orderFromDateInputRef = React.useRef(null);
-  const orderToDateInputRef = React.useRef(null);
 
   React.useEffect(() => {
     const timerId = window.setTimeout(() => {
@@ -823,12 +834,15 @@ const AdminDataTableContent = ({
     orderFilters.to,
     orderSearch,
   ]);
+  const orderRecordFilter = React.useMemo(() => getOrderRecordFilter(effectiveOrderFilters), [effectiveOrderFilters]);
+  const fromMs = parseOrderDateInput(orderFilters.from);
+  const toMs = parseOrderDateInput(orderFilters.to);
+  const orderDateRangeError = fromMs != null && toMs != null && fromMs > toMs ? 'From must be earlier than or equal to To.' : '';
   const pagingScopeKey = React.useMemo(() => JSON.stringify([
     viewType,
     pageSize,
     debouncedSearchQuery,
     debouncedOrderQuery,
-    ordersMode,
     orderFilters.symbol,
     orderFilters.openOnly,
     orderFilters.rangePreset,
@@ -840,7 +854,6 @@ const AdminDataTableContent = ({
     pageSize,
     debouncedSearchQuery,
     debouncedOrderQuery,
-    ordersMode,
     orderFilters.symbol,
     orderFilters.openOnly,
     orderFilters.rangePreset,
@@ -878,7 +891,7 @@ const AdminDataTableContent = ({
       .catch(() => {});
     return () => { cancelled = true; };
   }, [isSymbolsGrid, refreshTrigger]);
-  const { data: positionsResponse, loading: positionsLoading, error: positionsError, mutate: refetchPositions } = usePositions({ page: activePage, limit: pageSize }, true, 2000, viewType === 'Positions');
+  const { data: positionsResponse, loading: positionsLoading, error: positionsError, verified: positionsVerified, mutate: refetchPositions } = usePositions({ page: activePage, limit: pageSize }, true, 2000, viewType === 'Positions');
   const { data: ordersResponse, loading: ordersLoading, error: ordersError, mutate: refetchOrders } = useOrders({
     limit: pageSize,
     offset: (activePage - 1) * pageSize,
@@ -887,7 +900,9 @@ const AdminDataTableContent = ({
     from: orderFilters.from,
     to: orderFilters.to,
     openOnly: orderFilters.openOnly,
-  }, viewType === 'Orders');
+    matches: orderRecordFilter,
+  }, viewType === 'Orders' && !orderDateRangeError);
+  const { data: orderSymbolCatalog } = useDataFetch(InstrumentsService.getMarketSymbols, null, [], viewType === 'Orders', { requestKey: 'manager:order-symbols', cacheTtlMs: 30000 });
 
   const { data: groupsResponse, loading: groupsLoading, error: groupsError, mutate: refetchGroups } = useGroups(activePage, pageSize, groupSearch, shouldLoadGroups);
 
@@ -904,20 +919,13 @@ const AdminDataTableContent = ({
     map[viewType]?.();
   }, [refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [dealDateRange] = useState(() => {
-    const now = Date.now();
-    return {
-      from: new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      to: new Date(now).toISOString()
-    };
-  });
   const { data: dealsResponse, loading: dealsLoading, error: dealsError, mutate: refetchDeals } = useDealsSummary(
-    dealDateRange.from,
-    dealDateRange.to,
+    '',
+    '',
     '',
     '',
     viewType === 'Deals',
-    { page: activePage, limit: pageSize, search: debouncedSearchQuery }
+    { page: activePage, limit: pageSize, search: debouncedSearchQuery, range: 'recent' }
   );
 
   React.useEffect(() => {
@@ -965,6 +973,7 @@ const AdminDataTableContent = ({
   };
 
   const handleCloseAllBySymbol = async () => {
+    if (!positionsVerified) return;
     const action = getCloseAllActionState({
       user: currentUser,
       symbol: closeAllSymbol,
@@ -1012,17 +1021,8 @@ const AdminDataTableContent = ({
     }
   };
 
-  const handleOrderModeChange = (mode) => {
-    setOrdersMode(mode);
-    setOrderFilters((current) => ({
-      ...current,
-      openOnly: mode !== 'all',
-    }));
-  };
-
-  const handleOrderOpenOnlyChange = (event) => {
-    const openOnly = event.target.checked;
-    setOrdersMode(openOnly ? 'open' : 'all');
+  const handleOrderStatusChange = (event) => {
+    const openOnly = event.target.value === 'open';
     setOrderFilters((current) => ({
       ...current,
       openOnly,
@@ -1039,17 +1039,8 @@ const AdminDataTableContent = ({
   };
 
   const handleOrderRequest = () => {
-    refetchOrders?.();
-  };
-
-  const openOrderDatePicker = (inputRef) => {
-    const input = inputRef.current;
-    if (!input) return;
-    if (typeof input.showPicker === 'function') {
-      input.showPicker();
-      return;
-    }
-    input.focus();
+    if (orderFilters.query !== debouncedOrderQuery) setDebouncedOrderQuery(orderFilters.query);
+    else refetchOrders?.();
   };
 
   const handleOrderFilterSelectMouseDown = (event) => {
@@ -1175,14 +1166,18 @@ const AdminDataTableContent = ({
         keys: ['data', 'orders', 'answer', 'items', 'rows'],
         page: activePage,
         pageSize,
-        filterFn: applyLocalOrderFilter ? getOrderRecordFilter(effectiveOrderFilters) : undefined,
+        filterFn: applyLocalOrderFilter && !ordersResponse?.clientFiltered ? orderRecordFilter : undefined,
         mapFn: (order, idx) => getOrderDisplayRow(getOrderRow(order, idx)),
       });
 
       columns = ORDER_COLUMNS;
       data = pageData.rows;
-      pagination = pageData;
-      orderSymbolOptions = getOrderSymbolOptions(data);
+      pagination = ordersResponse?.clientFiltered ? { ...pageData, hasNextPage: ordersResponse.hasNextPage } : pageData;
+      orderSymbolOptions = getOrderSymbolOptions([
+        ...normalizeArrayResponse(ordersResponse, ['data', 'orders', 'answer', 'items', 'rows']).map(order => getOrderRow(order, 0)),
+        ...(Array.isArray(orderSymbolCatalog) ? orderSymbolCatalog.map(symbol => ({ symbol })) : []),
+        { symbol: orderFilters.symbol },
+      ]);
       isPositionsViewTemp = true;
       isLoading = ordersLoading;
     } else if (viewType === 'Deals') {
@@ -1259,6 +1254,9 @@ const AdminDataTableContent = ({
     groupsLoading,
     groupsResponse,
     lpSymbolEntries,
+    orderFilters.symbol,
+    orderRecordFilter,
+    orderSymbolCatalog,
     ordersLoading,
     ordersResponse,
     activePage,
@@ -1283,10 +1281,14 @@ const AdminDataTableContent = ({
     pagination,
   } = tableState;
   const data = React.useMemo(() => sortToolbarRows(unsortedData, sortDirection, viewType), [unsortedData, sortDirection, viewType]);
-  const clientWindow = useClientRowWindow(viewType === 'Clients', `${pagingScopeKey}|${activePage}`, data.length);
-  const rowsToRender = React.useMemo(() => viewType === 'Clients'
+  const windowedRows = ['Clients', 'Trading Accounts', 'Symbols', 'Orders', 'Positions', 'Deals'].includes(viewType);
+  const rowHeight = viewType === 'Clients' ? 37 : viewType === 'Orders' ? 42 : 34;
+  const clientWindow = useClientRowWindow(windowedRows, `${pagingScopeKey}|${activePage}`, data.length, {
+    rowHeight, headerHeight: viewType === 'Clients' ? 33 : viewType === 'Orders' ? 36 : viewType === 'Deals' ? 30 : 34,
+  });
+  const rowsToRender = React.useMemo(() => windowedRows
     ? data.slice(clientWindow.start, clientWindow.end) : data,
-  [data, viewType, clientWindow.start, clientWindow.end]);
+  [data, windowedRows, clientWindow.start, clientWindow.end]);
 
   const knownTotalCount = pagination?.hasKnownTotal ? pagination.total : undefined;
   const renderedTotalCount = Number.isFinite(knownTotalCount) ? knownTotalCount : data.length;
@@ -1592,6 +1594,8 @@ const AdminDataTableContent = ({
 
   const isPagedView = PAGED_VIEW_TYPES.has(viewType);
   const isBrokerClientsView = viewType === 'Clients';
+  const isTradingAccountsView = viewType === 'Trading Accounts';
+  const isAccountDirectoryView = isBrokerClientsView || isTradingAccountsView;
   const totalCount = renderedTotalCount;
   const activeFooterTabLabel = viewType === 'Clients & Accounts'
     ? 'Clients & Accounts'
@@ -1606,6 +1610,7 @@ const AdminDataTableContent = ({
     ? `${formatCount(pageStart)}-${formatCount(pageEnd)}${hasKnownPaginationTotal ? ` of ${formatCount(pagination.total)}` : ''}`
     : (isLoading ? 'Loading...' : 'No rows');
   const paginationRangeAriaLabel = data.length ? `Rows ${paginationRangeLabel}` : paginationRangeLabel;
+  const showAccountPageNavigation = activePage > 1 || Boolean(pagination?.hasNextPage) || (hasKnownPaginationTotal && totalPages > 1);
 
   const goToPage = (nextPage) => {
     setPage((currentPage) => {
@@ -1619,7 +1624,9 @@ const AdminDataTableContent = ({
       setPageInputValue(String(activePage));
       return;
     }
-    goToPage(pageInputValue);
+    const nextPage = clampPage(pageInputValue, totalPages);
+    setPageInputValue(String(nextPage));
+    goToPage(nextPage);
   };
 
   const handlePageInputChange = (event) => {
@@ -1646,6 +1653,10 @@ const AdminDataTableContent = ({
   };
 
   const handleRowClick = (row) => {
+    if (isSymbolsView) {
+      setSymbolSelection({ scope: `${pagingScopeKey}|${activePage}`, id: String(row.id) });
+      return;
+    }
     if (isPositionsView && row.symbol) {
       setCloseAllSymbol(row.symbol);
       setCloseAllNotice(null);
@@ -1657,7 +1668,9 @@ const AdminDataTableContent = ({
       : null);
   };
 
-  const isSelectedEditableRow = (row) => (
+  const isSelectedEditableRow = (row) => isSymbolsView
+    ? symbolSelection.scope === `${pagingScopeKey}|${activePage}` && symbolSelection.id === String(row.id)
+    : (
     selectedEditableTargetKey &&
     selectedEditableTargetType === getRowEditTargetType(row) &&
     String(row.id) === selectedEditableTargetKey
@@ -1680,7 +1693,7 @@ const AdminDataTableContent = ({
   }
 
   return (
-    <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative" onContextMenu={handleContextMenu}>
+    <div className={`flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative ${viewType === 'Orders' ? 'admin-orders-view' : viewType === 'Positions' ? 'admin-positions-view' : viewType === 'Symbols' ? 'admin-symbols-view' : ''}`} onContextMenu={handleContextMenu}>
       {serverPopupData && (
         <Suspense fallback={null}>
           <ServerPropertiesPopup
@@ -1692,9 +1705,10 @@ const AdminDataTableContent = ({
         </Suspense>
       )}
       {viewType === 'Orders' && (
-        <div className="flex items-center px-3 py-2 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] text-[11px] shrink-0 overflow-x-auto no-scrollbar whitespace-nowrap shadow-[var(--shadow-sm)]">
-          <div className="flex border border-[color:var(--border-strong)] bg-[color:var(--bg-surface-1)] h-[26px] items-center text-[color:var(--text-muted)] mr-1 rounded-[2px]">
-            <div className="px-1.5"><Search size={10} /></div>
+        <OrderFilterPlacement host={orderFilterHost}>
+        <div className="admin-orders-filters" role="search" aria-label="Order filters">
+          <div className="admin-orders-search">
+            <div><Search size={13} aria-hidden="true" /></div>
             <input
               type="text"
               aria-label="Search orders by group, account, or ticket"
@@ -1709,16 +1723,17 @@ const AdminDataTableContent = ({
               onKeyDown={(event) => {
                 if (viewType === 'Orders' && event.key === 'Enter') handleOrderRequest();
               }}
-              placeholder="Group, account, or order ticket"
-              className="bg-transparent border-none outline-none w-[280px] text-[11px] text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)]"
+              placeholder="Search account, ticket, or symbol…"
+              className="bg-transparent border-none outline-none text-[color:var(--text-primary)]"
             />
           </div>
 
           <div
-            className={`${orderFilterSelectShellClassName} w-[100px] mr-2`}
+            className={`${orderFilterSelectShellClassName} admin-orders-select admin-orders-select--symbol`}
             onMouseDown={handleOrderFilterSelectMouseDown}
           >
             <select
+              aria-label="Order symbol"
               value={viewType === 'Orders' ? orderFilters.symbol : ''}
               onChange={(event) => {
                 if (viewType !== 'Orders') return;
@@ -1737,21 +1752,20 @@ const AdminDataTableContent = ({
             <div className="px-1 pointer-events-none text-[color:var(--text-muted)]"><ChevronDown size={12} /></div>
           </div>
 
-          <label className="flex items-center gap-1.5 text-[color:var(--text-primary)] cursor-pointer mr-2 border border-transparent hover:border-[color:var(--border-strong)] px-1.5 h-[26px] rounded-sm">
-            <input
-              type="checkbox"
-              checked={viewType === 'Orders' ? orderFilters.openOnly : false}
-              onChange={viewType === 'Orders' ? handleOrderOpenOnlyChange : undefined}
-              className="w-[12px] h-[12px] accent-[color:var(--accent-500)]"
-            />
-            Open only
-          </label>
+          <div className={`${orderFilterSelectShellClassName} admin-orders-select admin-orders-select--status`} onMouseDown={handleOrderFilterSelectMouseDown}>
+            <select aria-label="Order status" value={orderFilters.openOnly ? 'open' : 'all'} onChange={handleOrderStatusChange} className={orderFilterSelectClassName}>
+              <option value="all" className={orderFilterSelectOptionClassName} style={orderFilterSelectOptionStyle}>All orders</option>
+              <option value="open" className={orderFilterSelectOptionClassName} style={orderFilterSelectOptionStyle}>Open orders</option>
+            </select>
+            <div className="px-1 pointer-events-none text-[color:var(--text-muted)]"><ChevronDown size={12} /></div>
+          </div>
 
           <div
-            className={`${orderFilterSelectShellClassName} w-[70px] mr-1`}
+            className={`${orderFilterSelectShellClassName} admin-orders-select admin-orders-select--range`}
             onMouseDown={handleOrderFilterSelectMouseDown}
           >
             <select
+              aria-label="Order date range"
               value={viewType === 'Orders' ? orderFilters.rangePreset : 'all'}
               onChange={viewType === 'Orders' ? handleOrderRangePresetChange : undefined}
               className={orderFilterSelectClassName}
@@ -1765,121 +1779,70 @@ const AdminDataTableContent = ({
             <div className="px-1 pointer-events-none text-[color:var(--text-muted)]"><ChevronDown size={12} /></div>
           </div>
 
-          <div className="flex border border-[color:var(--border-strong)] bg-[color:var(--bg-surface-1)] h-[26px] items-center text-[color:var(--text-primary)] mr-1 rounded-[2px]">
-            <input
-              ref={orderFromDateInputRef}
-              type="datetime-local"
-              step="60"
-              aria-label="Orders from date"
-              value={viewType === 'Orders' ? orderFilters.from : ''}
-              onChange={(event) => {
-                if (viewType !== 'Orders') return;
-                setOrderFilters((current) => ({
-                  ...current,
-                  from: event.target.value,
-                  rangePreset: 'custom',
-                }));
-              }}
-              className="order-date-input bg-transparent border-none outline-none w-[140px] text-[11px] pl-2"
+          <div className="admin-orders-date-range">
+            <OrderDateTimePicker
+              label="From" boundary="from" value={orderFilters.from}
+              onChange={from => setOrderFilters(current => ({ ...current, from, rangePreset: 'custom' }))}
             />
-            <button
-              type="button"
-              onClick={() => openOrderDatePicker(orderFromDateInputRef)}
-              className="border-l border-[color:var(--border-strong)] px-1.5 text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)] cursor-pointer h-full flex items-center"
-              aria-label="Select orders from date"
-            >
-              <Calendar size={12} />
-            </button>
+            <OrderDateTimePicker
+              label="To" boundary="to" value={orderFilters.to}
+              onChange={to => setOrderFilters(current => ({ ...current, to, rangePreset: 'custom' }))}
+            />
           </div>
 
-          <div className="flex border border-[color:var(--border-strong)] bg-[color:var(--bg-surface-1)] h-[26px] items-center text-[color:var(--text-primary)] mr-2 rounded-[2px]">
-            <input
-              ref={orderToDateInputRef}
-              type="datetime-local"
-              step="60"
-              aria-label="Orders to date"
-              value={viewType === 'Orders' ? orderFilters.to : ''}
-              onChange={(event) => {
-                if (viewType !== 'Orders') return;
-                setOrderFilters((current) => ({
-                  ...current,
-                  to: event.target.value,
-                  rangePreset: 'custom',
-                }));
-              }}
-              className="order-date-input bg-transparent border-none outline-none w-[140px] text-[11px] pl-2"
-            />
-            <button
-              type="button"
-              onClick={() => openOrderDatePicker(orderToDateInputRef)}
-              className="border-l border-[color:var(--border-strong)] px-1.5 text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)] cursor-pointer h-full flex items-center"
-              aria-label="Select orders to date"
-            >
-              <Calendar size={12} />
-            </button>
-          </div>
-
+          {orderDateRangeError && <span className="admin-orders-filter-error" role="alert">{orderDateRangeError}</span>}
         </div>
+        </OrderFilterPlacement>
       )}
 
       {viewType === 'Positions' && (
-        <div className="flex min-h-10 shrink-0 items-center gap-2 border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] px-3 py-1.5 text-[11px]">
-          <span className="shrink-0 font-medium text-[color:var(--text-secondary)]">Close positions by symbol</span>
-          <div className="flex min-w-0 items-center gap-1.5">
-              <input
-                type="text"
+        <div className="admin-positions-toolbar">
+          <span className="admin-positions-toolbar-label">Open positions</span>
+          {positionsResponse && !positionsVerified && <span role="status" className="text-xs text-[color:var(--text-muted)]">Updating positions…</span>}
+          <div className="admin-positions-close-controls">
+              <label htmlFor="positions-close-symbol">Close by symbol</label>
+              <PositionSymbolPicker
                 value={closeAllSymbol}
-                onChange={(event) => {
-                  setCloseAllSymbol(event.target.value);
+                onChange={(symbol) => {
+                  setCloseAllSymbol(symbol);
                   setCloseAllNotice(null);
                 }}
+                options={closeAllSymbolOptions}
                 disabled={!closeAllAction.hasClosePermission || closeAllBusy}
-                list="close-all-symbol-options"
-                aria-label="Close all positions symbol"
-                placeholder="Symbol"
-                className="bg-[color:var(--bg-surface-1)] border border-[color:var(--border-strong)] text-[color:var(--text-primary)] text-[11px] h-[26px] px-2 rounded-[2px] outline-none w-[110px] focus:border-[color:var(--accent-500)] disabled:opacity-50"
                 title={closeAllAction.hasClosePermission ? 'Symbol to close' : closeAllAction.disabledReason}
               />
-              <datalist id="close-all-symbol-options">
-                {closeAllSymbolOptions.map((symbol) => (
-                  <option key={symbol} value={symbol} />
-                ))}
-              </datalist>
               <button
                 type="button"
                 onClick={handleCloseAllBySymbol}
-                disabled={!closeAllAction.canSubmit}
+                disabled={!closeAllAction.canSubmit || !positionsVerified}
                 title={closeAllAction.disabledReason || `Close all positions for ${closeAllAction.normalizedSymbol}`}
-                className="inline-flex items-center gap-1 h-[26px] px-2.5 bg-[color:var(--danger-500)]/16 border border-[color:var(--danger-500)]/45 rounded-[2px] text-[color:var(--danger-500)] hover:bg-[color:var(--danger-500)]/24 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="admin-positions-close-button"
               >
                 <ShieldAlert size={12} />
-                {closeAllBusy ? 'Closing' : 'Close All'}
+                {closeAllBusy ? 'Closing…' : 'Close All'}
               </button>
-              {closeAllNotice && (
-                <span
-                  role={closeAllNotice.tone === 'error' ? 'alert' : 'status'}
-                  className={`max-w-[360px] truncate ${closeAllNoticeClass}`}
-                  title={closeAllNotice.message}
-                >
-                  {closeAllNotice.message}
-                </span>
-              )}
           </div>
+          {closeAllNotice && (
+            <div className={`admin-positions-notice ${closeAllNoticeClass}`} data-tone={closeAllNotice.tone} role={closeAllNotice.tone === 'error' ? 'alert' : 'status'}>
+              <span>{closeAllNotice.message}</span>
+              <button type="button" aria-label="Dismiss position message" onClick={() => setCloseAllNotice(null)}><X size={12} aria-hidden="true" /></button>
+            </div>
+          )}
         </div>
       )}
 
       {/* Header and rows share one scroll surface so columns stay aligned. */}
       <div
-        ref={isBrokerClientsView ? clientWindow.scrollRef : undefined}
-        onScroll={isBrokerClientsView ? clientWindow.onScroll : undefined}
+        ref={windowedRows ? clientWindow.scrollRef : undefined}
+        onScroll={windowedRows ? clientWindow.onScroll : undefined}
         className="flex-1 min-h-0 overflow-auto bg-[color:var(--bg-app)]"
       >
-        <div className={isBrokerClientsView ? 'w-full min-w-[1160px]' : 'w-max min-w-full'}>
-      <div data-export-header="true" className={isBrokerClientsView ? 'admin-clients-header sticky top-0 z-10' : 'sticky top-0 z-10 flex h-[30px] w-full items-center border-b border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-2)] shadow-sm'}>
+        <div className={isSymbolsView ? 'admin-symbols-grid' : isTradingAccountsView ? 'admin-trading-grid' : viewType === 'Orders' ? 'admin-orders-grid' : viewType === 'Positions' ? 'admin-positions-grid' : isBrokerClientsView ? 'w-full min-w-[1160px]' : 'w-max min-w-full'}>
+      <div data-export-header="true" className={isSymbolsView ? 'admin-symbols-header' : isTradingAccountsView ? 'admin-trading-header' : isBrokerClientsView ? 'admin-clients-header sticky top-0 z-10' : 'sticky top-0 z-10 flex h-[30px] w-full items-center border-b border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-2)] shadow-sm'}>
         {columns.map((col, idx) => (
           <div
             key={idx}
-            className={isBrokerClientsView ? 'admin-column-header admin-client-column' : `admin-column-header ${col.width} px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] hover:bg-[color:var(--bg-surface-3)] cursor-default flex items-center shrink-0 ${NUMERIC_COLUMN_LABELS.has(col.label) ? 'justify-end tabular-nums text-right' : ''}`}
+            className={isSymbolsView ? 'admin-column-header admin-symbols-column' : isTradingAccountsView ? `admin-column-header admin-trading-column ${NUMERIC_COLUMN_LABELS.has(col.label) ? 'admin-trading-number' : ''}` : isBrokerClientsView ? 'admin-column-header admin-client-column' : `admin-column-header ${col.width} px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] hover:bg-[color:var(--bg-surface-3)] cursor-default flex items-center shrink-0 ${NUMERIC_COLUMN_LABELS.has(col.label) ? 'justify-end tabular-nums text-right' : ''}`}
           >
             {col.label}
           </div>
@@ -1888,16 +1851,20 @@ const AdminDataTableContent = ({
         {viewType === 'Groups' && <div className="flex-1 border-b border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-2)]"></div>}
       </div>
 
-        {isBrokerClientsView && clientWindow.before > 0 && <div aria-hidden="true" style={{ height: clientWindow.before }} />}
+        {windowedRows && clientWindow.before > 0 && <div aria-hidden="true" style={{ height: clientWindow.before }} />}
         {rowsToRender.map((row, idx) => (
           <div
             key={row.id}
             data-export-row="true"
-            data-row-index={isBrokerClientsView ? clientWindow.start + idx : undefined}
+            data-row-index={windowedRows ? clientWindow.start + idx : undefined}
             onClick={() => handleRowClick(row)}
             onDoubleClick={() => onRowDoubleClick && onRowDoubleClick(row)}
             onContextMenu={(e) => { e.stopPropagation(); handleContextMenu(e, row); }}
-            onKeyDown={isBrokerClientsView ? (event) => {
+            onKeyDown={isAccountDirectoryView || isSymbolsView ? (event) => {
+              if (isSymbolsView) {
+                if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handleRowClick(row); }
+                return;
+              }
               if (event.key === 'Enter') {
                 event.preventDefault();
                 handleRowClick(row);
@@ -1907,14 +1874,14 @@ const AdminDataTableContent = ({
                 handleRowClick(row);
               }
             } : undefined}
-            role={isBrokerClientsView ? 'button' : undefined}
-            tabIndex={isBrokerClientsView ? 0 : undefined}
-            aria-label={isBrokerClientsView ? `Select ${row.name || row.login || 'client'} account; press Enter to edit` : undefined}
-            aria-pressed={isBrokerClientsView ? Boolean(isSelectedEditableRow(row)) : undefined}
-            data-selected={isBrokerClientsView ? Boolean(isSelectedEditableRow(row)) : undefined}
-            data-stripe={isBrokerClientsView ? ((clientWindow.start + idx) % 2 === 0 ? 'even' : 'odd') : undefined}
-            className={isBrokerClientsView ? 'admin-clients-row' : `flex min-h-[var(--row-h)] w-full cursor-pointer group border-b border-[color:var(--border-subtle)] transition-colors ${isSelectedEditableRow(row) ? 'bg-[color:var(--bg-surface-2)] text-[color:var(--text-primary)]' : (idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]')} hover:bg-[color:var(--bg-surface-3)]`}
-            style={!isBrokerClientsView && isSelectedEditableRow(row) ? { boxShadow: 'inset 2px 0 0 var(--accent-500)' } : undefined}
+            role={isAccountDirectoryView || isSymbolsView ? 'button' : undefined}
+            tabIndex={isAccountDirectoryView || isSymbolsView ? 0 : undefined}
+            aria-label={isSymbolsView ? `Select ${row.symbol} symbol` : isAccountDirectoryView ? `Select ${row.name || row.login || 'client'} account; press Enter to edit` : undefined}
+            aria-pressed={isAccountDirectoryView || isSymbolsView ? Boolean(isSelectedEditableRow(row)) : undefined}
+            data-selected={isAccountDirectoryView || isSymbolsView || viewType === 'Orders' || viewType === 'Positions' ? Boolean(isSelectedEditableRow(row)) : undefined}
+            data-stripe={windowedRows ? ((clientWindow.start + idx) % 2 === 0 ? 'even' : 'odd') : undefined}
+            className={isSymbolsView ? 'admin-symbols-row' : isTradingAccountsView ? 'admin-trading-row' : isBrokerClientsView ? 'admin-clients-row' : `flex min-h-[var(--row-h)] w-full cursor-pointer group border-b border-[color:var(--border-subtle)] transition-colors ${isSelectedEditableRow(row) ? 'bg-[color:var(--bg-surface-2)] text-[color:var(--text-primary)]' : (idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]')} hover:bg-[color:var(--bg-surface-3)]`}
+            style={{ ...(windowedRows ? { height: rowHeight, minHeight: rowHeight, flexShrink: 0 } : {}), ...(!isBrokerClientsView && isSelectedEditableRow(row) ? { boxShadow: 'inset 2px 0 0 var(--accent-500)' } : {}) }}
           >
             {isBrokerClientsView ? (
               <>
@@ -1941,16 +1908,19 @@ const AdminDataTableContent = ({
               </>
             ) : isSymbolsView ? (
               <>
-                <div className="w-48 px-3 py-1.5 text-[12px] flex items-center gap-2 border-r border-[color:var(--border-subtle)] shrink-0">
-                  <span className={row.notConfigured ? 'opacity-40' : undefined}><OrangeSquareSIcon /></span>
-                  <span className={`${row.notConfigured ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]'} truncate font-normal`}>{row.symbol}</span>
+                <div className="admin-symbols-cell admin-symbols-code" title={row.symbol}>
+                  <Hash size={12} strokeWidth={1.5} aria-hidden="true" />
+                  <span className="admin-symbols-name">{row.symbol}</span>
                 </div>
-                <div className="w-72 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.description}</div>
-                <div className="w-24 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.digits}</div>
-                <div className="w-32 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.type}</div>
-                <div className={`w-48 px-3 py-1.5 text-[12px] border-r border-[color:var(--border-subtle)] shrink-0 truncate ${row.notConfigured ? 'text-[color:var(--warning-500)] italic' : 'text-[color:var(--text-secondary)]'}`} title={row.notConfigured ? 'Streamed by the LP but not configured as an instrument' : undefined}>{row.execution}</div>
-                <div className="w-32 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.expiration}</div>
-                <div className="flex-1 bg-transparent"></div>
+                <div className="admin-symbols-cell admin-symbols-description" title={String(row.description || '')}>{row.description || <span className="admin-symbols-empty">—</span>}</div>
+                <div className="admin-symbols-cell admin-symbols-number">{row.digits === '' || row.digits == null ? <span className="admin-symbols-empty">—</span> : row.digits}</div>
+                <div className="admin-symbols-cell">{row.type === '' || row.type == null ? <span className="admin-symbols-empty">—</span> : row.type}</div>
+                <div className="admin-symbols-cell" title={row.notConfigured ? 'Available from the feed; instrument setup is required before trading.' : String(row.execution || '')}>
+                  <span className="admin-symbols-execution" data-tone={row.notConfigured ? 'pending' : String(row.execution).toLowerCase() === 'enabled' ? 'enabled' : String(row.execution).toLowerCase() === 'disabled' ? 'disabled' : 'neutral'}>
+                    <span aria-hidden="true" />{row.execution || '—'}
+                  </span>
+                </div>
+                <div className="admin-symbols-cell admin-symbols-expiration">{row.expiration || <span className="admin-symbols-empty">—</span>}</div>
               </>
             ) : isPositionsView ? (
               <>
@@ -1976,6 +1946,25 @@ const AdminDataTableContent = ({
                   if (col.label === 'Status') val = row.status;
                   if (col.label === 'Comment') val = row.comment;
 
+                  const rawValue = val;
+                  if (viewType === 'Orders') {
+                    const priceDigits = row.raw?.digits ?? row.raw?.Digits ?? row.raw?.price_digits ?? row.raw?.PriceDigits;
+                    if (['Price Open', 'S/L', 'T/P'].includes(col.label)) val = formatOrderNumber(val, priceDigits);
+                    if (col.label === 'Volume') val = formatOrderNumber(val, row.raw?.volume_digits ?? row.raw?.VolumeDigits, 2);
+                    if (col.label === 'Time') val = formatOrderTime(row.timeMs, row.time);
+                    if (col.label === 'Side') val = getTradeSideLabel(val);
+                    if (col.label === 'Status') val = String(val || '—').replace(/^./, char => char.toUpperCase());
+                  }
+                  if (viewType === 'Positions') {
+                    const priceDigits = row.raw?.digits ?? row.raw?.Digits ?? row.raw?.price_digits ?? row.raw?.PriceDigits;
+                    if (['Price Open', 'Price Current', 'S/L', 'T/P'].includes(col.label)) {
+                      val = ['S/L', 'T/P'].includes(col.label) && Number(val) === 0 ? '—' : formatOrderNumber(val, priceDigits);
+                    }
+                    if (col.label === 'Volume') val = formatOrderNumber(val, row.raw?.volume_digits ?? row.raw?.VolumeDigits, 2);
+                    if (['Swap', 'Profit'].includes(col.label)) val = formatOrderNumber(val, row.raw?.currency_digits ?? row.raw?.digits_currency ?? row.raw?.CurrencyDigits ?? 2);
+                    if (col.label === 'Time') val = formatOrderTime(row.timeMs, row.time);
+                  }
+
                   const displayVal = viewType === 'Deals' && col.label === 'Action'
                     ? formatDealActionLabel(val)
                     : viewType === 'Deals' && col.label === 'Entry'
@@ -1996,7 +1985,7 @@ const AdminDataTableContent = ({
                           : 'text-[color:var(--text-primary)]';
 
                   return (
-                    <div key={cIdx} title={String(renderTableValue(displayVal))} className={`${col.width} px-3 py-1.5 text-[11px] ${cellToneClass} border-r border-[color:var(--border-subtle)] shrink-0 ${isNumeric ? 'text-right tabular-nums' : ''} truncate`}>
+                    <div key={cIdx} title={String(renderTableValue(viewType === 'Deals' ? displayVal : rawValue))} data-order-tone={viewType === 'Orders' ? (isSideCol ? String(val).toLowerCase() : col.label === 'Status' ? (isOpenOrderRow(row) ? 'open' : 'closed') : undefined) : undefined} data-position-tone={viewType === 'Positions' ? (isSideCol ? String(displayVal).toLowerCase() : col.label === 'Profit' ? (Number(row.profit) > 0 ? 'profit' : Number(row.profit) < 0 ? 'loss' : 'neutral') : undefined) : undefined} className={`${col.width} px-3 py-1.5 text-[11px] ${cellToneClass} border-r border-[color:var(--border-subtle)] shrink-0 ${isNumeric ? 'text-right tabular-nums' : ''} truncate`}>
                        {renderTableValue(displayVal)}
                     </div>
                   );
@@ -2004,17 +1993,16 @@ const AdminDataTableContent = ({
               </>
             ) : isAccountsView ? (
               <>
-                <div className="w-32 px-3 py-1.5 text-[12px] flex items-center gap-2 border-r border-[color:var(--border-subtle)] shrink-0">
-                  <BlueUserIcon />
-                  <span className="text-[color:var(--text-primary)] truncate font-normal">{row.login}</span>
-                </div>
-                <div className="w-48 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.name}</div>
-                <div className="w-48 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.group}</div>
-                <div title={String(row.balance)} className="w-32 px-3 py-1.5 text-right tabular-nums text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.balance}</div>
-                <div title={String(row.equity)} className="w-32 px-3 py-1.5 text-right tabular-nums text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.equity}</div>
-                <div className="w-24 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.currency}</div>
-                <div className="w-32 px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate">{row.status}</div>
-                <div className="flex-1 bg-transparent"></div>
+                <div className="admin-trading-cell admin-trading-login" title={String(row.login ?? '')}><span className="admin-trading-value">{renderClientField(row.login)}</span></div>
+                <div className="admin-trading-cell admin-trading-name" title={String(row.name ?? '')}><span className="admin-trading-value">{renderClientField(row.name)}</span></div>
+                <div className="admin-trading-cell" title={String(row.group ?? '')}><span className="admin-trading-value">{renderClientField(row.group)}</span></div>
+                {['balance', 'equity'].map(key => (
+                  <div key={key} title={String(row[key] ?? '')} className="admin-trading-cell admin-trading-number">
+                    <span className="admin-trading-value">{formatAccountAmount(row[key], row.currency, row.raw?.currency_digits ?? row.raw?.digits_currency ?? row.raw?.CurrencyDigits)}</span>
+                  </div>
+                ))}
+                <div className="admin-trading-cell" title={String(row.currency ?? '')}>{renderClientField(row.currency)}</div>
+                <div className="admin-trading-cell"><span className="admin-client-status" data-tone={getClientStatusTone(row.status)} title={String(row.status ?? '')}>{formatClientStatus(row.status)}</span></div>
               </>
             ) : (
               <>
@@ -2035,7 +2023,7 @@ const AdminDataTableContent = ({
             )}
           </div>
         ))}
-        {isBrokerClientsView && clientWindow.after > 0 && <div aria-hidden="true" style={{ height: clientWindow.after }} />}
+        {windowedRows && clientWindow.after > 0 && <div aria-hidden="true" style={{ height: clientWindow.after }} />}
         {isLoading && data.length === 0 && (
           <div role="status" className="m-4 w-fit rounded-[4px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] px-4 py-3 text-[12px] text-[color:var(--text-secondary)]">
             Loading {viewType.toLowerCase()}...
@@ -2055,26 +2043,110 @@ const AdminDataTableContent = ({
       </div>
 
       {/* Bottom Tab Bar (MT5 Style) */}
+      {viewType === 'Orders' ? (
+        <footer className="admin-orders-footer" aria-label="Orders pagination">
+          <span className="admin-orders-range" aria-live="polite" aria-label={paginationRangeAriaLabel}>
+              {data.length ? `Rows ${paginationRangeLabel}` : isLoading ? 'Loading orders…' : activeError ? 'Orders unavailable' : 'No orders'}
+          </span>
+          <div className="admin-orders-pagination">
+            {showAccountPageNavigation && (
+              <nav className="admin-orders-page-nav" aria-label="Order pages">
+                <PaginationIconButton aria-label="Previous page" onClick={() => goToPage(current => current - 1)} disabled={!canGoPreviousPage}><ChevronLeft size={14} aria-hidden="true" /></PaginationIconButton>
+                <label className="admin-orders-page-number">
+                  <span>Page</span>
+                  <input aria-label="Page number" type="text" inputMode="numeric" pattern="[0-9]*" value={pageInputValue} onChange={handlePageInputChange} onBlur={commitPageInput} onKeyDown={handlePageInputKeyDown} disabled={isLoading} />
+                  {hasKnownPaginationTotal && <span>of {formatCount(totalPages)}</span>}
+                </label>
+                <PaginationIconButton aria-label="Next page" onClick={() => goToPage(current => current + 1)} disabled={!canGoNextPage}><ChevronRight size={14} aria-hidden="true" /></PaginationIconButton>
+              </nav>
+            )}
+            <label className="admin-orders-page-size">
+              <span>Rows per page</span>
+              <select aria-label="Rows per page" value={pageSize} onChange={handlePageSizeChange} disabled={isLoading}>
+                {PAGE_SIZE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+              </select>
+            </label>
+          </div>
+        </footer>
+      ) : viewType === 'Positions' ? (
+        <footer className="admin-positions-footer" aria-label="Positions pagination">
+          <span className="admin-positions-scope">Open positions</span>
+          <div className="admin-positions-pagination">
+            <span className="admin-positions-range" aria-live="polite" aria-label={paginationRangeAriaLabel}>
+              {data.length ? `Rows ${paginationRangeLabel}` : isLoading ? 'Loading positions…' : activeError ? 'Positions unavailable' : 'No open positions'}
+            </span>
+            {showAccountPageNavigation && (
+              <nav className="admin-positions-page-nav" aria-label="Position pages">
+                <PaginationIconButton aria-label="Previous page" onClick={() => goToPage(current => current - 1)} disabled={!canGoPreviousPage}><ChevronLeft size={14} aria-hidden="true" /></PaginationIconButton>
+                <label className="admin-positions-page-number">
+                  <span>Page</span>
+                  <input aria-label="Page number" type="text" inputMode="numeric" pattern="[0-9]*" value={pageInputValue} onChange={handlePageInputChange} onBlur={commitPageInput} onKeyDown={handlePageInputKeyDown} disabled={isLoading} />
+                  {hasKnownPaginationTotal && <span>of {formatCount(totalPages)}</span>}
+                </label>
+                <PaginationIconButton aria-label="Next page" onClick={() => goToPage(current => current + 1)} disabled={!canGoNextPage}><ChevronRight size={14} aria-hidden="true" /></PaginationIconButton>
+              </nav>
+            )}
+            <label className="admin-positions-page-size">
+              <span>Rows per page</span>
+              <select aria-label="Rows per page" value={pageSize} onChange={handlePageSizeChange} disabled={isLoading}>
+                {PAGE_SIZE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+              </select>
+            </label>
+          </div>
+        </footer>
+      ) : isSymbolsView ? (
+        <footer className="admin-symbols-footer" aria-label="Symbols pagination">
+          <span className="admin-symbols-range" aria-live="polite">
+            {data.length ? `Showing ${paginationRangeLabel} symbols` : isLoading ? 'Loading symbols…' : activeError ? 'Symbols unavailable' : 'No symbols'}
+          </span>
+          <div className="admin-symbols-page-controls">
+            {showAccountPageNavigation && (
+              <nav className="admin-symbols-page-nav" aria-label="Symbol pages">
+                <PaginationIconButton aria-label="Previous page" onClick={() => goToPage(current => current - 1)} disabled={!canGoPreviousPage}><ChevronLeft size={14} aria-hidden="true" /></PaginationIconButton>
+                <label className="admin-symbols-page-number">
+                  <span>Page</span>
+                  <input aria-label="Page number" type="text" inputMode="numeric" pattern="[0-9]*" value={pageInputValue} onChange={handlePageInputChange} onBlur={commitPageInput} onKeyDown={handlePageInputKeyDown} disabled={isLoading} />
+                  {hasKnownPaginationTotal && <span>of {formatCount(totalPages)}</span>}
+                </label>
+                <PaginationIconButton aria-label="Next page" onClick={() => goToPage(current => current + 1)} disabled={!canGoNextPage}><ChevronRight size={14} aria-hidden="true" /></PaginationIconButton>
+              </nav>
+            )}
+            <label className="admin-symbols-page-size">
+              <span>Rows per page</span>
+              <select aria-label="Rows per page" value={pageSize} onChange={handlePageSizeChange} disabled={isLoading}>
+                {PAGE_SIZE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+              </select>
+            </label>
+          </div>
+        </footer>
+      ) : isTradingAccountsView ? (
+        <footer className="admin-trading-footer" aria-label="Trading accounts pagination">
+          <span className="admin-trading-range" aria-live="polite">
+            {data.length ? `Showing ${paginationRangeLabel} ${hasKnownPaginationTotal && pagination.total === 1 ? 'account' : 'accounts'}` : isLoading ? 'Loading accounts…' : activeError ? 'Accounts unavailable' : 'No accounts'}
+          </span>
+          <div className="admin-trading-page-controls">
+            <label className="admin-trading-page-size">
+              <span>Rows per page</span>
+              <select aria-label="Rows per page" value={pageSize} onChange={handlePageSizeChange} disabled={isLoading}>
+                {PAGE_SIZE_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
+              </select>
+            </label>
+            {showAccountPageNavigation && (
+              <nav aria-label="Account pages" className="admin-trading-page-nav">
+                <PaginationIconButton aria-label="Previous page" onClick={() => goToPage(current => current - 1)} disabled={!canGoPreviousPage}><ChevronLeft size={14} aria-hidden="true" /></PaginationIconButton>
+                <label className="admin-trading-page-number">
+                  <span>Page</span>
+                  <input aria-label="Page number" type="text" inputMode="numeric" pattern="[0-9]*" value={pageInputValue} onChange={handlePageInputChange} onBlur={commitPageInput} onKeyDown={handlePageInputKeyDown} disabled={isLoading} />
+                  {hasKnownPaginationTotal && <span>of {formatCount(totalPages)}</span>}
+                </label>
+                <PaginationIconButton aria-label="Next page" onClick={() => goToPage(current => current + 1)} disabled={!canGoNextPage}><ChevronRight size={14} aria-hidden="true" /></PaginationIconButton>
+              </nav>
+            )}
+          </div>
+        </footer>
+      ) : (
       <div className="min-h-10 bg-[color:var(--bg-surface-1)] border-t border-[color:var(--border-default)] flex flex-wrap items-center gap-1.5 px-2 py-1.5 shadow-[var(--shadow-sm)]">
         <div className="flex min-w-0 shrink-0 items-center gap-1 overflow-hidden">
-          {viewType === 'Orders' ? (
-            <>
-              <button
-                type="button"
-                onClick={() => handleOrderModeChange('open')}
-                className={`h-8 shrink-0 px-3 text-[11px] flex items-center border border-[color:var(--border-strong)] rounded-[3px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent-500)] ${ordersMode !== 'all' ? 'bg-[color:var(--accent-500)]/18 text-[color:var(--text-primary)] shadow-sm' : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)]'}`}
-              >
-                Orders
-              </button>
-              <button
-                type="button"
-                onClick={() => handleOrderModeChange('all')}
-                className={`h-8 shrink-0 px-3 text-[11px] flex items-center border border-[color:var(--border-strong)] rounded-[3px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color:var(--accent-500)] ${ordersMode === 'all' ? 'bg-[color:var(--accent-500)]/18 text-[color:var(--text-primary)] shadow-sm' : 'text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)]'}`}
-              >
-                All Orders
-              </button>
-            </>
-          ) : (
             <>
               <div
                 className="h-8 max-w-[220px] truncate px-3 bg-[color:var(--accent-500)]/18 text-[color:var(--text-primary)] text-[11px] flex items-center border border-[color:var(--accent-500)]/45 rounded-[3px] shadow-sm cursor-default"
@@ -2088,7 +2160,6 @@ const AdminDataTableContent = ({
                 </div>
               )}
             </>
-          )}
         </div>
         {isPagedView && (
           <div className="ml-auto flex min-w-0 max-w-full items-center justify-end gap-1.5 overflow-x-auto no-scrollbar whitespace-nowrap text-[11px] text-[color:var(--text-muted)]">
@@ -2160,6 +2231,7 @@ const AdminDataTableContent = ({
           </div>
         )}
       </div>
+      )}
       {/* Context Menu Overlay */}
       {contextMenu.visible && viewType === 'Groups' && (
         <AdminContextMenu

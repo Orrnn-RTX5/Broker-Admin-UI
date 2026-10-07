@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getClientRowWindow } from '../utils/clientRowWindow';
 
-export const useClientRowWindow = (enabled, scope, count) => {
+export const useClientRowWindow = (enabled, scope, count, options = {}) => {
   const scrollRef = useRef(null);
   const lastElementRef = useRef(null);
   const frameRef = useRef(null);
@@ -39,7 +39,7 @@ export const useClientRowWindow = (enabled, scope, count) => {
   }, [measure]);
 
   return {
-    ...getClientRowWindow(count, viewport.scope === scope ? viewport.scrollTop : 0, viewport.height),
+    ...getClientRowWindow(count, viewport.scope === scope ? viewport.scrollTop : 0, viewport.height, options),
     scrollRef, onScroll,
   };
 };

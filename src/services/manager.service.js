@@ -1,13 +1,22 @@
 import { api } from '../lib/api';
+import { getStoredCacheIdentity } from '../utils/cacheIdentity.js';
+import { invalidateGroupListCache } from '../utils/groupListCache.js';
+import { getManagerDirectoryIdentity, invalidateManagerDirectory } from './managerDirectory.service.js';
 
 const cleanParams = (params = {}) => Object.fromEntries(
   Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
 );
 
+const directoryMutation = async (request, kinds = ['managers', 'online']) => {
+  const identity = getManagerDirectoryIdentity();
+  const res = await request();
+  invalidateManagerDirectory(identity, kinds);
+  return res.data;
+};
+
 export const ManagerService = {
   updateManagerGroupAccess: async (login, mode, groups) => {
-    const res=await api.post('/manager/ManagerUpdate',{manager_login:login,group_access_mode:mode,...(groups.length ? {'allowed_groups[]':groups}: {})});
-    return res.data;
+    return directoryMutation(() => api.post('/manager/ManagerUpdate',{manager_login:login,group_access_mode:mode,...(groups.length ? {'allowed_groups[]':groups}: {})}));
   },
   getGroupList: async (params = {}) => {
     const res = await api.get('/manager/GroupList', {
@@ -22,15 +31,19 @@ export const ManagerService = {
   },
 
   createGroup: async (groupData) => {
+    const identity = getStoredCacheIdentity();
     const res = await api.post('/manager/GroupCreate', groupData);
+    invalidateGroupListCache({ identity, clearSnapshot: true });
     return res.data;
   },
 
   updateGroup: async (groupData) => {
+    const identity = getStoredCacheIdentity();
     const { originalName, ...payload } = groupData;
     const res = await api.post('/manager/GroupUpdate', payload, {
       params: { group_name: originalName || payload.name }
     });
+    invalidateGroupListCache({ identity, clearSnapshot: true });
     return res.data;
   },
 
@@ -38,10 +51,12 @@ export const ManagerService = {
   // yet. Try the POST shape used by GroupCreate/GroupUpdate first, and fall back to
   // the legacy GET so the server's own message still reaches the UI.
   deleteGroup: async (groupName) => {
+    const identity = getStoredCacheIdentity();
     try {
       const res = await api.post('/manager/GroupDelete', { group_name: groupName, group: groupName }, {
         params: { group_name: groupName },
       });
+      invalidateGroupListCache({ identity, clearSnapshot: true });
       return res.data;
     } catch (error) {
       const status = error?.response?.status;
@@ -50,6 +65,7 @@ export const ManagerService = {
     const res = await api.get('/manager/GroupDelete', {
       params: { group: groupName }
     });
+    invalidateGroupListCache({ identity, clearSnapshot: true });
     return res.data;
   },
 
@@ -184,21 +200,18 @@ export const ManagerService = {
   },
 
   createRole: async (roleData) => {
-    const res = await api.post('/manager/ManagerRoleCreate', roleData);
-    return res.data;
+    return directoryMutation(() => api.post('/manager/ManagerRoleCreate', roleData), ['roles', 'managers']);
   },
 
   createManager: async (managerData) => {
-    const res = await api.post('/manager/ManagerCreate', managerData);
-    return res.data;
+    return directoryMutation(() => api.post('/manager/ManagerCreate', managerData));
   },
 
   updateManagerRole: async (managerLogin, roleId) => {
-    const res = await api.post('/manager/ManagerUpdate', {
+    return directoryMutation(() => api.post('/manager/ManagerUpdate', {
       manager_login: Number(managerLogin),
       role_id: Number(roleId) || 0,
-    });
-    return res.data;
+    }));
   },
 
   createCommissionSchedule: async (data) => {
@@ -370,38 +383,40 @@ export const ManagerService = {
 
   // --- TRADING / EXECUTION ---
 
-  getPositionsAll: async (page = 1, limit = 50) => {
+  getPositionsAll: async (page = 1, limit = 50, options = {}) => {
     const res = await api.get('/manager/PositionsAll', {
+      signal: options.signal,
       params: { page, limit }
     });
     return res.data;
   },
 
-  getPositions: async (logins = [], page = 1, limit = 50) => {
+  getPositions: async (logins = [], page = 1, limit = 50, options = {}) => {
     const params = new URLSearchParams();
     params.append('page', page);
     params.append('limit', limit);
     logins.forEach(l => params.append('logins[]', l));
 
-    const res = await api.get(`/manager/Positions?${params.toString()}`);
+    const res = await api.get(`/manager/Positions?${params.toString()}`, { signal: options.signal });
     return res.data;
   },
 
-  getBrokerOrders: async (limitOrParams = 100, offset = 0) => {
+  getBrokerOrders: async (limitOrParams = 100, offset = 0, options = {}) => {
     const params = typeof limitOrParams === 'object' && limitOrParams !== null
       ? cleanParams(limitOrParams)
       : { limit: limitOrParams, offset };
     const res = await api.get('/manager/BrokerOrders', {
+      signal: options.signal,
       params
     });
     return res.data;
   },
 
-  getOrders: async (logins = []) => {
+  getOrders: async (logins = [], options = {}) => {
     const params = new URLSearchParams();
     logins.forEach(l => params.append('logins[]', l));
 
-    const res = await api.get(`/manager/Orders?${params.toString()}`);
+    const res = await api.get(`/manager/Orders?${params.toString()}`, { signal: options.signal });
     return res.data;
   },
 
@@ -423,11 +438,12 @@ export const ManagerService = {
     return res.data;
   },
 
-  getBrokerDeals: async (pageOrParams = 1, limit = 50) => {
+  getBrokerDeals: async (pageOrParams = 1, limit = 50, options = {}) => {
     const params = typeof pageOrParams === 'object' && pageOrParams !== null
       ? cleanParams(pageOrParams)
       : { page: pageOrParams, limit };
     const res = await api.get('/manager/BrokerDeals', {
+      signal: options.signal,
       params
     });
     return res.data;
@@ -435,10 +451,9 @@ export const ManagerService = {
 
   // --- RBAC: ROLES ---
   updateRole: async (roleId, data) => {
-    const res = await api.post('/manager/ManagerRoleUpdate', data, {
+    return directoryMutation(() => api.post('/manager/ManagerRoleUpdate', data, {
       params: { role_id: roleId }
-    });
-    return res.data;
+    }), ['roles', 'managers']);
   },
 
   // { available_permissions: [{ key, label, description, category }], default_roles }
@@ -448,8 +463,7 @@ export const ManagerService = {
   },
 
   deleteRole: async (roleId) => {
-    const res = await api.post('/manager/ManagerRoleDelete', { role_id: Number(roleId) });
-    return res.data;
+    return directoryMutation(() => api.post('/manager/ManagerRoleDelete', { role_id: Number(roleId) }), ['roles', 'managers']);
   },
 
   // --- MANAGER ACCOUNTS ---
@@ -468,31 +482,27 @@ export const ManagerService = {
   // Manager/role mutations use the POST+JSON successor of the retired
   // mutating GETs (the backend answers those GETs with 410 Gone).
   deleteManager: async (login) => {
-    const res = await api.post('/manager/ManagerDelete', { manager_login: Number(login) });
-    return res.data;
+    return directoryMutation(() => api.post('/manager/ManagerDelete', { manager_login: Number(login) }));
   },
 
   // body comes from buildManagerUpdateParams.
   updateManager: async (login, body) => {
-    const res = await api.post('/manager/ManagerUpdate', { ...body, manager_login: Number(login) });
-    return res.data;
+    return directoryMutation(() => api.post('/manager/ManagerUpdate', { ...body, manager_login: Number(login) }));
   },
 
   setManagerEnabled: async (login, enabled) => {
-    const res = await api.post('/manager/ManagerUpdate', {
+    return directoryMutation(() => api.post('/manager/ManagerUpdate', {
       manager_login: Number(login),
       enabled: Boolean(enabled),
-    });
-    return res.data;
+    }));
   },
 
   // The password travels in the JSON body, never in the URL.
   resetManagerPassword: async (login, password) => {
-    const res = await api.post('/manager/ManagerPasswordReset', {
+    return directoryMutation(() => api.post('/manager/ManagerPasswordReset', {
       manager_login: Number(login),
       password,
-    });
-    return res.data;
+    }));
   },
 
   getManagerActivityLog: async (login, from, to) => {

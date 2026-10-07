@@ -11,6 +11,7 @@ import {
 import {
   DEV_PROXY_BACKEND_COOKIE,
   DEV_PROXY_EXT_COOKIE,
+  DEV_PROXY_FEED_COOKIE,
   DEV_PROXY_DIRECT_MANAGER_COOKIE,
   isLocalWebHostname,
   parseDevProxyTarget,
@@ -339,7 +340,7 @@ export const toLocalDevFeedProxyUrl = (
   }
 };
 
-export const buildFeedWsUrl = () => {
+export const buildFeedWsUrl = ({ useProxy = shouldUseFeedDevProxy() } = {}) => {
   updateDynamicEndpoints();
   const brokerInfo = readBrokerInfo();
   const explicitWsUrl = getRuntimeValue('FEED_WS_URL', 'VITE_FEED_WS_URL') ||
@@ -358,7 +359,7 @@ export const buildFeedWsUrl = () => {
     ...authContext,
     token: sendToken ? authContext.token : null,
   });
-  const proxiedUrl = shouldUseFeedDevProxy() ? toLocalDevFeedProxyUrl(authenticatedUrl) : authenticatedUrl;
+  const proxiedUrl = useProxy ? toLocalDevFeedProxyUrl(authenticatedUrl) : authenticatedUrl;
   try {
     const url = new URL(proxiedUrl, typeof window !== 'undefined' ? window.location.href : 'http://localhost');
     if (url.protocol === 'https:') url.protocol = 'wss:';
@@ -372,21 +373,21 @@ export const buildFeedWsUrl = () => {
 export const buildFeedStatusUrl = () => {
   updateDynamicEndpoints();
   const explicitStatusUrl = getRuntimeValue('FEED_STATUS_URL', 'VITE_FEED_STATUS_URL') || viteEnv.VITE_FEED_STATUS_URL;
-  if (explicitStatusUrl) {
-    return toLocalDevFeedProxyUrl(explicitStatusUrl, shouldUseFeedStatusDevProxy());
-  }
-  if (shouldUseLocalDevProxy()) {
-    return '/ws/feed/status';
-  }
-  const wsUrl = buildFeedWsUrl();
   try {
-    const url = new URL(wsUrl, typeof window !== 'undefined' ? window.location.href : 'http://localhost');
-    url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:';
-    if (!/\/status\/?$/i.test(url.pathname)) {
+    const url = new URL(explicitStatusUrl || buildFeedWsUrl({ useProxy: false }), typeof window !== 'undefined' ? window.location.href : 'http://localhost');
+    if (url.protocol === 'wss:') url.protocol = 'https:';
+    else if (url.protocol === 'ws:') url.protocol = 'http:';
+    if (!explicitStatusUrl && !/\/status\/?$/i.test(url.pathname)) {
       url.pathname = `${url.pathname.replace(/\/$/, '')}/status`;
     }
-    url.search = '';
+    if (!explicitStatusUrl) url.search = '';
     url.hash = '';
+    if (shouldUseFeedStatusDevProxy() || shouldUseLocalDevProxy()) {
+      // Follow the actual feed host, including runtime/broker overrides, so a
+      // local status snapshot cannot describe a different server's inventory.
+      writeDevProxyCookie(DEV_PROXY_FEED_COOKIE, url.origin);
+      return toLocalDevFeedProxyUrl(url.toString(), true);
+    }
     return url.toString();
   } catch {
     return '/ws/feed/status';

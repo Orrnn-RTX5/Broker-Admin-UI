@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import {
   DEV_PROXY_BACKEND_COOKIE,
   DEV_PROXY_EXT_COOKIE,
+  DEV_PROXY_FEED_COOKIE,
   isLocalWebHostname,
 } from './src/config/devProxy.js'
 import { createBrokerProxy } from './src/config/devBrokerProxy.js'
@@ -98,11 +99,7 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       proxy: {
         // Market Feed WebSocket and HTTP Status
-        '/ws/feed/status': {
-          target: wsTarget,
-          changeOrigin: true,
-          secure: false,
-        },
+        '/ws/feed/status': createBrokerProxy(wsTarget, DEV_PROXY_FEED_COOKIE),
         '/ws/feed': {
           target: wsTarget,
           changeOrigin: true,
@@ -132,8 +129,8 @@ export default defineConfig(({ mode }) => {
         // Gateway LP API
         '/api/v1': createBrokerProxy(apiHost, DEV_PROXY_BACKEND_COOKIE),
         '/api/v2': createBrokerProxy(apiHost, DEV_PROXY_BACKEND_COOKIE),
-        '/manager': createBrokerProxy(apiHost, DEV_PROXY_BACKEND_COOKIE),
-        '/Manager': createBrokerProxy(apiHost, DEV_PROXY_BACKEND_COOKIE),
+        '/manager': createBrokerProxy(apiHost, DEV_PROXY_BACKEND_COOKIE, { ws: true }),
+        '/Manager': createBrokerProxy(apiHost, DEV_PROXY_BACKEND_COOKIE, { ws: true }),
         // Platform Super Admin API uses an independent login/session.
         '/super-admin-api': {
           target: superAdminHost,

@@ -21,6 +21,28 @@ const installWindow = (config = {}) => {
 
 const importFreshEndpoints = () => import(`./endpoints.js?case=${++importId}`);
 
+test('local feed status follows the actual feed host and carries no websocket token', async t => {
+  const previousDocument = globalThis.document;
+  t.after(() => { if (previousDocument === undefined) delete globalThis.document; else globalThis.document = previousDocument; });
+  globalThis.document = { cookie: '' };
+  installWindow({ BACKEND_TARGET: 'web', USE_DEV_PROXY: 'true', FEED_WS_URL: 'wss://selected-feed.example/ws/feed' });
+  window.location = { origin: 'http://localhost:5173', href: 'http://localhost:5173/', protocol: 'http:', hostname: 'localhost' };
+  installStorage({ broker_info: JSON.stringify({ broker_id: 'selected', backend_url: 'https://api.example' }), token: 'fixture-token' });
+  const endpoints = await importFreshEndpoints();
+  assert.equal(endpoints.buildFeedStatusUrl(), 'http://localhost:5173/ws/feed/status');
+  assert.equal(document.cookie, 'rtx5_dev_feed=https%3A%2F%2Fselected-feed.example; Path=/; SameSite=Lax');
+  window.__RTX5_RUNTIME_CONFIG__.FEED_STATUS_URL = 'https://status-feed.example/ws/feed/status';
+  assert.equal(endpoints.buildFeedStatusUrl(), 'http://localhost:5173/ws/feed/status');
+  assert.match(document.cookie, /status-feed\.example/);
+});
+
+test('production feed status stays on the configured HTTPS origin', async () => {
+  installWindow({ BACKEND_TARGET: 'web', USE_DEV_PROXY: 'false', FEED_STATUS_URL: 'https://feed.example/status?scope=public' });
+  installStorage({});
+  const endpoints = await importFreshEndpoints();
+  assert.equal(endpoints.buildFeedStatusUrl(), 'https://feed.example/status?scope=public');
+});
+
 test('native journal uses the selected broker root without the legacy manager prefix', async () => {
   installWindow({ BACKEND_TARGET: 'web', USE_DEV_PROXY: 'false' });
   installStorage({ broker_info: JSON.stringify({ broker_id: 'a', backend_url: 'https://broker-a.example' }) });

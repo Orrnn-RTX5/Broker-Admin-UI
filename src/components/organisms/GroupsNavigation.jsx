@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { Folder, User } from 'lucide-react';
 import TreeItem from '../molecules/TreeItem';
 import { useDataFetch } from '../../hooks/useCore';
@@ -6,15 +6,16 @@ import { useAuthStore } from '../../store/authStore';
 import { ManagerService } from '../../services/manager.service';
 import { AccountsService } from '../../services/accounts.service';
 import { canAccessView } from '../../utils/permissions';
+import { createCacheIdentity } from '../../utils/cacheIdentity';
 import { loadGroupTreePages, normalizeNavigationAccounts } from '../../utils/groupTreeData';
 import { getServerGroupFolderNodes } from '../../utils/groupsExplorerData';
-import { GROUP_LIST_ARRAY_KEYS, GROUP_LIST_FETCH_OPTIONS, loadGroupList, readGroupListSnapshot } from '../../utils/groupListCache';
+import { GROUP_LIST_ARRAY_KEYS, GROUP_LIST_FETCH_OPTIONS, invalidateGroupListCache, loadGroupList, readGroupListSnapshot } from '../../utils/groupListCache';
 
 // Same cached request as the explorer, so opening the tree never repeats the fetch.
-const loadGroups = () => loadGroupList(() => loadGroupTreePages(
+const fetchGroupList = (options) => loadGroupList(() => loadGroupTreePages(
   ManagerService.getGroupList,
   { arrayKeys: GROUP_LIST_ARRAY_KEYS },
-));
+), options);
 
 const useGroupExpansion = (revealRevision) => {
   const [expansion, setExpansion] = useState({ open: false, revealedAt: null });
@@ -146,12 +147,20 @@ const ServerFolder = ({ node, groups, level, accounts, ...treeProps }) => {
 const ServerGroupsNavigation = ({ item, level = 0, refreshTrigger, ...treeProps }) => {
   const [expanded, setExpanded] = useGroupExpansion(treeProps.groupExplorerReveal?.revision ?? null);
   const currentUser = useAuthStore(state => state.user);
+  const cacheIdentity = createCacheIdentity(currentUser);
   const canLoadGroups = canAccessView(currentUser, 'Groups');
   const canLoadAccounts = canLoadGroups && canAccessView(currentUser, 'Trading Accounts');
+  const lastRefresh = useRef(refreshTrigger);
+  const loadGroups = useCallback(() => {
+    const force = lastRefresh.current !== refreshTrigger;
+    lastRefresh.current = refreshTrigger;
+    return fetchGroupList({ force });
+  }, [refreshTrigger]);
   const { data: liveGroups, loading: fetching, error, mutate } = useDataFetch(
     loadGroups, null, [refreshTrigger], expanded && canLoadGroups, GROUP_LIST_FETCH_OPTIONS,
   );
-  const snapshot = useMemo(() => (liveGroups ? null : readGroupListSnapshot()), [liveGroups]);
+  const snapshot = useMemo(() => (canLoadGroups && !error && !liveGroups ? readGroupListSnapshot(cacheIdentity) : null), [liveGroups, cacheIdentity, canLoadGroups, error]);
+  const retryGroups = () => { invalidateGroupListCache(); return mutate(); };
   const groups = liveGroups ?? snapshot;
   const loading = fetching && !groups;
   const groupCount = canLoadGroups && !loading && !error ? groups?.length : undefined;
@@ -188,7 +197,7 @@ const ServerGroupsNavigation = ({ item, level = 0, refreshTrigger, ...treeProps 
         renderChildren: ({ level: groupLevel }) => canLoadGroups ? (
           <>
             {(loading || error || !groups?.length) && (
-              <BranchStatus level={groupLevel} loading={loading} error={error} empty={!groups?.length} noun="groups" onRetry={mutate} />
+              <BranchStatus level={groupLevel} loading={loading} error={error} empty={!groups?.length} noun="groups" onRetry={retryGroups} />
             )}
             {!error && groups?.length > 0 && (
               <ServerFolderChildren

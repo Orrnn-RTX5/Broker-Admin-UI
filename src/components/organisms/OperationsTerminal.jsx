@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, ExternalLink, RefreshCw, ScrollText, Search, TerminalSquare, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, ExternalLink, ListFilter, RefreshCw, ScrollText, Search, TerminalSquare, X } from 'lucide-react';
 import { useWorkspaceData } from '../../hooks/useWorkspaceData';
 import { DEFAULT_WORKSPACE_LAYOUT } from '../../config/workspaceLayout';
 import { workspacePosition } from '../../utils/workspaceMetrics';
@@ -8,7 +8,9 @@ import useServerJournal from '../../hooks/useServerJournal';
 import { SERVER_JOURNAL_FILTERS, describeServerJournalScope, matchesServerJournalSearch, serverJournalSessionKey } from '../../utils/serverJournal';
 import { journalEntryKey } from '../../utils/serverJournalView';
 import ServerJournal from './ServerJournal';
+import JournalRecoveryStatus from './JournalRecoveryStatus';
 import './OperationsTerminal.css';
+import { useWorkspaceStartupReady } from '../../hooks/useWorkspaceStartup';
 
 const tabs = ['Summary', 'Exposure', 'News', 'Calendar', 'Dealing', 'Alerts', 'Search', 'Journal'];
 const value = number => number == null ? '—' : new Intl.NumberFormat('en-US', { maximumFractionDigits: 5 }).format(number);
@@ -28,6 +30,7 @@ export default function OperationsTerminal({ onNavigate }) {
   const [clearedJournal, setClearedJournal] = useState({ owner: '', ids: new Set() });
   const journalSession = serverJournalSessionKey(user);
   const journalData = useServerJournal(isAuthenticated, journalSession, activeTab === 'Journal' && !collapsed);
+  useWorkspaceStartupReady('terminal', activeTab !== 'Journal' || collapsed || Boolean(journalData.lastUpdatedAt || journalData.error));
   const journalOwner = JSON.stringify([journalSession, journalData.filter]);
   const hiddenIds = clearedJournal.owner === journalOwner ? clearedJournal.ids : new Set();
   const serverJournal = {
@@ -78,19 +81,29 @@ export default function OperationsTerminal({ onNavigate }) {
     {!collapsed && <div className="operations-terminal-resize" role="separator" aria-label="Resize Operations Terminal" aria-orientation="horizontal" aria-valuemin={130} aria-valuemax={Math.max(130, window.innerHeight - 300)} aria-valuenow={Math.round(clamp(Number(height)))} tabIndex={0}
       onPointerDown={event => { event.preventDefault(); drag.current = { y: event.clientY, height: section.current.getBoundingClientRect().height }; document.body.style.cursor = 'row-resize'; }}
       onDoubleClick={() => setHeight(DEFAULT_WORKSPACE_LAYOUT.operationsHeight)} onKeyDown={event => { if (['ArrowUp', 'ArrowDown', 'Home'].includes(event.key)) { event.preventDefault(); setHeight(event.key === 'Home' ? DEFAULT_WORKSPACE_LAYOUT.operationsHeight : clamp(Number(height) + (event.key === 'ArrowUp' ? 20 : -20))); } }} />}
-    <header className="operations-terminal-heading"><span className="operations-terminal-title">{activeTab === 'Journal' ? <ScrollText size={14} aria-hidden="true" /> : <TerminalSquare size={13} aria-hidden="true" />}{activeTab === 'Journal' ? 'Journal' : 'Operations Terminal'}</span><div className="operations-terminal-controls">
+    <header className="operations-terminal-heading">
+      <div className="operations-terminal-heading-summary">
+        <span className="operations-terminal-title">{activeTab === 'Journal' ? <ScrollText size={14} aria-hidden="true" /> : <TerminalSquare size={13} aria-hidden="true" />}{activeTab === 'Journal' ? 'Journal' : 'Operations Terminal'}</span>
+        {!collapsed && <span className="operations-terminal-caption" role="status" title={activeTab === 'Journal' ? journalStatus : undefined}>{activeTab === 'Summary' ? 'Open positions · 30s refresh' : activeTab === 'Journal' ? journalStatus.replace(/^Journal\s*·\s*/i, '') : activeTab}</span>}
+        {!collapsed && activeTab === 'Journal' && <JournalRecoveryStatus journal={serverJournal} />}
+      </div>
+      <div className="operations-terminal-controls">
+      {!collapsed && activeTab === 'Journal' && <div className="operations-journal-search-control">
+        <label className="operations-terminal-search"><Search size={12} aria-hidden="true" /><input aria-label="Search journal" placeholder="Search journal…" value={journalQuery} onChange={event => setJournalQuery(event.target.value)} /></label>
+        {journalQuery && <button type="button" className="operations-journal-clear" aria-label="Clear journal search" title="Clear search" onClick={event => { setJournalQuery(''); event.currentTarget.parentElement.querySelector('input')?.focus(); }}><X size={12} aria-hidden="true" /></button>}
+      </div>}
+      <div className="operations-terminal-actions">
       {!collapsed && <>
-        <span className="operations-terminal-caption" role="status" title={activeTab === 'Journal' ? journalStatus : undefined}>{activeTab === 'Summary' ? 'Open positions · 30s refresh' : activeTab === 'Journal' ? journalStatus : activeTab}</span>
         {activeTab === 'Journal' && <>
-          <select className="operations-journal-filter" aria-label="Journal filter" value={serverJournal.filter} disabled={!isAuthenticated} onChange={event => serverJournal.setFilter(event.target.value)}>
+          <div className="operations-journal-filter-control"><ListFilter size={12} aria-hidden="true" /><select className="operations-journal-filter" aria-label="Journal filter" value={serverJournal.filter} disabled={!isAuthenticated} onChange={event => serverJournal.setFilter(event.target.value)}>
             {SERVER_JOURNAL_FILTERS.map(filter => <option key={filter.id} value={filter.id}>{filter.label}</option>)}
-          </select>
-          <label className={'operations-journal-live' + (serverJournal.live ? ' is-live' : '')} title={serverJournal.live ? 'Journal updates automatically every 5 seconds' : 'Live updates are paused. Enable Live to receive the latest journal events.'}><input type="checkbox" checked={serverJournal.live} disabled={!isAuthenticated} onChange={event => serverJournal.setLive(event.target.checked)} />Live</label>
+          </select><ChevronDown size={11} aria-hidden="true" /></div>
+          <label className={'operations-journal-live' + (serverJournal.live ? ' is-live' : '') + (serverJournal.delayed ? ' is-delayed' : '')} title={serverJournal.live ? 'Journal refreshes in the background and retries temporary failures automatically.' : 'Live updates are paused. Enable Live to receive the latest journal events.'}><input type="checkbox" checked={serverJournal.live} disabled={!isAuthenticated} onChange={event => serverJournal.setLive(event.target.checked)} />Live</label>
         </>}
-        <button type="button" onClick={activeTab === 'Journal' ? serverJournal.refresh : refresh} disabled={terminalLoading || (activeTab === 'Journal' && !isAuthenticated)} title={activeTab === 'Journal' ? 'Refresh journal' : 'Refresh terminal data'} aria-label={activeTab === 'Journal' ? 'Refresh journal' : 'Refresh terminal data'}><RefreshCw size={13} className={terminalLoading ? 'animate-spin' : ''} /></button>
+        <button type="button" onClick={activeTab === 'Journal' ? () => serverJournal.refresh({ quiet: true }) : refresh} disabled={terminalLoading || (activeTab === 'Journal' && (!isAuthenticated || serverJournal.fetching))} title={activeTab === 'Journal' ? 'Refresh journal' : 'Refresh terminal data'} aria-label={activeTab === 'Journal' ? 'Refresh journal' : 'Refresh terminal data'}><RefreshCw size={13} className={terminalLoading ? 'animate-spin' : ''} /></button>
       </>}
       <button type="button" onClick={() => setCollapsed(!collapsed)} aria-expanded={!collapsed} aria-label={collapsed ? 'Expand Operations Terminal' : 'Collapse Operations Terminal'} title={collapsed ? 'Expand terminal' : 'Collapse terminal'}>{collapsed ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</button>
-    </div></header>
+      </div></div></header>
     {!collapsed && <>
       <div id="operations-terminal-panel" role="tabpanel" aria-labelledby={'terminal-tab-' + activeTab} className="operations-terminal-content">
         {['Summary', 'Search'].includes(activeTab) && <TerminalTable columns={positionColumns} rows={rows} empty={emptyPositions} />}
@@ -105,8 +118,7 @@ export default function OperationsTerminal({ onNavigate }) {
         <div role="tablist" aria-label="Operations Terminal views">{tabs.map((label, index) => <button type="button" ref={node => { tabButtons.current[index] = node; }} key={label} id={'terminal-tab-' + label} role="tab" aria-selected={activeTab === label} aria-controls="operations-terminal-panel" tabIndex={activeTab === label ? 0 : -1} onClick={() => selectTab(label)} onKeyDown={event => { let next; if (event.key === 'ArrowRight') next = (index + 1) % tabs.length; if (event.key === 'ArrowLeft') next = (index + tabs.length - 1) % tabs.length; if (event.key === 'Home') next = 0; if (event.key === 'End') next = tabs.length - 1; if (next != null) { event.preventDefault(); selectTab(tabs[next]); tabButtons.current[next]?.focus(); } }}>{label}</button>)}</div>
         {['Summary', 'Search', 'Journal'].includes(activeTab) && <div className="operations-terminal-tools">
           {activeTab === 'Journal' && <span className="operations-journal-count">{journalQuery.trim() ? `${journalCount} of ${serverJournal.entries.length}` : journalCount} {serverJournal.entries.length === 1 ? 'event' : 'events'}</span>}
-          <label className="operations-terminal-search"><Search size={12} aria-hidden="true" /><input aria-label={activeTab === 'Journal' ? 'Search journal' : 'Search terminal positions'} placeholder={activeTab === 'Journal' ? 'Search journal…' : 'Search positions'} value={activeTab === 'Journal' ? journalQuery : query} onChange={event => activeTab === 'Journal' ? setJournalQuery(event.target.value) : setQuery(event.target.value)} /></label>
-          {activeTab === 'Journal' && journalQuery && <button type="button" className="operations-journal-clear" aria-label="Clear journal search" title="Clear search" onClick={event => { setJournalQuery(''); event.currentTarget.parentElement.querySelector('input')?.focus(); }}><X size={12} aria-hidden="true" /></button>}
+          {activeTab !== 'Journal' && <label className="operations-terminal-search"><Search size={12} aria-hidden="true" /><input aria-label="Search terminal positions" placeholder="Search positions" value={query} onChange={event => setQuery(event.target.value)} /></label>}
         </div>}
       </div>
     </>}

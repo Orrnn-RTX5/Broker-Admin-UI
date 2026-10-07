@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { ChevronDown, Radio, RefreshCw, Search, WifiOff } from 'lucide-react';
 import LPGroupFeedControls from './LPGroupFeedControls.jsx';
 import { lpFeeds, matchingFeedSnapshot } from '../../services/lpFeeds.js';
 import { useAuthStore } from '../../store/authStore.js';
@@ -10,6 +11,16 @@ const SOURCE_KEY = 'rtx5.admin.lpQuoteSource';
 const rememberedSource = () => { try { return localStorage.getItem(SOURCE_KEY) || ''; } catch { return ''; } };
 const rememberSource = value => { try { if (value) localStorage.setItem(SOURCE_KEY, value); else localStorage.removeItem(SOURCE_KEY); } catch { /* storage unavailable */ } };
 const ageText = ms => { const seconds = Math.max(0, Math.floor((Date.now() - ms) / 1000)); return seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m`; };
+
+function CompactFeedNotice({ title, children, problem = false, loading = false, onRetry }) {
+  const Icon = problem ? WifiOff : loading ? RefreshCw : Radio;
+  return <div className={`lp-feed-notice${problem ? ' is-problem' : ''}`} role={problem ? 'alert' : 'status'}>
+    <span className="lp-feed-notice-icon"><Icon size={19} aria-hidden="true" className={loading ? 'is-spinning' : undefined} /></span>
+    <strong>{title}</strong>
+    <p>{children}</p>
+    {onRetry && <button type="button" onClick={onRetry}><RefreshCw size={12} aria-hidden="true" />Retry</button>}
+  </div>;
+}
 
 export default function LPFeedsPanel({ compact = false }) {
   const session = useAuthStore(state => state.accessToken);
@@ -84,25 +95,38 @@ function FeedWorkspace({ compact = false, permissions }) {
   const state = !source ? 'idle' : error ? 'down' : snapshot ? 'live' : 'loading';
   const query = filter.trim().toUpperCase();
   const rows = snapshot ? snapshot.catalog.filter(item => !query || item.symbol.toUpperCase().includes(query)) : [];
+  const refreshSources = () => setRefresh(value => value + 1);
   return <section className={`lp-feeds-panel${compact ? ' is-compact' : ''}`} aria-label="LP quote feeds">
     <header className="lp-feeds-head">
-      <div><h2 className="lp-feeds-title">Live LP quotes</h2><p className="lp-feeds-intro">Choose a provider to inspect the prices it is sending now. Quotes are shown exactly as received from that source.</p></div>
-      <button type="button" disabled={listLoading} onClick={() => setRefresh(value => value + 1)}>{listLoading ? 'Refreshing…' : 'Refresh sources'}</button>
+      <div>{compact && <Radio size={14} className="lp-feeds-heading-icon" aria-hidden="true" />}<div><h2 className="lp-feeds-title">{compact ? 'Named feeds' : 'Live LP quotes'}</h2><p className="lp-feeds-intro">{compact ? 'Direct provider quotes' : 'Choose a provider to inspect the prices it is sending now. Quotes are shown exactly as received from that source.'}</p></div></div>
+      <button className={compact ? 'lp-feeds-refresh' : undefined} type="button" aria-label="Refresh sources" title="Refresh sources" disabled={listLoading} onClick={refreshSources}>{compact ? <RefreshCw size={13} aria-hidden="true" className={listLoading ? 'is-spinning' : undefined} /> : listLoading ? 'Refreshing…' : 'Refresh sources'}</button>
     </header>
     <div className="lp-feeds-preview">
-      <label className="lp-feeds-source">Quote source<select value={source} onChange={event => choose(event.target.value)}>
+      <div className="lp-feeds-source-controls">
+      <label className="lp-feeds-source">Quote source<span className="lp-feeds-select-wrap"><select value={source} onChange={event => choose(event.target.value)} disabled={compact && listLoading && !feeds.length}>
         <option value="">Choose an LP</option>
         {source && !selected && <option value={source}>{source} — unavailable</option>}
         {feeds.map(feed => <option key={feed.source_id} value={feed.source_id} title={feed.source_id}>{feed.name} — {feed.connected ? 'Connected' : 'Not connected'}</option>)}
-      </select></label>
-      {listLoading && !feeds.length && <p className="lp-feeds-note" role="status">Loading LP connections…</p>}
-      {!listLoading && !feeds.length && !listError && <p className="lp-feeds-empty">No LP connections yet. Create and enable one in Connections to inspect its quotes.</p>}
-      {listError && !source && <div className="lp-feed-problem" role="alert"><p>Could not load LP connections: {listError}</p><p>Use Refresh sources to try again.</p></div>}
-      {source && <p className={`lp-feed-status is-${state}`}><span className="lp-feed-dot" aria-hidden="true" />{state === 'live' ? `Live · ${snapshot.catalog.length} symbol${snapshot.catalog.length === 1 ? '' : 's'} · updated ${ageText(snapshot.publishedAt)} ago` : state === 'down' ? 'Prices unavailable' : 'Loading prices…'}</p>}
-      {source && error && <div className="lp-feed-problem" role="alert"><p>{error}</p>{selected && !selected.connected && <p>Check this provider’s connection status and settings in Connections, then run a logon test.</p>}</div>}
+      </select>{compact && <ChevronDown size={12} aria-hidden="true" />}</span></label>
+      {compact && snapshot && <label className="lp-feeds-symbol-search"><Search size={12} aria-hidden="true" /><input aria-label="Search provider symbols" placeholder="Search symbols…" value={filter} onChange={event => setFilter(event.target.value)} /></label>}
+      </div>
+      {source && <p className={`lp-feed-status is-${state}`} role="status"><span className="lp-feed-dot" aria-hidden="true" />{compact ? state === 'live' ? 'Live quotes' : state === 'down' ? 'Prices unavailable' : 'Connecting…' : state === 'live' ? `Live · ${snapshot.catalog.length} symbol${snapshot.catalog.length === 1 ? '' : 's'} · updated ${ageText(snapshot.publishedAt)} ago` : state === 'down' ? 'Prices unavailable' : 'Loading prices…'}{compact && snapshot && <span className="lp-feed-symbol-count">{snapshot.catalog.length} symbol{snapshot.catalog.length === 1 ? '' : 's'}</span>}</p>}
+      {compact ? <>
+        {listLoading && !feeds.length && !source && <CompactFeedNotice title="Loading sources" loading>Fetching provider connections…</CompactFeedNotice>}
+        {!listLoading && !feeds.length && !listError && !source && <CompactFeedNotice title="No quote sources">Create and enable an LP connection to view its quotes here.</CompactFeedNotice>}
+        {listError && !source && <CompactFeedNotice title="Sources unavailable" problem onRetry={refreshSources}>{listError}</CompactFeedNotice>}
+        {!listLoading && feeds.length > 0 && !source && <CompactFeedNotice title="Select a quote source">Choose a provider above to inspect its symbols and live prices.</CompactFeedNotice>}
+        {source && !snapshot && !error && <CompactFeedNotice title="Waiting for quotes" loading>Retrieving prices from the selected provider…</CompactFeedNotice>}
+        {source && error && <CompactFeedNotice title={selected && !selected.connected ? 'Provider disconnected' : 'Quotes unavailable'} problem onRetry={refreshSources}>{error}</CompactFeedNotice>}
+      </> : <>
+        {listLoading && !feeds.length && <p className="lp-feeds-note" role="status">Loading LP connections…</p>}
+        {!listLoading && !feeds.length && !listError && <p className="lp-feeds-empty">No LP connections yet. Create and enable one in Connections to inspect its quotes.</p>}
+        {listError && !source && <div className="lp-feed-problem" role="alert"><p>Could not load LP connections: {listError}</p><p>Use Refresh sources to try again.</p></div>}
+        {source && error && <div className="lp-feed-problem" role="alert"><p>{error}</p>{selected && !selected.connected && <p>Check this provider’s connection status and settings in Connections, then run a logon test.</p>}</div>}
+      </>}
       {snapshot && <>
         {!compact && <p className="lp-feeds-note">Source ID: {source} · connection revision {snapshot.revision} · published <time dateTime={new Date(snapshot.publishedAt).toISOString()} title={new Date(snapshot.publishedAt).toISOString()}>{new Date(snapshot.publishedAt).toLocaleString()}</time></p>}
-        {snapshot.catalog.length > 8 && <label className="lp-feed-filter-label">Find a symbol<input className="lp-feed-filter" placeholder="Search symbols…" value={filter} onChange={event => setFilter(event.target.value)} /></label>}
+        {!compact && snapshot.catalog.length > 8 && <label className="lp-feed-filter-label">Find a symbol<input className="lp-feed-filter" placeholder="Search symbols…" value={filter} onChange={event => setFilter(event.target.value)} /></label>}
         <div className="lp-feed-table" role="region" aria-label="Quotes for selected LP" tabIndex={0}><table><thead><tr><th scope="col">Symbol</th>{!compact && <th scope="col">Provider instrument</th>}<th scope="col" className="num">Bid</th><th scope="col" className="num">Ask</th><th scope="col" className="num">{compact ? 'Age' : 'Observation age'}</th></tr></thead><tbody>
           {rows.map(item => { const tick = snapshot.ticks[item.symbol]; return <tr key={item.symbol}><th scope="row">{item.symbol}</th>{!compact && <td>{item.provider_instrument_id}</td>}<td className="num">{tick?.bid || '—'}</td><td className="num">{tick?.ask || '—'}</td><td className="num">{tick ? ageText(tick.received_at_ms) : compact ? '—' : 'No observation'}</td></tr>; })}
           {!rows.length && <tr><td colSpan={compact ? 4 : 5}>{query ? 'No symbols match your search.' : 'This LP has not sent any symbols yet.'}</td></tr>}
@@ -110,6 +134,7 @@ function FeedWorkspace({ compact = false, permissions }) {
       </>}
       {!compact && <p className="lp-feeds-note">These displayed quotes are observations, not proof of an executable price.</p>}
     </div>
+    {compact && <footer className="lp-feeds-footer"><span title={selected?.name || 'No provider selected'}>{selected?.name || 'No provider selected'}</span><span>{snapshot ? `Updated ${ageText(snapshot.publishedAt)} ago` : 'Named feeds'}</span></footer>}
     {!compact && <fieldset className="lp-feeds-account"><legend>Account effective quote source</legend>
       <p>Every account uses its group's single quote source. Configure the source on the group.</p>
       <div className="lp-feeds-load"><label>Account UUID<input value={account} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" spellCheck={false} onChange={event => { accountGeneration.current++; setBusy(false); setLoaded(null); setAccountError(''); setAccount(event.target.value); }} /></label>

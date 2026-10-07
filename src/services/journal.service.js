@@ -1,4 +1,5 @@
 import { api } from '../lib/api.js';
+import { journalRequestTimeout, journalRetryAfter } from '../utils/journalRecovery.js';
 import { buildServerJournalQuery, mergeServerJournalPages } from '../utils/serverJournal.js';
 
 const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -13,6 +14,7 @@ const responseMessage = (payload) => {
 
 const journalError = (message, status) => {
   const error = new Error(message);
+  error.code = 'ERR_JOURNAL_RESPONSE';
   if (status) error.status = Number(status);
   return error;
 };
@@ -65,14 +67,18 @@ export const fetchServerJournal = async (options = {}, config = {}) => {
   const query = buildServerJournalQuery(options);
   try {
     const response = await api.get(`/api/v1/manager/journal?${query}`, {
-      timeout: 15000,
+      timeout: journalRequestTimeout(import.meta.env?.VITE_JOURNAL_REQUEST_TIMEOUT_MS),
       ...config,
       _nativeBrokerApi: true,
+      _isolatedConnectionStatus: true,
     });
     return validateServerJournalResponse(response.data);
   } catch (error) {
     if (error?.code === 'ERR_CANCELED' || error?.name === 'AbortError') throw error;
     const status = error?.status ?? error?.response?.status;
-    throw journalError(responseMessage(error?.response?.data) || error?.message || 'Journal request failed.', status);
+    const normalized = journalError(responseMessage(error?.response?.data) || error?.message || 'Journal request failed.', status);
+    normalized.code = error?.code || (status ? 'ERR_JOURNAL_HTTP' : 'ERR_NETWORK');
+    normalized.retryAfterMs = journalRetryAfter(error?.response?.headers?.['retry-after']);
+    throw normalized;
   }
 };

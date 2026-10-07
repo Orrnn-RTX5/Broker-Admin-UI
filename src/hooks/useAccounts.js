@@ -28,7 +28,7 @@ export function useAccounts(page = 1, limit = 20, search = '', group = '', statu
       }
     }
     const cached = AccountsService.peekAccounts(params, { allowStale: true });
-    if (force) AccountsService.invalidateCache();
+    if (force) AccountsService.invalidateCache({ keepDisplaySnapshot: true });
     setResult(previous => ({
       key, data: previous.key === key ? (previous.data ?? cached) : cached, loading: true, error: null,
     }));
@@ -38,7 +38,11 @@ export function useAccounts(page = 1, limit = 20, search = '', group = '', statu
       setResult({ key, data: response, loading: false, error: null });
       return response;
     } catch (error) {
-      if (isCurrent()) setResult(previous => ({ ...previous, key, loading: false, error }));
+      if (isCurrent()) setResult(previous => ({
+        ...previous, key,
+        data: [401, 403, 419].includes(Number(error?.response?.status)) ? null : previous.data,
+        loading: false, error,
+      }));
       return null;
     }
   }, [authenticated, enabled, identity, key, params]);

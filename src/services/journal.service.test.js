@@ -11,7 +11,8 @@ test('Admin requests the exact Manager journal path using native broker routing 
   api.get = async (url, config) => {
     assert.equal(url, '/api/v1/manager/journal?limit=50');
     assert.equal(config._nativeBrokerApi, true);
-    assert.equal(config.timeout, 15000);
+    assert.equal(config.timeout, 30000);
+    assert.equal(config._isolatedConnectionStatus, true);
     assert.equal(config.signal, controller.signal);
     assert.equal(config.headers, undefined);
     return { data: { entries: [entry], next_cursor: 'older-1', scope: { mode: 'unrestricted' } } };
@@ -87,4 +88,16 @@ test('cancellation remains recognizable so an obsolete response cannot produce a
   api.get = async () => { throw error; };
   try { await assert.rejects(fetchServerJournal(), (received) => received === error); }
   finally { api.get = original; }
+});
+
+test('timeouts and Retry-After survive normalization, while malformed responses do not retry', async () => {
+  const original = api.get;
+  try {
+    api.get = async () => { throw Object.assign(new Error('timeout'), { code: 'ECONNABORTED' }); };
+    await assert.rejects(fetchServerJournal(), error => error.code === 'ECONNABORTED');
+    api.get = async () => { throw { response: { status: 429, headers: { 'retry-after': '60' }, data: { message: 'Slow down' } } }; };
+    await assert.rejects(fetchServerJournal(), error => error.status === 429 && error.retryAfterMs === 60000);
+    api.get = async () => ({ data: { entries: 'invalid' } });
+    await assert.rejects(fetchServerJournal(), error => error.code === 'ERR_JOURNAL_RESPONSE');
+  } finally { api.get = original; }
 });

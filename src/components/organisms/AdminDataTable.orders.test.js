@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const src = readFileSync(new URL('./AdminDataTable.jsx', import.meta.url), 'utf8');
-const indexCss = readFileSync(new URL('../../index.css', import.meta.url), 'utf8');
 
 test('Orders view is wired to backend data instead of the coming-soon placeholder', () => {
   const comingSoonBlock = src.match(/const COMING_SOON_VIEWS = new Set\(\[[\s\S]*?\]\);/)?.[0] ?? '';
@@ -30,17 +29,16 @@ test('Orders rows are rendered with order-specific fields', () => {
 });
 
 test('Orders filter bar is controlled by Orders state', () => {
-  assert.match(src, /const \[ordersMode,\s*setOrdersMode\] = useState\('all'\)/);
   assert.match(src, /const \[orderFilters,\s*setOrderFilters\] = useState\(\(\) => createDefaultOrderFilters\(\)\)/);
   assert.match(src, /const \[page,\s*setPage\] = useState\(1\)/);
   assert.match(src, /const \[pageSize,\s*setPageSize\] = useState\(DEFAULT_PAGE_SIZE\)/);
   assert.match(src, /const \[debouncedOrderQuery,\s*setDebouncedOrderQuery\] = useState\(orderFilters\.query\)/);
   assert.match(src, /const filterOrderRows = \(rows, filters\) => \{/);
-  assert.match(src, /orderSymbolOptions = getOrderSymbolOptions\(data\)/);
+  assert.match(src, /orderSymbolCatalog\.map\(symbol => \(\{ symbol \}\)\)/);
   assert.match(src, /const applyLocalOrderFilter = hasActiveOrderFilter\(effectiveOrderFilters\)/);
-  assert.match(src, /filterFn:\s*applyLocalOrderFilter \? getOrderRecordFilter\(effectiveOrderFilters\) : undefined/);
+  assert.match(src, /filterFn:\s*applyLocalOrderFilter && !ordersResponse\?\.clientFiltered \? orderRecordFilter : undefined/);
   assert.match(src, /mapFn:\s*\(order, idx\) => getOrderDisplayRow\(getOrderRow\(order, idx\)\)/);
-  assert.match(src, /checked=\{viewType === 'Orders' \? orderFilters\.openOnly : false\}/);
+  assert.match(src, /value=\{orderFilters\.openOnly \? 'open' : 'all'\}/);
   assert.match(src, /value=\{viewType === 'Orders' \? orderFilters\.symbol : ''\}/);
 });
 
@@ -58,20 +56,14 @@ test('Orders filter bar does not show the redundant manual request button', () =
   assert.doesNotMatch(src, /onClick=\{viewType === 'Orders' \? handleOrderRequest : undefined\}/);
 });
 
-test('Orders date filters use native calendar pickers', () => {
-  assert.match(src, /const orderFromDateInputRef = React\.useRef\(null\)/);
-  assert.match(src, /const orderToDateInputRef = React\.useRef\(null\)/);
-  assert.match(src, /const openOrderDatePicker = \(inputRef\) => \{/);
-  assert.match(src, /input\.showPicker\(\)/);
+test('Orders date filters share the controlled terminal calendar', () => {
+  assert.match(src, /import OrderDateTimePicker from '\.\/OrderDateTimePicker'/);
+  assert.match(src, /label="From" boundary="from" value=\{orderFilters\.from\}/);
+  assert.match(src, /label="To" boundary="to" value=\{orderFilters\.to\}/);
+  assert.match(src, /onChange=\{from => setOrderFilters\(current => \(\{ \.\.\.current, from, rangePreset: 'custom' \}\)\)\}/);
+  assert.match(src, /onChange=\{to => setOrderFilters\(current => \(\{ \.\.\.current, to, rangePreset: 'custom' \}\)\)\}/);
   assert.match(src, /replace\('T', ' '\)/);
-  assert.match(src, /type="datetime-local"/);
-  assert.match(src, /ref=\{orderFromDateInputRef\}/);
-  assert.match(src, /ref=\{orderToDateInputRef\}/);
-  assert.match(src, /className="order-date-input bg-transparent border-none outline-none w-\[140px\] text-\[11px\] pl-2"/);
-  assert.match(indexCss, /\.order-date-input\s*\{\s*color-scheme: inherit;/);
-  assert.match(indexCss, /\.order-date-input::-webkit-calendar-picker-indicator\s*\{\s*display: none;/);
-  assert.match(src, /aria-label="Select orders from date"/);
-  assert.match(src, /aria-label="Select orders to date"/);
+  assert.doesNotMatch(src, /orderFromDateInputRef|orderToDateInputRef|type="datetime-local"/);
 });
 
 test('Orders filter dropdown arrows open the native picker and use tokenized theme colors', () => {
@@ -116,12 +108,11 @@ test('Orders table uses shared paging instead of all-row render batches', () => 
   assert.match(src, /paginationRangeLabel/);
 });
 
-test('Orders bottom tabs switch between open and all orders', () => {
-  assert.match(src, /const handleOrderModeChange = \(mode\) => \{/);
-  assert.match(src, /openOnly:\s*mode !== 'all'/);
-  assert.match(src, /onClick=\{\(\) => handleOrderModeChange\('open'\)\}/);
-  assert.match(src, /onClick=\{\(\) => handleOrderModeChange\('all'\)\}/);
-  assert.match(src, /All Orders/);
+test('Orders has one status selector and no duplicate footer tabs', () => {
+  assert.match(src, /const handleOrderStatusChange = \(event\) => \{/);
+  assert.match(src, /const openOnly = event\.target\.value === 'open'/);
+  assert.match(src, /aria-label="Order status"/);
+  assert.doesNotMatch(src, /ordersMode|admin-orders-modes|admin-orders-open-only/);
 });
 
 test('Coming-soon views include the real Utency sidebar label', () => {

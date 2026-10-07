@@ -531,7 +531,7 @@ export const withAdminPort = (backendUrl = '') => {
 // fetchBrokerList — returns array of broker objects (name + id visible, ip hidden)
 // Calls:  GET {DISCOVERY_BASE_URL}/api/v2/broker/servers
 // ---------------------------------------------------------------------------
-export const fetchBrokerList = async () => {
+const loadBrokerList = async () => {
   // A Nexa-specific installation already knows its backend and does not need
   // platform discovery before the administrator can sign in.
   if (RUNTIME_BROKER_ID === 'nexa') {
@@ -597,6 +597,14 @@ export const fetchBrokerList = async () => {
     normalized.push(normalizeBrokerInfo(fallbackBroker));
   }
   return normalized;
+};
+
+let pendingBrokerList;
+export const fetchBrokerList = () => {
+  // Login screens and development effect replay share discovery in flight.
+  // Clear after settlement so Retry always checks the current platform list.
+  if (!pendingBrokerList) pendingBrokerList = loadBrokerList().finally(() => { pendingBrokerList = undefined; });
+  return pendingBrokerList;
 };
 
 

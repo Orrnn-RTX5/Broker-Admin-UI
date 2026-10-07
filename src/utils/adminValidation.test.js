@@ -132,6 +132,24 @@ test('Edit Manager sends changed role and preserves account scope for empty grou
   assert.equal(buildManagerUpdateParams({ name: 'A', role_id: '', enabled: true }, original).role_id, 0);
 });
 
+test('Manager edits without an IP editor preserve existing IP restrictions by omitting the setting', () => {
+  const original = { role_id: 3, ip_whitelist: ['10.0.0.1'] };
+  const params = buildManagerUpdateParams(
+    { name: 'A', role_id: '3', enabled: true, group_access_mode: 'restricted', allowed_groups: 'retail' },
+    original,
+    { includeIpWhitelist: false },
+  );
+  assert.deepEqual(params, { name: 'A', enabled: true, group_access_mode: 'restricted', 'allowed_groups[]': ['retail'] });
+  assert.equal(Object.hasOwn(params, 'ip_whitelist[]'), false);
+  assert.equal(Object.hasOwn(params, 'ip_whitelist'), false);
+  assert.deepEqual(original.ip_whitelist, ['10.0.0.1']);
+  assert.doesNotThrow(() => buildManagerUpdateParams(
+    { name: 'A', ip_whitelist: 'unloaded-or-stale-value' },
+    original,
+    { includeIpWhitelist: false },
+  ));
+});
+
 test('Edit Manager rejects a blank name and invalid IPs', () => {
   assert.throws(() => buildManagerUpdateParams({ name: '  ' }), /Name is required/);
   assert.throws(() => buildManagerUpdateParams({ name: 'A', ip_whitelist: 'not-an-ip' }), /IP whitelist entry/);

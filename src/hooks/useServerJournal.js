@@ -3,7 +3,7 @@ import { fetchServerJournal } from '../services/journal.service.js';
 import { takeServerJournalStartup } from '../services/journalStartup.js';
 import {
   denyServerJournalAccess, peekServerJournal, readCachedServerJournal, serverJournalDenial,
-  subscribeServerJournalCache, warmServerJournalFilters,
+  subscribeServerJournalCache, warmServerJournalFilters, pauseServerJournalWarming,
 } from '../services/serverJournalCache.js';
 import {
   SERVER_JOURNAL_FILTERS,
@@ -11,12 +11,13 @@ import {
   isServerJournalDenied,
   mergeServerJournalPages,
 } from '../utils/serverJournal.js';
+import { createJournalRecovery, JOURNAL_POLL_MS } from '../utils/journalRecovery.js';
 
-const emptyState = (key) => ({ key, entries: [], cursor: '', scope: null, error: '', olderError: '', revision: 0, loading: false, loadingOlder: false });
+const emptyState = (key) => ({ key, entries: [], cursor: '', scope: null, error: '', olderError: '', revision: 0, loading: false, loadingOlder: false, fetching: false, delayed: false, retryAt: 0, lastUpdatedAt: 0 });
 const isCancelled = (error) => error?.code === 'ERR_CANCELED' || error?.name === 'AbortError';
 const visible = () => typeof document === 'undefined' || document.visibilityState !== 'hidden';
 const pageState = (key, page) => page
-  ? { ...emptyState(key), entries: page.data.entries, cursor: page.data.next_cursor, scope: page.data.scope }
+  ? { ...emptyState(key), entries: page.data.entries, cursor: page.data.next_cursor, scope: page.data.scope, lastUpdatedAt: page.fetchedAt }
   : emptyState(key);
 
 export default function useServerJournal(active, sessionKey = '', displayed = true) {
@@ -52,8 +53,9 @@ export default function useServerJournal(active, sessionKey = '', displayed = tr
 
   const refresh = useCallback(async ({ quiet = false, initial = false } = {}) => {
     const context = contextRef.current;
-    if (!active || !context || context.key !== key || context.closed) return;
-    context.controller?.abort();
+    if (!active || !context || context.key !== key || context.closed || context.busy) return;
+    if (!quiet) context.recovery.reset();
+    const startedAt = Date.now();
     const controller = new AbortController();
     context.controller = controller;
     context.busy = true;
@@ -63,6 +65,7 @@ export default function useServerJournal(active, sessionKey = '', displayed = tr
       ...(previous.key === key ? previous : pageState(key, peekServerJournal(sessionKey, filter))),
       loading: !quiet && !peekServerJournal(sessionKey, filter),
       loadingOlder: false,
+      fetching: true,
     }));
     try {
       const startup = context.startupPending && filter === 'all'
@@ -76,31 +79,38 @@ export default function useServerJournal(active, sessionKey = '', displayed = tr
       }
       data ||= await readCachedServerJournal(sessionKey, filter, { signal: controller.signal, force: !initial });
       if (!relevant()) return;
+      context.recovery.success();
       setState((previous) => ({
         ...emptyState(key), entries: data.entries, cursor: data.next_cursor, scope: data.scope,
         revision: (previous.key === key ? previous.revision : 0) + (quiet ? 0 : 1),
+        lastUpdatedAt: peekServerJournal(sessionKey, filter)?.fetchedAt ?? Date.now(),
       }));
-      void warmServerJournalFilters(sessionKey);
+      if (Date.now() - startedAt >= JOURNAL_POLL_MS) pauseServerJournalWarming(sessionKey);
+      else void warmServerJournalFilters(sessionKey);
     } catch (error) {
       if (!relevant() || isCancelled(error)) return;
       const denied = isServerJournalDenied(error);
       if (denied) { denyServerJournalAccess(sessionKey, error); setLive(false); }
+      const recovery = context.recovery.failure(error);
+      if (recovery.retryable) pauseServerJournalWarming(sessionKey);
       setState((previous) => ({
         ...(denied || previous.key !== key ? emptyState(key) : previous),
-        error: describeServerJournalError(error), loading: false, loadingOlder: false,
+        error: recovery.retryable ? '' : describeServerJournalError(error),
+        delayed: recovery.retryable, retryAt: recovery.retryAt,
+        loading: false, loadingOlder: false, fetching: false,
       }));
     } finally {
       if (relevant()) {
         context.busy = false;
         context.controller = null;
-        setState((previous) => previous.key === key ? { ...previous, loading: false } : previous);
+        setState((previous) => previous.key === key ? { ...previous, loading: false, fetching: false } : previous);
       }
     }
   }, [active, key, filter, sessionKey, setLive]);
 
   useEffect(() => {
     if (!active) return undefined;
-    const context = { key, sequence: 0, closed: false, busy: false, initialPending: true, startupPending: true, controller: null };
+    const context = { key, sequence: 0, closed: false, busy: false, initialPending: true, startupPending: true, controller: null, recovery: createJournalRecovery() };
     contextRef.current = context;
     const timer = setTimeout(() => { context.initialPending = false; refresh({ initial: true, quiet: Boolean(peekServerJournal(sessionKey, filter)) }); }, 0);
     return () => {
@@ -113,22 +123,26 @@ export default function useServerJournal(active, sessionKey = '', displayed = tr
 
   useEffect(() => {
     if (!active || !displayed || !live || denied) return undefined;
-    const poll = () => {
+    const poll = (wake = false) => {
       const context = contextRef.current;
-      if (visible() && context && !context.initialPending && !context.busy) refresh({ quiet: true });
+      if (!visible() || navigator.onLine === false || !context || context.initialPending || context.busy) return;
+      if (wake) context.recovery.wake();
+      if (context.recovery.ready()) refresh({ quiet: true });
     };
+    const resume = () => poll();
+    const reconnected = () => poll(true);
     // Enabling Live should catch up immediately; the initial fetch is already
     // scheduled by the request-owner effect above.
-    poll();
-    const timer = setInterval(poll, 5000);
-    document.addEventListener('visibilitychange', poll);
-    window.addEventListener('focus', poll);
-    window.addEventListener('online', poll);
+    reconnected();
+    const timer = setInterval(poll, 1000);
+    document.addEventListener('visibilitychange', resume);
+    window.addEventListener('focus', resume);
+    window.addEventListener('online', reconnected);
     return () => {
       clearInterval(timer);
-      document.removeEventListener('visibilitychange', poll);
-      window.removeEventListener('focus', poll);
-      window.removeEventListener('online', poll);
+      document.removeEventListener('visibilitychange', resume);
+      window.removeEventListener('focus', resume);
+      window.removeEventListener('online', reconnected);
     };
   }, [active, displayed, live, denied, refresh]);
 

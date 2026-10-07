@@ -2,7 +2,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AccountsService } from '../services/accounts.service';
-import { ManagerService } from '../services/manager.service';
+import { primePositions } from '../services/tradeLists.service';
 import { useAuthStore } from '../store/authStore';
 import { canAccessView } from '../utils/permissions';
 import { loadGroupTreePages } from '../utils/groupTreeData';
@@ -28,7 +28,7 @@ export function WorkspaceDataProvider({ children, refreshTrigger = 0 }) {
     setSnapshot(value => ({ ...value, loading: true }));
     const results = await Promise.allSettled([
       canAccounts ? AccountsService.getAllAccounts() : Promise.reject(new Error('Account access is restricted')),
-      canPositions ? loadGroupTreePages(({ page, limit }) => ManagerService.getPositionsAll(page, limit), { arrayKeys: ['positions', 'data', 'answer', 'items', 'rows'] }) : Promise.reject(new Error('Position access is restricted')),
+      canPositions ? loadGroupTreePages(({ page, limit }) => primePositions({ page, limit }, { force: true }), { arrayKeys: ['positions', 'data', 'answer', 'items', 'rows'] }) : Promise.reject(new Error('Position access is restricted')),
     ]);
     if (run !== generation.current) return;
     const errors = {};

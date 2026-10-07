@@ -1,15 +1,18 @@
 import { refreshGroupMembership } from './services/groupMembershipRefresh.js';
 import { startManagerAccessFeed } from './services/managerAccessFeed';
+import { getManagerDirectoryIdentity, invalidateManagerDirectory } from './services/managerDirectory.service';
 import { canViewGroup, canViewGroups, canManageGroupLifecycle, groupAccessKey } from './utils/groupAccess';
 import React from 'react';
 import MenuBar from './components/organisms/MenuBar';
 import ActionToolBar from './components/organisms/ActionToolBar';
 import SidebarNavTree from './components/organisms/SidebarNavTree';
+import { loadGatewayWorkspace } from './utils/gatewayWorkspace';
+import GatewaysView from './components/organisms/GatewayWorkspace.jsx';
+import { primeGatewayConnections } from './services/gatewayStartup';
 import MarketWatchDock from './components/organisms/MarketWatchDock';
 import OperationsTerminal from './components/organisms/OperationsTerminal';
 import { WorkspaceDataProvider } from './hooks/useWorkspaceData';
 import './styles/adminWorkspace.css';
-import AccountNativePendingDialog from './components/RIGHTCLICKJPOPUPS/AccountNativePendingDialog';
 import {nativePendingAccountTarget} from './utils/nativePendingAccountTarget';
 import {getManagerTradeScope} from './services/managerTradeApi';
 
@@ -23,7 +26,6 @@ import {
 } from './store/authStore';
 import { startSessionRefreshScheduler } from './services/sessionRefreshScheduler';
 import { useConnectionStore } from './store/connectionStore';
-import useSymbolStore from './store/useSymbolStore';
 import { useLocalStorage } from './lib/useLocalStorage';
 import { useKbStatus } from './lib/useKbStatus';
 import { canAccessView, hasPermission, PERMISSION_KEYS, requiredPermissionForView } from './utils/permissions';
@@ -37,17 +39,27 @@ import {
 import { getViewCapabilityToast, shouldBlockViewNavigation } from './config/viewCapabilities';
 import { DEFAULT_WORKSPACE_LAYOUT } from './config/workspaceLayout';
 import { resolveGroupExplorerNode, sameGroupExplorerLocation, getHistoryEntryView, retireGroupHistory } from './utils/groupExplorerNavigation';
-import { Download, FolderTree, Network, RefreshCcw, ShieldAlert, Users } from 'lucide-react';
+import { Download, FolderTree, Hash, Network, RefreshCcw, ShieldAlert, Users } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { TooltipProvider } from './components/ui/Tooltip';
 import { ToastProvider, ToastViewport } from './components/ui/Toast';
-import ServerConfigWorkspace from './components/organisms/ServerConfigWorkspace';
 import { useToast } from './components/ui/useToast';
 import { StatusDot } from './components/ui/Badge';
+import { WorkspaceViewReady } from './components/organisms/WorkspaceStartup.jsx';
+import { useWorkspaceStartupReady } from './hooks/useWorkspaceStartup';
 
 // Keep the terminal and navigation available while a requested view or dialog
 // downloads. Screens that are never opened do not belong in the startup path.
+const ServerConfigWorkspace = React.lazy(() => import('./components/organisms/ServerConfigWorkspace'));
+const AllocationsView = React.lazy(() => import('./components/organisms/AllocationsView'));
 const AdminDataTable = React.lazy(() => import('./components/organisms/AdminDataTable'));
+const ManagersView = React.lazy(() => import('./components/organisms/ManagersView'));
+const prepareGatewayNavigation = label => {
+  if (label !== 'Gateways') return;
+  void loadGatewayWorkspace().catch(() => {});
+  void primeGatewayConnections();
+};
+const AccountNativePendingDialog = React.lazy(() => import('./components/RIGHTCLICKJPOPUPS/AccountNativePendingDialog'));
 const BrokerDashboard = React.lazy(() => import('./components/organisms/BrokerDashboard'));
 const GroupsExplorer = React.lazy(() => import('./components/organisms/GroupsExplorer'));
 const GroupPropertiesPopup = React.lazy(() => import('./components/RIGHTCLICKJPOPUPS/GroupPropertiesPopup'));
@@ -112,8 +124,11 @@ const getInitialServerTabForLabel = (label) => (
 );
 
 const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetLayout }) => {
+  useWorkspaceStartupReady('shell');
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const accessToken = useAuthStore((state) => state.accessToken);
+  const [verifiedAccessToken, setVerifiedAccessToken] = React.useState(null);
+  useWorkspaceStartupReady('identity', Boolean(accessToken) && verifiedAccessToken === accessToken);
   const currentUser = useAuthStore((state) => state.user);
   const tokenExpiresAt = useAuthStore((state) => state.tokenExpiresAt);
   const setUser = useAuthStore((state) => state.setUser);
@@ -140,6 +155,7 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
   const [aboutOpen, setAboutOpen] = React.useState(false);
   const [isSuperAdminOpen, setIsSuperAdminOpen] = React.useState(false);
   const [rowCount, setRowCount] = React.useState({ total: 0, filtered: 0, visible: 0, bytes: 0 });
+  const [orderFilterHost, setOrderFilterHost] = React.useState(null);
   const reportClientRowCount = React.useCallback((counts) => {
     React.startTransition(() => setRowCount(counts));
   }, []);
@@ -200,16 +216,21 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
     if (!isAuthenticated || !accessToken) return undefined;
 
     let cancelled = false;
-    const refreshAccess=()=>AuthService.getMe().catch(() => {
+    const refreshAccess=(startup=false)=>(startup===true ? AuthService.getStartupMe() : AuthService.getMe()).catch(() => {
       if (!cancelled && currentUser) {
         const latest=useAuthStore.getState();
         if(latest.accessToken===accessToken) setUser({...latest.user,group_config_admin:false,group_access_mode:'none',permissions:null});
       }
+    }).finally(() => {
+      if (!cancelled && useAuthStore.getState().accessToken === accessToken) setVerifiedAccessToken(accessToken);
     });
 
-    refreshAccess();
+    refreshAccess(true);
     const timer=window.setInterval(refreshAccess,5000);
-    const stopAccessFeed=startManagerAccessFeed(refreshAccess);
+    const stopAccessFeed=startManagerAccessFeed(() => {
+      refreshAccess();
+      invalidateManagerDirectory(getManagerDirectoryIdentity());
+    });
     window.addEventListener('focus',refreshAccess);
     return () => { cancelled=true;stopAccessFeed();window.clearInterval(timer);window.removeEventListener('focus',refreshAccess); };
     // Hydrate when the access token changes. currentUser is intentionally not
@@ -337,16 +358,6 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
       setViewingTrade(null);
     }
   }, [activeNode, isAccountEditView]);
-
-  React.useEffect(() => {
-    const symbolStore = useSymbolStore.getState();
-    if (isAuthenticated) {
-      symbolStore.initWebSocket();
-      return () => symbolStore.disconnectWebSocket();
-    }
-
-    symbolStore.disconnectWebSocket();
-  }, [isAuthenticated]);
 
   const openView = React.useCallback((label, folderLocation = null) => {
     setActiveTab(label);
@@ -602,7 +613,7 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
   }, []);
 
   const handleRefresh = React.useCallback(() => {
-    AccountsService.invalidateCache();
+    AccountsService.invalidateCache({ keepDisplaySnapshot: true });
     setRefreshKey((prev) => prev + 1);
     notify({ title: 'Refreshed', description: `at ${formatTime(new Date())}`, tone: 'success' });
   }, [notify]);
@@ -922,12 +933,13 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
       />
       </MenuBar>
 
-      <WorkspaceDataProvider refreshTrigger={refreshKey}>
+      <WorkspaceDataProvider key={groupIdentity} refreshTrigger={refreshKey}>
       <div className="admin-workspace-body">
       <div className="admin-workspace-upper">
         <MarketWatchDock>
         <SidebarNavTree
           onNodeSelect={handleNodeSelect}
+          onNodePrepare={prepareGatewayNavigation}
           onNodeDoubleClick={handleNodeDoubleClick}
           onLockedDropdownClick={handleLockedDropdownClick}
           selectedNodeLabel={activeNode === 'Market Overview' ? 'Symbols Browser' : activeNode}
@@ -939,18 +951,20 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
 
         <div className="admin-workspace-main">
           {!(canViewActive && ['Dashboard', 'Managers', 'Integrations', 'Gateways', 'Market Overview', 'Symbols Browser', 'Symbol Management', 'Allocations'].includes(activeNode)) && (
-          <div className="min-h-10 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] flex items-center px-4 gap-3 text-xs text-[color:var(--text-muted)] shadow-[var(--shadow-sm)] select-none">
-            <div role="heading" aria-level="1" className="flex items-center gap-2 text-[color:var(--text-primary)] font-semibold tracking-wide" style={{ fontSize: '14px', lineHeight: '18px' }}>
+          <div className={activeNode === 'Symbols' ? 'admin-symbols-heading' : activeNode === 'Orders' ? 'admin-orders-heading' : activeNode === 'Positions' ? 'admin-positions-heading' : activeNode === 'Trading Accounts' ? 'admin-trading-heading' : 'min-h-10 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] flex items-center px-4 gap-3 text-xs text-[color:var(--text-muted)] shadow-[var(--shadow-sm)] select-none'}>
+            <div role="heading" aria-level="1" className="flex items-center gap-2 text-[color:var(--text-primary)] font-semibold tracking-wide" style={{ fontSize: activeNode === 'Trading Accounts' ? '13px' : '14px', lineHeight: '18px' }}>
               {activeNode === 'Groups' ? (
                 <FolderTree size={13} className="text-white" />
-              ) : (activeNode === 'Trading Accounts' || activeNode === 'Clients') ? (
+              ) : activeNode === 'Clients' ? (
                 <Users size={13} className="text-white" />
-              ) : activeNode !== 'Allocations' ? (
+              ) : activeNode === 'Symbols' ? (
+                <Hash size={13} aria-hidden="true" />
+              ) : activeNode !== 'Allocations' && activeNode !== 'Trading Accounts' && activeNode !== 'Orders' && activeNode !== 'Positions' ? (
                 <Network size={13} className="text-white" />
               ) : null}
               <span>{activeNode}</span>
             </div>
-            {canViewActive && rowCount.total > 0 && (
+            {canViewActive && activeNode !== 'Trading Accounts' && rowCount.total > 0 && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium bg-[color:var(--bg-surface-3)] text-[color:var(--text-secondary)] border border-[color:var(--border-subtle)] shadow-xs">
                 {searchQuery ? (
                   <>Showing <strong className="text-white">{rowCount.filtered}</strong> of {rowCount.total}</>
@@ -959,12 +973,18 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
                 )}
               </span>
             )}
+            {canViewActive && activeNode === 'Symbols' && <span className="admin-symbols-heading-detail">Instrument specifications</span>}
+            {canViewActive && activeNode === 'Orders' && <div ref={setOrderFilterHost} className="admin-orders-filter-host" />}
           </div>
 
           )}
           <React.Suspense fallback={<WorkspaceViewFallback />}>
           {canViewActive && (activeNode === 'Server Config' || activeNode === 'Server Configuration') ? (
             <ServerConfigWorkspace key={groupIdentity} refreshTrigger={refreshKey} />
+          ) : canViewActive && activeNode === 'Allocations' ? (
+            <AllocationsView />
+          ) : canViewActive && activeNode === 'Managers' ? (
+            <ManagersView refreshTrigger={refreshKey} searchQuery={searchQuery} sortDirection={tableSortDirection} onRowsChange={handleRowsChange} />
           ) : canViewActive && activeNode === 'Dashboard' ? <BrokerDashboard onNavigate={handleNodeSelect} /> : canViewActive && activeNode === 'Groups' ? (
             <GroupsExplorer
               dummyActionsRef={dummyGroupsRef}
@@ -985,10 +1005,13 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
               onCountChange={setRowCount}
               onRowsChange={handleRowsChange}
             />
+          ) : canViewActive && activeNode === 'Gateways' ? (
+            <GatewaysView key={groupIdentity} />
           ) : canViewActive ? (
             <AdminDataTable key={groupIdentity}
               onRowDoubleClick={handleRowDoubleClick}
               viewType={activeNode}
+              orderFilterHost={orderFilterHost}
               onAddClick={handleAddClick}
               onGroupsChanged={handleGroupSaved}
               initialServerTab={serverTargetTab}
@@ -1004,6 +1027,7 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
           ) : (
             <AccessDeniedPanel viewName={activeNode} permission={activeViewPermission} />
           )}
+          {!(canViewActive && ['Server Config', 'Server Configuration'].includes(activeNode)) && <WorkspaceViewReady />}
           </React.Suspense>
         </div>
       </div>

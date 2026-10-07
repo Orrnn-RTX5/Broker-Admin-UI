@@ -10,10 +10,40 @@ import {
   getSymbolFriendlyDescription,
   isMarketQuoteFresh,
   mapFeedStatusRows,
+  marketTickReceivedTime,
   readMarketWatchViewCache,
+  resolveSymbolQuote,
   seedMarketTickHistory,
   writeMarketWatchViewCache,
 } from './marketWatch.js';
+
+test('quote freshness uses the server quote time rather than snapshot arrival', () => {
+  const now = 1700000100000;
+  assert.equal(marketTickReceivedTime({ quote_time_ms: 1700000000000 }, now), 1700000000000);
+  assert.equal(marketTickReceivedTime({ time_ms: now - 500 }, now), now - 500);
+  assert.equal(marketTickReceivedTime({ quote_time_unix: 1700000000 }, now), 1700000000000);
+  assert.equal(marketTickReceivedTime({ age_ms: 10000 }, now), now - 10000);
+  assert.equal(marketTickReceivedTime({}, now), now);
+  assert.equal(marketTickReceivedTime({ quote_time_ms: null, age_ms: null }, now), now);
+  assert.equal(isMarketQuoteFresh({ live: true, lastUpdate: marketTickReceivedTime({ quote_time_ms: now - 60000 }, now) }, true, now), false);
+});
+
+test('startup prices remain empty until a real quote arrives', () => {
+  for (const name of ['AUDUSD', 'ADAUSD', 'BTCUSD', 'UNKNOWN']) {
+    const quote = resolveSymbolQuote(name);
+    assert.equal(quote.bid, null);
+    assert.equal(quote.ask, null);
+    assert.equal(formatMarketPrice(quote.bid), '—');
+    assert.equal(formatMarketPrice(quote.ask), '—');
+  }
+});
+
+test('partial quotes never acquire an invented opposite price', () => {
+  const row = { bid: '0.27070', ask: 0, live: true, lastUpdate: 1000 };
+  assert.deepEqual(resolveSymbolQuote('ADAUSD', row), { ...row, symbol: 'ADAUSD', ask: null });
+  assert.equal(resolveSymbolQuote('EURUSD', { bid: NaN, ask: 1.1 }).bid, null);
+  assert.equal(resolveSymbolQuote('EURUSD', { bid: 1.09, ask: 1.1 }).ask, 1.1);
+});
 
 test('price direction follows each field independently and remains neutral without a prior live price', () => {
   assert.equal(getMarketPriceDirection(1.101, null), null);

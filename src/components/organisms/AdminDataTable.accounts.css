@@ -1,0 +1,102 @@
+/* Trading account directory uses one shared column grid across the panel. */
+.admin-trading-heading {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-toolbar);
+}
+.admin-trading-grid { width: 100%; min-width: 1040px; }
+.admin-trading-header,
+.admin-trading-row {
+  display: grid;
+  grid-template-columns:
+    minmax(100px, .8fr)
+    minmax(220px, 1.9fr)
+    minmax(180px, 1.6fr)
+    minmax(150px, 1.45fr)
+    minmax(150px, 1.45fr)
+    minmax(96px, 1.25fr)
+    minmax(110px, 1.55fr);
+  width: 100%;
+}
+.admin-trading-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  min-height: 32px;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-surface-2);
+  color: var(--text-secondary);
+}
+.admin-trading-column,
+.admin-trading-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 0 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-trading-column { font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.admin-trading-column + .admin-trading-column { border-left: 1px solid var(--border-subtle); }
+.admin-trading-header > :nth-child(n + 6),
+.admin-trading-row > :nth-child(n + 6) { justify-content: center; text-align: center; }
+.admin-trading-row {
+  min-height: 34px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-app);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.admin-trading-row[data-stripe="odd"] { background: color-mix(in srgb, var(--bg-surface-1) 55%, var(--bg-app)); }
+.admin-trading-row:hover { background: var(--bg-surface-2); }
+.admin-trading-row[data-selected="true"] { background: var(--accent-50); box-shadow: inset 2px 0 0 var(--accent-500); }
+.admin-trading-row:focus-visible { outline: 2px solid var(--accent-500); outline-offset: -2px; }
+.admin-trading-cell { font-size: 11px; line-height: 1.4; }
+.admin-trading-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-trading-name { color: var(--text-primary); font-weight: 500; }
+.admin-trading-login { color: var(--text-primary); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.admin-trading-number { justify-content: flex-end; text-align: right; font-variant-numeric: tabular-nums; }
+.admin-trading-cell.admin-trading-number { font-family: var(--font-mono); }
+.admin-trading-cell .admin-client-status { font-size: 11px; }
+.admin-trading-footer {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  min-height: 40px;
+  padding: 6px 14px;
+  border-top: 1px solid var(--border-default);
+  background: var(--bg-toolbar);
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.admin-trading-range { font-variant-numeric: tabular-nums; }
+.admin-trading-page-controls,
+.admin-trading-page-size,
+.admin-trading-page-nav,
+.admin-trading-page-number { display: flex; align-items: center; gap: 8px; }
+.admin-trading-page-controls { flex-wrap: wrap; justify-content: flex-end; gap: 8px 16px; margin-left: auto; }
+.admin-trading-page-size,
+.admin-trading-page-number { white-space: nowrap; }
+.admin-trading-page-nav { gap: 6px; }
+.admin-trading-footer :is(select, input) {
+  height: 26px;
+  border: 1px solid var(--border-default);
+  border-radius: 2px;
+  outline: none;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.admin-trading-footer select { min-width: 56px; padding: 0 6px; }
+.admin-trading-page-number input { width: 36px; padding: 0 4px; text-align: center; }
+.admin-trading-footer :is(select, input):focus { border-color: var(--accent-500); }
+.admin-trading-footer :is(select, input):disabled { opacity: .5; }

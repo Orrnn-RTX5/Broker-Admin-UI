@@ -3,6 +3,8 @@ import { normalizeArrayResponse } from '../utils/apiShapes.js';
 import { loadGroupTreePages } from '../utils/groupTreeData.js';
 import { useAuthStore } from '../store/authStore.js';
 import { groupAccessKey } from '../utils/groupAccess.js';
+import { createCacheIdentity } from '../utils/cacheIdentity.js';
+import { createAccountDirectorySnapshot } from '../utils/accountDirectorySnapshot.js';
 
 const ACCOUNT_ARRAY_KEYS = ['accounts', 'data', 'answer', 'items', 'rows'];
 const ACCOUNT_TOTAL_PATHS = [
@@ -29,13 +31,21 @@ let accountCacheGeneration = 0;
 let allAccountsLoad = null;
 const pendingAccountRequests = new Map();
 const accountPages = new Map();
+const directorySnapshots = createAccountDirectorySnapshot();
+const directoryIdentity = () => createCacheIdentity(useAuthStore.getState());
+const isDirectoryFirstPage = params => params.page === 1 && params.limit === 100 && !params.search && !params.group && !params.status;
 
-export const getAccountCacheIdentity = (state = useAuthStore.getState()) => JSON.stringify([
-  state.isAuthenticated, state.accessToken, groupAccessKey(state.user),
-  state.user?.role, state.user?.is_admin, state.user?.permissions,
-]);
+export const getAccountCacheIdentity = (state = useAuthStore.getState()) => {
+  const identity = createCacheIdentity(state);
+  return JSON.stringify([
+    state.isAuthenticated, Boolean(state.accessToken), identity ?? groupAccessKey(state.user),
+    // Older sessions without a broker/login still need their access scope checked.
+    ...(identity ? [] : [state.user?.role, state.user?.is_admin, state.user?.permissions]),
+  ]);
+};
 
-const invalidateAccountsCache = () => {
+const invalidateAccountsCache = ({ keepDisplaySnapshot = false } = {}) => {
+  if (!keepDisplaySnapshot) directorySnapshots.clear(directoryIdentity());
   accountCacheGeneration += 1;
   legacyAccountsCache = null;
   legacyAccountsProbePromise = null;
@@ -237,6 +247,7 @@ const rememberAccountPage = (params, response, cachedAt = Date.now()) => {
   const key = JSON.stringify(params);
   accountPages.delete(key);
   accountPages.set(key, { response, cachedAt, firstPage: params.page === 1 && shouldShareLegacyProbe(params) });
+  if (isDirectoryFirstPage(params)) directorySnapshots.write(directoryIdentity(), response, cachedAt);
   if (accountPages.size > MAX_CACHED_ACCOUNT_PAGES) {
     const evictionKey = [...accountPages].find(([, entry]) => !entry.firstPage)?.[0]
       ?? accountPages.keys().next().value;
@@ -254,7 +265,8 @@ const peekAccounts = (params = {}, { allowStale = false } = {}) => {
     return cached.response;
   }
   const legacy = getCachedAccountResponse(accountParams, { allowStale });
-  return legacy ? rememberAccountPage(accountParams, legacy, legacyAccountsCache.cachedAt) : null;
+  return legacy ? rememberAccountPage(accountParams, legacy, legacyAccountsCache.cachedAt)
+    : allowStale && isDirectoryFirstPage(accountParams) ? directorySnapshots.read(directoryIdentity()) : null;
 };
 
 export const AccountsService = {
@@ -296,6 +308,7 @@ export const AccountsService = {
     }
 
     const requestGeneration = accountCacheGeneration;
+    const requestIdentity = directoryIdentity();
     const requestPromise = api.get('/manager/AccountDetailsMany', {
       params: accountParams,
       _allowAuthFailure: true,
@@ -303,6 +316,12 @@ export const AccountsService = {
       const response = normalizeAccountResponse(res.data, accountParams, requestGeneration);
       if (requestGeneration === accountCacheGeneration) rememberAccountPage(accountParams, response);
       return response;
+    }).catch(error => {
+      if ([401, 403, 419].includes(Number(error?.response?.status))) {
+        directorySnapshots.clear(requestIdentity);
+        if (requestGeneration === accountCacheGeneration) invalidateAccountsCache();
+      }
+      throw error;
     });
 
     const trackedPromise = requestPromise.finally(() => {
@@ -387,5 +406,8 @@ export const AccountsService = {
 };
 
 useAuthStore.subscribe((state, previous) => {
-  if (getAccountCacheIdentity(state) !== getAccountCacheIdentity(previous)) invalidateAccountsCache();
+  if (getAccountCacheIdentity(state) !== getAccountCacheIdentity(previous)) {
+    directorySnapshots.clear(createCacheIdentity(previous));
+    invalidateAccountsCache();
+  }
 });

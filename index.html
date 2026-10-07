@@ -5,9 +5,18 @@
     <link rel="icon" href="%BASE_URL%logo V2.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RTX5 Broker Admin</title>
+    <link rel="stylesheet" href="%BASE_URL%workspace-loading.css" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="workspace-loading-screen" role="status" aria-live="polite" aria-label="Loading admin workspace">
+        <div class="workspace-loading-content">
+          <div class="workspace-loading-brand"><img src="%BASE_URL%admin-symbol.png" alt="" /><span>RTX5 Admin</span></div>
+          <span class="workspace-loading-spinner" aria-hidden="true"></span>
+          <p class="workspace-loading-message">Preparing your workspace…</p>
+        </div>
+      </div>
+    </div>
     <script src="%BASE_URL%runtime-config.js"></script>
     <script type="module" src="/src/main.jsx"></script>
   </body>

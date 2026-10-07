@@ -1,5 +1,6 @@
 export const DEV_PROXY_BACKEND_COOKIE = 'rtx5_dev_backend';
 export const DEV_PROXY_EXT_COOKIE = 'rtx5_dev_ext_backend';
+export const DEV_PROXY_FEED_COOKIE = 'rtx5_dev_feed';
 export const DEV_PROXY_DIRECT_MANAGER_COOKIE = 'rtx5_dev_direct_manager';
 
 export const isLocalWebHostname = (hostname = '') => {
@@ -49,6 +50,6 @@ export const stripDevProxyCookies = (cookieHeader = '') =>
     .map((part) => part.trim())
     .filter((part) => {
       const key = part.split('=')[0];
-      return key && ![DEV_PROXY_BACKEND_COOKIE, DEV_PROXY_EXT_COOKIE, DEV_PROXY_DIRECT_MANAGER_COOKIE].includes(key);
+      return key && ![DEV_PROXY_BACKEND_COOKIE, DEV_PROXY_EXT_COOKIE, DEV_PROXY_DIRECT_MANAGER_COOKIE, DEV_PROXY_FEED_COOKIE].includes(key);
     })
     .join('; ');

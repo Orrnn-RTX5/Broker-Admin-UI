@@ -143,7 +143,8 @@ export default function ServerJournal({ journal, query, isAuthenticated }) {
     return SERVER_JOURNAL_COLUMNS.filter(column => next.includes(column));
   });
   const empty = !isAuthenticated ? 'Sign in to view the broker journal.'
-    : journal.loading ? 'Loading journal…'
+    : journal.delayed && !journal.lastUpdatedAt ? (journal.live ? 'Waiting for journal updates. Retrying automatically…' : 'Journal updates are paused. Enable Live or refresh to try again.')
+      : journal.loading ? 'Loading journal…'
       : journal.error ? 'Journal events could not be loaded.'
         : needle ? 'No journal events match your search.' : journal.cleared ? 'Journal display cleared.' : 'No journal events available.';
 
@@ -161,7 +162,7 @@ export default function ServerJournal({ journal, query, isAuthenticated }) {
       {journal.error && (
         <div className="operations-journal-error" role="alert">
           <span>{journal.error}</span>
-          <button type="button" onClick={journal.refresh} disabled={journal.loading || !isAuthenticated}>Retry</button>
+          <button type="button" onClick={() => journal.refresh({ quiet: true })} disabled={journal.loading || journal.fetching || !isAuthenticated}>Retry</button>
         </div>
       )}
       {journal.cleared && <div className="operations-journal-display-notice"><span>Cleared events are hidden from this view.</span><button type="button" onClick={journal.restore}>Restore journal</button></div>}

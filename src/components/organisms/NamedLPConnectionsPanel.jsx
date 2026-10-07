@@ -4,7 +4,8 @@ import LPRuntimeReadinessPanel from './LPRuntimeReadinessPanel.jsx';
 import LPSourceGapPanel from './LPSourceGapPanel.jsx';
 import { readLPRuntimeReadiness } from '../../services/lpConnections.service.js';
 import { useAuthStore } from '../../store/authStore.js';
-import { listLPConnections, saveLPConnection, enableLPConnection, testLPConnection } from '../../services/lpConnections.service.js';
+import { saveLPConnection, enableLPConnection, testLPConnection } from '../../services/lpConnections.service.js';
+import { getGatewayConnectionsScope, peekGatewayConnections, readGatewayConnections, invalidateGatewayConnections } from '../../services/gatewayStartup.js';
 import { emptyConnection, emptyCredentials, saveConnectionPayload, connectionError, connectionResult } from '../../utils/lpConnections.js';
 
 const secrets = () => ({ quote: emptyCredentials(), trade: emptyCredentials() });
@@ -20,34 +21,41 @@ const roleInfo = {
 };
 const credentialFields = [['sender_comp_id', 'Sender Comp ID'], ['sender_sub_id', 'Sender sub ID (optional)'], ['username', 'Username'], ['password', 'Password'], ['account_id', 'Account ID']];
 const credentialHint = (role, key) => ({ sender_comp_id: 'e.g. demo.pepperstone.5328266', sender_sub_id: roleInfo[role].subID, account_id: 'Last part of Sender Comp ID' }[key]);
-function Workspace() {
-  const [records, setRecords] = useState([]);
-  const [config, setConfig] = useState(emptyConnection);
+function Workspace({ scope }) {
+  const initial = peekGatewayConnections(scope)?.data.connections;
+  const [records, setRecords] = useState(() => initial || []);
+  const [config, setConfig] = useState(() => initial?.[0] ? structuredClone(initial[0].config) : emptyConnection());
   const [credentials, setCredentials] = useState(secrets);
-  const [status, setStatus] = useState(null);
+  const [status, setStatus] = useState(() => initial?.[0]?.status || null);
   const [busy, setBusy] = useState(true);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [conflict, setConflict] = useState(false);
-  const [listLoaded, setListLoaded] = useState(false);
+  const [listLoaded, setListLoaded] = useState(() => Boolean(initial));
   const [explicitNew, setExplicitNew] = useState(false);
   const mounted = useRef(false);
   const select = record => {
     setConfig(record ? structuredClone(record.config) : emptyConnection());
     setCredentials(secrets()); setStatus(record?.status || null); setConflict(false); setError(''); setMessage('');
   };
-  async function refresh() {
+  async function refresh({ force = true } = {}) {
     setBusy(true); setError('');
     try {
-      const result = await listLPConnections();
+      const result = await readGatewayConnections(scope, { force });
       if (!mounted.current) return;
       setRecords(result.connections || []);
       setListLoaded(true);
       select((result.connections || []).find(item => item.config.id === config.id) || result.connections?.[0]);
-    } catch (e) { if (mounted.current) setError(connectionError(e)); }
+    } catch (e) {
+      if (!mounted.current) return;
+      setError(connectionError(e));
+      if ([401, 403].includes(Number(e.status ?? e.response?.status))) {
+        setRecords([]); setListLoaded(false); setExplicitNew(false); setConfig(emptyConnection()); setStatus(null);
+      } else if (listLoaded) setConflict(true);
+    }
     finally { if (mounted.current) setBusy(false); }
   }
-  useEffect(() => { mounted.current = true; refresh(); return () => { mounted.current = false; }; }, []); // eslint-disable-line react-hooks/exhaustive-deps -- Workspace remounts on session changes; form edits must not trigger a refresh.
+  useEffect(() => { mounted.current = true; refresh({ force: false }); return () => { mounted.current = false; }; }, []); // eslint-disable-line react-hooks/exhaustive-deps -- Workspace remounts on session changes; form edits must not trigger a refresh.
   async function run(action) {
     setBusy(true); setError(''); setMessage('');
     try {
@@ -63,7 +71,7 @@ function Workspace() {
       setError(connectionError(e));
       if (['CONFIGURATION_CONFLICT', 'CONFIGURATION_COMMIT_UNCERTAIN'].includes(e.response?.data?.error_code)) setConflict(true);
       if (e.response?.data?.test_kind === 'connection_logon' && e.response?.data?.orders_submitted === false) setMessage('Logon test failed. No orders submitted.');
-    } finally { if (mounted.current) { setBusy(false); setCredentials(secrets()); } }
+    } finally { invalidateGatewayConnections(scope); if (mounted.current) { setBusy(false); setCredentials(secrets()); } }
   }
   function save(event) {
     event.preventDefault();
@@ -106,7 +114,7 @@ function Workspace() {
     </div>
     <div className="nfc-context">
       <strong>{isNew ? 'New connection' : config.name || config.id}</strong>
-      <span>{isNew ? 'Complete the fields below, then save this connection.' : hasUnsavedChanges ? 'Unsaved edits. Save before testing or changing the connection state.' : 'Showing saved settings and current runtime status.'}</span>
+      <span>{busy ? 'Checking saved settings and session status…' : isNew ? 'Complete the fields below, then save this connection.' : hasUnsavedChanges ? 'Unsaved edits. Save before testing or changing the connection state.' : 'Showing last loaded settings and session status.'}</span>
     </div>
     <div className="nfc-status" role="group" aria-label="Connection status summary">
       <div className="nfc-status-group">
@@ -174,6 +182,6 @@ function Workspace() {
   </section>;
 }
 export default function NamedLPConnectionsPanel() {
-  const session = useAuthStore(state => state.accessToken);
-  return session ? <Workspace key={session} /> : null;
+  const scope = useAuthStore(getGatewayConnectionsScope);
+  return scope ? <Workspace key={scope} scope={scope} /> : null;
 }

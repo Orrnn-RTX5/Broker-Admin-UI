@@ -18,11 +18,12 @@ export const ToastProvider = ({ children }) => {
   const notify = React.useCallback((t) => {
     setToasts([{ id: crypto.randomUUID?.() ?? Date.now(), ...t }]);
   }, []);
+  const context = React.useMemo(() => ({ notify }), [notify]);
   const dismiss = (id) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
   return (
     <RToast.Provider swipeDirection="right" duration={4000}>
-      <ToastCtx.Provider value={{ notify }}>
+      <ToastCtx.Provider value={context}>
         {children}
         {toasts.map((t) => (
           <RToast.Root

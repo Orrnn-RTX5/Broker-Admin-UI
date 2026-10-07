@@ -99,7 +99,7 @@ const Field = ({ label, children }) => (
 const inputClassName = 'min-w-0 w-full flex-1 bg-[color:var(--bg-surface-1)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-[color:var(--text-primary)] focus:outline-none focus:border-blue-500 rounded-sm disabled:opacity-60';
 const selectClassName = 'min-w-0 w-full flex-1 bg-[color:var(--bg-surface-1)] border border-[color:var(--border-strong)] px-2 py-1 text-[12px] text-[color:var(--text-primary)] focus:outline-none focus:border-blue-500 rounded-sm cursor-pointer disabled:opacity-60';
 
-const AccountEditPopup = ({ account, onClose, onSaved }) => {
+const AccountEditForm = ({ account, onClose, onSaved }) => {
 	const nativeCancelUser=useAuthStore(state=>state.user);
   const original = useMemo(() => buildFormState(account), [account]);
   const login = useMemo(() => getAccountLogin(account), [account]);
@@ -331,6 +331,39 @@ const AccountEditPopup = ({ account, onClose, onSaved }) => {
       {fundingOpen && (
         <FundingPopup login={login} currency={config.currency || form.currency} onClose={() => setFundingOpen(false)} />
       )}
+    </div>
+  );
+};
+
+const AccountEditPopup = (props) => {
+  const { account, onClose } = props;
+  const login = getAccountLogin(account);
+  const needsDetail = Boolean(getAccountSource(account)._accountDirectorySummary);
+  const [detail, setDetail] = useState(null);
+  const [error, setError] = useState('');
+  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    if (!needsDetail) return undefined;
+    let active = true;
+    AccountsService.getAccount(login).then(response => {
+      const record = response?.account ?? response?.data?.account ?? response?.data ?? response?.answer ?? response;
+      if (!record || Array.isArray(record) || String(getAccountLogin(record)) !== String(login)) throw new Error('Current account details are unavailable.');
+      if (active) setDetail({ login, record });
+    }).catch(error => { if (active) setError(error?.response?.data?.message || error.message || 'Account details could not be loaded.'); });
+    return () => { active = false; };
+  }, [login, needsDetail, revision]);
+  const currentDetail = detail?.login === login ? detail.record : null;
+  if (!needsDetail || currentDetail) return <AccountEditForm {...props} account={currentDetail || account} />;
+  return (
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/40 font-sans">
+      <div role="dialog" aria-modal="true" aria-label="Edit account" className="w-[520px] max-w-[calc(100vw-32px)] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] p-4 text-[12px] text-[color:var(--text-primary)]">
+        <div className="mb-4">Edit Account #{login}</div>
+        <p role={error ? 'alert' : 'status'}>{error || 'Loading current account details…'}</p>
+        <div className="mt-4 flex justify-end gap-3">
+          {error && <button type="button" onClick={() => { setError(''); setRevision(value => value + 1); }}>Retry</button>}
+          <button type="button" onClick={onClose}>Cancel</button>
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,6 +1,5 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import LPFeedsPanel from './LPFeedsPanel.jsx';
 import {
   ArrowDownRight, ArrowUpRight, ChartNoAxesCombined, ChevronUp, ChevronDown, Minus,
   Folder, Search, ArrowLeft, Activity, Info, Clock, CheckCircle2, PanelLeftOpen, X,
@@ -8,6 +7,8 @@ import {
 import useSymbolStore from '../../store/useSymbolStore';
 import { InstrumentsService } from '../../services/instruments.service';
 import { DEFAULT_WORKSPACE_LAYOUT } from '../../config/workspaceLayout';
+import { useWorkspaceDockResize } from '../../hooks/useWorkspaceDockResize';
+import WorkspaceColumnResizer from './WorkspaceColumnResizer';
 import {
   formatMarketPrice,
   formatMarketSpread,
@@ -22,6 +23,7 @@ import {
 import './MarketWatchDock.css';
 
 const MARKET_WATCH_CACHE_WRITE_MS = 250;
+const LPFeedsPanel = lazy(() => import('./LPFeedsPanel.jsx'));
 
 const quotePriceClass = (direction, fresh = true) => {
   if (!fresh) return 'market-quote-neutral';
@@ -121,6 +123,7 @@ export default function MarketWatchDock({ children }) {
 
   // Vertical Resizer State between Market Watch and Navigator
   const dockRef = useRef(null);
+  const columnResize = useWorkspaceDockResize(dockRef, collapsed, navigatorCollapsed);
   const [marketWatchHeight, setMarketWatchHeight] = useState(DEFAULT_WORKSPACE_LAYOUT.marketWatchHeight);
   const [isDragging, setIsDragging] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -363,6 +366,7 @@ export default function MarketWatchDock({ children }) {
     <aside
       className={`admin-market-dock ${collapsed ? 'is-collapsed' : ''} ${navigatorCollapsed ? 'is-navigator-collapsed' : ''} ${mobileOpen ? 'is-mobile-open' : ''}`}
       ref={dockRef}
+      style={columnResize.style}
       aria-label="Market Watch and Navigator"
     >
       <button
@@ -446,12 +450,16 @@ export default function MarketWatchDock({ children }) {
           </div>
 
           <div
-            className="admin-market-content"
+            className={`admin-market-content${tab === 'Named feeds' ? ' is-named-feeds' : ''}`}
             ref={viewport}
             onScroll={e => setScrollTop(e.currentTarget.scrollTop)}
           >
             {/* View 1: Symbols Quotes Table */}
-            {tab === 'Named feeds' && <LPFeedsPanel compact />}
+            {tab === 'Named feeds' && (
+              <Suspense fallback={<p className="market-watch-empty" role="status">Loading named feeds…</p>}>
+                <LPFeedsPanel compact />
+              </Suspense>
+            )}
             {tab === 'Symbols' && (
               <>
                 <table className="admin-market-table admin-market-symbols-table">
@@ -653,6 +661,7 @@ export default function MarketWatchDock({ children }) {
               </button>
             ))}
           </nav>
+          <WorkspaceColumnResizer label="Resize Market Watch width" {...columnResize.separatorProps('marketWatch')} />
         </section>
       )}
 
@@ -711,6 +720,7 @@ export default function MarketWatchDock({ children }) {
           <div className="admin-navigator-content" onClick={handleMobileNavigatorClick} onKeyDown={handleMobileNavigatorKeyDown}>
             {children}
           </div>
+          <WorkspaceColumnResizer label="Resize Navigator width" {...columnResize.separatorProps('navigator')} />
         </section>
       )}
       </div>

@@ -1,11 +1,13 @@
 import { create } from 'zustand';
+import { flushSync } from 'react-dom';
 import { persist } from 'zustand/middleware';
 import { buildFeedWsUrl, buildFeedStatusUrl, shouldUseFeedDevProxy } from '../config/endpoints';
-import { extractMarketTicks, extractStreamedSymbols, getMarketPriceDirection, mapFeedStatusRows, validMarketPrice } from '../utils/marketWatch';
+import { extractMarketTicks, extractStreamedSymbols, getMarketPriceDirection, mapFeedStatusRows, marketTickReceivedTime, validMarketPrice } from '../utils/marketWatch';
 import { createBrowserDeferredPersistStorage } from './deferredPersistStorage';
 import { getFeedOriginError, getFeedReconnectDelayMs } from './feedConnectionPolicy';
 
 const STATUS_SYNC_TTL_MS = 10000;
+const STATUS_REQUEST_TIMEOUT_MS = 3000;
 // Re-read the streamed symbol inventory so SuperAdmin changes appear without a reload.
 const STATUS_POLL_MS = 15000;
 const symbolPersistStorage = createBrowserDeferredPersistStorage();
@@ -75,6 +77,7 @@ const useSymbolStore = create(
       symbols: {}, // Object keyed by symbol name: { symbol, bid, ask, lastUpdate, category }
       symbolMetadata: [], // Stable list of metadata
       ws: null,
+      retireSocket: null,
       isConnected: false,
       feedError: '',
       feedOriginBlocked: false,
@@ -126,8 +129,10 @@ const useSymbolStore = create(
               bidDir,
               askDir,
               dir: bidDir ?? askDir,
-              live: true,
-              lastUpdate: now,
+              // A server snapshot can contain an old or explicitly stale
+              // quote. Receiving it now must not make that price look live.
+              live: data.fresh !== false && data.stale !== true,
+              lastUpdate: marketTickReceivedTime(data, now),
               category,
             };
           });
@@ -192,6 +197,16 @@ const useSymbolStore = create(
           get().shouldReconnect && getCurrentBrokerScope() === nextBrokerScope;
         let reconnectAttempt = 0;
 
+        const scheduleReconnect = () => {
+          if (!isCurrent() || get().feedOriginBlocked || get().reconnectTimer) return;
+          const reconnectTimer = setTimeout(() => {
+            if (get().reconnectTimer !== reconnectTimer) return;
+            set({ reconnectTimer: null });
+            connect();
+          }, getFeedReconnectDelayMs(reconnectAttempt++));
+          set({ reconnectTimer });
+        };
+
         const connect = () => {
           if (!isCurrent() || get().ws || get().feedOriginBlocked) return;
 
@@ -200,18 +215,64 @@ const useSymbolStore = create(
             ws = new WebSocket(buildFeedWsUrl());
           } catch {
             set({ isConnected: false, feedError: 'Market feed unavailable. Check feed configuration.' });
+            scheduleReconnect();
             return;
           }
-          const watchdog = setTimeout(() => {
-            if (get().ws === ws && ws.readyState === 0) ws.close();
-          }, 10000);
+          let watchdog;
           let batchHandle;
+          let receivedFirstQuote = false;
           const pending = [];
+
+          const cleanup = () => {
+            clearTimeout(watchdog);
+            cancelTickBatch(batchHandle);
+            batchHandle = null;
+            pending.length = 0;
+          };
+          const retire = () => {
+            cleanup();
+            ws.onmessage = null;
+            ws.onerror = null;
+            ws.onclose = null;
+            // Cancelling CONNECTING sockets creates the browser's
+            // "closed before the connection is established" error. Detach
+            // their handlers immediately and close only once open.
+            if (ws.readyState === 0) {
+              ws.onopen = () => {
+                ws.onopen = null;
+                ws.close(1000, 'Symbol feed retired');
+              };
+            } else {
+              ws.onopen = null;
+              if (ws.readyState === 1) ws.close(1000, 'Symbol feed retired');
+            }
+          };
+          const disconnected = () => {
+            cleanup();
+            if (get().ws !== ws) return;
+            const shouldReconnect = isCurrent();
+            const originBlocked = get().feedOriginBlocked;
+            set((state) => ({
+              isConnected: false,
+              ws: null,
+              retireSocket: null,
+              feedError: originBlocked ? state.feedError :
+                shouldReconnect ? 'Market feed reconnecting…' : 'Market feed disconnected.',
+              symbols: Object.fromEntries(
+                Object.entries(state.symbols).map(([key, value]) => [key, { ...value, live: false }])
+              ),
+            }));
+            if (shouldReconnect && !originBlocked) scheduleReconnect();
+          };
+          const retireAndDisconnect = () => { retire(); disconnected(); };
+          watchdog = setTimeout(() => {
+            if (get().ws === ws && ws.readyState === 0) retireAndDisconnect();
+          }, 10000);
 
           ws.onopen = () => {
             clearTimeout(watchdog);
             if (!isCurrent() || get().ws !== ws) {
-              ws.close();
+              retireAndDisconnect();
               return;
             }
             reconnectAttempt = 0;
@@ -225,13 +286,22 @@ const useSymbolStore = create(
             try {
               const updates = extractMarketTicks(e.data);
               if (updates.length > 0) {
+                if (!receivedFirstQuote) {
+                  receivedFirstQuote = true;
+                  // The first real snapshot is urgent: publish it without a
+                  // frame wait so a visible table cannot linger on empty cells.
+                  flushSync(() => get().upsertSymbols(updates));
+                  return;
+                }
                 // Keep tick order within the frame. Collapsing each symbol to
                 // its final quote loses the direction of its last price move.
                 updates.forEach((tick) => pending.push(tick));
                 if (!batchHandle) {
                   batchHandle = scheduleTickBatch(() => {
                     batchHandle = null;
-                    if (get().ws === ws) get().upsertSymbols(pending.splice(0));
+                    // Commit in this frame; scheduling React after the frame
+                    // can otherwise add another visible frame of quote latency.
+                    if (get().ws === ws) flushSync(() => get().upsertSymbols(pending.splice(0)));
                     else pending.length = 0;
                   });
                 }
@@ -241,38 +311,16 @@ const useSymbolStore = create(
             }
           };
 
-          ws.onclose = () => {
-            clearTimeout(watchdog);
-            cancelTickBatch(batchHandle);
-            batchHandle = null;
-            pending.length = 0;
-            if (get().ws !== ws) return;
-            const shouldReconnect = isCurrent();
-            const originBlocked = get().feedOriginBlocked;
-            set((state) => ({
-              isConnected: false,
-              ws: null,
-              feedError: originBlocked ? state.feedError :
-                shouldReconnect ? 'Market feed reconnecting…' : 'Market feed disconnected.',
-              symbols: Object.fromEntries(
-                Object.entries(state.symbols).map(([key, value]) => [key, { ...value, live: false }])
-              ),
-            }));
-            if (shouldReconnect && !originBlocked) {
-              const reconnectTimer = setTimeout(connect, getFeedReconnectDelayMs(reconnectAttempt));
-              reconnectAttempt += 1;
-              set({ reconnectTimer });
-            }
-          };
+          ws.onclose = disconnected;
 
           ws.onerror = () => {
             if (get().ws !== ws) return;
             // Browser error events do not expose the handshake reason. The
-            // close handler owns the visible state and bounded retry.
-            ws.close();
+            // retire path owns the visible state and bounded retry.
+            retireAndDisconnect();
           };
 
-          set({ ws });
+          set({ ws, retireSocket: retireAndDisconnect });
         };
 
         const syncStatusAndOrigin = async () => {
@@ -290,10 +338,9 @@ const useSymbolStore = create(
             shouldUseFeedDevProxy()
           );
           if (originError) {
-            set({ feedOriginBlocked: true, isConnected: false, feedError: originError });
-            const currentSocket = get().ws;
-            if (currentSocket && currentSocket.readyState !== WebSocket.CLOSING &&
-              currentSocket.readyState !== WebSocket.CLOSED) currentSocket.close();
+            if (get().reconnectTimer) clearTimeout(get().reconnectTimer);
+            set({ feedOriginBlocked: true, isConnected: false, feedError: originError, reconnectTimer: null });
+            get().retireSocket?.();
             return;
           }
 
@@ -304,22 +351,10 @@ const useSymbolStore = create(
         };
 
         set({ statusPollTimer: setInterval(() => { void syncStatusAndOrigin(); }, STATUS_POLL_MS) });
-        const initialStatus = syncStatusAndOrigin();
-        if (shouldUseFeedDevProxy()) {
-          // The proxy presents its own permitted Origin to the upstream feed.
-          // Its status request must not delay a working WebSocket handshake.
-          connect();
-          return;
-        }
-
-        let preflightTimer;
-        const preflightDeadline = new Promise((resolve) => {
-          preflightTimer = setTimeout(resolve, 3000);
-        });
-        void Promise.race([initialStatus, preflightDeadline]).then(() => {
-          clearTimeout(preflightTimer);
-          if (isCurrent() && !get().feedOriginBlocked) connect();
-        });
+        // The server enforces the socket Origin. Read diagnostics in parallel;
+        // a slow HTTP status response must not hold back the first live tick.
+        connect();
+        void syncStatusAndOrigin();
       },
 
       syncAvailableSymbols: ({ force = false } = {}) => {
@@ -339,13 +374,24 @@ const useSymbolStore = create(
           }
           if (!statusUrl) return;
 
+          const controller = new AbortController();
+          let statusDeadline;
           try {
-            // The feed status is public. Sending cookies makes the browser drop
-            // the response from backends that omit Access-Control-Allow-Credentials,
-            // which silently fell back to the full instrument list.
-            const res = await fetch(statusUrl, { credentials: 'omit' });
+            // Only same-origin routing cookies reach the local proxy. Remote
+            // status requests stay credential-free and do not require ACAC.
+            const { res, payload } = await Promise.race([
+              (async () => {
+                const res = await fetch(statusUrl, { credentials: 'same-origin', signal: controller.signal });
+                return { res, payload: res.ok ? await res.json() : null };
+              })(),
+              new Promise((_, reject) => {
+                statusDeadline = setTimeout(() => {
+                  controller.abort();
+                  reject(new Error('Market feed status timed out'));
+                }, STATUS_REQUEST_TIMEOUT_MS);
+              }),
+            ]);
             if (!res.ok) return null;
-            const payload = await res.json();
             if (get().connectionGeneration !== statusGeneration ||
               get().brokerScope !== statusBrokerScope) return null;
             const allowedOrigins = Array.isArray(payload?.allowed_browser_origins)
@@ -401,6 +447,8 @@ const useSymbolStore = create(
           } catch {
             // Ignore transient status fetch errors; cached symbols remain available.
             return null;
+          } finally {
+            clearTimeout(statusDeadline);
           }
         })().finally(() => {
           if (get().statusSyncPromise === syncPromise) set({ statusSyncPromise: null });
@@ -411,7 +459,7 @@ const useSymbolStore = create(
       },
 
       disconnectWebSocket: () => {
-        const { ws, reconnectTimer, statusPollTimer } = get();
+        const { retireSocket, reconnectTimer, statusPollTimer } = get();
         if (reconnectTimer) clearTimeout(reconnectTimer);
         if (statusPollTimer) clearInterval(statusPollTimer);
 
@@ -424,21 +472,10 @@ const useSymbolStore = create(
           feedOriginBlocked: false,
           isConnected: false,
           ws: null,
+          retireSocket: null,
         });
 
-        if (ws && typeof WebSocket !== 'undefined') {
-          const connecting = WebSocket.CONNECTING ?? 0;
-          const closing = WebSocket.CLOSING ?? 2;
-          const closed = WebSocket.CLOSED ?? 3;
-          if (ws.readyState === connecting) {
-            // Closing mid-handshake makes the browser report a failed connection
-            // (React StrictMode unmounts effects once in dev), so close on open.
-            ws.onmessage = null;
-            ws.onopen = () => ws.close(1000, 'Symbol feed disabled');
-          } else if (ws.readyState !== closing && ws.readyState !== closed) {
-            ws.close(1000, 'Symbol feed disabled');
-          }
-        }
+        retireSocket?.();
       },
 
       syncMetadata: () => {

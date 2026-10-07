@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Bug, Check, Copy, Image as ImageIcon, Paperclip, X } from 'lucide-react';
+import * as Dialog from '@radix-ui/react-dialog';
+import { Bug, Check, ChevronDown, Copy, FileText, Image as ImageIcon, Info, Loader2, Paperclip, X } from 'lucide-react';
 
 import {
   CATEGORY_LABELS,
   MAX_ATTACHMENTS,
+  MAX_FILE_BYTES,
   SEVERITY_LABELS,
   fetchBugReportOptions,
   submitBugReport,
   validateAttachment,
 } from '../services/bugReport.service';
+import './BugReportDialog.css';
 
 // Kept low on purpose, and matched by the control plane. The first live test
 // reports ("check", "check ing") were blocked by a 10-character minimum the
@@ -25,8 +28,8 @@ const EMPTY_FORM = {
   actual: '',
 };
 
-const labelClass = 'block text-[11px] font-semibold uppercase tracking-wide text-[color:var(--text-secondary)] mb-1';
-const fieldClass = 'w-full bg-[color:var(--bg-surface-2)] border border-[color:var(--border-default)] px-2 py-1.5 text-[12px] text-[color:var(--text-primary)] outline-none focus:border-[color:var(--accent-500)]';
+const labelClass = 'bug-report-label';
+const fieldClass = 'bug-report-field';
 
 /**
  * Report a Bug.
@@ -48,6 +51,7 @@ export default function BugReportDialog({ onClose }) {
 
   const fileInputRef = useRef(null);
   const dialogRef = useRef(null);
+  const returnFocusRef = useRef(document.activeElement);
 
   useEffect(() => {
     let active = true;
@@ -56,12 +60,6 @@ export default function BugReportDialog({ onClose }) {
       .catch(() => { if (active) setOptions({ enabled: true }); });
     return () => { active = false; };
   }, []);
-
-  useEffect(() => {
-    const onKeyDown = (event) => { if (event.key === 'Escape' && !submitting) onClose?.(); };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose, submitting]);
 
   const addFiles = useCallback((incoming) => {
     const candidates = Array.from(incoming || []);
@@ -85,23 +83,19 @@ export default function BugReportDialog({ onClose }) {
   // Paste-to-attach. Most people take a screenshot with the OS shortcut and
   // have it on the clipboard already; asking them to save it to disk first is
   // the step that stops reports being filed.
-  useEffect(() => {
-    const onPaste = (event) => {
-      const items = Array.from(event.clipboardData?.items || []);
-      const images = items.filter((item) => item.kind === 'file' && item.type.startsWith('image/'));
-      if (!images.length) return;
-      event.preventDefault();
-      addFiles(images.map((item, index) => {
-        const blob = item.getAsFile();
-        if (!blob) return null;
-        const extension = (blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
-        return new File([blob], `pasted-${Date.now()}-${index}.${extension}`, { type: blob.type });
-      }).filter(Boolean));
-    };
-    const node = dialogRef.current;
-    node?.addEventListener('paste', onPaste);
-    return () => node?.removeEventListener('paste', onPaste);
-  }, [addFiles]);
+  const onPaste = (event) => {
+    if (submitting) return;
+    const items = Array.from(event.clipboardData?.items || []);
+    const images = items.filter((item) => item.kind === 'file' && item.type.startsWith('image/'));
+    if (!images.length) return;
+    event.preventDefault();
+    addFiles(images.map((item, index) => {
+      const blob = item.getAsFile();
+      if (!blob) return null;
+      const extension = (blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+      return new File([blob], `pasted-${Date.now()}-${index}.${extension}`, { type: blob.type });
+    }).filter(Boolean));
+  };
 
   const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
 
@@ -141,191 +135,223 @@ export default function BugReportDialog({ onClose }) {
   const storageDisabled = options && options.enabled === false;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto bg-black/60 p-6">
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Report a bug"
-        tabIndex={-1}
-        className="w-full max-w-[640px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] shadow-2xl"
-      >
-        <header className="flex items-center justify-between border-b border-[color:var(--border-default)] px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Bug size={15} aria-hidden="true" className="text-[color:var(--accent-500)]" />
-            <h2 className="text-[13px] font-semibold text-[color:var(--text-primary)]">Report a Bug</h2>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)]">
-            <X size={16} aria-hidden="true" />
-          </button>
-        </header>
-
-        {receipt ? (
-          <div className="px-5 py-8 text-center">
-            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--accent-500)]/15 text-[color:var(--accent-500)]">
-              <Check size={20} aria-hidden="true" />
+    <Dialog.Root open onOpenChange={(open) => { if (!open && !submitting) onClose?.(); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="bug-report-overlay" />
+        <Dialog.Content
+          ref={dialogRef}
+          className="bug-report-dialog"
+          onPaste={onPaste}
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            dialogRef.current?.querySelector('#bug-title')?.focus();
+          }}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            returnFocusRef.current?.focus?.();
+          }}
+          onPointerDownOutside={(event) => event.preventDefault()}
+          onInteractOutside={(event) => event.preventDefault()}
+          onEscapeKeyDown={(event) => { if (submitting) event.preventDefault(); }}
+        >
+          <header className="bug-report-header">
+            <span className="bug-report-header-icon"><Bug size={17} strokeWidth={1.7} aria-hidden="true" /></span>
+            <div className="bug-report-heading">
+              <Dialog.Title className="bug-report-title">Report a bug</Dialog.Title>
+              <Dialog.Description className="bug-report-subtitle">Share an issue with the RTX5 platform team.</Dialog.Description>
             </div>
-            <p className="text-[13px] font-semibold text-[color:var(--text-primary)]">Bug report submitted</p>
-            <p className="mt-1 text-[11px] text-[color:var(--text-secondary)]">
-              The RTX5 platform team can see this report. Quote this reference if you follow it up.
-            </p>
-            <div className="mt-4 inline-flex items-center gap-2 border border-[color:var(--border-default)] bg-[color:var(--bg-surface-2)] px-3 py-2">
-              <code className="font-mono text-[12px] text-[color:var(--text-primary)]">{receipt.report_id}</code>
-              <button type="button" onClick={copyId} aria-label="Copy report id" className="text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)]">
-                {copied ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
-              </button>
-            </div>
-            {receipt.failed_attachments?.length ? (
-              <p className="mt-3 text-[11px] text-amber-400">
-                The report was filed, but {receipt.failed_attachments.length} attachment
-                {receipt.failed_attachments.length === 1 ? '' : 's'} could not be uploaded.
-              </p>
-            ) : null}
-            <div className="mt-5">
-              <button type="button" onClick={onClose} className="border border-[color:var(--border-default)] bg-[color:var(--bg-surface-2)] px-4 py-1.5 text-[12px] text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)]">
-                Close
-              </button>
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto px-5 py-4">
-            {storageDisabled ? (
-              <p className="mb-3 border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-300">
-                Bug reporting is not configured on this server yet. Submitting will not work until an administrator enables it.
-              </p>
-            ) : null}
-
-            <div className="mb-3">
-              <label className={labelClass} htmlFor="bug-title">Title</label>
-              <input
-                id="bug-title" className={fieldClass} value={form.title} onChange={update('title')}
-                placeholder="Order rejected although the quote is live" maxLength={200} required
-              />
-            </div>
-
-            <div className="mb-3">
-              <label className={labelClass} htmlFor="bug-description">What happened?</label>
-              <textarea
-                id="bug-description" className={`${fieldClass} min-h-[96px] resize-y`}
-                value={form.description} onChange={update('description')}
-                placeholder="Describe what you were doing and what went wrong." maxLength={8000} required
-              />
-            </div>
-
-            <div className="mb-3 grid grid-cols-2 gap-3">
-              <div>
-                <label className={labelClass} htmlFor="bug-category">Area</label>
-                <select id="bug-category" className={fieldClass} value={form.category} onChange={update('category')}>
-                  {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className={labelClass} htmlFor="bug-severity">Severity</label>
-                <select id="bug-severity" className={fieldClass} value={form.severity} onChange={update('severity')}>
-                  {Object.entries(SEVERITY_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="mb-3">
-              <span className={labelClass}>Screenshot or log</span>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button" onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-2 border border-[color:var(--border-default)] bg-[color:var(--bg-surface-2)] px-3 py-1.5 text-[11px] text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)]"
-                >
-                  <Paperclip size={13} aria-hidden="true" /> Attach file
-                </button>
-                <span className="text-[10px] text-[color:var(--text-tertiary)]">or press Ctrl+V to paste a screenshot</span>
-              </div>
-              <input
-                ref={fileInputRef} type="file" multiple hidden
-                accept="image/png,image/jpeg,image/webp,text/plain,.log,.txt"
-                onChange={(event) => { addFiles(event.target.files); event.target.value = ''; }}
-              />
-              {attachments.length ? (
-                <ul className="mt-2 flex flex-col gap-1">
-                  {attachments.map((file, index) => (
-                    <li key={`${file.name}-${index}`} className="flex items-center justify-between border border-[color:var(--border-default)] bg-[color:var(--bg-surface-2)] px-2 py-1">
-                      <span className="flex min-w-0 items-center gap-2 text-[11px] text-[color:var(--text-primary)]">
-                        <ImageIcon size={12} aria-hidden="true" className="shrink-0 text-[color:var(--text-tertiary)]" />
-                        <span className="truncate">{file.name}</span>
-                        <span className="shrink-0 text-[color:var(--text-tertiary)]">{Math.round(file.size / 1024)} KB</span>
-                      </span>
-                      <button
-                        type="button" aria-label={`Remove ${file.name}`}
-                        onClick={() => setAttachments((current) => current.filter((_, i) => i !== index))}
-                        className="text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)]"
-                      >
-                        <X size={13} aria-hidden="true" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              {/* Stated plainly, because a screenshot of this UI can contain
-                  client names, balances and open positions. */}
-              <p className="mt-1.5 text-[10px] leading-4 text-[color:var(--text-tertiary)]">
-                Screenshots are sent to the RTX5 platform team. Check the image does not show anything
-                you would not want shared.
-              </p>
-            </div>
-
-            <button
-              type="button" onClick={() => setShowDetails((value) => !value)}
-              className="mb-2 text-[11px] font-semibold text-[color:var(--accent-500)] hover:underline"
-              aria-expanded={showDetails}
-            >
-              {showDetails ? 'Hide' : 'Add'} reproduction details
+            <button type="button" onClick={onClose} disabled={submitting} aria-label="Close report dialog" className="bug-report-icon-button">
+              <X size={16} aria-hidden="true" />
             </button>
+          </header>
 
-            {showDetails ? (
-              <div className="mb-3 flex flex-col gap-3 border-l-2 border-[color:var(--border-default)] pl-3">
-                <div>
-                  <label className={labelClass} htmlFor="bug-steps">Steps to reproduce (one per line)</label>
-                  <textarea id="bug-steps" className={`${fieldClass} min-h-[72px] resize-y`} value={form.steps} onChange={update('steps')} placeholder={'Open EURUSD\nClick Buy\nOrder is rejected'} />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className={labelClass} htmlFor="bug-expected">Expected</label>
-                    <textarea id="bug-expected" className={`${fieldClass} min-h-[56px] resize-y`} value={form.expected} onChange={update('expected')} />
-                  </div>
-                  <div>
-                    <label className={labelClass} htmlFor="bug-actual">Actual</label>
-                    <textarea id="bug-actual" className={`${fieldClass} min-h-[56px] resize-y`} value={form.actual} onChange={update('actual')} />
-                  </div>
-                </div>
+          {receipt ? (
+            <div className="bug-report-receipt">
+              <div className="bug-report-receipt-icon">
+                <Check size={20} aria-hidden="true" />
               </div>
-            ) : null}
-
-            <p className="mb-3 text-[10px] leading-4 text-[color:var(--text-tertiary)]">
-              Your application version, browser, operating system and current screen are attached automatically.
-              Passwords and session tokens are never included.
-            </p>
-
-            {submitHint && !submitting ? (
-              <p className="mb-3 text-[11px] text-amber-300">{submitHint}</p>
-            ) : null}
-
-            {error ? (
-              <p role="alert" className="mb-3 border border-red-500/30 bg-red-500/10 px-3 py-2 text-[11px] text-red-300">{error}</p>
-            ) : null}
-
-            <div className="flex items-center justify-end gap-2 border-t border-[color:var(--border-default)] pt-3">
-              <button type="button" onClick={onClose} disabled={submitting} className="border border-[color:var(--border-default)] px-4 py-1.5 text-[12px] text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] disabled:opacity-50">
-                Cancel
-              </button>
-              <button type="submit" disabled={!canSubmit} className="bg-[color:var(--accent-500)] px-4 py-1.5 text-[12px] font-semibold text-[color:var(--accent-contrast)] disabled:opacity-40">
-                {submitting ? 'Submitting…' : 'Submit report'}
-              </button>
+              <h3>Bug report submitted</h3>
+              <p className="bug-report-help">
+                The RTX5 platform team can see this report. Quote this reference if you follow it up.
+              </p>
+              <div className="bug-report-reference">
+                <code>{receipt.report_id}</code>
+                <button type="button" onClick={copyId} aria-label="Copy report id" className="bug-report-icon-button">
+                  {copied ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
+                </button>
+              </div>
+              {receipt.failed_attachments?.length ? (
+                <p className="bug-report-notice bug-report-notice--warning" role="status">
+                  The report was filed, but {receipt.failed_attachments.length} attachment
+                  {receipt.failed_attachments.length === 1 ? '' : 's'} could not be uploaded.
+                </p>
+              ) : null}
+              <div className="bug-report-receipt-action">
+                <button type="button" onClick={onClose} className="bug-report-button">
+                  Close
+                </button>
+              </div>
             </div>
-          </form>
-        )}
-      </div>
-    </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="bug-report-form">
+              <div className="bug-report-body">
+                {storageDisabled ? (
+                  <p className="bug-report-notice bug-report-notice--warning" role="status">
+                    Bug reporting is not configured on this server yet. Submitting will not work until an administrator enables it.
+                  </p>
+                ) : null}
+
+                <div className="bug-report-form-group">
+                  <label className={labelClass} htmlFor="bug-title">Title <span className="bug-report-required" aria-hidden="true">*</span></label>
+                  <input
+                    id="bug-title" className={fieldClass} value={form.title} onChange={update('title')}
+                    placeholder="Order rejected although the quote is live" maxLength={200} required
+                    disabled={submitting}
+                  />
+                </div>
+
+                <div className="bug-report-form-group">
+                  <label className={labelClass} htmlFor="bug-description">What happened? <span className="bug-report-required" aria-hidden="true">*</span></label>
+                  <textarea
+                    id="bug-description" className={`${fieldClass} bug-report-description`}
+                    value={form.description} onChange={update('description')}
+                    placeholder="Describe what you were doing and what went wrong." maxLength={8000} required
+                    disabled={submitting}
+                  />
+                </div>
+
+                <div className="bug-report-columns">
+                  <div className="bug-report-form-group">
+                    <label className={labelClass} htmlFor="bug-category">Area</label>
+                    <select id="bug-category" className={fieldClass} value={form.category} onChange={update('category')} disabled={submitting}>
+                      {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="bug-report-form-group">
+                    <label className={labelClass} htmlFor="bug-severity">Severity</label>
+                    <select id="bug-severity" className={fieldClass} value={form.severity} onChange={update('severity')} disabled={submitting}>
+                      {Object.entries(SEVERITY_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <section className="bug-report-attachments" aria-labelledby="bug-attachments-title">
+                  <div className="bug-report-section-heading">
+                    <h3 id="bug-attachments-title">Screenshots and logs</h3>
+                    <span className="bug-report-help">Optional · {attachments.length}/{MAX_ATTACHMENTS} files</span>
+                  </div>
+                  <div className="bug-report-upload-row">
+                    <div className="bug-report-upload-copy">
+                      <span className="bug-report-upload-icon"><Paperclip size={17} strokeWidth={1.6} aria-hidden="true" /></span>
+                      <div><p>Attach a file or paste a screenshot</p><p className="bug-report-help">PNG, JPG, WebP, TXT or LOG · Up to {MAX_FILE_BYTES / (1024 * 1024)} MB each</p></div>
+                    </div>
+                    <button
+                      type="button" onClick={() => fileInputRef.current?.click()}
+                      disabled={submitting || attachments.length >= MAX_ATTACHMENTS}
+                      className="bug-report-button"
+                    >
+                      <Paperclip size={13} aria-hidden="true" /> Attach file
+                    </button>
+                  </div>
+                  <input
+                    ref={fileInputRef} type="file" multiple hidden
+                    disabled={submitting}
+                    accept="image/png,image/jpeg,image/webp,text/plain,.log,.txt"
+                    onChange={(event) => { addFiles(event.target.files); event.target.value = ''; }}
+                  />
+                  {attachments.length ? (
+                    <ul className="bug-report-file-list">
+                      {attachments.map((file, index) => (
+                        <li key={`${file.name}-${index}`}>
+                          <span className="bug-report-file-name">
+                            {file.type.startsWith('image/') ? <ImageIcon size={14} aria-hidden="true" /> : <FileText size={14} aria-hidden="true" />}
+                            <span title={file.name}>{file.name}</span>
+                          </span>
+                          <span className="bug-report-file-size">{Math.max(1, Math.round(file.size / 1024))} KB</span>
+                          <button
+                            type="button" aria-label={`Remove ${file.name}`}
+                            onClick={() => {
+                              setAttachments((current) => current.filter((_, i) => i !== index));
+                              setError(null);
+                            }}
+                            disabled={submitting}
+                            className="bug-report-icon-button"
+                          >
+                            <X size={13} aria-hidden="true" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {/* Stated plainly, because a screenshot of this UI can contain
+                      client names, balances and open positions. */}
+                  <p className="bug-report-help bug-report-attachment-note">
+                    Paste with Ctrl+V. Attachments are shared with the platform team; remove sensitive details first.
+                  </p>
+                </section>
+
+                <button
+                  type="button" onClick={() => setShowDetails((value) => !value)}
+                  className="bug-report-disclosure"
+                  aria-expanded={showDetails}
+                  aria-controls="bug-reproduction-details"
+                  disabled={submitting}
+                >
+                  <span><span className="bug-report-disclosure-label">Reproduction details <span className="bug-report-help">Optional</span></span><span className="bug-report-help">Steps to reproduce, expected result and actual result</span></span>
+                  <ChevronDown size={15} aria-hidden="true" />
+                </button>
+
+                {showDetails ? (
+                  <div id="bug-reproduction-details" className="bug-report-details">
+                    <div className="bug-report-form-group">
+                      <label className={labelClass} htmlFor="bug-steps">Steps to reproduce (one per line)</label>
+                      <textarea id="bug-steps" className={fieldClass} value={form.steps} onChange={update('steps')} placeholder={'Open EURUSD\nClick Buy\nOrder is rejected'} disabled={submitting} />
+                    </div>
+                    <div className="bug-report-columns">
+                      <div className="bug-report-form-group">
+                        <label className={labelClass} htmlFor="bug-expected">Expected</label>
+                        <textarea id="bug-expected" className={fieldClass} value={form.expected} onChange={update('expected')} placeholder="What should happen?" disabled={submitting} />
+                      </div>
+                      <div className="bug-report-form-group">
+                        <label className={labelClass} htmlFor="bug-actual">Actual</label>
+                        <textarea id="bug-actual" className={fieldClass} value={form.actual} onChange={update('actual')} placeholder="What happened instead?" disabled={submitting} />
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                <p className="bug-report-environment">
+                  <Info size={14} aria-hidden="true" />
+                  <span>
+                    Your application version, browser, operating system and current screen are attached automatically.
+                    Passwords and session tokens are never included.
+                  </span>
+                </p>
+
+                {error ? (
+                  <p role="alert" className="bug-report-notice bug-report-notice--error">{error}</p>
+                ) : null}
+              </div>
+              <footer className="bug-report-footer">
+                <p className="bug-report-submit-hint" id="bug-submit-hint" role="status">{submitting ? 'Sending your report…' : submitHint || 'Ready to send to the platform team.'}</p>
+                <div className="bug-report-actions">
+                  <button type="button" onClick={onClose} disabled={submitting} className="bug-report-button">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={!canSubmit} aria-describedby="bug-submit-hint" className="bug-report-button bug-report-button--primary">
+                    {submitting && <Loader2 size={13} className="bug-report-spinner" aria-hidden="true" />}
+                    {submitting ? 'Submitting…' : 'Submit report'}
+                  </button>
+                </div>
+              </footer>
+            </form>
+          )}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

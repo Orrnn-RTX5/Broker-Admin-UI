@@ -29,9 +29,10 @@ globalThis.localStorage = {
 };
 
 globalThis.sessionStorage = {
-  getItem: () => null,
-  setItem: () => {},
-  removeItem: () => {},
+  values: new Map(),
+  getItem(key) { return this.values.get(key) ?? null; },
+  setItem(key, value) { this.values.set(key, value); },
+  removeItem(key) { this.values.delete(key); },
 };
 
 const { api } = await import('../lib/api.js');
@@ -383,6 +384,36 @@ test('large account censuses retain the first Clients page within a bounded page
     assert.equal(await AccountsService.getAccounts({ page: 1, limit: 100 }), first);
     assert.equal(AccountsService.peekAccounts({ page: 2, limit: 100 }), null, 'older later pages are evicted');
     assert.equal(requestCount, 70, 'the first page remains ready after more than 64 census pages');
+  } finally {
+    mockAdapter = null;
+    AccountsService.invalidateCache();
+  }
+});
+
+test('reload display summaries never satisfy live requests and token rotation preserves the same scope', async () => {
+  const user = { login: 'summary-manager', broker_id: 'summary-broker', role: 'admin', is_admin: true, permissions: ['*'] };
+  useAuthStore.setState({ accessToken: 'summary-token', isAuthenticated: true, user });
+  requestCount = 0;
+  mockResponseData = { accounts: [{ Login: 7, Name: 'Saved', Password: 'private' }], total: 1 };
+  try {
+    const live = await AccountsService.getAccounts({ page: 1, limit: 100 });
+    useAuthStore.setState({ accessToken: 'rotated-summary-token' });
+    assert.equal(AccountsService.peekAccounts({ page: 1, limit: 100 }), live);
+    AccountsService.invalidateCache({ keepDisplaySnapshot: true });
+    assert.equal(AccountsService.peekAccounts({ page: 1, limit: 100 }), null);
+    const summary = AccountsService.peekAccounts({ page: 1, limit: 100 }, { allowStale: true });
+    assert.equal(summary.accounts[0]._accountDirectorySummary, true);
+    assert.equal(summary.accounts[0].Password, undefined);
+    mockResponseData = { accounts: [{ Login: 7, Name: 'Updated' }, { Login: 8, Name: 'New entry' }], total: 2 };
+    const updated = await AccountsService.getAccounts({ page: 1, limit: 100 });
+    assert.equal(requestCount, 2);
+    assert.equal(updated.accounts[0].Name, 'Updated');
+    assert.equal(updated.accounts.length, 2);
+    assert.equal(updated.accounts[0]._accountDirectorySummary, undefined);
+    AccountsService.invalidateCache({ keepDisplaySnapshot: true });
+    mockAdapter = async () => { const error = new Error('Permission denied'); error.response = { status: 403 }; throw error; };
+    await assert.rejects(AccountsService.getAccounts({ page: 1, limit: 100 }), /Permission denied/);
+    assert.equal(AccountsService.peekAccounts({ page: 1, limit: 100 }, { allowStale: true }), null);
   } finally {
     mockAdapter = null;
     AccountsService.invalidateCache();

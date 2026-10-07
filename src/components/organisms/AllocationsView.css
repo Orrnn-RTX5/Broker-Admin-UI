@@ -87,7 +87,15 @@
   white-space: nowrap;
 }
 
-.alloc-nav-metrics { display: flex; flex: 0 0 auto; align-items: center; height: 100%; margin-left: auto; }
+.alloc-nav-filters {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.alloc-nav-metrics { display: flex; flex: 0 0 auto; align-items: center; height: 100%; margin: 0; }
 .alloc-nav-metrics > div {
   display: flex;
   align-items: baseline;
@@ -126,13 +134,6 @@
   padding: 0 10px 0 12px;
   border-left: 1px solid var(--border-default);
   background: var(--bg-toolbar);
-}
-.alloc-updated {
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 .alloc-btn,
@@ -413,11 +414,8 @@
   animation: alloc-shimmer 1.4s ease-in-out infinite;
 }
 
-.alloc-spin { animation: alloc-rotate 0.9s linear infinite; }
-
 @keyframes alloc-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
-@keyframes alloc-rotate { to { transform: rotate(360deg); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .alloc-skeleton, .alloc-spin { animation: none; }
+  .alloc-skeleton { animation: none; }
 }

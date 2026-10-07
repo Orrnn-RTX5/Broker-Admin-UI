@@ -18,6 +18,7 @@ import ActionableErrorState from '../atoms/ActionableErrorState';
 import LpSymbolDatalist from '../atoms/LpSymbolDatalist';
 import { useServerStatus } from '../../hooks/useServerStatus';
 import './ServerConfigWorkspace.css';
+import { useWorkspaceStartupReady } from '../../hooks/useWorkspaceStartup';
 
 const ServerSettingsTab = React.lazy(() => import('./ServerConfigTables').then(module => ({ default: module.ServerSettingsTab })));
 const SwapRatesTab = React.lazy(() => import('./ServerConfigTables').then(module => ({ default: module.SwapRatesTab })));
@@ -72,6 +73,7 @@ const MetricRow = ({ label, value, tone = 'default' }) => (
 
 const StatusTab = ({ navigate, refreshTrigger }) => {
   const { data, loading, error, lastUpdated, saved, refresh: load } = useServerStatus(refreshTrigger);
+  useWorkspaceStartupReady('view', Boolean(data || error) || !loading);
 
   if (!data && loading) {
     return (

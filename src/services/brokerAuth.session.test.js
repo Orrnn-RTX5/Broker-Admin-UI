@@ -35,6 +35,24 @@ const installBrowserGlobals = (runtimeConfig = {}) => {
 
 const importFreshBrokerAuth = () => import(`./brokerAuth.js?case=${++importId}`);
 
+test('concurrent login discovery shares one read and retries after it settles', async () => {
+  installBrowserGlobals();
+  let calls = 0;
+  const pending = [];
+  globalThis.fetch = () => { calls++; return new Promise(resolve => pending.push(resolve)); };
+  const auth = await importFreshBrokerAuth();
+  const first = auth.fetchBrokerList();
+  const second = auth.fetchBrokerList();
+  assert.equal(first, second);
+  assert.equal(calls, 1);
+  pending.shift()({ ok: true, status: 200, text: async () => '[]' });
+  await Promise.all([first, second]);
+  const retry = auth.fetchBrokerList();
+  assert.equal(calls, 2, 'A later refresh must read fresh discovery data');
+  pending.shift()({ ok: true, status: 200, text: async () => '[]' });
+  await retry;
+});
+
 for (const target of ['web', 'desktop']) {
   test(`Nexa selection routes admin login to its HTTPS backend in ${target}`, async () => {
     installBrowserGlobals({ BACKEND_TARGET: target });

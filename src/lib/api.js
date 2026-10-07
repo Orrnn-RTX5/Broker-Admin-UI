@@ -224,7 +224,7 @@ api.interceptors.request.use(async (config) => {
 });
 
 api.interceptors.response.use((response) => {
-  useConnectionStore.getState().markOk();
+  if (!response.config?._isolatedConnectionStatus) useConnectionStore.getState().markOk();
   // Large account/position responses should go directly to the view in the
   // production app instead of copying their contents for debug logs.
   if (import.meta.env?.DEV) {
@@ -246,7 +246,7 @@ api.interceptors.response.use((response) => {
     });
   }
 
-  if (!shouldSuppressApiErrorLog(error) && (!error.response || error.response.status >= 500)) {
+  if (!originalRequest?._isolatedConnectionStatus && !shouldSuppressApiErrorLog(error) && (!error.response || error.response.status >= 500)) {
     useConnectionStore.getState().markError(
       error.response?.statusText || error.message || 'Network error'
     );

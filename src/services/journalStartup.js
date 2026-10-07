@@ -1,5 +1,5 @@
 import { fetchServerJournal } from './journal.service.js';
-import { readCachedServerJournal, warmServerJournalFilters } from './serverJournalCache.js';
+import { peekServerJournal, readCachedServerJournal, warmServerJournalFilters } from './serverJournalCache.js';
 
 export const SERVER_JOURNAL_STARTUP_TTL_MS = 10_000;
 
@@ -77,7 +77,11 @@ const startup = createServerJournalStartup({
 export const primeServerJournalStartup = sessionKey => {
   startupOwner = sessionKey;
   const request = startup.prime(sessionKey);
-  if (request) void warmServerJournalFilters(sessionKey);
+  // The visible journal and first list pages get the initial connections.
+  // Other journal filters can warm after its first response has arrived.
+  if (request) request.then(() => {
+    if (startupOwner === sessionKey && peekServerJournal(sessionKey, 'all')) return warmServerJournalFilters(sessionKey);
+  }).catch(() => {});
   return request;
 };
 export const discardServerJournalStartup = startup.discard;

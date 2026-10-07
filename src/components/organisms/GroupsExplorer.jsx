@@ -1,5 +1,5 @@
 import { canManageGroupLifecycle } from '../../utils/groupAccess';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUp, ChevronRight, Folder, Info, Pencil, Plus, Search, Trash2, User, Users, X } from 'lucide-react';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import * as Dialog from '@radix-ui/react-dialog';
@@ -8,8 +8,9 @@ import { useAuthStore } from '../../store/authStore';
 import { ManagerService } from '../../services/manager.service';
 import { AccountsService } from '../../services/accounts.service';
 import { canAccessView } from '../../utils/permissions';
+import { createCacheIdentity } from '../../utils/cacheIdentity';
 import { loadGroupTreePages } from '../../utils/groupTreeData';
-import { GROUP_LIST_ARRAY_KEYS, GROUP_LIST_FETCH_OPTIONS, loadGroupList, readGroupListSnapshot } from '../../utils/groupListCache';
+import { GROUP_LIST_ARRAY_KEYS, GROUP_LIST_FETCH_OPTIONS, invalidateGroupListCache, loadGroupList, readGroupListSnapshot } from '../../utils/groupListCache';
 import './DummyGroupsExplorer.css';
 import './GroupsExplorer.css';
 import {
@@ -77,6 +78,7 @@ const ServerGroupsExplorer = ({
   refreshTrigger,
 }) => {
   const user = useAuthStore(state => state.user);
+  const cacheIdentity = createCacheIdentity(user);
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const canLoadGroups = isAuthenticated && canAccessView(user, 'Groups');
   const canLifecycle=canManageGroupLifecycle(user);
@@ -101,15 +103,20 @@ const ServerGroupsExplorer = ({
   const setSubgroupDraft = (next) => setView(current => ({ ...current, subgroupDraft: typeof next === 'function' ? next(current.subgroupDraft) : next }));
   const setLocalSearch = (next) => setView(current => ({ ...current, localSearch: next }));
   const [menuNode, setMenuNode] = useState(null);
-  const fetchGroups = useCallback(() => loadGroupList(() => loadGroupTreePages(
-    ManagerService.getGroupList,
-    { arrayKeys: GROUP_LIST_ARRAY_KEYS },
-  )), []);
+  const lastRefresh = useRef(refreshTrigger);
+  const fetchGroups = useCallback(() => {
+    const force = lastRefresh.current !== refreshTrigger;
+    lastRefresh.current = refreshTrigger;
+    return loadGroupList(() => loadGroupTreePages(
+      ManagerService.getGroupList,
+      { arrayKeys: GROUP_LIST_ARRAY_KEYS },
+    ), { force });
+  }, [refreshTrigger]);
   const { data: groupData, loading: fetchingGroups, error: groupError, mutate: retryGroups } = useDataFetch(
     fetchGroups, null, [refreshTrigger], canLoadGroups, GROUP_LIST_FETCH_OPTIONS,
   );
   // The stored snapshot paints the tree instantly while the live list is still loading.
-  const snapshot = useMemo(() => (groupData ? null : readGroupListSnapshot()), [groupData]);
+  const snapshot = useMemo(() => (canLoadGroups && !groupError && !groupData ? readGroupListSnapshot(cacheIdentity) : null), [groupData, cacheIdentity, canLoadGroups, groupError]);
   const groupList = groupData ?? snapshot;
   const groupNodes = useMemo(() => (groupList ? groupList.map(group => ({ ...group, type: 'group' })) : EMPTY_NODES), [groupList]);
   // An opened folder that is itself a server group (every main group) also holds accounts.
@@ -181,6 +188,7 @@ const ServerGroupsExplorer = ({
   };
   const select = (node) => setSelection({ id: node.id, sidebarId: selectedNodeId });
   const openSettings = (node) => {
+    if (node?.group?._allocationSummary) return;
     const target = getGroupsExplorerEditTarget(node);
     if (target) onGroupEdit?.({ ...node, group: target.row });
   };
@@ -247,11 +255,11 @@ const ServerGroupsExplorer = ({
             <ContextMenu.Item onSelect={() => onAccountOpen?.(node)}>Open account</ContextMenu.Item>
           </>
         ) : (
-          <ContextMenu.Item onSelect={() => activate(node)}>
+          <ContextMenu.Item disabled={node.type === 'group' && (allGroups || !rowIsBranch(node)) && node.group?._allocationSummary} onSelect={() => activate(node)}>
             {node.type === 'group' ? (allGroups || !rowIsBranch(node) ? 'Settings' : 'Open') : 'Open folder'}
           </ContextMenu.Item>
         )}
-        {node.type === 'group' && rowIsBranch(node) && !allGroups && <ContextMenu.Item onSelect={() => openSettings(node)}>Settings</ContextMenu.Item>}
+        {node.type === 'group' && rowIsBranch(node) && !allGroups && <ContextMenu.Item disabled={node.group?._allocationSummary} onSelect={() => openSettings(node)}>Settings</ContextMenu.Item>}
         {node.type === 'group' && !allGroups && <ContextMenu.Item onSelect={() => navigate(node)}>Open accounts</ContextMenu.Item>}
         {canLifecycle && node.type !== 'group-account' && <ContextMenu.Item hidden={!canLifecycle} disabled={!canLoadGroups || !canLifecycle} onSelect={() => addGroup(containerOf(node))}>Add group</ContextMenu.Item>}
         {node.type !== 'group-account' && <ContextMenu.Item hidden={!canLifecycle} disabled={!canLoadGroups || !canLifecycle} onSelect={() => askSubgroup(containerOf(node))}>Add subgroup</ContextMenu.Item>}
@@ -328,7 +336,7 @@ const ServerGroupsExplorer = ({
           <button
             type="button"
             className="dummy-btn-action dummy-btn-secondary"
-            disabled={selectedNode?.type !== 'group'}
+            disabled={selectedNode?.type !== 'group' || selectedNode?.group?._allocationSummary}
             onClick={() => openSettings(selectedNode)}
           >
             <Pencil size={12} strokeWidth={2} />
@@ -453,7 +461,7 @@ const ServerGroupsExplorer = ({
           <p role="status" className="dummy-group-empty">Loading {noun}...</p>
         ) : error ? (
           <div role="alert" className="dummy-group-empty">
-            Unable to load {noun}. <button type="button" onClick={() => { retryGroups(); retryAccounts(); }}>Retry</button>
+            Unable to load {noun}. <button type="button" onClick={() => { invalidateGroupListCache(); AccountsService.invalidateCache(); retryGroups(); retryAccounts(); }}>Retry</button>
           </div>
         ) : !visibleNodes.length ? (
           <p role="status" className="dummy-group-empty">

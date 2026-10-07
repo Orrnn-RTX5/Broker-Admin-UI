@@ -73,6 +73,7 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true, 
   const paramsKey = JSON.stringify(params);
   const depsKey = JSON.stringify(deps);
   const cacheTtlMs = getPositiveNumber(options.cacheTtlMs);
+  const keepPreviousData = options.keepPreviousData === true;
   const accessIdentity=useAuthStore(state => String(state.accessToken || '')+groupAccessKey(state.user));
   const fetchCacheKey = buildFetchCacheKey(options.requestKey ? accessIdentity+'|'+options.requestKey : null, paramsKey, depsKey);
   
@@ -170,13 +171,13 @@ export function useDataFetch(fetchFn, params = null, deps = [], enabled = true, 
     });
     const refresh = event => {
       if (event !== lastInvalidationEvent) { lastInvalidationEvent = event; invalidateDataFetchCaches(); }
-      setData(null);
+      if (!keepPreviousData) setData(null);
       execute({ force: true });
     };
     const target = typeof window === 'undefined' ? null : window;
     target?.addEventListener('admin:state-changed', refresh);
     return () => { unsubscribe(); target?.removeEventListener('admin:state-changed', refresh); };
-  }, [execute]);
+  }, [execute, keepPreviousData]);
 
   const mutate = useCallback(() => execute({ force: true }), [execute]);
 

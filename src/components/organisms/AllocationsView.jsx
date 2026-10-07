@@ -1,18 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import * as Menu from '@radix-ui/react-dropdown-menu';
-import { Pencil, Search, Plus, RefreshCw, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
+import { Pencil, Search, Plus, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
 import './AllocationsView.css';
-import CreateGroupPopup from '../RIGHTCLICKJPOPUPS/CreateGroupPopup';
-import GroupPropertiesPopup from '../RIGHTCLICKJPOPUPS/GroupPropertiesPopup';
-import { ManagerService } from '../../services/manager.service';
-import { AccountsService } from '../../services/accounts.service';
 import { useAuthStore } from '../../store/authStore';
 import { hasPermission, PERMISSION_KEYS } from '../../utils/permissions';
 import { getApiErrorMessage } from '../../utils/apiShapes';
-import { loadGroupTreePages } from '../../utils/groupTreeData';
-import { GROUP_LIST_ARRAY_KEYS, loadGroupList } from '../../utils/groupListCache';
-import { countAccountsByGroup, filterAllocationGroups, normalizeAllocationGroups } from '../../utils/allocations';
-import { countsFromAllocationRows, initialAllocationState, readAllocationCache, writeAllocationCache } from '../../utils/allocationCache';
+import { filterAllocationGroups } from '../../utils/allocations';
+import { createCacheIdentity } from '../../utils/cacheIdentity';
+import { getAllocationGroupRecord, peekAllocations, primeAllocations, subscribeAllocations } from '../../services/allocation.service';
+
+const CreateGroupPopup = lazy(() => import('../RIGHTCLICKJPOPUPS/CreateGroupPopup'));
+const GroupPropertiesPopup = lazy(() => import('../RIGHTCLICKJPOPUPS/GroupPropertiesPopup'));
 
 // Short columns get fixed widths and center their values under the heading;
 // Group and Description stay left-aligned and share the rest of the width.
@@ -31,7 +29,6 @@ const PAGE_SIZES = [25, 50, 100];
 const SKELETON_ROWS = 8;
 
 const formatCount = (value) => (value === null || value === undefined ? '—' : Number(value).toLocaleString());
-const formatTime = (date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 const Empty = () => <span className="alloc-empty-value">—</span>;
 const percent = (value) => (value === null ? <Empty /> : `${value}%`);
 
@@ -54,10 +51,15 @@ const renderCell = (group, key) => {
 
 export default function AllocationsView() {
   const currentUser = useAuthStore((state) => state.user);
+  const identity = useAuthStore(createCacheIdentity);
+  return <AllocationTable key={identity} identity={identity} currentUser={currentUser} />;
+}
+
+function AllocationTable({ identity, currentUser }) {
   const canEditGroups = hasPermission(currentUser, PERMISSION_KEYS.MANAGE_GROUPS);
 
-  const [state, setState] = useState(initialAllocationState);
-  const [updatedAt, setUpdatedAt] = useState(() => (state.updatedAt ? new Date(state.updatedAt) : null));
+  const state = useSyncExternalStore(subscribeAllocations, () => peekAllocations(identity));
+  const [actionError, setActionError] = useState('');
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [currencyFilter, setCurrencyFilter] = useState('');
@@ -67,54 +69,9 @@ export default function AllocationsView() {
   const [selectedId, setSelectedId] = useState(null);
   const [groupEditor, setGroupEditor] = useState(null);
   const [propertiesGroup, setPropertiesGroup] = useState(null);
-  const [reloadKey, setReloadKey] = useState(0);
-  const loadGeneration = useRef(0);
+  useEffect(() => { void primeAllocations(); }, [identity]);
 
-  // The grid is already filled from the saved copy. GroupList updates it;
-  // account totals follow and must not hold the first paint.
-  useEffect(() => {
-    const generation = loadGeneration.current + 1;
-    loadGeneration.current = generation;
-    const publish = (rows, accountsKnown) => {
-      if (loadGeneration.current !== generation) return;
-      const at = Date.now();
-      writeAllocationCache({ rows, accountsKnown, at });
-      setState({ loading: false, syncing: false, error: '', rows, accountsKnown, updatedAt: at });
-      setUpdatedAt(new Date(at));
-    };
-    (async () => {
-      try {
-        const groups = await loadGroupList(() => loadGroupTreePages(ManagerService.getGroupList, {
-          arrayKeys: GROUP_LIST_ARRAY_KEYS,
-          limit: 500,
-        }));
-        const records = groups.map((group) => (
-          group.group && typeof group.group === 'object' ? group.group : { name: group.groupName }
-        ));
-        const carried = readAllocationCache();
-        const carriedCounts = carried?.accountsKnown ? countsFromAllocationRows(carried.rows) : null;
-        publish(normalizeAllocationGroups(records, carriedCounts), Boolean(carriedCounts));
-
-        const accounts = await AccountsService.getAllAccounts().catch(() => null);
-        if (!accounts) return;
-        publish(normalizeAllocationGroups(records, countAccountsByGroup(accounts)), true);
-      } catch (error) {
-        if (loadGeneration.current !== generation) return;
-        setState((current) => (
-          current.rows.length
-            ? { ...current, loading: false, syncing: false }
-            : { loading: false, syncing: false, error: getApiErrorMessage(error, 'Account groups could not be loaded.'), rows: [], accountsKnown: false, updatedAt: null }
-        ));
-      }
-    })();
-    return () => { loadGeneration.current += 1; };
-  }, [reloadKey]);
-
-  const refresh = () => {
-    AccountsService.invalidateCache?.();
-    setState((current) => ({ ...current, syncing: true, loading: current.rows.length === 0, error: '' }));
-    setReloadKey((key) => key + 1);
-  };
+  const refresh = () => { setActionError(''); void primeAllocations({ force: true }); };
 
   const allGroups = state.rows;
   const currencies = useMemo(() => [...new Set(allGroups.map((group) => group.currency).filter(Boolean))].sort(), [allGroups]);
@@ -142,16 +99,21 @@ export default function AllocationsView() {
   };
   const resetFilters = () => { setQuery(''); setTypeFilter(''); setCurrencyFilter(''); setPage(0); };
   const openProperties = (group) => {
-    if (!group.record) return;
     setPropertiesGroup({ ...group.record, group: group.name, name: group.name });
   };
-  const editGroup = (group) => {
-    if (!group.record) return;
-    setGroupEditor({ initialData: { ...group.record, name: group.name } });
+  const fullRecord = async group => {
+    setActionError('');
+    try { return group.record && !group.record._allocationSummary ? group.record : await getAllocationGroupRecord(group.name); }
+    catch (error) { setActionError(getApiErrorMessage(error, 'The group editor could not be opened.')); return null; }
   };
-  const duplicateGroup = (group) => {
-    if (!group.record) return;
-    const { id: _id, ...copy } = group.record;
+  const editGroup = async (group) => {
+    const record = await fullRecord(group);
+    if (record) setGroupEditor({ initialData: { ...record, name: group.name } });
+  };
+  const duplicateGroup = async (group) => {
+    const record = await fullRecord(group);
+    if (!record) return;
+    const { id: _id, ...copy } = record;
     setGroupEditor({ draftData: { ...copy, name: `${group.name}-copy` } });
   };
   const afterGroupSaved = () => { setGroupEditor(null); refresh(); };
@@ -165,6 +127,7 @@ export default function AllocationsView() {
         <div className="alloc-nav" role="toolbar" aria-label="Account groups">
           <div className="alloc-nav-main">
           <span className="alloc-nav-label" title="Groups new accounts are allocated to, with their trading conditions. Double-click a group to open its properties.">Account groups</span>
+          <div className="alloc-nav-filters">
           <label className="alloc-search">
             <Search size={13} strokeWidth={1.75} aria-hidden="true" />
             <input type="search" aria-label="Search by group, description or currency" placeholder="Search groups" value={query} spellCheck={false} autoComplete="off" onChange={(event) => { setQuery(event.target.value); setPage(0); }} />
@@ -176,6 +139,7 @@ export default function AllocationsView() {
             <option value="">All currencies</option>{currencies.map((value) => <option key={value} value={value}>{value}</option>)}
           </select>
           {hasFilters && <button type="button" className="alloc-link-btn" onClick={resetFilters}>Clear</button>}
+          </div>
           <dl className="alloc-nav-metrics" aria-label="Group summary">
             {metrics.map(([label, value, title]) => (
               <div key={label} title={title || label}>
@@ -185,21 +149,15 @@ export default function AllocationsView() {
             ))}
           </dl>
           </div>
-          <div className="alloc-nav-tools">
-            <span className="alloc-updated" aria-live="polite" title={state.syncing ? 'Refreshing groups' : updatedAt ? `Updated ${formatTime(updatedAt)}` : undefined}>
-              {state.loading && !state.rows.length ? 'Loading…' : updatedAt ? formatTime(updatedAt) : ''}
-            </span>
-            <button type="button" className="alloc-btn" onClick={refresh} disabled={state.syncing}>
-              <RefreshCw size={13} className={state.syncing ? 'alloc-spin' : undefined} aria-hidden="true" />Refresh
-            </button>
-            {canEditGroups && (
+          {canEditGroups && (
+            <div className="alloc-nav-tools">
               <button type="button" className="alloc-btn alloc-btn--primary" onClick={() => setGroupEditor({})}><Plus size={14} aria-hidden="true" />Add group</button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
-        {state.error && (
-          <div className="alloc-alert" role="alert">{state.error}<button type="button" className="alloc-link-btn" onClick={refresh}>Retry</button></div>
+        {(state.error || state.countsError || actionError) && (
+          <div className="alloc-alert" role="alert">{state.error || state.countsError || actionError}<button type="button" className="alloc-link-btn" onClick={refresh}>Retry</button></div>
         )}
 
         <div className="alloc-table-wrap">
@@ -297,6 +255,7 @@ export default function AllocationsView() {
         </footer>
       </section>
 
+      <Suspense fallback={null}>
       {groupEditor && (
         <CreateGroupPopup
           initialData={groupEditor.initialData}
@@ -312,6 +271,7 @@ export default function AllocationsView() {
           onSaved={() => { setPropertiesGroup(null); refresh(); }}
         />
       )}
+      </Suspense>
     </div>
   );
 }

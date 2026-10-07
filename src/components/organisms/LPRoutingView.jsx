@@ -1,16 +1,17 @@
 import { useAuthStore } from '../../store/authStore';
 import { canEditGroup, canEditGroups, canManageGroupLifecycle } from '../../utils/groupAccess';
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Plus, RefreshCw, X, Edit2, Trash2, GitBranch, Network, Loader2, ChevronUp, ChevronDown, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback, useId } from 'react';
+import { Plus, RefreshCw, X, Edit2, Trash2, GitBranch, Network, Loader2, ChevronUp, ChevronDown, ArrowLeft, Search } from 'lucide-react';
 import { RoutingService } from '../../services/routing.service';
 import { ManagerService } from '../../services/manager.service';
 import { gatewayGetRoutingOptions } from '../../services/gateway.service';
 import LPRouteFormPopup from '../popups/LPRouteFormPopup';
+import './LPRoutingView.css';
 
 const ROUTING_MODE_COLOR = {
   b_book: 'text-[color:var(--success-500)]',
-  a_book: 'text-[#d97706]',
-  hybrid:  'text-white',
+  a_book: 'text-[color:var(--info-500)]',
+  hybrid: 'text-[color:var(--warning-500)]',
 };    
 
 const ROUTING_MODE_LABEL = {
@@ -26,7 +27,7 @@ const FALLBACK_LABEL = {
 };
 
 const RouteIcon = (props) => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
     <circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/>
     <path d="M6 9v3a6 6 0 0 0 6 6h3"/>
   </svg>
@@ -56,111 +57,52 @@ const LpRoutingOptionsPanel = () => {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
   const [err, setErr] = useState('');
-
+  const panelId = useId();
   const fetchOptions = useCallback(() => {
     setLoading(true);
     setErr('');
     gatewayGetRoutingOptions()
-      .then((res) => {
-        setOptions(res.items || []);
-      })
-      .catch(e => {
-        setErr(e.message || 'Failed to fetch routing options');
-      })
+      .then(res => setOptions(res.items || []))
+      .catch(e => setErr(e.message || 'Failed to fetch routing options'))
       .finally(() => setLoading(false));
   }, []);
-
   useEffect(() => {
     const timerId = window.setTimeout(fetchOptions, 0);
     return () => window.clearTimeout(timerId);
   }, [fetchOptions]);
 
-  const toggleExpand = () => setExpanded(e => !e);
-
-  return (
-    <div className="rounded-xl border overflow-hidden shrink-0"
-      style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
-      
-      {/* ── Panel header ── */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-3 cursor-pointer select-none" onClick={toggleExpand}>
-          <div className="p-2 rounded-lg bg-purple-500/10">
-            <Network size={16} className="text-purple-400" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Routing Options API</span>
-              {loading && <Loader2 size={11} className="animate-spin" style={{ color: 'var(--muted)' }} />}
-            </div>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xs" style={{ color: 'var(--text-3)' }}>
-                {err ? 'Unable to load LP routes' : `${options.length} LP routes available`}
-              </span>
-              <span className="text-xs" style={{ color: 'var(--text-3)' }}>· Available LP endpoints</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button onClick={fetchOptions} title="Refresh options"
-            className="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm">
-            <RefreshCw size={13} />
-          </button>
-          <button onClick={toggleExpand} className="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm">
-            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
-        </div>
+  return <section className="lp-route-providers" aria-label="Available routing providers">
+    <header className="lp-route-providers-head">
+      <button type="button" className="lp-route-providers-toggle" aria-expanded={expanded} aria-controls={panelId} onClick={() => setExpanded(value => !value)}>
+        <span className="lp-route-provider-icon"><Network size={14} aria-hidden="true" /></span>
+        <span className="lp-route-providers-title">Available providers</span>
+        <span className="lp-route-provider-count">{loading ? 'Loading…' : err ? 'Unavailable' : `${options.length} endpoint${options.length === 1 ? '' : 's'}`}</span>
+        {!loading && !err && <span className="lp-route-provider-connected">{options.filter(option => option.connected).length} connected</span>}
+      </button>
+      <div className="lp-route-provider-tools">
+        <button type="button" className="lp-route-icon-button" aria-label="Refresh routing providers" title="Refresh providers" disabled={loading} onClick={fetchOptions}><RefreshCw size={13} className={loading ? 'lp-route-spinning' : undefined} aria-hidden="true" /></button>
+        <button type="button" className="lp-route-icon-button" aria-label={expanded ? 'Collapse routing providers' : 'Expand routing providers'} aria-expanded={expanded} aria-controls={panelId} onClick={() => setExpanded(value => !value)}>{expanded ? <ChevronUp size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}</button>
       </div>
-
-      {/* ── Expanded view ── */}
-      {expanded && (
-        <div className="px-4 pb-4 border-t" style={{ borderColor: 'var(--border-3)' }}>
-          <ErrBox msg={err} />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
-            {options.map((opt) => (
-              <div key={opt.id} className="rounded-lg border p-4 flex flex-col gap-3 relative overflow-hidden"
-                style={{ background: 'var(--surface-2)', borderColor: 'var(--border-3)' }}>
-                
-                <div className="flex justify-between items-start">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold" style={{ color: 'var(--text)' }}>{opt.name}</span>
-                    <span className="text-[10px] uppercase tracking-widest mt-0.5" style={{ color: 'var(--text-3)' }}>
-                      {opt.adapter_type}
-                    </span>
-                  </div>
-                  <div className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${opt.routing_mode === 'a_book' ? 'bg-blue-500/10 text-white' : 'bg-orange-500/10 text-orange-400'}`}>
-                    {opt.routing_mode.replace('_', '-')}</div>
-                </div>
-
-                <div className="flex flex-col gap-1.5 mt-1">
-                  <KV label="Route Value" value={opt.route_value} mono />
-                  <KV label="Connection" value={opt.connected ? 'Connected' : 'Disconnected'} mono />
-                  <KV label="Trade Enabled" value={opt.trade_connected ? '✓ Yes' : '✗ No'} mono />
-                  {opt.is_internal_route && <KV label="Internal" value="Yes" mono />}
-                  {opt.is_external_route && <KV label="External LP" value="Yes" mono />}
-                </div>
-                
-                <div className="mt-2 text-[10px] truncate" style={{ color: 'var(--text-3)' }}>
-                  {(!opt.supported_symbols || opt.supported_symbols.length === 0)
-                    ? 'No explicit symbols filtered'
-                    : `Symbols: ${opt.supported_symbols.join(', ')}`}
-                </div>
-              </div>
-            ))}
-            
-            {!loading && options.length === 0 && !err && (
-              <div className="col-span-full py-8 text-center text-sm" style={{ color: 'var(--muted)' }}>
-                No routing options available.
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    </header>
+    {expanded && <div id={panelId} className="lp-route-provider-body">
+      {err && <div className="lp-route-notice is-error" role="alert">{err}</div>}
+      {loading && !options.length && <div className="lp-route-provider-empty" role="status">Loading routing providers…</div>}
+      {!loading && !err && !options.length && <div className="lp-route-provider-empty">No routing providers available.</div>}
+      <div className="lp-route-provider-grid">
+        {options.map(option => <article key={option.id} className="lp-route-provider-card">
+          <header><div><strong title={option.name}>{option.name}</strong><span>{option.adapter_type || 'Provider'}</span></div><span className={`lp-route-mode ${ROUTING_MODE_COLOR[option.routing_mode] || ''}`}>{ROUTING_MODE_LABEL[option.routing_mode] || option.routing_mode}</span></header>
+          <dl>
+            <div><dt>Route value</dt><dd title={option.route_value}>{option.route_value ?? '—'}</dd></div>
+            <div><dt>Connection</dt><dd className={`lp-route-status ${option.connected ? 'is-active' : 'is-off'}`}>{option.connected ? 'Connected' : 'Disconnected'}</dd></div>
+            <div><dt>Trading</dt><dd>{option.trade_connected ? 'Enabled' : 'Disabled'}</dd></div>
+            <div><dt>Route type</dt><dd>{option.is_internal_route ? 'Internal' : option.is_external_route ? 'External LP' : '—'}</dd></div>
+          </dl>
+          <p title={option.supported_symbols?.join(', ')}>{option.supported_symbols?.length ? `Symbols: ${option.supported_symbols.join(', ')}` : 'No symbol filter specified'}</p>
+        </article>)}
+      </div>
+    </div>}
+  </section>;
 };
-
 
 const GroupDashboardPanel = ({ groupName, onClose }) => {
   const [data, setData] = useState(null);
@@ -336,6 +278,7 @@ const LPRoutingView = () => {
  const canWrite=canEditGroups(currentUser);
   const [data, setData]               = useState([]);
   const [loading, setLoading]         = useState(true);
+  const [loadError, setLoadError]     = useState('');
   const [selectedRow, setSelectedRow] = useState(null);
   const [formOpen, setFormOpen]       = useState(false);
   const [editRoute, setEditRoute]     = useState(null);
@@ -346,11 +289,13 @@ const LPRoutingView = () => {
 
   const fetchRoutes = async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const res = await RoutingService.listRoutes();
       setData(Array.isArray(res) ? res : []);
     } catch (err) {
       console.error('Failed to fetch LP routes', err);
+      setLoadError(err.response?.data?.message || err.message || 'Routing rules could not be loaded.');
       setData([]);
     } finally {
       setLoading(false);
@@ -415,7 +360,7 @@ const LPRoutingView = () => {
 
   return (
     <div
-      className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative"
+      className="lp-routes-view"
       onClick={closeCtx}
       onContextMenu={(e) => e.preventDefault()}
     >
@@ -426,275 +371,79 @@ const LPRoutingView = () => {
         />
       ) : (
         <>
-          {/* ── Top Bar ─────────────────────────────────────────────────────────── */}
-          <div className="flex items-center gap-2 px-2 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] shrink-0 select-none flex-wrap">
-        <button
-          hidden={!canWrite} onClick={openCreate}
-          className="flex items-center gap-1.5 h-[24px] px-3 bg-[color:var(--accent-500)] hover:opacity-90 text-white text-[11px] rounded-[2px] transition-colors"
-        >
-          <Plus size={12} /> Add Route
-        </button>
-
-        <div className="flex items-center gap-1 ml-2">
-          {['all', 'active', 'off'].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilterEnabled(f)}
-              className={`h-[22px] px-2.5 text-[10px] rounded-[2px] transition-colors capitalize ${
-                filterEnabled === f
-                  ? 'bg-[color:var(--accent-500)] text-white'
-                  : 'bg-transparent text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]'
-              }`}
-            >
-              {f === 'all' ? `All (${stats.total})` : f === 'active' ? `Active (${stats.active})` : `Off (${stats.off})`}
-            </button>
-          ))}
-        </div>
-
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Filter group, symbol, LP…"
-          className="h-[24px] px-2 text-[11px] bg-[color:var(--bg-app)] border border-black/20 text-[color:var(--text-primary)] placeholder-[color:var(--text-muted)] focus:border-[color:var(--accent-500)] focus:outline-none rounded-[2px] w-44"
-        />
-        {search && (
-          <button onClick={() => setSearch('')} className="text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)] transition-colors">
-            <X size={12} />
-          </button>
-        )}
-
-        <div className="ml-auto flex items-center gap-2 pr-1">
-          <span className="text-[11px] tabular-nums text-[color:var(--text-secondary)]">{filtered.length} route{filtered.length !== 1 ? 's' : ''}</span>
-          <button
-            onClick={fetchRoutes}
-            disabled={loading}
-            className="text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] transition-colors disabled:opacity-40"
-            title="Refresh"
-          >
-            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-          </button>
-        </div>
-      </div>
-
-      {/* ── Split: Table + Detail Panel ─────────────────────────────────────── */}
-      <div className="flex flex-col flex-1 overflow-hidden p-4 gap-4">
-        
-        {canManageGroupLifecycle(currentUser) && <LpRoutingOptionsPanel />}
-
-        {/* Table */}
-        <div className="flex overflow-hidden flex-1 border border-[color:var(--border-default)] rounded-md">
-          <div className="flex flex-col overflow-hidden flex-1">
-
-          {/* Grid Header */}
-          <div className="flex bg-[color:var(--bg-surface-2)] border-b border-[color:var(--border-default)] sticky top-0 z-10 select-none shrink-0">
-            <div className="w-[60px]  px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">ID</div>
-            <div className="w-[72px]  px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">Status</div>
-            <div className="w-[160px] px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">Group</div>
-            <div className="w-[130px] px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">Symbol</div>
-            <div className="w-[90px]  px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">Mode</div>
-            <div className="w-[120px] px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">LP Name</div>
-            <div className="w-[80px]  px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">Priority</div>
-            <div className="w-[130px] px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">Fallback</div>
-            <div className="w-[80px]  px-3 py-1.5 text-[11px] font-semibold text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0">Max Vol</div>
-            <div className="flex-1 px-3 py-1.5 bg-[color:var(--bg-surface-2)]"></div>
+          <div className="lp-routes-toolbar">
+            {canWrite && <button type="button" className="lp-route-button is-primary" onClick={openCreate}><Plus size={13} aria-hidden="true" />Add Route</button>}
+            <div className="lp-routes-filters" role="group" aria-label="Route status filters">
+              {['all', 'active', 'off'].map(filter => <button type="button" key={filter} aria-pressed={filterEnabled === filter} onClick={() => setFilterEnabled(filter)}>
+                {filter === 'all' ? 'All' : filter === 'active' ? 'Active' : 'Off'}<span>{stats[filter === 'all' ? 'total' : filter]}</span>
+              </button>)}
+            </div>
+            <div className="lp-routes-search">
+              <Search size={13} aria-hidden="true" />
+              <input aria-label="Search routing rules" placeholder="Search group, symbol or LP…" value={search} onChange={event => setSearch(event.target.value)} />
+              {search && <button type="button" aria-label="Clear routing search" title="Clear search" onClick={event => { setSearch(''); event.currentTarget.parentElement.querySelector('input')?.focus(); }}><X size={12} aria-hidden="true" /></button>}
+            </div>
+            <div className="lp-routes-toolbar-end"><span role="status">{filtered.length} route{filtered.length === 1 ? '' : 's'}</span><button type="button" className="lp-route-icon-button" aria-label="Refresh routing rules" title="Refresh routes" disabled={loading} onClick={fetchRoutes}><RefreshCw size={13} aria-hidden="true" className={loading ? 'lp-route-spinning' : undefined} /></button></div>
           </div>
-
-          {/* Grid Body */}
-          <div className="flex-1 overflow-auto no-scrollbar bg-[color:var(--bg-app)]" aria-busy={loading}>
-            {loading && filtered.length === 0 && (
-              <div role="status" className="flex min-h-40 items-center justify-center gap-2 px-6 text-[12px] text-[color:var(--text-secondary)]">
-                <RefreshCw size={14} className="animate-spin text-white" />
-                Loading routing rules…
-              </div>
-            )}
-            {!loading && filtered.length === 0 && (
-              <div className="flex min-h-44 flex-col items-center justify-center gap-2 px-6 text-center">
-                <div className="flex h-9 w-9 items-center justify-center rounded-md border border-[color:var(--border-default)] bg-[color:var(--bg-surface-2)] text-white">
-                  <GitBranch size={17} />
+          <div className="lp-routes-workspace">
+            {canManageGroupLifecycle(currentUser) && <LpRoutingOptionsPanel />}
+            {loadError && <div className="lp-route-notice is-error" role="alert"><span>{loadError}</span><button type="button" className="lp-route-button" disabled={loading} onClick={fetchRoutes}>Retry</button></div>}
+            <div className="lp-routes-split">
+              <div className="lp-routes-grid-panel">
+                <div className="lp-routes-grid-scroll" tabIndex={0} aria-label="Routing rules">
+                  <table className="lp-routes-table" aria-label="LP routing rules" aria-busy={loading}>
+                    <colgroup><col className="lp-route-col-id" /><col className="lp-route-col-status" /><col /><col className="lp-route-col-symbol" /><col className="lp-route-col-mode" /><col /><col className="lp-route-col-priority" /><col className="lp-route-col-fallback" /><col className="lp-route-col-volume" /><col className="lp-route-col-actions" /></colgroup>
+                    <thead><tr>{['ID', 'Status', 'Group', 'Symbol', 'Mode', 'LP provider', 'Priority', 'Fallback', 'Max volume'].map(label => <th key={label} scope="col">{label}</th>)}<th scope="col" aria-label="Route actions" /></tr></thead>
+                    <tbody>
+                      {filtered.map((row, index) => {
+                        const rowId = row.route_id ?? row.id;
+                        const isSelected = (selectedRow?.route_id ?? selectedRow?.id) === rowId;
+                        return <tr key={rowId ?? index} tabIndex={0} aria-selected={isSelected} className={isSelected ? 'is-selected' : ''}
+                          onClick={event => { event.stopPropagation(); setSelectedRow(row); }}
+                          onDoubleClick={event => { event.stopPropagation(); setBlankUiGroup(row.group_name); }}
+                          onContextMenu={event => handleContextMenu(event, row)}
+                          onKeyDown={event => { if (event.target !== event.currentTarget) return; if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedRow(row); } else if (event.key === 'Escape') setSelectedRow(null); }}>
+                          <td><span className="lp-route-id"><RouteIcon /><span>{rowId ?? '—'}</span></span></td>
+                          <td><span className={`lp-route-status ${row.enabled ? 'is-active' : 'is-off'}`}>{row.enabled ? 'Active' : 'Off'}</span></td>
+                          <td title={row.group_name}>{row.group_name || '—'}</td>
+                          <td className="lp-route-mono" title={row.symbol_pattern}>{row.symbol_pattern || '—'}</td>
+                          <td><span className={`lp-route-mode ${ROUTING_MODE_COLOR[row.routing_mode] || ''}`}>{ROUTING_MODE_LABEL[row.routing_mode] || row.routing_mode || '—'}</span></td>
+                          <td title={row.lp_name}>{row.lp_name || '—'}</td>
+                          <td className="lp-route-number">{row.priority ?? '—'}</td>
+                          <td title={FALLBACK_LABEL[row.fallback_policy] || row.fallback_policy}>{FALLBACK_LABEL[row.fallback_policy] || row.fallback_policy || '—'}</td>
+                          <td className="lp-route-number">{row.max_volume ?? '—'}</td>
+                          <td className="lp-route-row-actions">{canEditGroup(currentUser, row.group_name) && <button type="button" className="lp-route-icon-button" aria-label={`Edit route ${rowId}`} title="Edit route" onClick={event => { event.stopPropagation(); handleEdit(row); }}><Edit2 size={12} aria-hidden="true" /></button>}</td>
+                        </tr>;
+                      })}
+                    </tbody>
+                  </table>
+                  {!filtered.length && <div className="lp-routes-empty" role="status">
+                    <span className="lp-routes-empty-icon">{loading ? <Loader2 size={18} className="lp-route-spinning" aria-hidden="true" /> : <GitBranch size={18} aria-hidden="true" />}</span>
+                    <strong>{loading ? 'Loading routing rules…' : loadError ? 'Routes unavailable' : data.length ? 'No routes match your filter' : 'No routing rules configured'}</strong>
+                    {!loading && <p>{loadError ? 'Retry to reload the routing rules.' : data.length ? 'Try another group, symbol or LP name.' : 'Create a route to connect a group to an LP.'}</p>}
+                    {!loading && !loadError && !data.length && canWrite && <button type="button" className="lp-route-button" onClick={openCreate}><Plus size={12} aria-hidden="true" />Add Route</button>}
+                  </div>}
                 </div>
-                <p className="m-0 text-[13px] font-semibold text-[color:var(--text-primary)]">
-                  {data.length === 0 ? 'No routing rules configured' : 'No routes match your filter'}
-                </p>
-                <p className="m-0 text-[12px] text-[color:var(--text-secondary)]">
-                  {data.length === 0 ? 'Create a route to connect a group to an LP.' : 'Try another group, symbol, or LP name.'}
-                </p>
-                {data.length === 0 && (
-                  <button
-                    hidden={!canWrite}
-                    onClick={openCreate}
-                    className="mt-2 inline-flex h-7 items-center gap-1.5 rounded-[3px] border border-[color:var(--border-strong)] bg-[color:var(--bg-surface-2)] px-3 text-[11px] text-[color:var(--text-primary)] hover:bg-[color:var(--bg-surface-3)]"
-                  >
-                    <Plus size={12} /> Add Route
-                  </button>
-                )}
+                <footer className="lp-routes-grid-footer"><span>{filtered.length === data.length ? `${data.length} routing rules` : `${filtered.length} of ${data.length} routing rules`}</span><span>{selectedRow ? `Route #${selectedRow.route_id ?? selectedRow.id} selected` : 'Select a route to view details'}</span></footer>
               </div>
-            )}
-
-            {!loading && filtered.map((row, idx) => {
-              const rowId = row.route_id ?? row.id;
-              const selId = selectedRow?.route_id ?? selectedRow?.id;
-              const isSelected = selId === rowId;
-              return (
-                <div
-                  key={rowId ?? idx}
-                  onClick={(e) => { e.stopPropagation(); setSelectedRow(row); }}
-                  onDoubleClick={(e) => { e.stopPropagation(); setBlankUiGroup(row.group_name); }}
-                  onContextMenu={(e) => handleContextMenu(e, row)}
-                  className={`flex cursor-pointer border-b border-[color:var(--border-subtle)] transition-colors
-                    ${isSelected
-                      ? 'bg-[color:var(--accent-700)] border-l-2 border-l-[color:var(--accent-500)]'
-                      : idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}
-                    hover:bg-[color:var(--bg-surface-3)]`}
-                >
-                  {/* ID */}
-                  <div className="w-[60px] px-3 py-1 text-[12px] flex items-center gap-1.5 border-r border-[color:var(--border-subtle)] shrink-0">
-                    <RouteIcon />
-                    <span className="text-[color:var(--text-primary)] font-mono truncate">{rowId ?? '—'}</span>
-                  </div>
-                  {/* Status */}
-                  <div className="w-[72px] px-3 py-1 text-[12px] border-r border-[color:var(--border-subtle)] shrink-0 flex items-center">
-                    <span className={`text-[11px] font-semibold ${row.enabled ? 'text-white' : 'text-[#f48771]'}`}>
-                      {row.enabled ? 'Active' : 'Off'}
-                    </span>
-                  </div>
-                  {/* Group */}
-                  <div className="w-[160px] px-3 py-1 text-[12px] text-white font-medium border-r border-[color:var(--border-subtle)] shrink-0 truncate flex items-center">
-                    {row.group_name}
-                  </div>
-                  {/* Symbol */}
-                  <div className="w-[130px] px-3 py-1 text-[12px] font-mono text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate flex items-center">
-                    {row.symbol_pattern}
-                  </div>
-                  {/* Mode */}
-                  <div className="w-[90px] px-3 py-1 text-[12px] border-r border-[color:var(--border-subtle)] shrink-0 flex items-center">
-                    <span className={`text-[11px] font-semibold ${ROUTING_MODE_COLOR[row.routing_mode] ?? 'text-white'}`}>
-                      {ROUTING_MODE_LABEL[row.routing_mode] ?? row.routing_mode}
-                    </span>
-                  </div>
-                  {/* LP Name */}
-                  <div className="w-[120px] px-3 py-1 text-[12px] text-[color:var(--text-secondary)] font-medium border-r border-[color:var(--border-subtle)] shrink-0 truncate flex items-center">
-                    {row.lp_name}
-                  </div>
-                  {/* Priority */}
-                  <div className="w-[80px] px-3 py-1 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate flex items-center tabular-nums">
-                    {row.priority}
-                  </div>
-                  {/* Fallback */}
-                  <div className="w-[130px] px-3 py-1 text-[11px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate flex items-center">
-                    {FALLBACK_LABEL[row.fallback_policy] ?? row.fallback_policy}
-                  </div>
-                  {/* Max Vol */}
-                  <div className="w-[80px] px-3 py-1 text-[12px] text-[color:var(--text-secondary)] border-r border-[color:var(--border-subtle)] shrink-0 truncate flex items-center tabular-nums">
-                    {row.max_volume ?? '—'}
-                  </div>
-                  <div className="flex-1 flex items-center justify-end pr-2 gap-1">
-                    <button
-                      hidden={!canEditGroup(currentUser, row.group_name)}
-                      onClick={(e) => { e.stopPropagation(); handleEdit(row); }}
-                      className="opacity-0 group-hover:opacity-100 text-white hover:text-white transition-colors p-0.5"
-                      title="Edit"
-                    >
-                      <Edit2 size={11} />
-                    </button>
-                  </div>
+              {detailOpen && <aside className="lp-route-details" aria-label="Selected route details">
+                <header><div><GitBranch size={13} aria-hidden="true" /><strong>Route #{selectedRow.route_id ?? selectedRow.id}</strong></div><button type="button" className="lp-route-icon-button" aria-label="Close route details" onClick={() => setSelectedRow(null)}><X size={13} aria-hidden="true" /></button></header>
+                <div className="lp-route-details-scroll">
+                  <p className="lp-route-detail-group" title={selectedRow.group_name}>{selectedRow.group_name}</p>
+                  <dl>{[
+                    ['Route ID', selectedRow.route_id ?? selectedRow.id], ['Broker ID', selectedRow.broker_id], ['Group', selectedRow.group_name], ['Symbol pattern', selectedRow.symbol_pattern],
+                    ['Routing mode', ROUTING_MODE_LABEL[selectedRow.routing_mode] || selectedRow.routing_mode], ['LP provider', selectedRow.lp_name], ['Priority', selectedRow.priority],
+                    ['Fallback', FALLBACK_LABEL[selectedRow.fallback_policy] || selectedRow.fallback_policy], ['Max volume', selectedRow.max_volume ?? '—'], ['Status', selectedRow.enabled ? 'Active' : 'Off'],
+                  ].map(([label, content]) => <div key={label}><dt>{label}</dt><dd title={String(content ?? '—')}>{content ?? '—'}</dd></div>)}</dl>
+                  {canEditGroup(currentUser, selectedRow.group_name) && <div className="lp-route-detail-actions"><button type="button" className="lp-route-button" onClick={() => handleEdit(selectedRow)}><Edit2 size={12} aria-hidden="true" />Edit Route</button><button type="button" className="lp-route-button is-danger" onClick={() => handleDelete(selectedRow)}><Trash2 size={12} aria-hidden="true" />Delete Route</button></div>}
+                  {(selectedRow.created_at || selectedRow.updated_at) && <dl className="lp-route-detail-times">{[['Created', selectedRow.created_at], ['Updated', selectedRow.updated_at]].filter(([, timestamp]) => timestamp).map(([label, timestamp]) => <div key={label}><dt>{label}</dt><dd>{new Date(timestamp * 1000).toLocaleString()}</dd></div>)}</dl>}
                 </div>
-              );
-            })}
-
+              </aside>}
+            </div>
           </div>
-        </div>
-
-        {/* ── Detail Panel ──────────────────────────────────────────────────── */}
-        {detailOpen && (
-          <div className="w-[300px] flex flex-col border-l border-black/40 bg-[color:var(--bg-app)] shrink-0">
-            {/* Panel Header */}
-            <div className="flex items-center px-3 h-[30px] bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0">
-              <span className="text-[11px] font-semibold text-white flex-1 truncate">
-                Route #{selectedRow.route_id ?? selectedRow.id} — {selectedRow.group_name}
-              </span>
-              <button
-                onClick={() => setSelectedRow(null)}
-                className="text-white hover:text-white transition-colors"
-              >
-                <X size={13} />
-              </button>
-            </div>
-
-            {/* Properties */}
-            <div className="px-3 py-2.5 border-b border-black/30 bg-[color:var(--bg-surface-1)] shrink-0">
-              <div className="flex flex-col gap-0.5">
-                {[
-                  ['Route ID',       selectedRow.route_id ?? selectedRow.id],
-                  ['Broker ID',      selectedRow.broker_id],
-                  ['Group',          selectedRow.group_name],
-                  ['Symbol Pattern', selectedRow.symbol_pattern],
-                  ['Routing Mode',   ROUTING_MODE_LABEL[selectedRow.routing_mode] ?? selectedRow.routing_mode],
-                  ['LP Name',        selectedRow.lp_name],
-                  ['Priority',       selectedRow.priority],
-                  ['Fallback',       FALLBACK_LABEL[selectedRow.fallback_policy] ?? selectedRow.fallback_policy],
-                  ['Max Volume',     selectedRow.max_volume ?? '—'],
-                  ['Status',         selectedRow.enabled ? 'Active' : 'Disabled'],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex items-start py-0.5">
-                    <span className="text-[10px] text-white w-28 shrink-0">{k}</span>
-                    <span className={`text-[11px] font-mono truncate ${k === 'Status' ? (selectedRow.enabled ? 'text-white' : 'text-[#f48771]') : 'text-[color:var(--text-primary)]'}`}>
-                      {v ?? '—'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="px-3 py-2.5 flex flex-col gap-2 shrink-0">
-              <p className="text-[10px] uppercase tracking-widest text-white font-semibold">Actions</p>
-              <button
-                hidden={!canEditGroup(currentUser, selectedRow?.group_name)}
-                onClick={() => handleEdit(selectedRow)}
-                className="flex items-center gap-2 h-[26px] px-3 bg-[#2a3a4a] hover:bg-[#3a4a5a] text-white text-[11px] rounded-[2px] transition-colors w-full"
-              >
-                <Edit2 size={12} /> Edit Route
-              </button>
-              <button
-                hidden={!canEditGroup(currentUser,selectedRow?.group_name)} onClick={() => handleDelete(selectedRow)}
-                className="flex items-center gap-2 h-[26px] px-3 bg-[#3a2a2a] hover:bg-[#4a3a3a] text-[#f48771] text-[11px] rounded-[2px] transition-colors w-full"
-              >
-                <Trash2 size={12} /> Delete Route
-              </button>
-            </div>
-
-            {/* Timestamps */}
-            {(selectedRow.created_at || selectedRow.updated_at) && (
-              <div className="px-3 pb-3 mt-auto">
-                <p className="text-[10px] uppercase tracking-widest text-white font-semibold mb-1.5">Timestamps</p>
-                {selectedRow.created_at && (
-                  <div className="flex items-center py-0.5">
-                    <span className="text-[10px] text-white w-20 shrink-0">Created</span>
-                    <span className="text-[10px] font-mono text-white">
-                      {new Date(selectedRow.created_at * 1000).toLocaleString()}
-                    </span>
-                  </div>
-                )}
-                {selectedRow.updated_at && (
-                  <div className="flex items-center py-0.5">
-                    <span className="text-[10px] text-white w-20 shrink-0">Updated</span>
-                    <span className="text-[10px] font-mono text-white">
-                      {new Date(selectedRow.updated_at * 1000).toLocaleString()}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-      </div>
-
-      {/* ── Context Menu ────────────────────────────────────────────────────── */}
       {contextMenu.visible && (
         <div
-          className="fixed z-[9998] bg-[color:var(--bg-surface-1)] border border-[#444] shadow-xl rounded-[3px] py-1 w-44 text-[12px]"
+          className="lp-route-context"
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onClick={(e) => e.stopPropagation()}
         >

@@ -16,6 +16,6 @@ test('mounted once in GatewaysView beside the capability registry',()=>{
  assert.equal(view.match(/<PrivateFIXReadinessPanel \/>/g)?.length,1);
  assert.equal(view.match(/<BrokerCapabilitiesPanel \/>/g)?.length,1);
  assert.match(view,/<PrivateFIXReadinessPanel \/><BrokerCapabilitiesPanel \/>/);
- assert.match(view,/import PrivateFIXReadinessPanel from '\.\/PrivateFIXReadinessPanel\.jsx';/);
- assert.match(view,/import BrokerCapabilitiesPanel from '\.\/BrokerCapabilitiesPanel\.jsx';/);
+ assert.match(view,/const PrivateFIXReadinessPanel = gatewayPanel\(\(\) => import\('\.\/PrivateFIXReadinessPanel\.jsx'\)\);/);
+ assert.match(view,/const BrokerCapabilitiesPanel = gatewayPanel\(\(\) => import\('\.\/BrokerCapabilitiesPanel\.jsx'\)\);/);
 });

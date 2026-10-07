@@ -1,0 +1,122 @@
+/* Scoped to Orders; all column sizes are shared by the header and every live row. */
+.admin-orders-view { min-height: 0; }
+.admin-orders-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px 12px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-toolbar);
+}
+.admin-orders-heading > :is([role="heading"], span) { flex-shrink: 0; white-space: nowrap; }
+.admin-orders-filter-host { flex: 1 1 1040px; min-width: 0; }
+.admin-orders-filter-host .admin-orders-filters {
+  justify-content: flex-end;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.admin-orders-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-toolbar);
+  font-size: 11px;
+}
+.admin-orders-search,
+.admin-orders-select,
+.admin-orders-date {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  min-width: 0;
+  border: 1px solid var(--border-default);
+  border-radius: 2px;
+  background: var(--bg-app);
+  color: var(--text-primary);
+}
+.admin-orders-search { width: clamp(220px, 23vw, 300px); padding: 0 8px; gap: 7px; }
+.admin-orders-search > div { padding: 0; color: var(--text-secondary); }
+.admin-orders-search input { width: 100%; min-width: 0; height: 100%; padding: 0; font: inherit; }
+.admin-orders-search input::placeholder { color: var(--text-muted); opacity: 1; }
+.admin-orders-search:focus-within,
+.admin-orders-select:focus-within,
+.admin-orders-date:focus-within { border-color: var(--accent-500); }
+.admin-orders-select { position: relative; cursor: pointer; }
+.admin-orders-select select { width: 100%; padding: 0 24px 0 8px; font: inherit; background: var(--bg-app); }
+.admin-orders-select > div {
+  position: absolute;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  pointer-events: none;
+}
+.admin-orders-select--symbol { width: 116px; }
+.admin-orders-select--range { width: 88px; }
+.admin-orders-select--status { width: 112px; }
+.admin-orders-date-range { display: flex; flex-wrap: wrap; gap: 8px; max-width: 100%; }
+.admin-orders-date { width: 196px; }
+.admin-orders-filter-error { color: var(--danger-500); font-size: 11px; }
+.admin-orders-grid { width: 100%; min-width: 1320px; }
+.admin-orders-view :is([data-export-header], [data-export-row]) {
+  display: grid;
+  grid-template-columns: repeat(11, minmax(0, 1fr));
+  width: 100%;
+  box-shadow: none;
+}
+.admin-orders-view [data-export-header] { height: 36px; background: var(--bg-toolbar); border-bottom: 1px solid var(--border-default); }
+.admin-orders-view [data-export-row] { min-height: 42px; background: var(--bg-app); color: var(--text-secondary); border-bottom: 1px solid var(--border-subtle); }
+.admin-orders-view [data-export-row][data-stripe="odd"] { background: color-mix(in srgb, var(--bg-surface-1) 35%, var(--bg-app)); }
+.admin-orders-view [data-export-row]:hover { background: var(--bg-surface-2); }
+.admin-orders-view [data-export-row][data-selected="true"] { background: var(--accent-50); }
+.admin-orders-view [data-export-row][data-selected="true"] > div:first-child { box-shadow: inset 2px 0 var(--accent-500); }
+.admin-orders-view :is([data-export-header], [data-export-row]) > div {
+  display: block;
+  align-content: center;
+  width: auto;
+  min-width: 0;
+  padding: 4px 12px;
+  color: var(--text-secondary);
+  border-right: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+.admin-orders-view [data-export-header] > div { color: var(--text-muted); font-size: 10px; font-weight: 600; letter-spacing: .04em; }
+.admin-orders-view [data-export-header] > div + div { border-left: 1px solid var(--border-subtle); }
+.admin-orders-view [data-export-row] > div { font-size: 11px; font-weight: 400; }
+.admin-orders-view :is([data-export-header], [data-export-row]) > :nth-child(n+6):nth-child(-n+9) { font-variant-numeric: tabular-nums; }
+.admin-orders-view [data-export-row] > :is(:nth-child(1), :nth-child(2), :nth-child(3), :nth-child(6), :nth-child(7), :nth-child(8), :nth-child(9)) { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.admin-orders-view [data-export-row] > :nth-child(3),
+.admin-orders-view [data-export-row] > :nth-child(11) { color: var(--text-muted); }
+.admin-orders-view [data-export-row] > :nth-child(3) { white-space: normal; line-height: 1.35; }
+.admin-orders-view [data-export-row] > :nth-child(4) { color: var(--text-primary); font-weight: 500; }
+.admin-orders-view [data-export-row] > [data-order-tone="buy"] { color: var(--info-500); }
+.admin-orders-view [data-export-row] > [data-order-tone="open"] { color: var(--text-primary); }
+.admin-orders-view [data-export-row] > [data-order-tone="sell"] { color: var(--danger-500); }
+.admin-orders-view [data-export-row] > [data-order-tone="closed"] { color: var(--text-muted); }
+.admin-orders-footer { display: flex; flex-shrink: 0; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-height: 42px; padding: 6px 12px; border-top: 1px solid var(--border-default); background: var(--bg-toolbar); color: var(--text-secondary); font-size: 11px; }
+.admin-orders-footer button:focus-visible { outline: 2px solid var(--accent-500); outline-offset: -2px; }
+.admin-orders-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 16px; margin-left: auto; }
+.admin-orders-range { color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.admin-orders-page-nav,
+.admin-orders-page-number,
+.admin-orders-page-size { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.admin-orders-page-size { gap: 8px; }
+.admin-orders-footer :is(select,input) { height: 26px; border: 1px solid var(--border-default); border-radius: 2px; background: var(--bg-app); color: var(--text-primary); font: inherit; outline: none; font-variant-numeric: tabular-nums; }
+.admin-orders-footer input { width: 36px; padding: 0 4px; text-align: center; }
+.admin-orders-footer select { min-width: 56px; padding: 0 6px; }
+.admin-orders-footer :is(select,input):focus { border-color: var(--accent-500); }
+@media (max-width: 720px) {
+  .admin-orders-filters { gap: 8px; }
+  .admin-orders-search { width: 100%; }
+}

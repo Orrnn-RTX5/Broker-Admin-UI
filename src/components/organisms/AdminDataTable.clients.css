@@ -162,9 +162,10 @@
 }
 
 .admin-client-status[data-tone="active"] {
-  --status-hue: var(--success-500);
+  --status-hue: var(--info-500);
 }
 
+.admin-client-status[data-tone="readonly"],
 .admin-client-status[data-tone="pending"] {
   --status-hue: var(--warning-500);
 }

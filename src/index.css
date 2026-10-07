@@ -134,11 +134,4 @@ body {
     scrollbar-width: none;
   }
 
-  .order-date-input {
-    color-scheme: inherit;
-  }
-
-  .order-date-input::-webkit-calendar-picker-indicator {
-    display: none;
-  }
 }

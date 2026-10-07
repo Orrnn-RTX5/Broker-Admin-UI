@@ -16,12 +16,31 @@ const notifyBackendDisconnect = async (token) => {
 };
 
 let accessRequestSequence = 0;
+let startupAccessRequest;
+useAuthStore.subscribe((state, previous) => {
+  if (!state.isAuthenticated || state.accessToken !== previous.accessToken) startupAccessRequest = undefined;
+});
+const currentStartupAccess = () => startupAccessRequest
+  && startupAccessRequest.token === useAuthStore.getState().accessToken
+  && startupAccessRequest.sequence === accessRequestSequence
+  && Date.now() - startupAccessRequest.startedAt < 5000;
 export const AuthService = {
+  primeStartupMe: () => {
+    if (currentStartupAccess()) return startupAccessRequest.promise;
+    const token = useAuthStore.getState().accessToken;
+    const promise = AuthService.getMe();
+    startupAccessRequest = { token, promise, sequence: accessRequestSequence, startedAt: Date.now() };
+    promise.catch(() => {});
+    return promise;
+  },
+  // Only the initial shell hydration shares this early request. Focus, access
+  // events and later polls still start fresh reads and supersede old snapshots.
+  getStartupMe: () => currentStartupAccess() ? startupAccessRequest.promise : AuthService.primeStartupMe(),
   getMe: async () => {
     const token=useAuthStore.getState().accessToken;
     const sequence=++accessRequestSequence;
     try {
-      const response = await api.get('/manager/api/v2/auth/me', { _allowAuthFailure: true });
+      const response = await api.get('/manager/api/v2/auth/me', { _allowAuthFailure: true, timeout: 5000 });
       const user = buildUserFromAuthPayload(response.data);
       if(sequence===accessRequestSequence && useAuthStore.getState().accessToken===token) useAuthStore.getState().setUser(user);
       return user;

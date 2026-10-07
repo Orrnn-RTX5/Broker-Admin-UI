@@ -1,9 +1,3 @@
-import LPCleanupPolicyPanel from './LPCleanupPolicyPanel.jsx';
-import LPRecoveryPolicyPanel from './LPRecoveryPolicyPanel.jsx';
-import LPExactPendingModifyAdmissionPanel from './LPExactPendingModifyAdmissionPanel.jsx';
-import LPNativePendingEnablementPanel from './LPNativePendingEnablementPanel.jsx';
-import BrokerCapabilitiesPanel from './BrokerCapabilitiesPanel.jsx';
-import PrivateFIXReadinessPanel from './PrivateFIXReadinessPanel.jsx';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Activity,
@@ -33,18 +27,31 @@ import {
 } from '../../services/gateway.service';
 import { buildFeedConfigPayload, normalizeFeedProvider } from '../../lib/feedConfigPayload';
 import { useToast } from '../ui/useToast';
-import FixRelayConfigPanel from './FixRelayConfigPanel';
-import GatewaySymbolPicker from './GatewaySymbolPicker';
 import NamedLPConnectionsPanel from './NamedLPConnectionsPanel';
-import NamedLPRoutingPanel from './NamedLPRoutingPanel';
-import LPFeedsPanel from './LPFeedsPanel';
-import LPManagerPermissionsPanel from './LPManagerPermissionsPanel';
-import LPJournalPanel from './LPJournalPanel';
-import LPDemoMarketWorkspace from './LPDemoMarketWorkspace.jsx';
-import CalculationBaselineWorkspace from './CalculationBaselineWorkspace.jsx';
 import './gateways-view.css';
 
-// Keep every workspace mounted so navigation preserves unsaved form drafts.
+const gatewayPanel = loader => {
+  const Component = React.lazy(loader);
+  return function GatewayPanel(props) {
+    return <React.Suspense fallback={<p className="gw-loading" role="status">Loading workspace…</p>}><Component {...props} /></React.Suspense>;
+  };
+};
+const LPCleanupPolicyPanel = gatewayPanel(() => import('./LPCleanupPolicyPanel.jsx'));
+const LPRecoveryPolicyPanel = gatewayPanel(() => import('./LPRecoveryPolicyPanel.jsx'));
+const LPExactPendingModifyAdmissionPanel = gatewayPanel(() => import('./LPExactPendingModifyAdmissionPanel.jsx'));
+const LPNativePendingEnablementPanel = gatewayPanel(() => import('./LPNativePendingEnablementPanel.jsx'));
+const BrokerCapabilitiesPanel = gatewayPanel(() => import('./BrokerCapabilitiesPanel.jsx'));
+const PrivateFIXReadinessPanel = gatewayPanel(() => import('./PrivateFIXReadinessPanel.jsx'));
+const FixRelayConfigPanel = gatewayPanel(() => import('./FixRelayConfigPanel.jsx'));
+const GatewaySymbolPicker = gatewayPanel(() => import('./GatewaySymbolPicker.jsx'));
+const NamedLPRoutingPanel = gatewayPanel(() => import('./NamedLPRoutingPanel.jsx'));
+const LPFeedsPanel = gatewayPanel(() => import('./LPFeedsPanel.jsx'));
+const LPManagerPermissionsPanel = gatewayPanel(() => import('./LPManagerPermissionsPanel.jsx'));
+const LPJournalPanel = gatewayPanel(() => import('./LPJournalPanel.jsx'));
+const LPDemoMarketWorkspace = gatewayPanel(() => import('./LPDemoMarketWorkspace.jsx'));
+const CalculationBaselineWorkspace = gatewayPanel(() => import('./CalculationBaselineWorkspace.jsx'));
+
+// A visited workspace stays mounted to preserve its unsaved form drafts.
 const GATEWAY_SECTIONS = [
   {
     id: 'connections',
@@ -93,7 +100,7 @@ const GATEWAY_SECTIONS = [
 
 const sectionDomId = (id) => `gw-section-${id}`;
 
-const GatewaySection = ({ section, active, children }) => {
+const GatewaySection = ({ section, active, mounted, children }) => {
   const Icon = section.icon;
   const headingId = `${sectionDomId(section.id)}-title`;
   return (
@@ -106,7 +113,7 @@ const GatewaySection = ({ section, active, children }) => {
         </div>
         {section.tag && <span className="gw-section-tag">{section.tag}</span>}
       </div>
-      <div className="gw-section-body">{children}</div>
+      <div className="gw-section-body">{mounted && children}</div>
     </div>
   );
 };
@@ -136,16 +143,17 @@ const GATEWAY_TOOLS = [
   { section: 'legacy', title: 'Legacy price feed', description: 'Single provider, market data credentials and SSL' },
 ];
 
-// Native disclosures keep form drafts mounted while reducing the initial page length.
-const GatewayDetails = ({ id, title, description, children }) => (
-  <details id={`gw-tool-${id}`} className="gw-details">
+// Opening a tool loads it once; closing it retains any unsaved draft.
+const GatewayDetails = ({ id, title, description, children }) => {
+  const [opened, setOpened] = useState(false);
+  return <details id={`gw-tool-${id}`} className="gw-details" onToggle={event => { if (event.currentTarget.open) setOpened(true); }}>
     <summary>
       <span><span className="gw-details-title">{title}</span><span className="gw-details-desc">{description}</span></span>
       <ChevronDown size={16} aria-hidden="true" />
     </summary>
-    <div className="gw-details-body">{children}</div>
-  </details>
-);
+    <div className="gw-details-body">{opened && children}</div>
+  </details>;
+};
 
 const PROVIDER_OPTIONS = [
   { value: 'rtxmd', label: 'RTX Market Data FIX' },
@@ -253,6 +261,7 @@ const GatewaysView = () => {
   const [loadingConfig, setLoadingConfig] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [configRefresh, setConfigRefresh] = useState(0);
+  const loadedConfigRevision = useRef(null);
   const [passwordSet, setPasswordSet] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -265,6 +274,7 @@ const GatewaysView = () => {
   const searchRef = useRef(null);
   const focusFrame = useRef(0);
   const [activeSection, setActiveSection] = useState(GATEWAY_SECTIONS[0].id);
+  const [visitedSections, setVisitedSections] = useState(['connections']);
   const [search, setSearch] = useState('');
   const searchTerms = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const searchResults = searchTerms.length ? GATEWAY_TOOLS.filter((tool) => {
@@ -276,7 +286,9 @@ const GatewaysView = () => {
 
   const jumpToSection = (id, toolId) => (event) => {
     event.preventDefault();
+    event.currentTarget.closest('.gw-setup')?.removeAttribute('open');
     setActiveSection(id);
+    setVisitedSections(previous => previous.includes(id) ? previous : [...previous, id]);
     setSearch('');
     setShowPassword(false);
     cancelAnimationFrame(focusFrame.current);
@@ -287,13 +299,16 @@ const GatewaysView = () => {
       const tool = toolId ? node.querySelector(`#gw-tool-${toolId}`) : null;
       if (tool) tool.open = true;
       const target = tool || node;
-      const top = root.scrollTop + target.getBoundingClientRect().top - root.getBoundingClientRect().top - 16;
+      const toolbarHeight = (root.querySelector('.gw-header')?.offsetHeight || 0)
+        + (root.querySelector('.gw-sidebar')?.offsetHeight || 0) + 12;
+      const top = tool ? root.scrollTop + target.getBoundingClientRect().top - root.getBoundingClientRect().top - toolbarHeight : 0;
       root.scrollTo({ top: Math.max(0, top), behavior: 'instant' });
       (tool?.querySelector('summary') || node.querySelector('.gw-section-title'))?.focus({ preventScroll: true });
     });
   };
 
   useEffect(() => {
+    if (activeSection !== 'legacy' || loadedConfigRevision.current === configRefresh) return undefined;
     let mounted = true;
     setLoadingConfig(true);
     setLoadError('');
@@ -301,6 +316,7 @@ const GatewaysView = () => {
     gatewayGetFeedConfig()
       .then((config) => {
         if (!mounted) return;
+        loadedConfigRevision.current = configRefresh;
         const loaded = formFromSavedConfig(config);
         setForm(loaded);
         setSavedForm(loaded);
@@ -316,7 +332,7 @@ const GatewaysView = () => {
       });
 
     return () => { mounted = false; };
-  }, [configRefresh]);
+  }, [configRefresh, activeSection]);
 
   const setField = (key) => (event) => {
     const { checked, type, value } = event.target;
@@ -441,14 +457,16 @@ const GatewaysView = () => {
     >
       <header className="gw-header">
         <div className="gw-shell">
-          <div className="gw-heading"><span className="gw-heading-icon" aria-hidden="true"><Plug size={22} /></span><div>
+          <div className="gw-heading"><span className="gw-heading-icon" aria-hidden="true"><Plug size={15} /></span><div className="gw-heading-copy">
           <h1 className="gw-title">Gateways</h1>
           <p className="gw-subtitle">
-            Connect liquidity providers, choose where prices come from, and control how orders are routed.
+            Liquidity connections, price sources & execution
           </p>
           </div></div>
-          <div className="gw-setup" role="group" aria-label="Gateway setup shortcuts">
-            <div className="gw-setup-label">Setting up a gateway?<span>Start with these three steps.</span></div>
+          <details className="gw-setup">
+            <summary>Setup guide <ChevronDown size={13} aria-hidden="true" /></summary>
+            <div className="gw-setup-content" role="group" aria-label="Gateway setup shortcuts">
+            <div className="gw-setup-label">Gateway setup<span>Connect a provider, verify quotes, then configure routing.</span></div>
             <ol className="gw-setup-list">
               {SETUP_STEPS.map((step, index) => (
                 <li key={step.id}>
@@ -460,7 +478,8 @@ const GatewaysView = () => {
                 </li>
               ))}
             </ol>
-          </div>
+            </div>
+          </details>
         </div>
       </header>
 
@@ -483,7 +502,6 @@ const GatewaysView = () => {
           </li>)}</ul>
         </div>}
         <nav className="gw-nav" aria-label="Gateway sections">
-          <p className="gw-nav-label">Workspace</p>
           <ul className="gw-nav-list">
             {GATEWAY_SECTIONS.map((section) => {
               const Icon = section.icon;
@@ -497,7 +515,7 @@ const GatewaysView = () => {
                     aria-current={active ? 'location' : undefined}
                     onClick={jumpToSection(section.id)}
                   >
-                    <Icon size={17} aria-hidden="true" />
+                    <Icon size={14} aria-hidden="true" />
                     <span>{section.label}</span>
                     {section.id === 'legacy' && dirty && <span className="gw-draft-dot" aria-label="Unsaved changes" />}
                   </a>
@@ -506,19 +524,18 @@ const GatewaysView = () => {
             })}
           </ul>
         </nav>
-        <p className="gw-sidebar-help">Switch sections freely. Your form drafts stay here until you save them or leave Gateways.</p>
       </aside>
 
       <div className="gw-body">
-        <GatewaySection section={SECTION_BY_ID.connections} active={activeSection === 'connections'}>
+        <GatewaySection section={SECTION_BY_ID.connections} active={activeSection === 'connections'} mounted={visitedSections.includes('connections')}>
           <NamedLPConnectionsPanel />
         </GatewaySection>
 
-        <GatewaySection section={SECTION_BY_ID.quotes} active={activeSection === 'quotes'}>
+        <GatewaySection section={SECTION_BY_ID.quotes} active={activeSection === 'quotes'} mounted={visitedSections.includes('quotes')}>
           <LPFeedsPanel />
         </GatewaySection>
 
-        <GatewaySection section={SECTION_BY_ID.routing} active={activeSection === 'routing'}>
+        <GatewaySection section={SECTION_BY_ID.routing} active={activeSection === 'routing'} mounted={visitedSections.includes('routing')}>
           <NamedLPRoutingPanel />
           <div className="gw-tools-label">Advanced execution settings</div>
           <GatewayDetails id="cleanup" title="Rejected-order cleanup" description="Set limits for cleaning up partial execution of rejected orders.">
@@ -535,7 +552,7 @@ const GatewaysView = () => {
           </GatewayDetails>
         </GatewaySection>
 
-        <GatewaySection section={SECTION_BY_ID.journal} active={activeSection === 'journal'}>
+        <GatewaySection section={SECTION_BY_ID.journal} active={activeSection === 'journal'} mounted={visitedSections.includes('journal')}>
           <LPJournalPanel />
           <GatewayDetails id="demo" title="Demo order workspace" description="Inspect demo execution and place demo market orders.">
             <LPDemoMarketWorkspace />
@@ -545,16 +562,16 @@ const GatewaysView = () => {
           </GatewayDetails>
         </GatewaySection>
 
-        <GatewaySection section={SECTION_BY_ID.permissions} active={activeSection === 'permissions'}>
+        <GatewaySection section={SECTION_BY_ID.permissions} active={activeSection === 'permissions'} mounted={visitedSections.includes('permissions')}>
           <LPManagerPermissionsPanel />
         </GatewaySection>
 
-        <GatewaySection section={SECTION_BY_ID.readiness} active={activeSection === 'readiness'}>
+        <GatewaySection section={SECTION_BY_ID.readiness} active={activeSection === 'readiness'} mounted={visitedSections.includes('readiness')}>
           <PrivateFIXReadinessPanel /><BrokerCapabilitiesPanel />
           {import.meta.env.VITE_FIX_RELAY_ENABLED === 'true' && <GatewayDetails id="relay" title="Superadmin FIX relay" description="Configure the separate FIX relay and inspect its connection status."><FixRelayConfigPanel /></GatewayDetails>}
         </GatewaySection>
 
-        <GatewaySection section={SECTION_BY_ID.legacy} active={activeSection === 'legacy'}>
+        <GatewaySection section={SECTION_BY_ID.legacy} active={activeSection === 'legacy'} mounted={visitedSections.includes('legacy')}>
           <form
             ref={legacyFormRef}
             noValidate
@@ -570,8 +587,7 @@ const GatewaysView = () => {
                 </div>
               </div>
               <div
-                className="rounded px-2 py-1 text-[10px] font-semibold uppercase tracking-wide"
-                style={{ background: 'rgba(96,165,250,0.12)', color: '#ffffff', border: '1px solid rgba(96,165,250,0.25)' }}
+                className="gw-provider-badge"
               >
                 {providerLabel(form.feed_provider)}
               </div>

@@ -1,41 +1,43 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import { useDataFetch } from './useCore';
-import { ManagerService } from '../services/manager.service';
+import { useAuthStore } from '../store/authStore';
+import { createCacheIdentity } from '../utils/cacheIdentity';
+import { normalizeOrderQuery } from '../utils/orderFeed';
+import { canAccessView } from '../utils/permissions';
+import { peekOrders, primeOrders, subscribeOrders } from '../services/orders.service';
+import { getTradeListIdentity, peekPositions, primePositions, refreshPositions, subscribePositions, peekDeals, primeDeals, refreshDeals, subscribeDeals } from '../services/tradeLists.service';
+import { normalizePositionQuery, normalizeDealQuery } from '../utils/tradeListFeed';
+
+const positionSource = { normalize: normalizePositionQuery, peek: peekPositions, prime: primePositions, refresh: refreshPositions, subscribe: subscribePositions };
+const dealSource = { normalize: normalizeDealQuery, peek: peekDeals, prime: primeDeals, refresh: refreshDeals, subscribe: subscribeDeals };
+function useTradeList(view, params, enabled, autoRefresh, refreshInterval, source) {
+  const identity = useAuthStore(state => getTradeListIdentity(view, state));
+  const queryKey = JSON.stringify(source.normalize(params));
+  const query = useMemo(() => JSON.parse(queryKey), [queryKey]);
+  const state = useSyncExternalStore(source.subscribe, () => source.peek(enabled ? identity : null, query));
+  const mutate = useCallback(() => enabled && identity ? source.refresh(query) : Promise.resolve(null), [enabled, identity, query, source]);
+  useEffect(() => {
+    if (!enabled || !identity) return undefined;
+    void source.prime(query);
+    const refreshVisible = () => {
+      if (document.visibilityState !== 'hidden') void source.prime(query, { force: true });
+    };
+    const interval = autoRefresh ? window.setInterval(refreshVisible, refreshInterval) : null;
+    window.addEventListener('focus', refreshVisible);
+    document.addEventListener('visibilitychange', refreshVisible);
+    window.addEventListener('admin:state-changed', mutate);
+    return () => {
+      if (interval !== null) window.clearInterval(interval);
+      window.removeEventListener('focus', refreshVisible);
+      document.removeEventListener('visibilitychange', refreshVisible);
+      window.removeEventListener('admin:state-changed', mutate);
+    };
+  }, [autoRefresh, enabled, identity, mutate, query, refreshInterval, source]);
+  return { ...state, mutate };
+}
 
 export function usePositions(params = { page: 1, limit: 100, logins: [] }, autoRefresh = true, refreshInterval = 2000, enabled = true) {
-  const refreshInFlightRef = useRef(false);
-  const fetcher = async () => {
-    return params.logins && params.logins.length > 0
-      ? await ManagerService.getPositions(params.logins, params.page, params.limit)
-      : await ManagerService.getPositionsAll(params.page, params.limit);
-  };
-
-  const hook = useDataFetch(
-    fetcher,
-    null,
-    [JSON.stringify(params)],
-    enabled,
-    { requestKey: 'manager:positions' }
-  );
-  const mutatePositions = hook.mutate;
-
-  useEffect(() => {
-    if (!autoRefresh || !enabled) return undefined;
-    const intervalId = setInterval(async () => {
-      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
-      if (refreshInFlightRef.current) return;
-
-      refreshInFlightRef.current = true;
-      try {
-        await mutatePositions();
-      } finally {
-        refreshInFlightRef.current = false;
-      }
-    }, refreshInterval);
-    return () => clearInterval(intervalId);
-  }, [autoRefresh, enabled, mutatePositions, refreshInterval]);
-
-  return hook;
+  return useTradeList('Positions', params, enabled, autoRefresh, refreshInterval, positionSource);
 }
 
 // Exposure and Top Accounts are visual widgets that we cannot fetch natively using page limits natively right now
@@ -50,65 +52,37 @@ export function useTopAccounts(limit = 10, sortBy = 'profit', order = 'desc', en
 }
 
 export function useDealsSummary(from, to, login, symbol, enabled = true, options = {}) {
-  const page = options.page ?? 1;
-  const limit = options.limit ?? 100;
-  const search = options.search ?? '';
-
-  const fetcher = async () => {
-    return ManagerService.getBrokerDeals({
-      page,
-      limit,
-      from,
-      to,
-      login,
-      symbol,
-      search,
-    });
-  };
-  return useDataFetch(
-    fetcher,
-    { from, to, login, symbol, page, limit, search },
-    [from, to, login, symbol, page, limit, search],
-    enabled,
-    { requestKey: 'manager:deals' }
-  );
+  return useTradeList('Deals', { from, to, login, symbol, ...options }, enabled, true, 2000, dealSource);
 }
 
 export function useOrders(params = { limit: 100, offset: 0, logins: [] }, enabled = true) {
-  const limitParam = params.limit ?? 100;
-  const offsetParam = params.offset ?? 0;
-  const search = params.search ?? '';
-  const symbol = params.symbol ?? '';
-  const from = params.from ?? '';
-  const to = params.to ?? '';
-  const openOnly = Boolean(params.openOnly);
-  const loginsKey = JSON.stringify(params.logins ?? []);
+  const identity = useAuthStore(state => canAccessView(state.user, 'Orders') ? createCacheIdentity(state) : null);
+  const queryKey = JSON.stringify(normalizeOrderQuery(params));
+  const query = useMemo(() => JSON.parse(queryKey), [queryKey]);
+  const matches = params.matches;
+  const state = useSyncExternalStore(subscribeOrders, () => peekOrders(enabled ? identity : null, query));
+  const mutate = useCallback(() => enabled && identity
+    ? primeOrders(query, { matches, force: true }) : Promise.resolve(null), [enabled, identity, query, matches]);
 
-  const fetcher = useCallback(async () => {
-    const logins = JSON.parse(loginsKey);
-    if (logins.length > 0) {
-      return ManagerService.getOrders(logins);
-    }
-
-    const limit = Number(limitParam);
-    const startOffset = Number(offsetParam);
-
-    return ManagerService.getBrokerOrders({
-      limit,
-      offset: startOffset,
-      search,
-      symbol,
-      from,
-      to,
-      openOnly,
-    });
-  }, [from, limitParam, loginsKey, offsetParam, openOnly, search, symbol, to]);
-  return useDataFetch(
-    fetcher,
-    null,
-    [from, limitParam, loginsKey, offsetParam, openOnly, search, symbol, to],
-    enabled,
-    { requestKey: 'manager:orders' }
-  );
+  useEffect(() => {
+    if (!enabled || !identity) return undefined;
+    void primeOrders(query, { matches });
+    const refreshVisible = () => {
+      if (document.visibilityState !== 'hidden') void mutate();
+    };
+    const interval = window.setInterval(refreshVisible, 2000);
+    window.addEventListener('focus', refreshVisible);
+    document.addEventListener('visibilitychange', refreshVisible);
+    window.addEventListener('admin:state-changed', mutate);
+    window.addEventListener('rtx:pending-placement-changed', mutate);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refreshVisible);
+      document.removeEventListener('visibilitychange', refreshVisible);
+      window.removeEventListener('admin:state-changed', mutate);
+      window.removeEventListener('rtx:pending-placement-changed', mutate);
+    };
+  }, [enabled, identity, matches, mutate, query]);
+  return { ...state, mutate };
 }
 
