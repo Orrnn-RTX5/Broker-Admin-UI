@@ -5,6 +5,7 @@ import './CreateGroupPopup.css';
 import { subgroupCreatePayload } from '../../utils/groupAuthority.js';
 import { ManagerService } from '../../services/manager.service';
 import { buildGroupRiskPayload, parseCsvList } from '../../utils/adminValidation';
+import { getApiErrorMessage } from '../../utils/apiShapes';
 import { validateGroupForm, validateGroupSection } from '../../utils/groupFormSteps';
 import GroupSymbolPicker from './GroupSymbolPicker';
 import GroupSymbolCategories from './GroupSymbolCategories';
@@ -145,9 +146,11 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
       if (onCreated) onCreated();
       onClose();
     } catch (err) {
-      if (/commission|leverage|spread markup/i.test(err.message || '')) setActiveSection('trading');
-      else if (/margin call|stop out/i.test(err.message || '')) setActiveSection('risk');
-      setError(err.message || 'Error creating group');
+      // Axios puts the backend's reason in response.data; err.message is only "Request failed with status code 400".
+      const message = getApiErrorMessage(err, 'Error creating group');
+      if (/commission|leverage|spread markup/i.test(message)) setActiveSection('trading');
+      else if (/margin call|stop out/i.test(message)) setActiveSection('risk');
+      setError(message);
     } finally {
       setIsLoading(false);
     }

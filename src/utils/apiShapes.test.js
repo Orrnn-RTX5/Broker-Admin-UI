@@ -103,3 +103,8 @@ test('getApiErrorMessage extracts meaningful backend errors', () => {
   assert.equal(getApiErrorMessage({ response: { data: { error: { message: 'Bad contract' } } } }), 'Bad contract');
   assert.equal(getApiErrorMessage({ message: 'Network down' }), 'Network down');
 });
+
+test('getApiErrorMessage prefers the backend reason over the axios status text', () => {
+  const axiosError = { message: 'Request failed with status code 400', response: { status: 400, data: { code: 'MT_RET_ERR_PARAMS', message: 'symbol X.PRO has no enabled internal instrument' } } };
+  assert.equal(getApiErrorMessage(axiosError, 'Error creating group'), 'symbol X.PRO has no enabled internal instrument');
+});
