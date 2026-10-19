@@ -45,19 +45,19 @@ export const mergeLpSymbols = (catalogue = [], configured = []) => {
   return [...bySymbol.values()].sort((a, b) => a.symbol.localeCompare(b.symbol));
 };
 
-/**
- * Group-create pickers must not offer a configured instrument that is disabled:
- * selecting it makes GroupCreate refuse the whole group. Unconfigured LP
- * catalogue entries are retained because the backend remains the authority for
- * whether they can be configured; the backend filter handles those.
- */
+/** Configured instruments that are disabled and therefore cannot join a group. */
 export const groupDisabledSymbols = (entries = []) => (Array.isArray(entries) ? entries : [])
   .filter(entry => entry?.configured && entry.instrument?.enabled === false)
   .map(entry => String(entry.symbol || '').toUpperCase())
   .filter(Boolean);
 
+/**
+ * Group-create pickers may only offer enabled, configured internal instruments.
+ * An unconfigured LP catalogue symbol is not an internal instrument, and a
+ * configured but disabled one makes GroupCreate refuse the whole group.
+ */
 export const groupSelectableSymbols = (entries = []) => (Array.isArray(entries) ? entries : [])
-  .filter(entry => !(entry?.configured && entry.instrument?.enabled === false));
+  .filter(entry => entry?.configured === true && entry.instrument?.enabled === true);
 
 /** Symbol names for pickers: every LP symbol plus every configured instrument. */
 export const lpSymbolNames = (entries = []) => entries.map((entry) => entry.symbol);

@@ -61,15 +61,18 @@ test('loadLpSymbols rejects only when both sources fail', async () => {
   invalidateLpSymbols();
 });
 
-test('group picker omits configured instruments that are disabled', () => {
+test('group picker offers only configured enabled instruments', () => {
   const rows = mergeLpSymbols(
-    [{ symbol: 'EURUSD' }, { symbol: 'EURUSD.PRO' }, { symbol: 'XAUUSD' }],
+    [{ symbol: 'EURUSD' }, { symbol: 'EURUSD.PRO' }, { symbol: 'GBPUSD' }, { symbol: 'XAUUSD' }],
     [
       { symbol: 'EURUSD', enabled: true },
       { symbol: 'EURUSD.PRO', enabled: false },
       { symbol: 'XAUUSD', enabled: true },
+      { symbol: 'CUSTOM1', enabled: true },
     ],
   );
-  assert.deepEqual(groupSelectableSymbols(rows).map(entry => entry.symbol), ['EURUSD', 'XAUUSD']);
+  // Unconfigured LP catalogue entries are still merged, but must not be pickable.
+  assert.deepEqual(rows.map(entry => entry.symbol), ['CUSTOM1', 'EURUSD', 'EURUSD.PRO', 'GBPUSD', 'XAUUSD']);
+  assert.deepEqual(groupSelectableSymbols(rows).map(entry => entry.symbol), ['CUSTOM1', 'EURUSD', 'XAUUSD']);
   assert.deepEqual(groupDisabledSymbols(rows), ['EURUSD.PRO']);
 });
