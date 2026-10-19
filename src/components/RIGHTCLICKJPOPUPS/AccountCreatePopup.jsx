@@ -3,7 +3,7 @@ import { ManagerService } from '../../services/manager.service.js';
 import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { AdminConfigApi } from '../../services/adminConfigApi';
-import { ACCOUNT_MODE_OPTIONS, buildAccountCreatePayload, emptyAccountCreateForm, readCreatedLogin } from '../../utils/legacyConfig';
+import { ACCOUNT_MODE_OPTIONS, buildAccountCreatePayload, emptyAccountCreateForm, readCreatedLogin, readGroupCurrency, readGroupLeverage } from '../../utils/legacyConfig';
 import { getApiErrorMessage } from '../../utils/apiShapes';
 import { useToast } from '../ui/useToast';
 import FundingPopup from './FundingPopup';
@@ -23,10 +23,40 @@ const Row = ({ label, htmlFor, children, error }) => (
   </div>
 );
 
-const AccountCreatePopup = ({ group, defaultLeverage, onClose, onCreated }) => {
-  const [form, setForm] = useState(() => emptyAccountCreateForm(group, defaultLeverage));
+const AccountCreatePopup = ({ group, defaultLeverage, defaultCurrency, groupRecord, onClose, onCreated }) => {
+  const [form, setForm] = useState(() => emptyAccountCreateForm(group, {
+    leverage: defaultLeverage ?? readGroupLeverage(groupRecord),
+    currency: defaultCurrency ?? readGroupCurrency(groupRecord),
+  }));
   const [groupPurpose, setGroupPurpose] = useState('');
-  useEffect(() => { let disposed = false; ManagerService.getGroup(group).then(value => { if (!disposed) setGroupPurpose(value.groupPurpose || 'customer'); }).catch(() => { if (!disposed) setGroupPurpose(''); }); return () => { disposed = true; }; }, [group]);
+  const [groupMeta, setGroupMeta] = useState(() => ({
+    currency: readGroupCurrency(groupRecord) || String(defaultCurrency ?? '').trim().toUpperCase(),
+    leverage: String(defaultLeverage ?? readGroupLeverage(groupRecord) ?? '').trim(),
+  }));
+  useEffect(() => {
+    let disposed = false;
+    ManagerService.getGroup(group).then((value) => {
+      if (disposed || !value) return;
+      setGroupPurpose(value.groupPurpose || 'customer');
+      const liveCurrency = readGroupCurrency(value);
+      const liveLeverage = readGroupLeverage(value);
+      if (liveCurrency || liveLeverage) {
+        setGroupMeta((current) => ({
+          currency: liveCurrency || current.currency,
+          leverage: liveLeverage || current.leverage,
+        }));
+        // Inherit the live group values into untouched (still blank) fields so
+        // every present/future group supplies its own defaults. An operator
+        // edit is never overwritten: only blank fields take the live value.
+        setForm((current) => ({
+          ...current,
+          currency: current.currency ? current.currency : (liveCurrency || current.currency),
+          leverage: current.leverage ? current.leverage : (liveLeverage || current.leverage),
+        }));
+      }
+    }).catch(() => { if (!disposed) setGroupPurpose(''); });
+    return () => { disposed = true; };
+  }, [group]);
   const [errors, setErrors] = useState({});
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,7 +72,8 @@ const AccountCreatePopup = ({ group, defaultLeverage, onClose, onCreated }) => {
   const submit = async (event) => {
     event.preventDefault();
     if (isSubmitting || created) return;
-    const { payload, errors: nextErrors } = buildAccountCreatePayload(form);
+    const groupContext = { currency: groupMeta.currency || readGroupCurrency(groupRecord) };
+    const { payload, errors: nextErrors } = buildAccountCreatePayload(form, groupContext);
     if (!payload) {
       setErrors(nextErrors);
       return;
@@ -57,7 +88,7 @@ const AccountCreatePopup = ({ group, defaultLeverage, onClose, onCreated }) => {
         setError('The server did not confirm the new account login. Check the group\'s account list before creating it again.');
         return;
       }
-      setCreated({ login, currency: payload.Currency || 'USD', accountPurpose: result.accountPurpose || groupPurpose, mode: payload.AccountMode, routingWarning: accountCreationWarning(result) });
+      setCreated({ login, currency: payload.Currency || groupMeta.currency || '', accountPurpose: result.accountPurpose || groupPurpose, mode: payload.AccountMode, routingWarning: accountCreationWarning(result) });
       notify({ title: 'Account created', description: `Login ${login} in ${payload.Group}`, tone: 'success' });
       onCreated?.(result);
     } catch (err) {
@@ -97,6 +128,7 @@ const AccountCreatePopup = ({ group, defaultLeverage, onClose, onCreated }) => {
               <input id="create-group" value={form.group} disabled className={inputClassName} />
             </Row>
             <p>Purpose: {groupPurpose === 'coverage' ? 'Coverage - every new account in this group is a coverage account.' : 'Determined by the group.'} Feed, symbols and routing are inherited from the group. A missing route is journaled at creation and blocks trading.</p>
+            <p>Currency and leverage default to the group&apos;s values{groupMeta.currency || groupMeta.leverage ? ` (${[groupMeta.currency, groupMeta.leverage ? `1:${groupMeta.leverage}` : ''].filter(Boolean).join(', ')})` : ''}. A currency that differs from the group&apos;s currency is rejected; enter the group&apos;s 3-letter currency.</p>
             <Row label="First name:" htmlFor="create-first" error={errors.firstName}>
               <input id="create-first" value={form.firstName} onChange={setField('firstName')} className={inputClassName} autoFocus />
             </Row>

@@ -13,7 +13,10 @@ import {
   normalizeAccountConfig,
   readConfigError,
   readCreatedLogin,
+  readGroupCurrency,
+  readGroupLeverage,
   readRevision,
+  resolveAccountCreateDefaults,
   withExpectedRevision,
 } from './legacyConfig.js';
 
@@ -94,6 +97,68 @@ test('customer account creation payload uses AccountCreate names and never funds
   assert.ok(buildAccountCreatePayload({ ...form, investorPassword: form.masterPassword }).errors.investorPassword);
 });
 
+test('account creation defaults are neutral: no hardcoded USD / 100', () => {
+  assert.deepEqual(emptyAccountCreateForm(), {
+    group: '', firstName: '', lastName: '', email: '', phone: '',
+    currency: '', leverage: '', accountMode: 'hedging', masterPassword: '', investorPassword: '',
+  });
+  assert.equal(emptyAccountCreateForm('real\\std').currency, '');
+  assert.equal(emptyAccountCreateForm('real\\std').leverage, '');
+  // Explicit operator values still flow through; currency normalises to upper case.
+  assert.equal(emptyAccountCreateForm('real\\std', 200).leverage, '200');
+  assert.equal(emptyAccountCreateForm('real\\std', 200).currency, '');
+  assert.deepEqual(
+    emptyAccountCreateForm('real\\std', { currency: 'eur', leverage: 500 }),
+    { ...emptyAccountCreateForm('real\\std'), currency: 'EUR', leverage: '500', group: 'real\\std' },
+  );
+});
+
+test('account creation inherits the chosen group currency/leverage (USD and non-USD fixtures)', () => {
+  // GroupGet-shaped USD fixture.
+  assert.deepEqual(resolveAccountCreateDefaults({ currency: 'USD', leverage: 100 }), { currency: 'USD', leverage: '100' });
+  // GroupList-shaped non-USD fixture (alternate keys, lower case, string leverage).
+  assert.deepEqual(resolveAccountCreateDefaults({ Currency: 'eur', Leverage: '500' }), { currency: 'EUR', leverage: '500' });
+  assert.deepEqual(resolveAccountCreateDefaults({ deposit_currency: 'jpy', leverage: '25' }), { currency: 'JPY', leverage: '25' });
+  assert.equal(readGroupCurrency({ currency: 'usd' }), 'USD');
+  assert.equal(readGroupCurrency({ Currency: 'GBP' }), 'GBP');
+  assert.equal(readGroupLeverage({ leverage: 1000 }), '1000');
+  // Unknown or invalid group metadata stays neutral so validation forces input.
+  assert.deepEqual(resolveAccountCreateDefaults({}), { currency: '', leverage: '' });
+  assert.deepEqual(resolveAccountCreateDefaults(null), { currency: '', leverage: '' });
+  assert.equal(readGroupCurrency({ currency: 'US' }), '');
+  assert.equal(readGroupCurrency({ currency: '' }), '');
+  assert.equal(readGroupLeverage({ leverage: '0' }), '');
+  assert.equal(readGroupLeverage({}), '');
+});
+
+test('account creation requires a valid currency and rejects group mismatches', () => {
+  const base = { ...emptyAccountCreateForm('real\\std', { currency: 'EUR', leverage: 500 }), firstName: 'Ann', masterPassword: 'Secret-123' };
+  // Matching the live group passes and always sends Currency.
+  const ok = buildAccountCreatePayload(base, { currency: 'EUR' });
+  assert.deepEqual(ok.errors, {});
+  assert.equal(ok.payload.Currency, 'EUR');
+  // Blank currency is rejected: the operator must enter the group's code.
+  const blank = buildAccountCreatePayload({ ...base, currency: '' }, { currency: 'EUR' });
+  assert.equal(blank.payload, null);
+  assert.match(blank.errors.currency, /required/);
+  const blankNoContext = buildAccountCreatePayload({ ...base, currency: '  ' });
+  assert.equal(blankNoContext.payload, null);
+  assert.match(blankNoContext.errors.currency, /required/);
+  // Malformed codes are rejected.
+  for (const currency of ['US', 'USDD', '12', 'U$D']) {
+    const bad = buildAccountCreatePayload({ ...base, currency }, { currency: 'EUR' });
+    assert.equal(bad.payload, null, currency);
+    assert.match(bad.errors.currency, /3-letter/, currency);
+  }
+  // A value that differs from the live group is rejected with the expected code.
+  const mismatch = buildAccountCreatePayload({ ...base, currency: 'USD' }, { currency: 'EUR' });
+  assert.equal(mismatch.payload, null);
+  assert.match(mismatch.errors.currency, /EUR/);
+  // Without live group metadata any well-formed code is accepted.
+  const noContext = buildAccountCreatePayload({ ...base, currency: 'usd' });
+  assert.deepEqual(noContext.errors, {});
+  assert.equal(noContext.payload.Currency, 'USD');
+});
 test('only a reply naming a positive login confirms account creation', () => {
   assert.equal(readCreatedLogin({ Login: 70001 }), '70001');
   assert.equal(readCreatedLogin({ login: ' 9007199254740993 ' }), '9007199254740993');

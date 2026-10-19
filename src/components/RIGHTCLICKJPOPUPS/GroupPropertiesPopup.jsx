@@ -12,6 +12,7 @@ import {
   buildGroupLeverageChange,
   describeConfigError,
   readConfigError,
+  readGroupCurrency,
   readRevision,
   withExpectedRevision,
 } from '../../utils/legacyConfig';
@@ -342,7 +343,8 @@ const GroupPropertiesPopup = ({
   // G8: group revision (expected_revision for GroupUpdate) and leverage come
   // from GroupGet; '' revision (older backend) keeps the legacy write.
   const [groupRevision, setGroupRevision] = useState(() => readRevision(group));
-  const [initialLeverage, setInitialLeverage] = useState(() => String(group?.leverage ?? ''));
+  const [initialLeverage, setInitialLeverage] = useState(() => String(group?.leverage ?? group?.Leverage ?? ''));
+  const [initialCurrency, setInitialCurrency] = useState(() => readGroupCurrency(group));
   const [leverage, setLeverage] = useState(initialLeverage);
   const [showCreateAccount, setShowCreateAccount] = useState(false);
   const leverageTouchedRef = useRef(false);
@@ -356,7 +358,9 @@ const GroupPropertiesPopup = ({
     ManagerService.getGroup(currentGroupName).then((fresh) => {
       if (!active || !fresh) return;
       setGroupRevision(readRevision(fresh));
-      if (fresh.leverage !== undefined && fresh.leverage !== null) {
+      const liveCurrency = readGroupCurrency(fresh);
+      if (liveCurrency) setInitialCurrency(liveCurrency);
+      if (fresh.leverage !== undefined && fresh.leverage !== null && String(fresh.leverage).trim() !== '') {
         const value = String(fresh.leverage);
         setInitialLeverage(value);
         if (!leverageTouchedRef.current) setLeverage(value);
@@ -1325,6 +1329,8 @@ const GroupPropertiesPopup = ({
         <AccountCreatePopup
           group={currentGroupName}
           defaultLeverage={initialLeverage}
+          defaultCurrency={initialCurrency}
+          groupRecord={group}
           onClose={() => setShowCreateAccount(false)}
           onCreated={() => { persistedRef.current = true; }}
         />

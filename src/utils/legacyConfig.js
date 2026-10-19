@@ -174,26 +174,80 @@ export const buildGroupLeverageChange = (initial, value) => {
   };
 };
 
-export const emptyAccountCreateForm = (group = '', leverage = '100') => ({
-  group,
-  firstName: '',
-  lastName: '',
-  email: '',
-  phone: '',
-  currency: 'USD',
-  leverage: String(leverage || '100'),
-  accountMode: 'hedging',
-  masterPassword: '',
-  investorPassword: '',
+const GROUP_CURRENCY_KEYS = ['currency', 'Currency', 'depositCurrency', 'deposit_currency'];
+const GROUP_LEVERAGE_KEYS = ['leverage', 'Leverage', 'defaultLeverage', 'default_leverage'];
+const CURRENCY_RE = /^[A-Z]{3}$/;
+
+/**
+ * Live group currency from a GroupGet / GroupList record, uppercased.
+ * Returns '' when the group does not name a valid 3-letter currency, so the
+ * caller forces explicit operator input instead of inventing one. No
+ * tenant/group-specific fallback belongs here: every present and future group
+ * supplies its own currency.
+ */
+export const readGroupCurrency = (group) => {
+  const raw = pick(group, GROUP_CURRENCY_KEYS, '');
+  const currency = String(raw ?? '').trim().toUpperCase();
+  return CURRENCY_RE.test(currency) ? currency : '';
+};
+
+/**
+ * Live group leverage from a GroupGet / GroupList record, as the form string.
+ * Returns '' when the group does not name a valid leverage, so the account
+ * form stays blank and validation requires an explicit value.
+ */
+export const readGroupLeverage = (group) => {
+  const raw = pick(group, GROUP_LEVERAGE_KEYS, '');
+  const text = String(raw ?? '').trim();
+  if (!text) return '';
+  const parsed = parseLeverage(text);
+  return parsed.error ? '' : String(parsed.value);
+};
+
+/**
+ * Account-creation defaults inherited from the chosen group's live record:
+ * { currency, leverage }, each '' when the group does not supply a valid
+ * value. No hardcoded USD / 100 fallback.
+ */
+export const resolveAccountCreateDefaults = (group) => ({
+  currency: readGroupCurrency(group),
+  leverage: readGroupLeverage(group),
 });
+
+export const emptyAccountCreateForm = (group = '', leverageOrDefaults = '', currency = '') => {
+  let leverage = leverageOrDefaults;
+  let inheritedCurrency = currency;
+  if (leverageOrDefaults && typeof leverageOrDefaults === 'object') {
+    leverage = leverageOrDefaults.leverage ?? leverageOrDefaults.Leverage
+      ?? leverageOrDefaults.defaultLeverage ?? leverageOrDefaults.default_leverage ?? '';
+    inheritedCurrency = leverageOrDefaults.currency ?? leverageOrDefaults.Currency
+      ?? leverageOrDefaults.defaultCurrency ?? leverageOrDefaults.groupCurrency ?? '';
+  }
+  return {
+    group,
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    currency: String(inheritedCurrency ?? '').trim().toUpperCase(),
+    leverage: String(leverage ?? '').trim(),
+    accountMode: 'hedging',
+    masterPassword: '',
+    investorPassword: '',
+  };
+};
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * POST /api/v1/manager/accounts body (AccountCreate parameter names). No
  * balance or credit: funding goes through the ledger request workflow.
+ * Currency is always required: it defaults to the chosen group's live
+ * currency in the UI, and a blank or mismatched value is rejected here so no
+ * hardcoded fallback can silently fund the wrong currency. Pass the live
+ * group record (or { currency }) as `groupContext` to enforce the match.
  */
-export const buildAccountCreatePayload = (form) => {
+export const buildAccountCreatePayload = (form, groupContext = null) => {
   const errors = {};
   const group = String(form?.group ?? '').trim();
   if (!group) errors.group = 'Group is required.';
@@ -212,20 +266,25 @@ export const buildAccountCreatePayload = (form) => {
   if (investor && investor.length < 8) errors.investorPassword = 'Investor password must have at least 8 characters.';
   if (investor && investor === master) errors.investorPassword = 'Investor password must differ from the master password.';
   const currency = String(form?.currency ?? '').trim().toUpperCase();
-  if (currency && !/^[A-Z]{3}$/.test(currency)) errors.currency = 'Currency must be a 3-letter code.';
+  if (!currency) errors.currency = 'Currency is required. Enter the group\'s 3-letter currency.';
+  else if (!CURRENCY_RE.test(currency)) errors.currency = 'Currency must be a 3-letter code.';
+  else {
+    const expected = readGroupCurrency(groupContext);
+    if (expected && currency !== expected) errors.currency = `Currency must match the group's currency (${expected}).`;
+  }
   if (Object.keys(errors).length) return { payload: null, errors };
   const payload = {
     Group: group,
     Leverage: leverage.value,
     AccountMode: mode,
     master_pass: master,
+    Currency: currency,
   };
   if (firstName) payload.FirstName = firstName;
   if (lastName) payload.LastName = lastName;
   if (email) payload.Email = email;
   const phone = String(form?.phone ?? '').trim();
   if (phone) payload.Phone = phone;
-  if (currency) payload.Currency = currency;
   if (investor) payload.investor_pass = investor;
   return { payload, errors };
 };

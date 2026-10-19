@@ -58,8 +58,14 @@ test('group properties: revisions, leverage, lock/conflict text and account crea
   assert.match(reload, /review the current values and your edits, then press OK again/);
   assert.doesNotMatch(reload, /updateGroup|handleOk\(/, 'the reload never re-submits');
   assert.match(groupProps, /<AccountCreatePopup\s+group=\{currentGroupName\}/);
+  assert.match(groupProps, /defaultCurrency=\{initialCurrency\}/);
   assert.match(create, /AdminConfigApi\.createCustomerAccount\(payload\)/);
-  assert.match(create, /buildAccountCreatePayload\(form\)/);
+  assert.match(create, /buildAccountCreatePayload\(form,/);
+  // Account creation inherits the live group: no hardcoded currency/leverage.
+  assert.match(create, /readGroupCurrency/);
+  assert.match(create, /readGroupLeverage/);
+  assert.doesNotMatch(create, /'USD'|"USD"|`USD`/);
+  assert.doesNotMatch(create, /demo\\forex|forex-hedge/i);
   // No "created" state or success toast unless the reply names the new login.
   assert.match(create, /const login = readCreatedLogin\(result\);\s*if \(!login\) \{/);
   assert.match(create, /<FundingPopup login=\{created\.login\}/);
