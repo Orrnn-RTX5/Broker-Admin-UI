@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { setImmediate } from 'node:timers';
-import { startSessionStateFeed } from './sessionStateFeed.js';
+import { nextSessionStateRetryMs, startSessionStateFeed } from './sessionStateFeed.js';
 
 const settle = () => new Promise(resolve => setImmediate(resolve));
 test('state changes coalesce, reconnect reloads, and obsolete sockets cannot affect new session', async (t) => {
@@ -190,4 +190,12 @@ test('ticket latency does not consume the socket handshake timeout', async (t) =
   t.mock.timers.tick(50);
   assert.equal(changes, 1);
   stop();
+});
+
+test('retry delay honors jitter bounds and the hard cap', () => {
+  assert.equal(nextSessionStateRetryMs({ attempt: 0, baseMs: 1000, maxMs: 30000, random: () => 0.5 }), 1000);
+  assert.equal(nextSessionStateRetryMs({ attempt: 0, baseMs: 1000, maxMs: 30000, random: () => 0 }), 750);
+  assert.equal(nextSessionStateRetryMs({ attempt: 0, baseMs: 1000, maxMs: 30000, random: () => 1 }), 1250);
+  assert.equal(nextSessionStateRetryMs({ attempt: 20, baseMs: 1000, maxMs: 30000, random: () => 0.5 }), 30000);
+  assert.equal(nextSessionStateRetryMs({ attempt: 20, baseMs: 1000, maxMs: 30000, random: () => 1 }), 30000);
 });

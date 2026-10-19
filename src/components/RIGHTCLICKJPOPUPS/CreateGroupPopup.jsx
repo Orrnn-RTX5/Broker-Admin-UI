@@ -103,7 +103,7 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
   const allowedSymbols = parseCsvList(formData.symbolsAllowed);
   const disabledSymbols = groupDisabledSymbols(symbolSource.symbols);
   const selectableSymbolSource = { ...symbolSource, symbols: groupSelectableSymbols(symbolSource.symbols) };
-  const symbolCategories = new Map(buildGroupSymbolCategories(selectableSymbolSource.symbols).flatMap(category => category.symbols.map(entry => [entry.symbol.toUpperCase(), category.label])));
+  const symbolCategories = new Map(buildGroupSymbolCategories(symbolSource.symbols).flatMap(category => category.symbols.map(entry => [entry.symbol.toUpperCase(), category.label])));
   const accountTypeLabel = { standard: 'Standard', cent: 'Cent', micro: 'Micro', pro: 'Pro' }[formData.accountType] || formData.accountType || '—';
 
   const focusSection = (section, field) => window.requestAnimationFrame(() => {
