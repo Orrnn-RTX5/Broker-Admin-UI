@@ -142,7 +142,12 @@ export const ManagerService = {
 
   // One group with its G8 `revision` (the expected_revision for GroupUpdate).
   getGroup: async (groupName) => {
-    const res = await api.get('/manager/GroupGet', { params: { group: groupName } });
+    const res = await api.get('/manager/GroupGet', {
+      params: { group: groupName },
+      // 404 is the expected "no such parent group" result for the availability
+      // lookup; suppress the API response-error console entry.
+      _expectedStatuses: [404],
+    });
     return res.data;
   },
 

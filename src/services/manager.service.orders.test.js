@@ -22,3 +22,9 @@ test('GroupUpdate strips UI-only originalName and uses it as the update target',
   assert.match(methodBlock, /api\.post\('\/manager\/GroupUpdate', payload,/);
   assert.match(methodBlock, /params:\s*\{ group_name: originalName \|\| payload\.name \}/);
 });
+
+test('GroupGet marks 404 as an expected availability result', () => {
+  const methodBlock = src.match(/getGroup:\s*async[\s\S]*?return res\.data;\s*\n\s*},/)?.[0] ?? '';
+  assert.match(methodBlock, /api\.get\('\/manager\/GroupGet'/);
+  assert.match(methodBlock, /_expectedStatuses:\s*\[404\]/);
+});
