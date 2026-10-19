@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   Activity,
   ArrowRight,
+  BookOpenCheck,
   Clock3,
   Database,
   HardDrive,
@@ -23,6 +24,7 @@ import { useWorkspaceStartupReady } from '../../hooks/useWorkspaceStartup';
 const ServerSettingsTab = React.lazy(() => import('./ServerConfigTables').then(module => ({ default: module.ServerSettingsTab })));
 const SwapRatesTab = React.lazy(() => import('./ServerConfigTables').then(module => ({ default: module.SwapRatesTab })));
 const DemoAccountsTab = React.lazy(() => import('./ServerConfigDemoAccounts'));
+const CloseCounterpartsTab = React.lazy(() => import('./ServerConfigCloseCounterparts'));
 const metricNumberFormats = [0, 1, 2, 3].map(maximumFractionDigits => new Intl.NumberFormat('en-US', { maximumFractionDigits }));
 
 const TABS = [
@@ -30,6 +32,7 @@ const TABS = [
   { id: 'settings', label: 'Server Settings', icon: Settings2 },
   { id: 'swaps', label: 'Swap Rates', icon: Database },
   { id: 'halt', label: 'Trading Halt', icon: ShieldOff },
+  { id: 'counterparts', label: 'Close Counterparts', icon: BookOpenCheck },
   { id: 'demo', label: 'Demo Accounts', icon: Users },
 ];
 
@@ -321,6 +324,7 @@ const ServerConfigWorkspace = ({ refreshTrigger = 0 }) => {
         {tab === 'settings' && <ServerSettingsTab />}
         {tab === 'swaps' && <SwapRatesTab />}
         {tab === 'halt' && <TradingHaltTab />}
+        {tab === 'counterparts' && <CloseCounterpartsTab />}
         {tab === 'demo' && <DemoAccountsTab />}
         </React.Suspense>
       </div>
