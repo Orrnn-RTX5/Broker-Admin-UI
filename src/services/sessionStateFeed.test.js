@@ -82,6 +82,55 @@ test('reconnect delay grows exponentially with jitter, caps, and requests no tic
   stop();
 });
 
+test('an upgrade/drop loop keeps backing off; stable uptime resets it', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let tickets = 0;
+  const sockets = [];
+  const stop = startSessionStateFeed({
+    requestTicket: async () => ({ ticket: String(++tickets) }),
+    buildUrl: ticket => `ws://example/state?ticket=${ticket}`,
+    createSocket: url => {
+      const socket = { url, readyState: 0, close() {} };
+      sockets.push(socket);
+      return socket;
+    },
+    onChange() {},
+    retryMs: 1000,
+    maxRetryMs: 30000,
+    stableMs: 100,
+    random: () => 0.5,
+  });
+  await settle();
+  sockets[0].onopen();
+  sockets[0].onclose();
+  t.mock.timers.tick(999);
+  await settle();
+  assert.equal(tickets, 1, 'no ticket during the first backoff');
+  t.mock.timers.tick(1);
+  await settle();
+  assert.equal(tickets, 2);
+
+  sockets[1].onopen();
+  sockets[1].onclose();
+  t.mock.timers.tick(1999);
+  await settle();
+  assert.equal(tickets, 2, 'an immediate upgrade/drop must not reset the delay');
+  t.mock.timers.tick(1);
+  await settle();
+  assert.equal(tickets, 3);
+
+  sockets[2].onopen();
+  t.mock.timers.tick(100);
+  sockets[2].onclose();
+  t.mock.timers.tick(999);
+  await settle();
+  assert.equal(tickets, 3, 'stable connection resets to the base delay');
+  t.mock.timers.tick(1);
+  await settle();
+  assert.equal(tickets, 4);
+  stop();
+});
+
 test('late ticket from a timed-out request never creates a second socket', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   let resolveOld;

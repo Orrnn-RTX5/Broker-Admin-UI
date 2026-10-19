@@ -16,8 +16,9 @@ export function nextSessionStateRetryMs({
 
 export function startSessionStateFeed({ requestTicket, buildUrl, onChange,
   createSocket = (url) => new WebSocket(url), retryMs = 1000,
-  maxRetryMs = SESSION_STATE_MAX_RETRY_MS, random = Math.random }) {
-  let stopped = false, socket = null, retry, deadline, refresh, generation = 0, retryAttempt = 0;
+  maxRetryMs = SESSION_STATE_MAX_RETRY_MS, random = Math.random,
+  stableMs = 10000 }) {
+  let stopped = false, socket = null, retry, deadline, refresh, stableTimer, generation = 0, retryAttempt = 0;
   const retireSocket = current => {
     if (!current) return;
     current.onmessage = null;
@@ -40,6 +41,8 @@ export function startSessionStateFeed({ requestTicket, buildUrl, onChange,
     if (stopped || attempt !== generation) return;
     generation += 1;
     clearTimeout(deadline);
+    clearTimeout(stableTimer);
+    stableTimer = undefined;
     const obsolete = socket;
     socket = null;
     retireSocket(obsolete);
@@ -64,15 +67,23 @@ export function startSessionStateFeed({ requestTicket, buildUrl, onChange,
       socket = current;
       // Ticket acquisition and the socket handshake each get their own bound.
       deadline = setTimeout(() => reconnect(attempt), 10000);
-      current.onopen = () => { if (!stopped && attempt === generation && socket === current) { clearTimeout(deadline); invalidate(); } };
+      current.onopen = () => {
+        if (stopped || attempt !== generation || socket !== current) return;
+        clearTimeout(deadline);
+        // Reset the backoff only after a connection proves stable. A server
+        // that upgrades then immediately drops (or sends one seed frame) must
+        // not reset the loop to the base delay.
+        clearTimeout(stableTimer);
+        stableTimer = setTimeout(() => {
+          if (!stopped && attempt === generation && socket === current) retryAttempt = 0;
+        }, Math.max(0, Number(stableMs) || 0));
+        invalidate();
+      };
       current.onmessage = ({ data: raw }) => {
         if (stopped || socket !== current) return;
         try {
           const event = JSON.parse(raw);
           if (event.type === 'state_changed' || event.type === 'access_changed' || event.action || event.data?.action) {
-            // A server that connects and delivers a valid frame is healthy;
-            // later disconnects start again at the base retry delay.
-            retryAttempt = 0;
             invalidate();
           }
         } catch { /* malformed/control frames cannot change local state */ }
@@ -85,7 +96,7 @@ export function startSessionStateFeed({ requestTicket, buildUrl, onChange,
   return () => {
     stopped = true;
     generation += 1;
-    clearTimeout(retry); clearTimeout(deadline); clearTimeout(refresh);
+    clearTimeout(retry); clearTimeout(deadline); clearTimeout(refresh); clearTimeout(stableTimer);
     const obsolete = socket;
     socket = null;
     retireSocket(obsolete);
