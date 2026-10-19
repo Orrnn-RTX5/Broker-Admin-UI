@@ -1,8 +1,23 @@
 // One session-scoped stream invalidates authorized REST projections. The
 // payload is a change hint, never a replacement for an account snapshot.
+export const SESSION_STATE_MAX_RETRY_MS = 30000;
+
+export function nextSessionStateRetryMs({
+  attempt = 0, baseMs = 1000, maxMs = SESSION_STATE_MAX_RETRY_MS,
+  jitterRatio = 0.25, random = Math.random,
+} = {}) {
+  const exponent = Math.min(Math.max(0, Number(attempt) || 0), 10);
+  const cappedBase = Math.min(Math.max(0, Number(baseMs) || 0), Math.max(0, Number(maxMs) || 0));
+  const exponential = Math.min(Math.max(0, Number(maxMs) || 0), cappedBase * (2 ** exponent));
+  const jitter = Math.round(exponential * Math.max(0, jitterRatio));
+  const varied = exponential - jitter + Math.round((Number(random()) || 0) * jitter * 2);
+  return Math.min(Math.max(0, Number(maxMs) || 0), Math.max(0, varied));
+}
+
 export function startSessionStateFeed({ requestTicket, buildUrl, onChange,
-  createSocket = (url) => new WebSocket(url), retryMs = 1000 }) {
-  let stopped = false, socket = null, retry, deadline, refresh, generation = 0;
+  createSocket = (url) => new WebSocket(url), retryMs = 1000,
+  maxRetryMs = SESSION_STATE_MAX_RETRY_MS, random = Math.random }) {
+  let stopped = false, socket = null, retry, deadline, refresh, generation = 0, retryAttempt = 0;
   const retireSocket = current => {
     if (!current) return;
     current.onmessage = null;
@@ -28,7 +43,11 @@ export function startSessionStateFeed({ requestTicket, buildUrl, onChange,
     const obsolete = socket;
     socket = null;
     retireSocket(obsolete);
-    if (!stopped && !retry) retry = setTimeout(() => { retry = undefined; void connect(); }, retryMs);
+    if (!stopped && !retry) {
+      const delayMs = nextSessionStateRetryMs({ attempt: retryAttempt, baseMs: retryMs, maxMs: maxRetryMs, random });
+      retryAttempt += 1;
+      retry = setTimeout(() => { retry = undefined; void connect(); }, delayMs);
+    }
   };
   const connect = async () => {
     if (stopped) return;
@@ -50,7 +69,12 @@ export function startSessionStateFeed({ requestTicket, buildUrl, onChange,
         if (stopped || socket !== current) return;
         try {
           const event = JSON.parse(raw);
-          if (event.type === 'state_changed' || event.type === 'access_changed' || event.action || event.data?.action) invalidate();
+          if (event.type === 'state_changed' || event.type === 'access_changed' || event.action || event.data?.action) {
+            // A server that connects and delivers a valid frame is healthy;
+            // later disconnects start again at the base retry delay.
+            retryAttempt = 0;
+            invalidate();
+          }
         } catch { /* malformed/control frames cannot change local state */ }
       };
       current.onerror = () => reconnect(attempt);

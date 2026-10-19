@@ -15,7 +15,7 @@ test('state changes coalesce, reconnect reloads, and obsolete sockets cannot aff
       const socket = { url, close() { this.onclose?.(); } };
       sockets.push(socket); return socket;
     },
-    onChange: () => changes++, retryMs: 10,
+    onChange: () => changes++, retryMs: 10, random: () => 0.5,
   });
   await settle();
   sockets[0].onopen();
@@ -38,6 +38,50 @@ test('state changes coalesce, reconnect reloads, and obsolete sockets cannot aff
   assert.equal(changes, 2);
 });
 
+test('reconnect delay grows exponentially with jitter, caps, and requests no tickets while waiting', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let tickets = 0;
+  const sockets = [];
+  const stop = startSessionStateFeed({
+    requestTicket: async () => ({ ticket: String(++tickets) }),
+    buildUrl: ticket => `ws://example/state?ticket=${ticket}`,
+    createSocket: url => {
+      const socket = { url, close() {} };
+      sockets.push(socket);
+      return socket;
+    },
+    onChange() {},
+    retryMs: 1000,
+    maxRetryMs: 3000,
+    random: () => 0.5,
+  });
+  await settle();
+  assert.equal(tickets, 1);
+
+  sockets[0].onclose();
+  t.mock.timers.tick(999);
+  await settle();
+  assert.equal(tickets, 1, 'no ticket request while the 1s backoff is pending');
+  t.mock.timers.tick(1);
+  await settle();
+  assert.equal(tickets, 2);
+  assert.equal(sockets[1].url, 'ws://example/state?ticket=2');
+
+  sockets[1].onclose();
+  t.mock.timers.tick(1999);
+  await settle();
+  assert.equal(tickets, 2, 'second retry waits 2s');
+  t.mock.timers.tick(1);
+  await settle();
+  assert.equal(tickets, 3);
+
+  sockets[2].onclose();
+  t.mock.timers.tick(3000);
+  await settle();
+  assert.equal(tickets, 4, 'third delay is capped at maxRetryMs');
+  stop();
+});
+
 test('late ticket from a timed-out request never creates a second socket', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   let resolveOld;
@@ -47,7 +91,7 @@ test('late ticket from a timed-out request never creates a second socket', async
     requestTicket: () => ++requests === 1 ? new Promise(resolve => { resolveOld = resolve; }) : Promise.resolve({ ticket: 'new' }),
     buildUrl: ticket => ticket,
     createSocket: url => { const socket = { url, close() {} }; sockets.push(socket); return socket; },
-    onChange() {}, retryMs: 10,
+    onChange() {}, retryMs: 10, random: () => 0.5,
   });
   t.mock.timers.tick(10000);
   t.mock.timers.tick(10);
