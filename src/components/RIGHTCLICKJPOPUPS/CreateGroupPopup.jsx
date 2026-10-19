@@ -11,6 +11,7 @@ import GroupSymbolPicker from './GroupSymbolPicker';
 import GroupSymbolCategories from './GroupSymbolCategories';
 import { useLpSymbols } from '../../hooks/useLpSymbols';
 import { buildGroupSymbolCategories } from '../../utils/groupSymbolCategories';
+import { GROUP_PARENT_LOOKUP_DEBOUNCE_MS, isGroupLookupNotFound } from '../../utils/groupParentLookup';
 
 const GroupField = ({ label, children, hint, className = '' }) => {
   const labelId = useId();
@@ -86,9 +87,12 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
   const changedFields = useRef(new Set());
   useEffect(() => {
     if (initialData || !parentGroup.trim()) return;
-    let disposed = false; setParentLoading(true);
-    ManagerService.getGroup(parentGroup.trim()).then(fresh => { if (!disposed) setFormData(current => ({ ...current, ...Object.fromEntries(Object.entries(fresh).filter(([key]) => key !== 'name' && key !== 'parentGroup' && key !== 'overriddenFields' && !changedFields.current.has(key))), ...(changedFields.current.has('symbolsAllowed') ? {} : { symbolsAllowed: Array.isArray(fresh.symbolsAllowed) ? fresh.symbolsAllowed.join(', ') : fresh.symbolsAllowed || '' }), ...(changedFields.current.has('symbolsBlocked') ? {} : { symbolsBlocked: Array.isArray(fresh.symbolsBlocked) ? fresh.symbolsBlocked.join(', ') : fresh.symbolsBlocked || '' }) })); }).catch(e => { if (!disposed) setError(e.message); }).finally(() => { if (!disposed) setParentLoading(false); });
-    return () => { disposed = true; };
+    let disposed = false;
+    const timer = setTimeout(() => {
+      setParentLoading(true);
+      ManagerService.getGroup(parentGroup.trim()).then(fresh => { if (!disposed) setFormData(current => ({ ...current, ...Object.fromEntries(Object.entries(fresh).filter(([key]) => key !== 'name' && key !== 'parentGroup' && key !== 'overriddenFields' && !changedFields.current.has(key))), ...(changedFields.current.has('symbolsAllowed') ? {} : { symbolsAllowed: Array.isArray(fresh.symbolsAllowed) ? fresh.symbolsAllowed.join(', ') : fresh.symbolsAllowed || '' }), ...(changedFields.current.has('symbolsBlocked') ? {} : { symbolsBlocked: Array.isArray(fresh.symbolsBlocked) ? fresh.symbolsBlocked.join(', ') : fresh.symbolsBlocked || '' }) })); }).catch(e => { if (!disposed && !isGroupLookupNotFound(e)) setError(e.message); }).finally(() => { if (!disposed) setParentLoading(false); });
+    }, GROUP_PARENT_LOOKUP_DEBOUNCE_MS);
+    return () => { disposed = true; clearTimeout(timer); };
   }, [parentGroup, initialData]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
