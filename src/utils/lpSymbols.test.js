@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { invalidateLpSymbols, loadLpSymbols, mergeLpSymbols } from './lpSymbols.js';
+import { groupSelectableSymbols, invalidateLpSymbols, loadLpSymbols, mergeLpSymbols } from './lpSymbols.js';
 
 test('mergeLpSymbols unions the LP catalogue with configured instruments', () => {
   const merged = mergeLpSymbols(
@@ -59,4 +59,16 @@ test('loadLpSymbols rejects only when both sources fail', async () => {
   };
   await assert.rejects(loadLpSymbols(services, { now: 5000 }), /catalogue down/);
   invalidateLpSymbols();
+});
+
+test('group picker omits configured instruments that are disabled', () => {
+  const rows = mergeLpSymbols(
+    [{ symbol: 'EURUSD' }, { symbol: 'EURUSD.PRO' }, { symbol: 'XAUUSD' }],
+    [
+      { symbol: 'EURUSD', enabled: true },
+      { symbol: 'EURUSD.PRO', enabled: false },
+      { symbol: 'XAUUSD', enabled: true },
+    ],
+  );
+  assert.deepEqual(groupSelectableSymbols(rows).map(entry => entry.symbol), ['EURUSD', 'XAUUSD']);
 });

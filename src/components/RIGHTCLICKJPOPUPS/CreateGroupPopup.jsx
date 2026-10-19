@@ -12,6 +12,7 @@ import GroupSymbolCategories from './GroupSymbolCategories';
 import { useLpSymbols } from '../../hooks/useLpSymbols';
 import { buildGroupSymbolCategories } from '../../utils/groupSymbolCategories';
 import { GROUP_PARENT_LOOKUP_DEBOUNCE_MS, isGroupLookupNotFound } from '../../utils/groupParentLookup';
+import { groupSelectableSymbols } from '../../utils/lpSymbols';
 
 const GroupField = ({ label, children, hint, className = '' }) => {
   const labelId = useId();
@@ -100,7 +101,8 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
   const activeStep = FORM_SECTIONS.findIndex(([key]) => key === activeSection);
   const isLastStep = activeStep === FORM_SECTIONS.length - 1;
   const allowedSymbols = parseCsvList(formData.symbolsAllowed);
-  const symbolCategories = new Map(buildGroupSymbolCategories(symbolSource.symbols).flatMap(category => category.symbols.map(entry => [entry.symbol.toUpperCase(), category.label])));
+  const selectableSymbolSource = { ...symbolSource, symbols: groupSelectableSymbols(symbolSource.symbols) };
+  const symbolCategories = new Map(buildGroupSymbolCategories(selectableSymbolSource.symbols).flatMap(category => category.symbols.map(entry => [entry.symbol.toUpperCase(), category.label])));
   const accountTypeLabel = { standard: 'Standard', cent: 'Cent', micro: 'Micro', pro: 'Pro' }[formData.accountType] || formData.accountType || '—';
 
   const focusSection = (section, field) => window.requestAnimationFrame(() => {
@@ -248,8 +250,8 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
               <section className="group-create-section group-create-symbols" data-section="symbols" data-active={activeSection === 'symbols'} aria-labelledby="group-symbols-title">
                 <header><h2 id="group-symbols-title">Allowed instruments</h2><p>Choose the symbols available to accounts in this group.</p></header>
                 <div className="group-create-symbol-fields">
-                <GroupSymbolCategories value={formData.symbolsAllowed} symbolSource={symbolSource} disabled={isLoading} onChange={symbolsAllowed => { changedFields.current.add('symbolsAllowed'); setFormData(prev => ({ ...prev, symbolsAllowed })); }} />
-                <GroupSymbolPicker value={formData.symbolsAllowed} symbolSource={symbolSource} disabled={isLoading} onChange={symbolsAllowed => { changedFields.current.add('symbolsAllowed'); setFormData(prev => ({ ...prev, symbolsAllowed })); }} />
+                <GroupSymbolCategories value={formData.symbolsAllowed} symbolSource={selectableSymbolSource} disabled={isLoading} onChange={symbolsAllowed => { changedFields.current.add('symbolsAllowed'); setFormData(prev => ({ ...prev, symbolsAllowed })); }} />
+                <GroupSymbolPicker value={formData.symbolsAllowed} symbolSource={selectableSymbolSource} disabled={isLoading} onChange={symbolsAllowed => { changedFields.current.add('symbolsAllowed'); setFormData(prev => ({ ...prev, symbolsAllowed })); }} />
                 </div>
                 <div className="group-create-instrument-preview"><span aria-live="polite">Added symbols ({allowedSymbols.length})</span>{allowedSymbols.length > 0 ? <div className="group-create-selected-symbols"><table aria-label="Added symbols"><thead><tr><th scope="col">Symbol or pattern</th><th scope="col">Category</th><th scope="col">Action</th></tr></thead><tbody>{allowedSymbols.map((symbol, index) => <tr key={`${symbol}-${index}`}><td>{symbol}</td><td className="group-create-selected-category">{symbolCategories.get(symbol.toUpperCase()) || 'Manual entry'}</td><td><button type="button" disabled={isLoading} aria-label={`Remove ${symbol}`} onClick={() => removeSymbol(index)}>Remove</button></td></tr>)}</tbody></table></div> : <p>Select a category above or add symbols individually.</p>}</div>
               </section>
