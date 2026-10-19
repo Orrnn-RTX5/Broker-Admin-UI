@@ -27,6 +27,7 @@ test('MenuBar About opens the in-app About dialog instead of a browser alert', (
   const src = readFileSync(join(here, 'MenuBar.jsx'), 'utf8');
 
   assert.match(src, /onHelp,\s*onAbout/);
-  assert.match(src, /label="About RTX 5"\s+onClick=\{onAbout\}/);
-  assert.doesNotMatch(src, /About RTX 5[\s\S]{0,120}alert\(/);
+  assert.match(src, /getBrokerBranding/);
+  assert.match(src, /label=\{`About \$\{productName\}`\}\s+onClick=\{onAbout\}/);
+  assert.doesNotMatch(src, /About RTX 5/);
 });

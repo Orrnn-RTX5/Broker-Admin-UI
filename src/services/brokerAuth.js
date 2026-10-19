@@ -1,6 +1,6 @@
 import { buildManagerApiUrl, updateDynamicEndpoints } from '../config/endpoints.js';
 import { getRuntimeValue } from '../config/runtimeConfig.js';
-import { isDesktopBackendTarget, isTestBrokerInfo, resolveBrokerBackendUrl, resolveBrokerExtApiUrl } from '../config/backendTarget.js';
+import { isDesktopBackendTarget, resolveBrokerBackendUrl, resolveBrokerExtApiUrl } from '../config/backendTarget.js';
 import { redactForLog, redactUrlForLog } from '../lib/logRedaction.js';
 import { normalizeTokenExpiresAt } from '../store/authStore.js';
 import {
@@ -22,13 +22,6 @@ const DEFAULT_DISCOVERY_BASE_URL = String(
   'https://superbackend.orrnn.com'
 ).replace(/\/+$/, '');
 export const BROKER_DISCOVERY_PATH = '/api/v2/broker/servers';
-const GTA_LOGIN_SERVER_HANDLE = 'broker-server-2';
-const GTA_BROKER_ALIASES = new Set(['gta_broker', 'grow-trading-academy']);
-const GTA_LOGIN_SERVER_MARKERS = [
-  '103.91.186.142',
-  'services.growtradingacademy.com',
-  'grow trading academy',
-];
 
 export const RUNTIME_API_HOST =
   (getRuntimeValue('API_HOST', 'VITE_API_HOST', 'API_URL', 'VITE_API_URL') ||
@@ -152,54 +145,18 @@ const getHostAuthority = (value = '') => {
 // Mock broker list — mirrors what the real /api/v2/broker/servers returns.
 // Each entry must have broker_id, name, status, backend_url, and opaque server.
 // ---------------------------------------------------------------------------
-export const NEXA_BROKER_DEFAULT_ENTRY = {
-  broker_id: 'Nexa',
-  name: 'Nexa',
-  broker_name: 'Nexa',
-  status: 'active',
-  server: 'nexa.orrnn.com:443',
-  backend_url: 'https://nexa.orrnn.com',
-  ext_api_url: 'https://nexa.orrnn.com',
-  server_url: 'https://nexa.orrnn.com',
-  server_ip: '100.119.182.26',
-  server_port: 443,
-  ws_url: 'wss://nexa.orrnn.com/ws/feed',
-  feed_ws_url: 'wss://nexa.orrnn.com/ws/feed',
-  feed_status_url: 'https://nexa.orrnn.com/ws/feed/status',
-  direct_manager_paths: false,
-};
-
 const MOCK_BROKER_LIST = [
-  NEXA_BROKER_DEFAULT_ENTRY,
   {
-    broker_id: 'TEST',
-    name: 'FXTrust / Test Broker',
+    broker_id: 'demo_broker',
+    name: 'Demo Broker',
     status: 'active',
-    server: '100.120.168.28',
-    backend_url: 'https://fxtrustbrokerbackend.orrnn.com',
-    server_ip: '100.120.168.28',
-    server_port: 8091,
-    ws_url: 'wss://fxtrustbrokerbackend.orrnn.com/ws/feed',
-  },
-  {
-    broker_id: 'testorrnn',
-    name: 'Test Orrnn Broker (Demo)',
-    status: 'active',
-    server: 'testorrnn',
-    backend_url: 'https://testbrokerbackend.orrnn.com',
-    server_ip: 'testbrokerbackend.orrnn.com',
-    server_port: 8091,
-  },
-  {
-    broker_id: 'orrnn',
-    name: 'Orrnn Broker',
-    status: 'active',
-    server: 'orrnn',
-    backend_url: 'https://testbrokerbackend.orrnn.com',
-    server_ip: 'testbrokerbackend.orrnn.com',
+    server: 'broker-server-1',
+    backend_url: 'https://broker.example.com',
+    server_ip: 'broker.example.com',
     server_port: 8091,
   },
 ];
+
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -323,40 +280,20 @@ const normalizeLoginServerValue = (value = '') =>
 const isOpaqueBrokerServerHandle = (value = '') =>
   /^broker-server-\d+$/i.test(String(value || '').trim());
 
-const isGtaBrokerInfo = (info = {}) => {
-  const idValues = [info.broker_id, info.brokerId, info.id]
+const isRuntimeBrokerRecord = (info = {}) => {
+  if (!RUNTIME_BROKER_ID) return false;
+  return [info.broker_id, info.brokerId, info.id]
     .map(normalizeLoginServerValue)
-    .filter(Boolean);
-
-  if (idValues.some((value) => GTA_BROKER_ALIASES.has(value))) return true;
-
-  return [
-    info.name,
-    info.broker_name,
-    info.brokerName,
-    info.server,
-    info.server_handle,
-    info.server_id,
-    info.login_server,
-    info.server_ip,
-    info.host,
-    info.backend_url,
-    info.api_url,
-    info.server_url,
-    info.public_backend_url,
-    info.public_api_url,
-  ]
-    .map(normalizeLoginServerValue)
-    .some((value) => GTA_LOGIN_SERVER_MARKERS.some((marker) => value.includes(marker)));
+    .some((value) => value === RUNTIME_BROKER_ID);
 };
 
 export const getBrokerLoginServer = (info = {}) => {
   const server = String(
     firstPresent(
+      info.login_server,
       info.server,
       info.server_handle,
       info.server_id,
-      info.login_server,
       info.broker_id,
       info.brokerId,
       info.id,
@@ -365,10 +302,6 @@ export const getBrokerLoginServer = (info = {}) => {
       ''
     ) || ''
   ).trim();
-
-  if (isGtaBrokerInfo(info) && !isOpaqueBrokerServerHandle(server)) {
-    return GTA_LOGIN_SERVER_HANDLE;
-  }
 
   return server;
 };
@@ -387,7 +320,7 @@ export const getBrokerDisplayServer = (info = {}) => {
     info.server_ip,
     info.host,
     isOpaqueBrokerServerHandle(server) ? '' : server,
-    isGtaBrokerInfo(info) && !isOpaqueBrokerServerHandle(runtimeDefaultServer) ? runtimeDefaultServer : '',
+    isRuntimeBrokerRecord(info) && !isOpaqueBrokerServerHandle(runtimeDefaultServer) ? runtimeDefaultServer : '',
     info.backend_url,
     info.api_url,
     server
@@ -399,20 +332,16 @@ export const getBrokerDisplayServer = (info = {}) => {
 const resolveBrokerLoginServer = (brokerInfo = {}, server = '') =>
   getBrokerLoginServer(server ? { ...brokerInfo, server } : brokerInfo);
 
-const withConfiguredBroker = (record = {}) => {
-  const defaults = RUNTIME_BROKER_ID === 'nexa' ? NEXA_BROKER_DEFAULT_ENTRY : {};
-  return {
-    ...defaults,
-    ...CONFIGURED_BROKER_ENTRY,
-    server: firstPresent(
-      CONFIGURED_BROKER_ENTRY.server,
-      record.server,
-      defaults.server,
-      RUNTIME_DEFAULT_MT5_SERVER,
-      getHostAuthority(CONFIGURED_BROKER_ENTRY.backend_url)
-    ),
-  };
-};
+const withConfiguredBroker = (record = {}) => ({
+  ...record,
+  ...CONFIGURED_BROKER_ENTRY,
+  server: firstPresent(
+    CONFIGURED_BROKER_ENTRY.server,
+    record.server,
+    RUNTIME_DEFAULT_MT5_SERVER,
+    getHostAuthority(CONFIGURED_BROKER_ENTRY.backend_url)
+  ),
+});
 
 const normalizeBrokerInfo = (info) => {
   const record = stripLicenseSecrets(info || {});
@@ -421,9 +350,7 @@ const normalizeBrokerInfo = (info) => {
   // discovered record cannot point the admin at stale hosts after .env changes.
   const safeInfo = CONFIGURED_BROKER_ENTRY && recordId === RUNTIME_BROKER_ID
     ? withConfiguredBroker(record)
-    : recordId === 'nexa'
-      ? { ...NEXA_BROKER_DEFAULT_ENTRY, ...record }
-      : record;
+    : record;
   const brokerId = getBrokerRecordId(safeInfo);
   const server = getBrokerLoginServer({ ...safeInfo, broker_id: brokerId });
   const backend_url = buildBackendUrl(safeInfo);
@@ -435,7 +362,7 @@ const normalizeBrokerInfo = (info) => {
     name: safeInfo.name || safeInfo.broker_name || safeInfo.brokerName || brokerId,
     status: safeInfo.status || 'active',
     backend_url,
-    server_ip: safeInfo.server_ip || safeInfo.host || (isTestBrokerInfo(safeInfo) ? '100.120.168.28' : ''),
+    server_ip: safeInfo.server_ip || safeInfo.host || '',
   };
 };
 
@@ -532,11 +459,6 @@ export const withAdminPort = (backendUrl = '') => {
 // Calls:  GET {DISCOVERY_BASE_URL}/api/v2/broker/servers
 // ---------------------------------------------------------------------------
 const loadBrokerList = async () => {
-  // A Nexa-specific installation already knows its backend and does not need
-  // platform discovery before the administrator can sign in.
-  if (RUNTIME_BROKER_ID === 'nexa') {
-    return [normalizeBrokerInfo(CONFIGURED_BROKER_ENTRY || NEXA_BROKER_DEFAULT_ENTRY)];
-  }
   if (USE_MOCK_DISCOVERY) {
     // Local fallback only; set VITE_USE_MOCK_DISCOVERY=true to use it.
     const list = MOCK_BROKER_LIST.filter((b) => b.status === 'active').map(normalizeBrokerInfo);
@@ -587,14 +509,11 @@ const loadBrokerList = async () => {
     .map(normalizeBrokerInfo)
     .filter((broker) => broker.broker_id && broker.server);
 
-  // Keep the configured Nexa backend selectable until platform discovery lists it.
-  // An explicit platform record (including a disabled one) remains authoritative.
-  // Likewise keep the environment's broker selectable when discovery omits it;
-  // an installation pinned to another broker does not need the Nexa fallback.
-  const fallbackBroker = CONFIGURED_BROKER_ENTRY || NEXA_BROKER_DEFAULT_ENTRY;
-  const fallbackId = String(getBrokerRecordId(fallbackBroker)).trim().toLowerCase();
-  if (!list.some((broker) => String(getBrokerRecordId(broker)).trim().toLowerCase() === fallbackId)) {
-    normalized.push(normalizeBrokerInfo(fallbackBroker));
+  if (CONFIGURED_BROKER_ENTRY) {
+    const fallbackId = String(getBrokerRecordId(CONFIGURED_BROKER_ENTRY)).trim().toLowerCase();
+    if (!list.some((broker) => String(getBrokerRecordId(broker)).trim().toLowerCase() === fallbackId)) {
+      normalized.push(normalizeBrokerInfo(CONFIGURED_BROKER_ENTRY));
+    }
   }
   return normalized;
 };

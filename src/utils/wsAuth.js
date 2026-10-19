@@ -90,8 +90,7 @@ export const readWsAuthContext = () => {
     readStorageValue('localStorage', 'feed_broker_id'),
     findField(authInfo, ['broker_id', 'brokerId']),
     readStorageValue('localStorage', 'brokerId'),
-    readStorageValue('localStorage', 'broker_id'),
-    'Nexa'
+    readStorageValue('localStorage', 'broker_id')
   );
 
   // A dedicated feed token comes from runtime broker configuration or broker discovery.

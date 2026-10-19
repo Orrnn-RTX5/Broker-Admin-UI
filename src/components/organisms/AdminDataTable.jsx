@@ -158,7 +158,7 @@ const paginationButtonClassName = 'inline-flex h-7 w-7 shrink-0 items-center jus
 const paginationFieldClassName = 'h-7 rounded-[2px] border border-[color:var(--border-strong)] bg-[color:var(--bg-surface-1)] text-[11px] text-[color:var(--text-primary)] outline-none focus-visible:border-[color:var(--accent-500)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 
 const SUPPORT_CENTER_VIEWS = new Set([
-  'Support Center', 'News', 'Articles', 'Orrnn Leads', 'Automation',
+  'Support Center', 'News', 'Articles', 'Leads', 'Automation',
   'Sponsored VPS', 'Platform Documentation', 'API Documentation', 'Workshops',
   'Certification', 'Service Desk', 'Online Assistant', 'Search',
 ]);

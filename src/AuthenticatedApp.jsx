@@ -47,6 +47,7 @@ import { useToast } from './components/ui/useToast';
 import { StatusDot } from './components/ui/Badge';
 import { WorkspaceViewReady } from './components/organisms/WorkspaceStartup.jsx';
 import { useWorkspaceStartupReady } from './hooks/useWorkspaceStartup';
+import { formatBrokerConnectionStatus, getBrokerBranding } from './utils/branding';
 
 // Keep the terminal and navigation available while a requested view or dialog
 // downloads. Screens that are never opened do not belong in the startup path.
@@ -290,9 +291,11 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
     document.documentElement.setAttribute('data-density', density);
   }, [density]);
 
+  const { appTitle, productName } = getBrokerBranding();
+
   React.useEffect(() => {
-    document.title = activeNode ? `RTX 5 Admin · ${activeNode}` : 'RTX 5 Admin';
-  }, [activeNode]);
+    document.title = activeNode ? `${appTitle} · ${activeNode}` : appTitle;
+  }, [activeNode, appTitle]);
 
   React.useEffect(() => {
     if (!canDownloadDesktopApp) return undefined;
@@ -618,7 +621,7 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
     notify({ title: 'Refreshed', description: `at ${formatTime(new Date())}`, tone: 'success' });
   }, [notify]);
 
-  const buildPayload = () => ({ view: activeNode, exportedAt: new Date().toISOString(), source: 'RTX5 Admin' });
+  const buildPayload = () => ({ view: activeNode, exportedAt: new Date().toISOString(), source: productName });
 
   const visibleRowsRef = React.useRef([]);
   const handleRowsChange = React.useCallback((rows) => {
@@ -669,7 +672,7 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
       rows.forEach((row) => lines.push(cols.map((col) => csvEscape(row[col])).join(',')));
       csv = lines.join('\n');
     } else {
-      csv = [['view', 'exportedAt', 'source'], [activeNode, new Date().toISOString(), 'RTX5 Admin']]
+      csv = [['view', 'exportedAt', 'source'], [activeNode, new Date().toISOString(), productName]]
         .map((line) => line.map(csvEscape).join(','))
         .join('\n');
     }
@@ -812,10 +815,10 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
 
     notify({
       title: 'Downloading desktop app',
-      description: `RTX5 Broker Admin v${desktopInstaller.version}`,
+      description: `${productName} v${desktopInstaller.version}`,
       tone: 'success',
     });
-  }, [desktopInstaller, desktopReleaseState.status, notify]);
+  }, [desktopInstaller, desktopReleaseState.status, notify, productName]);
 
   React.useEffect(() => {
     const onKey = (e) => {
@@ -881,7 +884,7 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
   }, [handleRefresh, activeTab, currentIndex, history, isPopupOpen, editingAccount, viewingTrade, isCreatingGroup, serverPopupData, helpOpen, aboutOpen, searchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const connTone = connStatus === 'error' ? 'danger' : 'success';
-  const connText = connStatus === 'error' ? `Connection issue: ${connError}` : 'Connected to RTX5-PROD-01';
+  const connText = formatBrokerConnectionStatus({ status: connStatus, lastError: connError });
 
   if (!isAuthenticated) return null;
 
@@ -1108,7 +1111,7 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
               download={desktopInstaller?.fileName || undefined}
               onClick={handleDesktopDownloadClick}
               className="h-5 inline-flex items-center gap-1 rounded-[2px] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface-2)] px-1.5 font-sans text-[11px] font-normal text-[color:var(--text-secondary)] hover:border-[color:var(--accent-500)] hover:text-[color:var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[color:var(--accent-500)]"
-              title={desktopInstaller ? `Download RTX5 Broker Admin v${desktopInstaller.version}` : 'Open latest desktop app download'}
+              title={desktopInstaller ? `Download ${productName} v${desktopInstaller.version}` : 'Open latest desktop app download'}
               aria-label={desktopInstaller ? `Download desktop app version ${desktopInstaller.version}` : 'Download desktop app'}
             >
               <Download size={11} aria-hidden="true" />

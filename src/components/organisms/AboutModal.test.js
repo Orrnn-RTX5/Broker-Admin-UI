@@ -8,15 +8,15 @@ const here = dirname(fileURLToPath(import.meta.url));
 const aboutSrc = readFileSync(join(here, 'AboutModal.jsx'), 'utf8');
 const appSrc = readFileSync(join(here, '..', '..', 'AuthenticatedApp.jsx'), 'utf8');
 
-test('AboutModal shows product details and Orrnn support contact', () => {
-  assert.match(aboutSrc, /title="About RTX 5"/);
-  assert.match(aboutSrc, /RTX 5 Admin/);
-  assert.match(aboutSrc, /support@orrnn\.com/);
+test('AboutModal uses dynamic broker branding and support contact', () => {
+  assert.match(aboutSrc, /getBrokerBranding/);
+  assert.match(aboutSrc, /title=\{`About \$\{productName\}`\}/);
+  assert.match(aboutSrc, /\{supportEmail\}/);
   assert.match(aboutSrc, /getRuntimeLabel/);
-  assert.doesNotMatch(aboutSrc, /localhost:5173|alert\(/);
+  assert.doesNotMatch(aboutSrc, /support@orrnn\.com|RTX 5 Admin|localhost:5173|alert\(/);
 });
 
-test('AuthenticatedApp wires About RTX 5 to in-app modal state', () => {
+test('AuthenticatedApp wires About modal to in-app modal state', () => {
   assert.match(appSrc, /const AboutModal = React\.lazy\(\(\) => import\('\.\/components\/organisms\/AboutModal'\)\.then\(module => \(\{ default: module\.AboutModal \}\)\)\)/);
   assert.match(appSrc, /const \[aboutOpen,\s*setAboutOpen\] = React\.useState\(false\)/);
   assert.match(appSrc, /onAbout=\{\(\) => setAboutOpen\(true\)\}/);

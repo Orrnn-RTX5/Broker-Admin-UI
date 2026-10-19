@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   BarChart2, UserCheck, Briefcase, FileText, Folder, HelpCircle,
   Files, BookOpen, Maximize2,
@@ -8,6 +9,7 @@ import {
 import { useAuthStore } from '../../store/authStore';
 import './MenuBar.css';
 import { AuthService } from '../../services/auth.service';
+import { getBrokerBranding } from '../../utils/branding';
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuSeparator,
@@ -51,6 +53,9 @@ const MenuBar = ({
   canUndo, canRedo, autoRefresh = false, onStartAutomation, onPauseAutomation, children,
 }) => {
   const user = useAuthStore((state) => state.user);
+  const [logoFailed, setLogoFailed] = React.useState(false);
+  const { productName, logoUrl } = getBrokerBranding();
+  const fallbackSymbol = `${import.meta.env.BASE_URL || '/'}admin-symbol.png`;
   const adminName = String(user?.name || user?.login || 'Admin');
   const adminLogin = String(user?.login || user?.id || '');
   const initials = adminName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
@@ -58,7 +63,7 @@ const MenuBar = ({
   const handleLogout = () => AuthService.logout();
 
   const handleExit = () => {
-    if (!window.confirm('Exit RTX 5 Admin?')) return;
+    if (!window.confirm(`Exit ${productName}?`)) return;
     try { AuthService.logout(); } catch { /* noop */ }
     setTimeout(() => {
       try { window.close(); } catch { /* noop */ }
@@ -69,8 +74,12 @@ const MenuBar = ({
   return (
     <header className="admin-unified-header">
       <nav className="admin-menu-bar" aria-label="Admin navigation">
-      <button type="button" className="admin-menu-brand" onClick={onAbout} aria-label="About RTX5 Admin">
-        <img src={`${import.meta.env.BASE_URL}admin-symbol.png`} alt="" />
+      <button type="button" className="admin-menu-brand" onClick={onAbout} aria-label={`About ${productName}`}>
+        <img
+          src={logoUrl && !logoFailed ? logoUrl : fallbackSymbol}
+          alt=""
+          onError={() => setLogoFailed(true)}
+        />
         <span>Admin</span>
       </button>
       {/* FILE */}
@@ -160,7 +169,7 @@ const MenuBar = ({
         <MenuTrigger label="Help" />
         <DropdownMenuContent align="start" className="admin-header-menu-content">
           <Item icon={HelpCircle} label="Keyboard shortcuts" shortcut="?" onClick={onHelp} />
-          <Item icon={Info} label="About RTX 5" onClick={onAbout} />
+          <Item icon={Info} label={`About ${productName}`} onClick={onAbout} />
         </DropdownMenuContent>
       </DropdownMenu>
       </nav>

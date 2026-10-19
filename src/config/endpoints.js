@@ -230,7 +230,7 @@ export const buildManagerApiUrl = (endpoint = '') => {
     .replace(/^\/api\/manager(?=\/|\?|$)/, '')
     .replace(/^\/manager(?=\/|\?|$)/, '');
 
-  // For broker backend (103.91.186.142:8091), don't add /manager/ prefix
+  // For direct broker backends, don't add /manager/ prefix
   // Just use the path directly (e.g., /GroupList, /ManagerOnline)
   const isBrokerBackend = API_HOST && isDirectBrokerBackendUrl(API_HOST, readBrokerInfo() || {});
   if (isBrokerBackend) {
@@ -245,7 +245,7 @@ export const buildManagerApiUrl = (endpoint = '') => {
     // Direct path without /manager/ prefix
     managerPath = path ? (path.startsWith('/') ? path : `/${path}`) : '';
   } else {
-    // Add /manager/ prefix for other backends (testbrokerbackend.orrnn.com, etc)
+    // Add /manager/ prefix for proxied broker backends
     managerPath = path
       ? `/manager${path.startsWith('/') || path.startsWith('?') ? path : `/${path}`}`
       : '/manager';
@@ -349,7 +349,8 @@ export const buildFeedWsUrl = ({ useProxy = shouldUseFeedDevProxy() } = {}) => {
     brokerInfo?.env?.FEED_WS_URL ||
     brokerInfo?.env?.VITE_FEED_WS_URL ||
     viteEnv.VITE_FEED_WS_URL;
-  const base = explicitWsUrl || getBaseWsHost() || 'wss://nexa.orrnn.com/ws/feed';
+  const base = explicitWsUrl || getBaseWsHost();
+  if (!base) return '';
   const rawUrl = base.endsWith('/ws/feed') ? base : `${base}/ws/feed`;
   const authContext = readWsAuthContext();
   const sendToken = String(
@@ -372,9 +373,13 @@ export const buildFeedWsUrl = ({ useProxy = shouldUseFeedDevProxy() } = {}) => {
 
 export const buildFeedStatusUrl = () => {
   updateDynamicEndpoints();
-  const explicitStatusUrl = getRuntimeValue('FEED_STATUS_URL', 'VITE_FEED_STATUS_URL') || viteEnv.VITE_FEED_STATUS_URL;
+  const explicitStatusUrl = getRuntimeValue('FEED_STATUS_URL', 'VITE_FEED_STATUS_URL') ||
+    readBrokerInfo()?.feed_status_url ||
+    viteEnv.VITE_FEED_STATUS_URL;
+  const baseTarget = explicitStatusUrl || buildFeedWsUrl({ useProxy: false });
+  if (!baseTarget) return '/ws/feed/status';
   try {
-    const url = new URL(explicitStatusUrl || buildFeedWsUrl({ useProxy: false }), typeof window !== 'undefined' ? window.location.href : 'http://localhost');
+    const url = new URL(baseTarget, typeof window !== 'undefined' ? window.location.href : 'http://localhost');
     if (url.protocol === 'wss:') url.protocol = 'https:';
     else if (url.protocol === 'ws:') url.protocol = 'http:';
     if (!explicitStatusUrl && !/\/status\/?$/i.test(url.pathname)) {

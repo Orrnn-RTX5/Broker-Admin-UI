@@ -7,7 +7,7 @@ export const SUPER_ADMIN_USER_KEY = 'rtx5-super-admin-user';
 export const SUPER_ADMIN_SESSION_EVENT = 'super-admin:session-changed';
 
 const viteEnv = import.meta.env || {};
-const DEFAULT_SUPER_ADMIN_ORIGIN = 'https://fxtrustsuperbackned.orrnn.com';
+const DEFAULT_SUPER_ADMIN_ORIGIN = '';
 
 const trimTrailingSlash = (value = '') => String(value || '').replace(/\/+$/, '');
 const isLocalWeb = () => typeof window !== 'undefined'
@@ -15,8 +15,17 @@ const isLocalWeb = () => typeof window !== 'undefined'
   && !window.rtx5Electron;
 
 export const getSuperAdminOrigin = () => trimTrailingSlash(
-  getRuntimeValue('SUPER_ADMIN_API_HOST', 'VITE_SUPER_ADMIN_API_HOST')
+  getRuntimeValue(
+    'SUPER_ADMIN_API_HOST',
+    'VITE_SUPER_ADMIN_API_HOST',
+    'DISCOVERY_BASE_URL',
+    'VITE_DISCOVERY_BASE_URL',
+    'DEFAULT_DISCOVERY_BASE_URL',
+    'VITE_DEFAULT_DISCOVERY_BASE_URL'
+  )
     || viteEnv.VITE_SUPER_ADMIN_API_HOST
+    || viteEnv.VITE_DISCOVERY_BASE_URL
+    || viteEnv.VITE_DEFAULT_DISCOVERY_BASE_URL
     || DEFAULT_SUPER_ADMIN_ORIGIN
 );
 

@@ -64,48 +64,14 @@ const DESKTOP_EXT_FIELDS = [
 
 const WS_FIELDS = [
   'ws_url',
+  'feed_ws_url',
   'web_ws_url',
   'public_ws_url',
   'env.WS_HOST',
   'env.VITE_WS_HOST',
+  'env.FEED_WS_URL',
+  'env.VITE_FEED_WS_URL',
 ];
-
-const GTA_LEGACY_MATCHES = [
-  '103.91.186.142',
-  'gta_broker',
-  'grow-trading-academy',
-  'services.growtradingacademy.com',
-];
-
-const GTA_LEGACY_WEB_BACKEND_URL =
-  getRuntimeValue('GTA_LEGACY_WEB_BACKEND_URL', 'VITE_GTA_LEGACY_WEB_BACKEND_URL') ||
-  viteEnv.VITE_GTA_LEGACY_WEB_BACKEND_URL ||
-  'https://services.growtradingacademy.com';
-
-// Legacy desktop fallback. Operator-overridable via runtime/env so the plain-HTTP
-// IP is not the only option; the historical value remains the default.
-const GTA_LEGACY_DESKTOP_BACKEND_URL =
-  getRuntimeValue('GTA_LEGACY_DESKTOP_BACKEND_URL', 'VITE_GTA_LEGACY_DESKTOP_BACKEND_URL') ||
-  viteEnv.VITE_GTA_LEGACY_DESKTOP_BACKEND_URL ||
-  'http://103.91.186.142:8091';
-
-const TEST_LEGACY_MATCHES = [
-  '100.120.168.28',
-  'fxtrustbrokerbackend.orrnn.com',
-  'fxtrust',
-  'rtx5-local-test-broker',
-  'test broker',
-];
-
-const TEST_LEGACY_WEB_BACKEND_URL =
-  getRuntimeValue('TEST_LEGACY_WEB_BACKEND_URL', 'VITE_TEST_LEGACY_WEB_BACKEND_URL') ||
-  viteEnv.VITE_TEST_LEGACY_WEB_BACKEND_URL ||
-  'https://fxtrustbrokerbackend.orrnn.com';
-
-const TEST_LEGACY_DESKTOP_BACKEND_URL =
-  getRuntimeValue('TEST_LEGACY_DESKTOP_BACKEND_URL', 'VITE_TEST_LEGACY_DESKTOP_BACKEND_URL') ||
-  viteEnv.VITE_TEST_LEGACY_DESKTOP_BACKEND_URL ||
-  'https://fxtrustbrokerbackend.orrnn.com';
 
 export const trimTrailingSlash = (value = '') => String(value || '').replace(/\/+$/, '');
 
@@ -255,72 +221,21 @@ const brokerMatchesRuntimeDeployment = (brokerInfo = {}) => {
   ].some((value) => getComparableHost(value) === runtimeServer);
 };
 
-const hasLegacyGtaMatch = (...values) =>
-  values
-    .filter((value) => value !== undefined && value !== null)
-    .some((value) => {
-      const normalized = String(value).trim().toLowerCase();
-      return GTA_LEGACY_MATCHES.some((match) => normalized.includes(match));
-    });
-
-const resolveLegacyGtaBackendUrl = (brokerInfo = {}, fallbackUrl = '') => {
-  if (
-    !hasLegacyGtaMatch(
-      fallbackUrl,
-      brokerInfo.broker_id,
-      brokerInfo.id,
-      brokerInfo.name,
-      brokerInfo.server_ip,
-      brokerInfo.host,
-      brokerInfo.backend_url,
-      brokerInfo.api_url,
-      brokerInfo.server_url
-    )
-  ) {
-    return '';
-  }
-
-  return isDesktopBackendTarget() ? GTA_LEGACY_DESKTOP_BACKEND_URL : GTA_LEGACY_WEB_BACKEND_URL;
-};
-
 export const hasLegacyTestMatch = (...values) =>
   values
     .filter((value) => value !== undefined && value !== null)
     .some((value) => {
       const normalized = String(value).trim().toLowerCase();
-      return (
-        normalized === 'test' ||
-        normalized === 'test-broker' ||
-        TEST_LEGACY_MATCHES.some((match) => normalized.includes(match))
-      );
+      return normalized === 'test' || normalized === 'test-broker';
     });
 
-export const isTestBrokerInfo = (brokerInfo = {}, fallbackUrl = '') =>
-  hasLegacyTestMatch(
-    fallbackUrl,
-    brokerInfo?.broker_id,
-    brokerInfo?.brokerId,
-    brokerInfo?.id,
-    brokerInfo?.name,
-    brokerInfo?.broker_name,
-    brokerInfo?.server,
-    brokerInfo?.server_ip,
-    brokerInfo?.host,
-    brokerInfo?.backend_url,
-    brokerInfo?.api_url,
-    brokerInfo?.server_url,
-    brokerInfo?.domain,
-    brokerInfo?.domain_name,
-    JSON.stringify(brokerInfo?.env || {})
+export const isTestBrokerInfo = (brokerInfo = {}) =>
+  Boolean(
+    brokerInfo?.is_test === true ||
+      brokerInfo?.isTest === true ||
+      String(brokerInfo?.environment || '').trim().toLowerCase() === 'test' ||
+      hasLegacyTestMatch(brokerInfo?.broker_id, brokerInfo?.brokerId, brokerInfo?.id)
   );
-
-const resolveLegacyTestBackendUrl = (brokerInfo = {}, fallbackUrl = '') => {
-  if (!isTestBrokerInfo(brokerInfo, fallbackUrl)) {
-    return '';
-  }
-
-  return isDesktopBackendTarget() ? TEST_LEGACY_DESKTOP_BACKEND_URL : TEST_LEGACY_WEB_BACKEND_URL;
-};
 
 const buildWebBackendUrl = (brokerInfo = {}) => {
   const explicitUrl = getFirstValue(brokerInfo, WEB_BACKEND_FIELDS);
@@ -383,14 +298,7 @@ export const resolveBrokerBackendUrl = (brokerInfo = {}, fallbackUrl = '') => {
   }
 
   const targetUrl = isDesktopBackendTarget() ? buildDesktopBackendUrl(info) : buildWebBackendUrl(info);
-  const legacyTestUrl = resolveLegacyTestBackendUrl(info, fallback);
-  const legacyUrl = resolveLegacyGtaBackendUrl(info, fallback);
-
-  if (legacyTestUrl && (!targetUrl || hasLegacyTestMatch(targetUrl))) return legacyTestUrl;
-  if (legacyUrl && (!targetUrl || hasLegacyGtaMatch(targetUrl))) return legacyUrl;
   if (targetUrl) return targetUrl;
-  if (legacyTestUrl) return legacyTestUrl;
-  if (legacyUrl) return legacyUrl;
 
   return trimTrailingSlash(fallback);
 };
@@ -434,9 +342,6 @@ export const resolveBrokerWsUrl = (brokerInfo = {}) => {
 
   const explicitUrl = getFirstValue(brokerInfo, WS_FIELDS);
   if (!explicitUrl) {
-    if (isTestBrokerInfo(brokerInfo)) {
-      return 'wss://fxtrustbrokerbackend.orrnn.com/ws/feed';
-    }
     return '';
   }
 
@@ -470,8 +375,6 @@ export const isDirectBrokerBackendUrl = (backendUrl = '', brokerInfo = {}) => {
 
   try {
     const url = new URL(ensureUrl(trimmed));
-    // FXTrust exposes the broker API directly, including on its HTTPS origin.
-    if (url.hostname === 'fxtrustbrokerbackend.orrnn.com') return true;
     const directOrigins = String(
       getRuntimeValue('DIRECT_MANAGER_ORIGINS', 'VITE_DIRECT_MANAGER_ORIGINS') ??
         viteEnv.VITE_DIRECT_MANAGER_ORIGINS ?? ''

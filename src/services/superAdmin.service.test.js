@@ -38,9 +38,15 @@ beforeEach(() => {
   globalThis.sessionStorage.clear();
 });
 
-test('getSuperAdminOrigin returns default origin https://fxtrustsuperbackned.orrnn.com', () => {
-  const origin = getSuperAdminOrigin();
-  assert.equal(origin, 'https://fxtrustsuperbackned.orrnn.com');
+test('getSuperAdminOrigin uses runtime config and returns empty string when unconfigured', () => {
+  delete globalThis.window.__RTX5_RUNTIME_CONFIG__;
+  assert.equal(getSuperAdminOrigin(), '');
+
+  globalThis.window.__RTX5_RUNTIME_CONFIG__ = {
+    SUPER_ADMIN_API_HOST: 'https://superadmin-prod.orrnn.com/',
+  };
+  assert.equal(getSuperAdminOrigin(), 'https://superadmin-prod.orrnn.com');
+  delete globalThis.window.__RTX5_RUNTIME_CONFIG__;
 });
 
 test('getSuperAdminSession detects unauthenticated state when token is empty', () => {

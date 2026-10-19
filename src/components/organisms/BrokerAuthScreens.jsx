@@ -89,7 +89,8 @@ const getRuntimeLockedBroker = (list = []) => {
   return list.find(brokerMatchesRuntime) || null;
 };
 
-const RTX5_LOGO_SRC = `${import.meta.env.BASE_URL || './'}logo-full-light.webp`;
+import { getBrokerBranding, resolveBrokerLogoUrl } from '../../utils/branding';
+
 const REMEMBERED_ADMIN_LOGIN_KEY = 'rtx5-admin-remembered-login';
 const getRememberedAdminLogin = () => {
   try { return window.localStorage.getItem(REMEMBERED_ADMIN_LOGIN_KEY) || ''; }
@@ -105,20 +106,72 @@ const AUTH_VISUAL_SRC_SET = [
 // ---------------------------------------------------------------------------
 // Shell & shared UI primitives
 // ---------------------------------------------------------------------------
-const AuthLogo = () => (
-  <img
-    src={RTX5_LOGO_SRC}
-    alt="RTX5"
-    className="mx-auto h-auto w-[150px] sm:w-[158px]"
-    decoding="async"
-    fetchPriority="high"
-    draggable="false"
-  />
-);
+const AuthLogo = ({ broker }) => {
+  const [failed, setFailed] = React.useState(false);
+  const { logoUrl, productName, shortName, monogram } = getBrokerBranding(broker);
 
-const AuthShell = ({ children, variant }) => variant === 'admin' ? (
+  React.useEffect(() => {
+    setFailed(false);
+  }, [logoUrl]);
+
+  if (logoUrl && !failed) {
+    return (
+      <img
+        src={logoUrl}
+        alt={productName}
+        className="mx-auto h-auto max-h-14 w-auto max-w-[158px] object-contain"
+        decoding="async"
+        fetchPriority="high"
+        draggable="false"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <div
+      className="mx-auto inline-flex items-center gap-2.5 rounded-[10px] border border-[#dce3ec] bg-[#f8fafc] px-3.5 py-2 text-[#0f172a]"
+      aria-label={productName}
+    >
+      <span className="inline-flex h-7 w-7 items-center justify-center rounded-[6px] bg-[#2563eb] text-[12px] font-bold text-white">
+        {monogram}
+      </span>
+      <span className="text-[15px] font-bold tracking-tight">{shortName}</span>
+    </div>
+  );
+};
+
+const AdminLoginWordmark = ({ broker }) => {
+  const [failed, setFailed] = React.useState(false);
+  const { logoUrl, productName, shortName } = getBrokerBranding(broker);
+
+  React.useEffect(() => {
+    setFailed(false);
+  }, [logoUrl]);
+
+  if (logoUrl && !failed) {
+    return (
+      <div className="admin-login-wordmark flex items-center" aria-label={productName}>
+        <img
+          src={logoUrl}
+          alt={productName}
+          className="h-9 max-w-[160px] object-contain"
+          onError={() => setFailed(true)}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="admin-login-wordmark" aria-label={productName}>
+      {shortName}
+    </div>
+  );
+};
+
+const AuthShell = ({ children, variant, broker }) => variant === 'admin' ? (
   <div className="admin-login-shell" style={{ fontFamily: 'var(--font-auth)' }}>
-    <AdminLoginBackdrop />
+    <AdminLoginBackdrop broker={broker} />
     <div className="admin-login-scrim" aria-hidden="true" />
     <div className="admin-login-scroll">
       <div className="admin-login-panel">{children}</div>
@@ -161,9 +214,9 @@ const AuthShell = ({ children, variant }) => variant === 'admin' ? (
   </div>
 );
 
-const Header = ({ title, subtitle }) => (
+const Header = ({ title, subtitle, broker }) => (
   <div className="mb-8 text-center">
-    <AuthLogo />
+    <AuthLogo broker={broker} />
     <div className="mt-7">
       <h1 className="text-[28px] font-bold leading-tight text-[#0f172a]">{title}</h1>
       {subtitle && (
@@ -197,7 +250,11 @@ const SpinnerLabel = ({ children }) => (
 
 const BrokerLogo = ({ broker, size = 32, fallback = Building2 }) => {
   const [failed, setFailed] = React.useState(false);
-  const src = broker?.logo_url;
+  const src = broker?.logo_url || (broker ? resolveBrokerLogoUrl(broker) : '');
+
+  React.useEffect(() => {
+    setFailed(false);
+  }, [src]);
 
   if (src && !failed) {
     return (
@@ -385,10 +442,13 @@ export const BrokerSelector = ({ navigate }) => {
     }
   };
 
+  const activeBrokerForBrand = runtimeLockedBroker || brokerList.find((b) => b.broker_id === selectedId) || null;
+  const { productName } = getBrokerBranding(activeBrokerForBrand);
+
   if (manualEntry) {
     return (
-      <AuthShell>
-        <Header icon={Building2} title="RTX 5 Admin Terminal" subtitle="Register broker" />
+      <AuthShell broker={activeBrokerForBrand}>
+        <Header broker={activeBrokerForBrand} icon={Building2} title={productName} subtitle="Register broker" />
         <div className="p-5">
           <InlineError>{error}</InlineError>
 
@@ -422,8 +482,8 @@ export const BrokerSelector = ({ navigate }) => {
   }
 
   return (
-    <AuthShell>
-      <Header icon={Building2} title="RTX 5 Admin Terminal" subtitle="Select broker" />
+    <AuthShell broker={activeBrokerForBrand}>
+      <Header broker={activeBrokerForBrand} icon={Building2} title={productName} subtitle="Select broker" />
       <div className="p-5">
         <InlineError>{error}</InlineError>
 
@@ -826,6 +886,7 @@ const getLoginSubtitle = (tone, fallback) => {
 };
 
 const LoginScreen = ({
+  brokerInfo,
   subtitle,
   tone,
   error,
@@ -849,11 +910,11 @@ const LoginScreen = ({
     Boolean(switchToLabel && onSwitchRole);
 
   return (
-    <AuthShell variant={tone}>
+    <AuthShell variant={tone} broker={brokerInfo}>
       {tone === 'admin' ? (
         <>
           <header className="admin-login-heading">
-            <div className="admin-login-wordmark" aria-label="RTX5">RTX<span>5</span></div>
+            <AdminLoginWordmark broker={brokerInfo} />
             <h1>ADMIN LOGIN</h1>
             <p>{supportSubtitle}</p>
           </header>
@@ -891,7 +952,7 @@ const LoginScreen = ({
         </>
       ) : (
       <>
-      <Header title="Welcome Back!" subtitle={supportSubtitle} />
+      <Header broker={brokerInfo} title="Welcome Back!" subtitle={supportSubtitle} />
       <div>
         <InlineError>{error}</InlineError>
         <form onSubmit={onSubmit} className="flex flex-col gap-[18px]">

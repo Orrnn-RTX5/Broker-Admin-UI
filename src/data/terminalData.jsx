@@ -362,7 +362,7 @@ export const sidebarData = [
                 children: [
                   { label: "News", icon: OrangeNewsIcon },
                   { label: "Articles", icon: BlueArticlesIcon },
-                  { label: "Orrnn Leads", icon: BlueUsersIcon },
+                  { label: "Leads", icon: BlueUsersIcon },
                   { label: "Automation", icon: GreenGearPlayIcon },
                   { label: "Sponsored VPS", icon: BlueCloudIcon },
                   { label: "Platform Documentation", icon: BlueBookRedBookmarkIcon },

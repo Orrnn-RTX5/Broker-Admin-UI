@@ -114,33 +114,33 @@ test('runtime VITE_API_URL alias can identify the current web deployment', async
   );
 });
 
-test('TEST broker automatically resolves backend_url and ws_url when missing', async () => {
+test('broker without backend_url or ws_url does not fall back to hardcoded tenant domains', async () => {
   installWindowConfig({ BACKEND_TARGET: 'web' });
   const { resolveBrokerBackendUrl, resolveBrokerWsUrl, isTestBrokerInfo } = await importFreshBackendTarget();
 
-  const testBrokerFromDiscovery = {
+  const unconfiguredBroker = {
     broker_id: 'TEST',
-    name: 'RTX-5 Local Test Broker',
+    name: 'Unconfigured Broker',
     status: 'active',
     server: 'broker-server-3',
   };
 
-  assert.equal(isTestBrokerInfo(testBrokerFromDiscovery), true);
-  assert.equal(resolveBrokerBackendUrl(testBrokerFromDiscovery), 'https://fxtrustbrokerbackend.orrnn.com');
-  assert.equal(resolveBrokerWsUrl(testBrokerFromDiscovery), 'wss://fxtrustbrokerbackend.orrnn.com/ws/feed');
+  assert.equal(isTestBrokerInfo(unconfiguredBroker), true);
+  assert.equal(resolveBrokerBackendUrl(unconfiguredBroker), '');
+  assert.equal(resolveBrokerWsUrl(unconfiguredBroker), '');
 });
 
-test('TEST broker recognizes direct IP and fxtrust naming variants', async () => {
+test('desktop broker with server_ip resolves backend_url from server_ip and port without tenant hardcodes', async () => {
   installWindowConfig({ BACKEND_TARGET: 'desktop' });
   const { resolveBrokerBackendUrl, isTestBrokerInfo } = await importFreshBackendTarget();
 
   const directBroker = {
-    broker_id: 'TEST',
-    name: 'FXTrust / Test Broker',
-    server_ip: '100.120.168.28',
-    server: '100.120.168.28',
+    broker_id: 'custom_broker',
+    name: 'Custom Broker',
+    server_ip: '203.0.113.28',
+    server_port: 443,
   };
 
-  assert.equal(isTestBrokerInfo(directBroker), true);
-  assert.equal(resolveBrokerBackendUrl(directBroker), 'https://fxtrustbrokerbackend.orrnn.com');
+  assert.equal(isTestBrokerInfo(directBroker), false);
+  assert.equal(resolveBrokerBackendUrl(directBroker), 'https://203.0.113.28');
 });

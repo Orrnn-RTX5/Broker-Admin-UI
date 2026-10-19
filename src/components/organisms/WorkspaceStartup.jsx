@@ -1,15 +1,24 @@
 import React from 'react';
 import useSymbolStore from '../../store/useSymbolStore';
 import { WorkspaceStartupContext, useWorkspaceStartupReady } from '../../hooks/useWorkspaceStartup';
+import { getBrokerBranding } from '../../utils/branding';
 const STARTUP_DATA_WAIT_MS = 4500;
 
 export function StartupLoadingScreen() {
+  const [logoFailed, setLogoFailed] = React.useState(false);
+  const { productName, logoUrl } = getBrokerBranding();
+  const fallbackIcon = `${import.meta.env.BASE_URL || '/'}admin-symbol.png`;
+
   return (
     <div className="workspace-loading-screen" role="status" aria-live="polite" aria-label="Loading admin workspace">
       <div className="workspace-loading-content">
         <div className="workspace-loading-brand">
-          <img src={`${import.meta.env.BASE_URL}admin-symbol.png`} alt="" />
-          <span>RTX5 Admin</span>
+          <img
+            src={logoUrl && !logoFailed ? logoUrl : fallbackIcon}
+            alt=""
+            onError={() => setLogoFailed(true)}
+          />
+          <span>{productName}</span>
         </div>
         <span className="workspace-loading-spinner" aria-hidden="true" />
         <p className="workspace-loading-message">Preparing your workspace…</p>

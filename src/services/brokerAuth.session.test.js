@@ -54,47 +54,55 @@ test('concurrent login discovery shares one read and retries after it settles', 
 });
 
 for (const target of ['web', 'desktop']) {
-  test(`Nexa selection routes admin login to its HTTPS backend in ${target}`, async () => {
+  test(`discovered broker selection routes admin login to its HTTPS backend in ${target}`, async () => {
     installBrowserGlobals({ BACKEND_TARGET: target });
     const calls = [];
     globalThis.fetch = async (url, options) => {
       calls.push({ url, options });
-      return { ok: true, status: 200, text: async () => JSON.stringify(options.method === 'GET' ? [] : { token: 'test-token' }) };
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify(options.method === 'GET' ? [{
+          broker_id: 'acme',
+          broker_name: 'Acme Markets',
+          backend_url: 'https://acme.example.com',
+          ws_url: 'wss://acme.example.com/ws/feed',
+        }] : { token: 'test-token' }),
+      };
     };
     const auth = await importFreshBrokerAuth();
     const brokers = await auth.fetchBrokerList();
-    const nexa = auth.discoverBrokerById(brokers, 'Nexa');
-    assert.equal(nexa.backend_url, 'https://nexa.orrnn.com');
-    assert.equal(nexa.ws_url, 'wss://nexa.orrnn.com/ws/feed');
-    await auth.loginAdmin(nexa, { user: 'test-admin', password: 'test-password' });
-    assert.equal(calls[1].url, 'https://nexa.orrnn.com/manager/api/v2/admin/login');
+    const acme = auth.discoverBrokerById(brokers, 'acme');
+    assert.equal(acme.backend_url, 'https://acme.example.com');
+    assert.equal(acme.ws_url, 'wss://acme.example.com/ws/feed');
+    await auth.loginAdmin(acme, { user: 'test-admin', password: 'test-password' });
+    assert.equal(calls[1].url, 'https://acme.example.com/manager/api/v2/admin/login');
   });
 }
 
-test('configured Nexa admin can select its backend without platform discovery', async () => {
-  installBrowserGlobals({ BROKER_ID: 'Nexa', API_HOST: 'https://nexa.orrnn.com' });
-  globalThis.fetch = async () => { throw new Error('Unexpected discovery request'); };
+test('configured broker admin falls back to its env backend when discovery fails', async () => {
+  installBrowserGlobals({ BROKER_ID: 'acme', API_HOST: 'https://acme.example.com' });
+  globalThis.fetch = async () => { throw new Error('Discovery unavailable'); };
   const auth = await importFreshBrokerAuth();
   const brokers = await auth.fetchBrokerList();
   assert.equal(brokers.length, 1);
-  assert.equal(brokers[0].broker_id, 'Nexa');
-  assert.equal(brokers[0].backend_url, 'https://nexa.orrnn.com');
-  assert.equal(brokers[0].direct_manager_paths, false);
+  assert.equal(brokers[0].broker_id, 'acme');
+  assert.equal(brokers[0].backend_url, 'https://acme.example.com');
 });
 
-const ORRNN_ENV = {
-  BROKER_ID: 'orrnn',
-  BROKER_NAME: 'ORRNN',
-  API_HOST: 'https://service.orrnn.com',
-  API_HOST_EXT: 'https://service.orrnn.com',
-  FEED_WS_URL: 'wss://service.orrnn.com/ws/feed',
-  FEED_STATUS_URL: 'https://service.orrnn.com/ws/feed/status',
+const CONFIGURED_BROKER_ENV = {
+  BROKER_ID: 'trivanta-markets',
+  BROKER_NAME: 'Trivanta Markets',
+  API_HOST: 'https://trivanta.orrnn.com',
+  API_HOST_EXT: 'https://trivanta.orrnn.com',
+  FEED_WS_URL: 'wss://trivanta.orrnn.com/ws/feed',
+  FEED_STATUS_URL: 'https://trivanta.orrnn.com/ws/feed/status',
   DEFAULT_MT5_SERVER: '51.195.188.172',
   DISCOVERY_BASE_URL: 'https://superadmin-prod.orrnn.com',
 };
 
 test('environment-configured broker keeps its discovery handle but uses .env hosts', async () => {
-  installBrowserGlobals(ORRNN_ENV);
+  installBrowserGlobals(CONFIGURED_BROKER_ENV);
   const calls = [];
   globalThis.fetch = async (url, options) => {
     calls.push(url);
@@ -103,8 +111,8 @@ test('environment-configured broker keeps its discovery handle but uses .env hos
       status: 200,
       headers: { get: () => null },
       text: async () => JSON.stringify(options.method === 'GET' ? [{
-        broker_id: 'Orrnn',
-        broker_name: 'ORRNN',
+        broker_id: 'trivanta-markets',
+        broker_name: 'Trivanta Markets',
         server: '51.195.188.172:443',
         server_url: 'https://51.195.188.172:443',
         ws_url: 'ws://51.195.188.172/ws/feed',
@@ -115,56 +123,57 @@ test('environment-configured broker keeps its discovery handle but uses .env hos
   const [broker, ...rest] = await auth.fetchBrokerList();
   assert.equal(calls[0], 'https://superadmin-prod.orrnn.com/api/v2/broker/servers');
   assert.equal(rest.length, 0);
-  assert.equal(broker.broker_id, 'orrnn');
-  assert.equal(broker.name, 'ORRNN');
+  assert.equal(broker.broker_id, 'trivanta-markets');
+  assert.equal(broker.name, 'Trivanta Markets');
   assert.equal(broker.server, '51.195.188.172:443');
-  assert.equal(broker.backend_url, 'https://service.orrnn.com');
-  assert.equal(broker.server_url, 'https://service.orrnn.com');
-  assert.equal(broker.feed_ws_url, 'wss://service.orrnn.com/ws/feed');
+  assert.equal(broker.backend_url, 'https://trivanta.orrnn.com');
+  assert.equal(broker.server_url, 'https://trivanta.orrnn.com');
+  assert.equal(broker.feed_ws_url, 'wss://trivanta.orrnn.com/ws/feed');
 
   // A previously stored record for the same broker cannot redirect login.
   await auth.loginAdmin(
-    { broker_id: 'Orrnn', backend_url: 'https://51.195.188.172:443', env: { API_HOST: 'https://old.example.com' } },
+    { broker_id: 'trivanta-markets', backend_url: 'https://51.195.188.172:443', env: { API_HOST: 'https://old.example.com' } },
     { user: 'test-admin', password: 'test-password' }
   );
-  assert.equal(calls[1], 'https://service.orrnn.com/manager/api/v2/admin/login');
+  assert.equal(calls[1], 'https://trivanta.orrnn.com/manager/api/v2/admin/login');
 });
 
 test('environment-configured broker stays available when discovery is unreachable', async () => {
-  installBrowserGlobals(ORRNN_ENV);
+  installBrowserGlobals(CONFIGURED_BROKER_ENV);
   globalThis.fetch = async () => { throw new Error('offline'); };
   const auth = await importFreshBrokerAuth();
   const brokers = await auth.fetchBrokerList();
   assert.equal(brokers.length, 1);
-  assert.equal(brokers[0].broker_id, 'orrnn');
+  assert.equal(brokers[0].broker_id, 'trivanta-markets');
   assert.equal(brokers[0].server, '51.195.188.172');
-  assert.equal(brokers[0].backend_url, 'https://service.orrnn.com');
+  assert.equal(brokers[0].backend_url, 'https://trivanta.orrnn.com');
 });
 
-test('Nexa discovery preserves platform handles and respects disabled records', async () => {
+test('discovery preserves platform handles and respects disabled records', async () => {
   installBrowserGlobals();
   const auth = await importFreshBrokerAuth();
   for (const enabled of [true, false]) {
     globalThis.fetch = async () => ({ ok: true, status: 200, text: async () => JSON.stringify([
-      { broker_id: 'nexa', server: 'broker-server-nexa', enabled },
+      { broker_id: 'acme', server: 'broker-server-acme', backend_url: 'https://acme.example.com', enabled },
     ]) });
     const brokers = await auth.fetchBrokerList();
     assert.equal(brokers.length, enabled ? 1 : 0);
     if (enabled) {
-      assert.equal(brokers[0].server, 'broker-server-nexa');
-      assert.equal(brokers[0].backend_url, 'https://nexa.orrnn.com');
+      assert.equal(brokers[0].server, 'broker-server-acme');
+      assert.equal(brokers[0].backend_url, 'https://acme.example.com');
     }
   }
 });
 
 for (const target of ['web', 'desktop']) {
-  test(`TEST discovery and admin login use the live backend's direct API in ${target}`, async () => {
+  test(`configured direct-origin broker discovery and admin login use direct API in ${target}`, async () => {
     installBrowserGlobals({
       BACKEND_TARGET: target,
-      BROKER_ID: 'TEST',
-      API_HOST: 'https://fxtrustbrokerbackend.orrnn.com',
-      DEFAULT_DISCOVERY_BASE_URL: 'https://fxtrustbrokerbackend.orrnn.com',
-      DISCOVERY_BASE_URL: 'https://fxtrustbrokerbackend.orrnn.com',
+      BROKER_ID: 'direct_broker',
+      API_HOST: 'https://direct.example.com',
+      DIRECT_MANAGER_ORIGINS: 'https://direct.example.com',
+      DEFAULT_DISCOVERY_BASE_URL: 'https://superadmin-prod.orrnn.com',
+      DISCOVERY_BASE_URL: 'https://superadmin-prod.orrnn.com',
     });
     const calls = [];
     globalThis.fetch = async (url, options) => {
@@ -173,30 +182,31 @@ for (const target of ['web', 'desktop']) {
         ok: true,
         status: 200,
         text: async () => JSON.stringify(options.method === 'GET' ? [{
-          broker_id: 'TEST',
-          broker_name: 'RTX5-Local-Test-Broker',
+          broker_id: 'direct_broker',
+          broker_name: 'Direct Broker',
           enabled: true,
           server: 'broker-server-5',
+          direct_manager_paths: true,
         }] : { token: 'test-admin-token' }),
       };
     };
     const auth = await importFreshBrokerAuth();
     const [broker] = await auth.fetchBrokerList();
-    assert.equal(broker.broker_id, 'TEST');
+    assert.equal(broker.broker_id, 'direct_broker');
     assert.equal(broker.server, 'broker-server-5');
     await auth.loginAdmin(broker, { user: '10018', password: 'test-password' });
-    assert.equal(calls[0].url, 'https://fxtrustbrokerbackend.orrnn.com/api/v2/broker/servers');
-    assert.equal(calls[1].url, 'https://fxtrustbrokerbackend.orrnn.com/api/v2/admin/login');
+    assert.equal(calls[0].url, 'https://superadmin-prod.orrnn.com/api/v2/broker/servers');
+    assert.equal(calls[1].url, 'https://direct.example.com/api/v2/admin/login');
     assert.deepEqual(JSON.parse(calls[1].options.body), { user: '10018', password: 'test-password' });
   });
 }
 
-test('live discovery never fabricates TEST when it is missing or disabled', async () => {
+test('live discovery never fabricates brokers when records are empty or disabled', async () => {
   installBrowserGlobals({ BROKER_ID: 'TEST' });
   const auth = await importFreshBrokerAuth();
   for (const records of [[], [{ broker_id: 'TEST', enabled: false, server: 'broker-server-5' }]]) {
     globalThis.fetch = async () => ({ ok: true, status: 200, text: async () => JSON.stringify(records) });
-    assert.deepEqual((await auth.fetchBrokerList()).map((broker) => broker.broker_id), ['Nexa']);
+    assert.deepEqual((await auth.fetchBrokerList()).map((broker) => broker.broker_id), []);
   }
 });
 
@@ -253,12 +263,12 @@ test('fetchBrokerList uses v2 discovery and keeps sanitized broker server handle
       text: async () => JSON.stringify({
         value: [
           {
-            broker_id: 'gta_broker',
-            broker_name: 'Grow Trading Academy',
+            broker_id: 'acme_broker',
+            broker_name: 'Acme Markets',
             status: 'active',
             server: 'broker-server-42',
-            backend_url: 'https://services.growtradingacademy.com',
-            logo_url: 'https://superbackend.orrnn.com/api/v1/brokers/gta_broker/logo',
+            backend_url: 'https://services.acme.example.com',
+            logo_url: 'https://superbackend.orrnn.com/api/v1/brokers/acme_broker/logo',
           },
           {
             broker_id: 'disabled',
@@ -275,17 +285,17 @@ test('fetchBrokerList uses v2 discovery and keeps sanitized broker server handle
   const list = await brokerAuth.fetchBrokerList();
 
   assert.equal(requestedUrl, 'https://superbackend.orrnn.com/api/v2/broker/servers');
-  assert.equal(list.length, 2);
-  assert.equal(list[0].broker_id, 'gta_broker');
-  assert.equal(list[0].name, 'Grow Trading Academy');
-  assert.equal(list[0].logo_url, 'https://superbackend.orrnn.com/api/v1/brokers/gta_broker/logo');
+  assert.equal(list.length, 1);
+  assert.equal(list[0].broker_id, 'acme_broker');
+  assert.equal(list[0].name, 'Acme Markets');
+  assert.equal(list[0].logo_url, 'https://superbackend.orrnn.com/api/v1/brokers/acme_broker/logo');
   assert.equal(list[0].server, 'broker-server-42');
-  assert.equal(list[0].backend_url, 'https://services.growtradingacademy.com');
+  assert.equal(list[0].backend_url, 'https://services.acme.example.com');
   assert.equal(list[0].server_ip, '');
   assert.equal(brokerAuth.getBrokerLoginServer(list[0]), 'broker-server-42');
 });
 
-test('fetchBrokerList maps GTA public SuperAdmin server to the broker server handle', async () => {
+test('fetchBrokerList preserves discovered server handle without hardcoded broker rewrites', async () => {
   installBrowserGlobals({ DISCOVERY_BASE_URL: 'https://superbackend.orrnn.com' });
   globalThis.fetch = async () => ({
     ok: true,
@@ -293,12 +303,12 @@ test('fetchBrokerList maps GTA public SuperAdmin server to the broker server han
     text: async () => JSON.stringify({
       servers: [
         {
-          broker_id: 'gta_broker',
-          broker_name: 'Grow Trading Academy',
+          broker_id: 'acme_broker',
+          broker_name: 'Acme Markets',
           status: 'active',
-          server: 'services.growtradingacademy.com:443',
-          server_ip: '103.91.186.142',
-          backend_url: 'https://services.growtradingacademy.com',
+          server: 'services.acme.example.com:443',
+          server_ip: '203.0.113.142',
+          backend_url: 'https://services.acme.example.com',
         },
       ],
     }),
@@ -307,18 +317,18 @@ test('fetchBrokerList maps GTA public SuperAdmin server to the broker server han
   const brokerAuth = await importFreshBrokerAuth();
   const list = await brokerAuth.fetchBrokerList();
 
-  assert.equal(list.length, 2);
-  assert.equal(list[0].broker_id, 'gta_broker');
-  assert.equal(list[0].server, 'broker-server-2');
-  assert.equal(brokerAuth.getBrokerDisplayServer(list[0]), '103.91.186.142');
-  assert.equal(brokerAuth.getBrokerLoginServer(list[0]), 'broker-server-2');
+  assert.equal(list.length, 1);
+  assert.equal(list[0].broker_id, 'acme_broker');
+  assert.equal(list[0].server, 'services.acme.example.com:443');
+  assert.equal(brokerAuth.getBrokerDisplayServer(list[0]), '203.0.113.142');
+  assert.equal(brokerAuth.getBrokerLoginServer(list[0]), 'services.acme.example.com:443');
 });
 
-test('fetchBrokerList keeps GTA local handle for login while displaying runtime server', async () => {
+test('fetchBrokerList keeps discovered handle for login while displaying runtime server for configured broker', async () => {
   installBrowserGlobals({
-    BROKER_ID: 'gta_broker',
-    DEFAULT_MT5_SERVER: '103.91.186.142',
-    DISCOVERY_BASE_URL: 'https://services.growtradingacademy.com',
+    BROKER_ID: 'acme_broker',
+    DEFAULT_MT5_SERVER: '203.0.113.142',
+    DISCOVERY_BASE_URL: 'https://superbackend.orrnn.com',
   });
   globalThis.fetch = async () => ({
     ok: true,
@@ -326,8 +336,8 @@ test('fetchBrokerList keeps GTA local handle for login while displaying runtime 
     text: async () => JSON.stringify({
       servers: [
         {
-          broker_id: 'gta_broker',
-          broker_name: 'Grow Trading Academy',
+          broker_id: 'acme_broker',
+          broker_name: 'Acme Markets',
           status: 'active',
           server: 'broker-server-2',
         },
@@ -340,7 +350,7 @@ test('fetchBrokerList keeps GTA local handle for login while displaying runtime 
 
   assert.equal(list[0].server, 'broker-server-2');
   assert.equal(brokerAuth.getBrokerLoginServer(list[0]), 'broker-server-2');
-  assert.equal(brokerAuth.getBrokerDisplayServer(list[0]), '103.91.186.142');
+  assert.equal(brokerAuth.getBrokerDisplayServer(list[0]), '203.0.113.142');
 });
 
 test('fetchBrokerList does not use the selected broker backend as discovery host', async () => {
@@ -363,9 +373,9 @@ test('fetchBrokerList does not use the selected broker backend as discovery host
 
 test('fetchBrokerList ignores runtime discovery when it points at selected broker services host', async () => {
   installBrowserGlobals({
-    API_HOST: 'https://services.growtradingacademy.com',
-    API_HOST_EXT: 'https://services.growtradingacademy.com',
-    DISCOVERY_BASE_URL: 'https://services.growtradingacademy.com',
+    API_HOST: 'https://services.acme.example.com',
+    API_HOST_EXT: 'https://services.acme.example.com',
+    DISCOVERY_BASE_URL: 'https://services.acme.example.com',
   });
   let requestedUrl = '';
   globalThis.fetch = async (url) => {
@@ -394,22 +404,22 @@ test('loginAdmin omits server when the caller does not explicitly supply one', a
     return {
       ok: true,
       status: 200,
-      text: async () => JSON.stringify({ token: 'admin-token', broker_id: 'gta_broker' }),
+      text: async () => JSON.stringify({ token: 'admin-token', broker_id: 'acme_broker' }),
     };
   };
 
   const brokerAuth = await importFreshBrokerAuth();
   const response = await brokerAuth.loginAdmin(
     {
-      broker_id: 'gta_broker',
-      name: 'Grow Trading Academy',
+      broker_id: 'acme_broker',
+      name: 'Acme Markets',
       server: 'broker-server-42',
-      backend_url: 'https://services.growtradingacademy.com',
+      backend_url: 'https://services.acme.example.com',
     },
     { user: '1000', password: 'secret' }
   );
 
-  assert.equal(postedUrl, 'https://services.growtradingacademy.com/manager/api/v2/admin/login');
+  assert.equal(postedUrl, 'https://services.acme.example.com/manager/api/v2/admin/login');
   assert.deepEqual(postedBody, {
     user: '1000',
     password: 'secret',
@@ -432,16 +442,16 @@ test('loginAdmin uses the local Vite proxy path on localhost web', async () => {
     return {
       ok: true,
       status: 200,
-      text: async () => JSON.stringify({ token: 'admin-token', broker_id: 'gta_broker' }),
+      text: async () => JSON.stringify({ token: 'admin-token', broker_id: 'acme_broker' }),
     };
   };
 
   const brokerAuth = await importFreshBrokerAuth();
   await brokerAuth.loginAdmin(
     {
-      broker_id: 'gta_broker',
-      name: 'Grow Trading Academy',
-      backend_url: 'https://services.growtradingacademy.com',
+      broker_id: 'acme_broker',
+      name: 'Acme Markets',
+      backend_url: 'https://services.acme.example.com',
     },
     { user: '10015', password: 'secret' }
   );
@@ -457,28 +467,28 @@ test('loginAdmin preserves authorization header tokens when the body has no toke
     headers: {
       get: (name) => (String(name).toLowerCase() === 'authorization' ? 'Bearer header-admin-token' : null),
     },
-    text: async () => JSON.stringify({ broker_id: 'gta_broker' }),
+    text: async () => JSON.stringify({ broker_id: 'acme_broker' }),
   });
 
   const brokerAuth = await importFreshBrokerAuth();
   const response = await brokerAuth.loginAdmin(
     {
-      broker_id: 'gta_broker',
-      name: 'Grow Trading Academy',
+      broker_id: 'acme_broker',
+      name: 'Acme Markets',
       server: 'broker-server-42',
-      backend_url: 'https://services.growtradingacademy.com',
+      backend_url: 'https://services.acme.example.com',
     },
     { user: '1000', password: 'secret' }
   );
 
-  const session = brokerAuth.setAuthSession(response, { broker_id: 'gta_broker' });
+  const session = brokerAuth.setAuthSession(response, { broker_id: 'acme_broker' });
 
   assert.equal(response.authorization, 'Bearer header-admin-token');
   assert.equal(session.token, 'header-admin-token');
   assert.equal(localStorage.getItem('authToken'), 'header-admin-token');
 });
 
-test('loginAdmin maps GTA stale public server values to the accepted broker server handle', async () => {
+test('loginAdmin passes explicit caller server handle unchanged', async () => {
   installBrowserGlobals();
   let postedBody = null;
   globalThis.fetch = async (url, options) => {
@@ -487,26 +497,25 @@ test('loginAdmin maps GTA stale public server values to the accepted broker serv
     return {
       ok: true,
       status: 200,
-      text: async () => JSON.stringify({ token: 'admin-token', broker_id: 'gta_broker' }),
+      text: async () => JSON.stringify({ token: 'admin-token', broker_id: 'acme_broker' }),
     };
   };
 
   const brokerAuth = await importFreshBrokerAuth();
   await brokerAuth.loginAdmin(
     {
-      broker_id: 'gta_broker',
-      name: 'Grow Trading Academy',
-      server: 'services.growtradingacademy.com:443',
-      server_ip: '103.91.186.142',
-      backend_url: 'https://services.growtradingacademy.com',
+      broker_id: 'acme_broker',
+      name: 'Acme Markets',
+      server: 'broker-server-42',
+      backend_url: 'https://services.acme.example.com',
     },
-    { user: '1000', password: 'secret', server: '103.91.186.142' }
+    { user: '1000', password: 'secret', server: 'broker-server-42' }
   );
 
   assert.deepEqual(postedBody, {
     user: '1000',
     password: 'secret',
-    server: 'broker-server-2',
+    server: 'broker-server-42',
   });
 });
 
@@ -550,22 +559,22 @@ test('loginManager sends the opaque server handle when discovery does not expose
     return {
       ok: true,
       status: 200,
-      text: async () => JSON.stringify({ token: 'manager-token', broker_id: 'gta_broker' }),
+      text: async () => JSON.stringify({ token: 'manager-token', broker_id: 'acme_broker' }),
     };
   };
 
   const brokerAuth = await importFreshBrokerAuth();
   const response = await brokerAuth.loginManager(
     {
-      broker_id: 'gta_broker',
-      name: 'Grow Trading Academy',
+      broker_id: 'acme_broker',
+      name: 'Acme Markets',
       server: 'broker-server-42',
-      backend_url: 'https://services.growtradingacademy.com',
+      backend_url: 'https://services.acme.example.com',
     },
     { user: '2000', password: 'secret' }
   );
 
-  assert.equal(postedUrl, 'https://services.growtradingacademy.com/manager/api/v2/auth/login');
+  assert.equal(postedUrl, 'https://services.acme.example.com/manager/api/v2/auth/login');
   assert.deepEqual(postedBody, {
     user: '2000',
     password: 'secret',

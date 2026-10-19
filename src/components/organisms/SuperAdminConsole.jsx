@@ -1925,7 +1925,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                 <input
                   name="broker_id"
                   required
-                  placeholder="e.g. gta_broker or my_broker"
+                  placeholder="e.g. acme_broker or my_broker"
                   className="w-full bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded px-3 py-2 text-[color:var(--text-primary)] font-mono"
                 />
               </div>
@@ -1935,7 +1935,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                 <input
                   name="name"
                   required
-                  placeholder="e.g. GTA Global Markets"
+                  placeholder="e.g. Acme Global Markets"
                   className="w-full bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded px-3 py-2 text-[color:var(--text-primary)]"
                 />
               </div>
@@ -1944,7 +1944,7 @@ export const SuperAdminConsole = ({ onClose, onNavigateBrokerLogin }) => {
                 <label className="font-semibold text-[color:var(--text-primary)] block mb-1">Company Legal Name</label>
                 <input
                   name="company_name"
-                  placeholder="e.g. GTA Markets LLC"
+                  placeholder="e.g. Acme Markets LLC"
                   className="w-full bg-[color:var(--bg-app)] border border-[color:var(--border-default)] rounded px-3 py-2 text-[color:var(--text-primary)]"
                 />
               </div>
