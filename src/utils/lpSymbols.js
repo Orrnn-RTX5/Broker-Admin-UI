@@ -51,6 +51,11 @@ export const mergeLpSymbols = (catalogue = [], configured = []) => {
  * catalogue entries are retained because the backend remains the authority for
  * whether they can be configured; the backend filter handles those.
  */
+export const groupDisabledSymbols = (entries = []) => (Array.isArray(entries) ? entries : [])
+  .filter(entry => entry?.configured && entry.instrument?.enabled === false)
+  .map(entry => String(entry.symbol || '').toUpperCase())
+  .filter(Boolean);
+
 export const groupSelectableSymbols = (entries = []) => (Array.isArray(entries) ? entries : [])
   .filter(entry => !(entry?.configured && entry.instrument?.enabled === false));
 

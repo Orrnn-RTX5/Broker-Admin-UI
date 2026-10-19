@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { groupSelectableSymbols, invalidateLpSymbols, loadLpSymbols, mergeLpSymbols } from './lpSymbols.js';
+import { groupDisabledSymbols, groupSelectableSymbols, invalidateLpSymbols, loadLpSymbols, mergeLpSymbols } from './lpSymbols.js';
 
 test('mergeLpSymbols unions the LP catalogue with configured instruments', () => {
   const merged = mergeLpSymbols(
@@ -71,4 +71,5 @@ test('group picker omits configured instruments that are disabled', () => {
     ],
   );
   assert.deepEqual(groupSelectableSymbols(rows).map(entry => entry.symbol), ['EURUSD', 'XAUUSD']);
+  assert.deepEqual(groupDisabledSymbols(rows), ['EURUSD.PRO']);
 });

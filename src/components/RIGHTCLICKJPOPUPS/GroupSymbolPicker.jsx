@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { parseCsvList } from '../../utils/adminValidation';
 import { appendSymbolToList } from '../../utils/lpSymbolLists';
 
-const GroupSymbolPicker = ({ value, onChange, disabled, symbolSource }) => {
+const GroupSymbolPicker = ({ value, onChange, disabled, symbolSource, disabledSymbols = [] }) => {
   const inputId = useId();
   const listId = useId();
   const inputRef = useRef(null);
@@ -32,8 +32,14 @@ const GroupSymbolPicker = ({ value, onChange, disabled, symbolSource }) => {
 
   const addSymbols = text => {
     if (disabled) return;
-    const entries = parseCsvList(text).map(symbol => symbols.find(entry => entry.symbol.toUpperCase() === symbol.toUpperCase())?.symbol || symbol);
+    const blocked = new Set(disabledSymbols.map(symbol => String(symbol).toUpperCase()));
+    const requested = parseCsvList(text);
+    const rejected = requested.filter(symbol => blocked.has(symbol.toUpperCase()));
+    const entries = requested
+      .filter(symbol => !blocked.has(symbol.toUpperCase()))
+      .map(symbol => symbols.find(entry => entry.symbol.toUpperCase() === symbol.toUpperCase())?.symbol || symbol);
     const next = entries.reduce(appendSymbolToList, value);
+    if (rejected.length) setAnnouncement(`${rejected.join(', ')} cannot be added: the instrument is disabled.`);
     if (next !== value) onChange(next);
     const additions = parseCsvList(next).filter(symbol => !selected.has(symbol.toUpperCase()));
     setAnnouncement(additions.length ? `${additions.join(', ')} added to the group.` : 'These symbols are already selected.');
