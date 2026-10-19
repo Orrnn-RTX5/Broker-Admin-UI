@@ -353,12 +353,12 @@ export const buildFeedWsUrl = ({ useProxy = shouldUseFeedDevProxy() } = {}) => {
   if (!base) return '';
   const rawUrl = base.endsWith('/ws/feed') ? base : `${base}/ws/feed`;
   const authContext = readWsAuthContext();
-  const sendToken = String(
-    getRuntimeValue('FEED_SEND_TOKEN', 'VITE_FEED_SEND_TOKEN') ?? viteEnv.VITE_FEED_SEND_TOKEN ?? 'true'
-  ).toLowerCase() !== 'false';
+  // SECURITY: the bridge serves /ws/feed unauthenticated and ignores any
+  // credential, so no token is ever attached. A session/fallback token in the
+  // URL would leak into logs and history for zero benefit.
   const authenticatedUrl = appendWsAuthParams(rawUrl, {
     ...authContext,
-    token: sendToken ? authContext.token : null,
+    token: null,
   });
   const proxiedUrl = useProxy ? toLocalDevFeedProxyUrl(authenticatedUrl) : authenticatedUrl;
   try {
@@ -399,14 +399,4 @@ export const buildFeedStatusUrl = () => {
   }
 };
 
-export const buildMetricsWsUrl = (token, login) => {
-  const authContext = readWsAuthContext();
-  return appendWsAuthParams(`${getBaseWsHost()}/manager/OnAccountMetrics`, {
-    token: token || authContext.token,
-    brokerId: null,
-    tokenParam: 'id',
-    brokerIdParam: null,
-    extraParams: { login },
-  });
-};
 
