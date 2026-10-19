@@ -199,8 +199,22 @@ export const buildManagerCreatePayload = (form, options = {}) => {
   return payload;
 };
 
+// Admin book control ('a' | 'b') is the owner of the Manager `routingMode`
+// contract value. The Manager normalizes an empty routingMode to b_book, so
+// the UI always sends the derived value explicitly instead of relying on
+// that silent backend default (UI-2).
+export const bookTypeToRoutingMode = (bookType, fallback) => {
+  const normalized = String(bookType ?? '').trim().toLowerCase();
+  if (normalized === 'a' || normalized === 'a_book') return 'a_book';
+  if (normalized === 'b' || normalized === 'b_book') return 'b_book';
+  if (fallback === 'a_book' || fallback === 'b_book') return fallback;
+  // Explicit neutral default: matches the backend normalization of empty -> b_book.
+  return 'b_book';
+};
+
 export const buildGroupRiskPayload = (formData) => ({
   ...formData,
+  routingMode: bookTypeToRoutingMode(formData?.bookType, formData?.routingMode),
   commissionRate: parseNonNegativeNumber(formData.commissionRate, 'Commission rate'),
   leverage: parsePositiveInteger(formData.leverage, 'Leverage'),
   lotDivisor: parsePositiveInteger(formData.lotDivisor, 'Lot divisor'),

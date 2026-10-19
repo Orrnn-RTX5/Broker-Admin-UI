@@ -143,7 +143,9 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
     setError(null);
     try {
       const validated = buildGroupRiskPayload({ ...formData, name: formData.name.trim(), currency: formData.currency.trim() });
-      const payload = initialData ? validated : subgroupCreatePayload(validated, parentGroup.trim(), [...changedFields.current]);
+      // bookType owns routingMode (UI-2): a book change is always a routing override.
+      const changed = [...new Set([...changedFields.current, ...(changedFields.current.includes('bookType') ? ['routingMode'] : [])])];
+      const payload = initialData ? validated : subgroupCreatePayload(validated, parentGroup.trim(), changed);
 
       if (initialData) {
         await ManagerService.updateGroup(payload);
