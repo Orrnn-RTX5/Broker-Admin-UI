@@ -699,12 +699,16 @@ const ManagerActionsMenu = ({ label, heading, actions, protectedAccount = false 
   </Menu.Root>
 );
 
-const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = '', onRowsChange }) => {
+const MANAGER_TABS = ['Managers', 'Roles', 'Online'];
+
+const getInitialManagersTab = (tab) => (MANAGER_TABS.includes(tab) ? tab : 'Managers');
+
+const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = '', onRowsChange, initialTab }) => {
   const [directorySearch, setDirectorySearch] = useState('');
   const matchesSearch = useCallback((row) => [searchQuery, directorySearch].every((query) =>
     !query.trim() || Object.values(row).some((value) => String(value ?? '').toLowerCase().includes(query.trim().toLowerCase()))
   ), [searchQuery, directorySearch]);
-  const [activeTab, setActiveTab] = useState('Managers');
+  const [activeTab, setActiveTab] = useState(() => getInitialManagersTab(initialTab));
   const identity = useAuthStore(getManagerDirectoryIdentity);
   const directory = useSyncExternalStore(subscribeManagerDirectory, () => peekManagerDirectory(identity));
   const managers = directory.managers.rows, roles = directory.roles.rows, online = directory.online.rows;
@@ -743,6 +747,11 @@ const ManagersView = ({ refreshTrigger = 0, searchQuery = '', sortDirection = ''
   useEffect(() => {
     if (previousRefresh.current !== refreshTrigger) { previousRefresh.current = refreshTrigger; void primeManagerDirectory({ force: true }); }
   }, [refreshTrigger]);
+  // Window-menu entries (e.g. Online Users) reuse this directory with a preset
+  // tab, so follow initialTab without a remount when navigation changes it.
+  useEffect(() => {
+    setActiveTab(getInitialManagersTab(initialTab));
+  }, [initialTab]);
 
   const handleContextMenu = (e, record, type) => {
     e.preventDefault();
