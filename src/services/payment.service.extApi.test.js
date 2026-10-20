@@ -65,3 +65,45 @@ test('no absolute host or API_HOST_EXT literal in payment URLs', () => {
   assert.doesNotMatch(src, /https?:\/\//);
   assert.doesNotMatch(src, /API_HOST_EXT/);
 });
+
+test('funding POST URLs stay same-origin through the ext-api resolver in production web', async () => {
+  // End-to-end pin for SUI-A2(a): PaymentService emits /ext-api URLs and the
+  // api.js interceptor resolves them via buildExtApiUrl. In production web
+  // with a broker ext field configured, the old resolver returned an absolute
+  // cross-origin host; it must stay on the same-origin proxy namespace.
+  const previousWindow = globalThis.window;
+  const previousSessionStorage = globalThis.sessionStorage;
+  globalThis.window = {
+    __RTX5_RUNTIME_CONFIG__: { BACKEND_TARGET: 'web', USE_DEV_PROXY: 'false' },
+    location: { protocol: 'https:' },
+  };
+  const store = new Map(Object.entries({
+    broker_info: JSON.stringify({
+      broker_id: 'demo-broker',
+      backend_url: 'https://backend-host.example',
+      web_ext_api_url: 'ext-host.example:8091',
+    }),
+  }));
+  globalThis.sessionStorage = {
+    getItem: (key) => store.get(key) ?? null,
+    setItem: (key, value) => store.set(key, String(value)),
+    removeItem: (key) => store.delete(key),
+  };
+  try {
+    await withFakePost(async (calls) => {
+      await PaymentService.createDeposit({ login: 990701, amount: 10, currency: 'USD' });
+      await PaymentService.createWithdrawal({ login: 990701, amount: 10, currency: 'USD' });
+      const endpoints = await import(`../config/endpoints.js?pay-case=${Date.now()}`);
+      assert.equal(calls.length, 2);
+      for (const call of calls) {
+        assert.equal(endpoints.buildExtApiUrl(call.url), call.url);
+        assert.doesNotMatch(endpoints.buildExtApiUrl(call.url), /^https?:\/\//);
+      }
+    });
+  } finally {
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+    if (previousSessionStorage === undefined) delete globalThis.sessionStorage;
+    else globalThis.sessionStorage = previousSessionStorage;
+  }
+});

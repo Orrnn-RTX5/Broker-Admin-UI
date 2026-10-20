@@ -44,11 +44,35 @@ test('SUI-A2/C1: FundingPopup routes validation errors to top-level setError', (
     'the login error must no longer render under Amount'
   );
   assert.ok(!popup.match(/error=\{errors\.amount \|\| errors\.login\}/));
+  assert.doesNotMatch(
+    popup,
+    /error=\{[^}]*errors\.login/,
+    'the login error must not render under any field row'
+  );
+});
+
+test('SUI-A2: FundingPopup marks its root as a nested popup for stacked Esc handling', () => {
+  const popup = readSource('components/RIGHTCLICKJPOPUPS/FundingPopup.jsx');
+  assert.match(
+    popup,
+    /data-nested-popup="true"/,
+    'the funding dialog renders inside Account Edit, so the parent Esc handler must stand down'
+  );
 });
 
 test('SUI-A2/C3: New Deposit form uses app validation, not native tooltips', () => {
   const view = readSource('components/organisms/DepositsView.jsx');
   assert.match(view, /<form onSubmit=\{handleSubmit\} noValidate/);
+});
+
+test('SUI-A2/C3: both Withdrawal forms use app validation, not native tooltips', () => {
+  const view = readSource('components/organisms/WithdrawalsView.jsx');
+  const matches = view.match(/<form onSubmit=\{handleSubmit\} noValidate/g) || [];
+  assert.equal(
+    matches.length,
+    2,
+    'both withdrawal forms (new request + reject) must carry noValidate'
+  );
 });
 
 test('SUI-A2/C3: deposit approve mints one key per click and passes it through', () => {
