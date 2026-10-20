@@ -4,6 +4,8 @@ import { AlertCircle, ChevronDown, LoaderCircle, ShieldCheck, X } from 'lucide-r
 import './CreateGroupPopup.css';
 import { subgroupCreatePayload } from '../../utils/groupAuthority.js';
 import { ManagerService } from '../../services/manager.service';
+import { BrokerGroupDefaultsApi } from '../../services/brokerGroupDefaults.service';
+import { GROUP_LEVERAGE_MAX, GROUP_LEVERAGE_MIN, applyBrokerDefaultLeverage, createGroupLeverageHint, groupCreateLeverageError } from '../../utils/brokerGroupDefaults';
 import { buildGroupRiskPayload, parseCsvList } from '../../utils/adminValidation';
 import { getApiErrorMessage } from '../../utils/apiShapes';
 import { validateGroupForm, validateGroupSection } from '../../utils/groupFormSteps';
@@ -67,7 +69,8 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
       currency: 'USD',
       demo: false,
       executionMode: 'market',
-      leverage: 100,
+      // No literal default: pre-filled from the broker default, else required.
+      leverage: '',
       lotDivisor: 1,
       marginCallLevel: 100,
       maxLotPerTrade: 100,
@@ -86,6 +89,19 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
   const [parentGroup, setParentGroup] = useState(draftData?.parentGroup || initialData?.parentGroup || '');
   const [parentLoading, setParentLoading] = useState(false);
   const changedFields = useRef(new Set());
+  // Broker default leverage for new groups: int pre-fills an untouched empty
+  // field; unset or unreadable leaves it empty and required (never 0).
+  const [leverageDefault, setLeverageDefault] = useState(() => ({ status: initialData ? 'none' : 'loading', value: null }));
+  useEffect(() => {
+    if (initialData) return;
+    let disposed = false;
+    BrokerGroupDefaultsApi.get().then(({ defaultLeverage }) => {
+      if (disposed) return;
+      setLeverageDefault({ status: defaultLeverage == null ? 'unset' : 'set', value: defaultLeverage });
+      setFormData(current => applyBrokerDefaultLeverage(current, defaultLeverage, changedFields.current.has('leverage')));
+    }).catch(() => { if (!disposed) setLeverageDefault({ status: 'error', value: null }); });
+    return () => { disposed = true; };
+  }, [initialData]);
   useEffect(() => {
     if (initialData || !parentGroup.trim()) return;
     let disposed = false;
@@ -144,7 +160,7 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
     try {
       const validated = buildGroupRiskPayload({ ...formData, name: formData.name.trim(), currency: formData.currency.trim() });
       // bookType owns routingMode (UI-2): a book change is always a routing override.
-      const changed = [...new Set([...changedFields.current, ...(changedFields.current.includes('bookType') ? ['routingMode'] : [])])];
+      const changed = [...new Set([...changedFields.current, ...(changedFields.current.has('bookType') ? ['routingMode'] : [])])];
       const payload = initialData ? validated : subgroupCreatePayload(validated, parentGroup.trim(), changed);
 
       if (initialData) {
@@ -156,7 +172,9 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
       onClose();
     } catch (err) {
       // Axios puts the backend's reason in response.data; err.message is only "Request failed with status code 400".
-      const message = getApiErrorMessage(err, 'Error creating group');
+      const leverageMessage = groupCreateLeverageError(err);
+      const message = leverageMessage || getApiErrorMessage(err, 'Error creating group');
+      if (leverageMessage) setErrorField('leverage');
       if (/commission|leverage|spread markup/i.test(message)) setActiveSection('trading');
       else if (/margin call|stop out/i.test(message)) setActiveSection('risk');
       setError(message);
@@ -232,7 +250,7 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
                   <div className="group-create-grid">
                     <GroupField label="Book type">{select('bookType', [['b', 'B-Book'], ['a', 'A-Book']])}</GroupField>
                     <GroupField label="Execution">{select('executionMode', [['market', 'Market'], ['instant', 'Instant']])}</GroupField>
-                    <GroupField label="Leverage (1:x)">{numericInput('leverage', { min: 1, step: 1 }, '1:')}</GroupField>
+                    <GroupField label="Leverage (1:x) *" hint={createGroupLeverageHint(leverageDefault)}>{numericInput('leverage', { min: GROUP_LEVERAGE_MIN, max: GROUP_LEVERAGE_MAX, step: 1, required: true }, '1:')}</GroupField>
                     <GroupField label="Spread markup">{numericInput('spreadMarkup', { min: 0, step: 'any' })}</GroupField>
                   </div>
                   <div className="group-create-subheading">Commission</div>

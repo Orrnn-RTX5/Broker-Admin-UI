@@ -1,7 +1,8 @@
-import { parseNonNegativeNumber, parsePositiveInteger } from './adminValidation.js';
+import { parseNonNegativeNumber } from './adminValidation.js';
+import { validateGroupLeverage } from './brokerGroupDefaults.js';
 
 const NUMERIC_FIELDS = {
-  trading: [['leverage', 'Leverage', parsePositiveInteger], ['spreadMarkup', 'Spread markup', parseNonNegativeNumber], ['commissionRate', 'Commission rate', parseNonNegativeNumber]],
+  trading: [['leverage', 'Leverage', validateGroupLeverage], ['spreadMarkup', 'Spread markup', parseNonNegativeNumber], ['commissionRate', 'Commission rate', parseNonNegativeNumber]],
   risk: [['marginCallLevel', 'Margin call level', parseNonNegativeNumber], ['stopOutLevel', 'Stop out level', parseNonNegativeNumber]],
 };
 
