@@ -88,7 +88,7 @@ const MenuBar = ({
         <DropdownMenuContent align="start" sideOffset={0} className="admin-header-menu-content">
           <Item icon={Download}        label="Export JSON"  shortcut="Ctrl+E"       onClick={onExport} />
           <Item icon={FileSpreadsheet} label="Export CSV"   shortcut="Ctrl+Shift+E" onClick={onExportCsv} />
-          <Item icon={FileCheck}       label="Validate import file" onClick={onImport} />
+          <Item icon={FileCheck}       label="Validate file (no import)" onClick={onImport} />
           <DropdownMenuSeparator />
           <Item icon={Printer} label="Print" shortcut="Ctrl+P" onClick={() => window.print()} />
           <DropdownMenuSeparator />

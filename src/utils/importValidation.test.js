@@ -70,5 +70,6 @@ test('File menu label stays validate-only accurate', () => {
     new URL('../components/organisms/MenuBar.jsx', import.meta.url),
     'utf8',
   );
-  assert.match(menuSrc, /label="Validate import file"/);
+  assert.match(menuSrc, /label="Validate file \(no import\)"/);
+  assert.doesNotMatch(menuSrc, /label="Validate import file"/);
 });
