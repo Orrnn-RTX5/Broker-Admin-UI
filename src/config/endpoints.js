@@ -281,7 +281,13 @@ export const buildExtApiUrl = (endpoint = '') => {
     ? path.startsWith('/') || path.startsWith('?') ? path : `/${path}`
     : '';
 
-  if (shouldUseLocalDevProxy()) {
+  // Web builds always stay on the same-origin /ext-api proxy namespace (Vite
+  // dev proxy + production proxy servers forward it to the broker ext API
+  // with the prefix stripped). Resolving the configured absolute ext host
+  // here would POST cross-origin with no /ext-api prefix, missing the proxy
+  // contract (SUI-A2: DepositRequestCreate "no request"). Only desktop
+  // targets, which have no serving proxy, use the configured absolute host.
+  if (!isDesktopBackendTarget()) {
     return `/ext-api${extPath}`;
   }
 

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { PaymentService } from '../../services/payment.service';
+import { PaymentService, newMoneyIdempotencyKey } from '../../services/payment.service';
 import { parseMoneyAmount, parsePositiveInteger } from '../../utils/adminValidation';
 import { normalizeArrayResponse, getApiErrorMessage } from '../../utils/apiShapes';
 import { Plus, RefreshCw, X, CheckCircle, XCircle } from 'lucide-react';
@@ -62,7 +62,7 @@ const AddDepositPopup = ({ onClose, onSaved }) => {
           <span className="text-[12px] font-semibold text-[color:var(--text-primary)] flex-1">New Deposit Request</span>
           <button onClick={onClose} className="text-white hover:text-white"><X size={14} /></button>
         </div>
-        <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3">
+        <form onSubmit={handleSubmit} noValidate className="p-4 flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-3">
             <FormLabel t="Account Login" req><input className={inp} type="number" value={form.login} onChange={e => set('login', e.target.value)} placeholder="12345" /></FormLabel>
             <FormLabel t="Amount" req><input className={inp} type="number" step="0.01" value={form.amount} onChange={e => set('amount', e.target.value)} placeholder="500.00" /></FormLabel>
@@ -163,7 +163,10 @@ const DepositsView = () => {
   const handleApprove = async (row) => {
     if (!window.confirm(`Approve deposit #${row.id} ($${row.amount}) for login ${row.account_login}?`)) return;
     setActionLoading(row.id);
-    try { await PaymentService.approveDeposit(row.id); fetchData(); }
+    // One idempotency key per click: minted here so a retry of this same
+    // click reuses it, while the next click mints a fresh one.
+    const idempotencyKey = newMoneyIdempotencyKey();
+    try { await PaymentService.approveDeposit(row.id, { idempotencyKey }); fetchData(); }
     catch (err) { alert(err.response?.data?.message || err.message); }
     finally { setActionLoading(null); }
   };

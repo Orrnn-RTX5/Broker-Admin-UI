@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { AdminConfigApi } from '../../services/adminConfigApi';
-import { buildFundingRequest } from '../../utils/legacyConfig';
+import { buildFundingRequest, fundingErrorsToMessage } from '../../utils/legacyConfig';
 import { getApiErrorMessage } from '../../utils/apiShapes';
 import { useToast } from '../ui/useToast';
 
@@ -32,6 +32,7 @@ const FundingPopup = ({ login, currency = 'USD', onClose, onSubmitted }) => {
   const setField = (field) => (event) => {
     setForm((current) => ({ ...current, [field]: event.target.value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
+    setError('');
   };
 
   const submit = async (event) => {
@@ -40,6 +41,7 @@ const FundingPopup = ({ login, currency = 'USD', onClose, onSubmitted }) => {
     const { payload, errors: nextErrors } = buildFundingRequest(kind, login, form);
     if (!payload) {
       setErrors(nextErrors);
+      setError(fundingErrorsToMessage(nextErrors));
       return;
     }
     setIsSubmitting(true);
@@ -61,7 +63,7 @@ const FundingPopup = ({ login, currency = 'USD', onClose, onSubmitted }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 font-sans" onClick={onClose}>
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 font-sans" onClick={onClose} data-nested-popup="true">
       <form
         role="dialog"
         aria-modal="true"
@@ -88,7 +90,7 @@ const FundingPopup = ({ login, currency = 'USD', onClose, onSubmitted }) => {
               <option value="withdrawal">Withdrawal request</option>
             </select>
           </Row>
-          <Row label="Amount:" htmlFor="funding-amount" error={errors.amount || errors.login}>
+          <Row label="Amount:" htmlFor="funding-amount" error={errors.amount}>
             <input id="funding-amount" type="number" min="0" step="0.01" value={form.amount} onChange={setField('amount')} className={inputClassName} autoFocus />
           </Row>
           <Row label="Currency:" htmlFor="funding-currency" error={errors.currency}>

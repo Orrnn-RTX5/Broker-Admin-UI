@@ -111,7 +111,7 @@ test('dynamic endpoints do not derive ext host from discovered HTTPS 443 server_
   assert.equal(endpoints.buildExtApiUrl('/SessionOverrideSet'), '/ext-api/SessionOverrideSet');
 });
 
-test('dynamic endpoints use explicit broker ext API fields when supplied', async () => {
+test('dynamic endpoints keep web ext calls on the same-origin proxy namespace', async () => {
   installWindow({ BACKEND_TARGET: 'web' });
   installStorage({
     broker_info: JSON.stringify({
@@ -127,11 +127,11 @@ test('dynamic endpoints use explicit broker ext API fields when supplied', async
   assert.equal(endpoints.API_HOST_EXT, 'http://203.0.113.21:8091');
   assert.equal(
     endpoints.buildExtApiUrl('/SessionOverrideSet'),
-    'http://203.0.113.21:8091/SessionOverrideSet'
+    '/ext-api/SessionOverrideSet'
   );
 });
 
-test('dynamic endpoints call discovered service-domain ext endpoints without ext-api prefix', async () => {
+test('discovered service-domain ext endpoints stay on the same-origin proxy namespace', async () => {
   installWindow({ BACKEND_TARGET: 'web' });
   installStorage({
     broker_info: JSON.stringify({
@@ -147,7 +147,7 @@ test('dynamic endpoints call discovered service-domain ext endpoints without ext
   assert.equal(endpoints.API_HOST_EXT, 'https://services.myprop.trade');
   assert.equal(
     endpoints.buildExtApiUrl('/ext-api/ServerStatus'),
-    'https://services.myprop.trade/ServerStatus'
+    '/ext-api/ServerStatus'
   );
 });
 
@@ -281,5 +281,54 @@ test('dynamic endpoints recover broker info from local storage after desktop res
   assert.equal(
     endpoints.buildManagerApiUrl('/manager/GroupList'),
     'https://services.myprop.trade/manager/GroupList'
+  );
+});
+
+test('SUI-A2: ext API posts stay same-origin/proxied in every web environment', async () => {
+  const environments = [
+    { name: 'dev proxy', config: { BACKEND_TARGET: 'web', USE_DEV_PROXY: 'true' } },
+    {
+      name: 'production proxy with baked ext host',
+      config: { BACKEND_TARGET: 'web', USE_DEV_PROXY: 'false', API_HOST_EXT: 'https://ext-host.example' },
+    },
+    {
+      name: 'production proxy with broker ext field',
+      config: { BACKEND_TARGET: 'web', USE_DEV_PROXY: 'false' },
+      extField: true,
+    },
+    { name: 'production proxy with no ext host', config: { BACKEND_TARGET: 'web', USE_DEV_PROXY: 'false' } },
+  ];
+
+  for (const env of environments) {
+    installWindow(env.config);
+    installStorage({
+      broker_info: JSON.stringify({
+        broker_id: 'demo-broker',
+        backend_url: 'https://backend-host.example',
+        ...(env.extField ? { web_ext_api_url: 'ext-host.example:8091' } : {}),
+      }),
+    });
+
+    const endpoints = await importFreshEndpoints();
+
+    for (const input of ['/ext-api/DepositRequestCreate', '/DepositRequestCreate', 'DepositRequestCreate']) {
+      const url = endpoints.buildExtApiUrl(input);
+      assert.equal(url, '/ext-api/DepositRequestCreate', `${env.name}: ${input}`);
+      assert.doesNotMatch(url, /^https?:\/\//, `${env.name}: never absolute/cross-origin`);
+    }
+  }
+});
+
+test('SUI-A2: desktop target keeps the configured absolute ext host (no serving proxy)', async () => {
+  installWindow({ BACKEND_TARGET: 'desktop' });
+  installStorage({
+    broker_info: JSON.stringify({ broker_id: 'demo-broker', backend_url: 'http://203.0.113.21:8091' }),
+  });
+
+  const endpoints = await importFreshEndpoints();
+
+  assert.equal(
+    endpoints.buildExtApiUrl('/ext-api/DepositRequestCreate'),
+    'http://203.0.113.21:8091/DepositRequestCreate'
   );
 });

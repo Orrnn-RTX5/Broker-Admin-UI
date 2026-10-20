@@ -304,6 +304,25 @@ export const readCreatedLogin = (result) => {
 
 export const FUNDING_KINDS = Object.freeze(['deposit', 'withdrawal']);
 
+// Validation errors surface field-by-field AND as one top-level message, so
+// no failure is visible only as small text under a field (SUI-A2: the login
+// error used to hide under Amount). Order is fixed for stable snapshots.
+const FUNDING_ERROR_ORDER = ['kind', 'login', 'amount', 'currency'];
+
+/** Joins a buildFundingRequest errors object into one top-level message. */
+export const fundingErrorsToMessage = (errors = {}) => {
+  if (!errors || typeof errors !== 'object') return '';
+  const seen = new Set();
+  const parts = [];
+  for (const key of [...FUNDING_ERROR_ORDER, ...Object.keys(errors)]) {
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const value = errors[key];
+    if (value !== undefined && value !== null && String(value) !== '') parts.push(String(value));
+  }
+  return parts.join(' ');
+};
+
 /**
  * A deposit or withdrawal REQUEST for the existing ledger workflow
  * (DepositRequestCreate / WithdrawalRequestCreate). It never changes a
