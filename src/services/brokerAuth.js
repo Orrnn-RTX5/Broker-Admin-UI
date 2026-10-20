@@ -16,12 +16,19 @@ const BROKER_INFO_KEY = 'broker_info';
 const AUTH_KEY = 'auth';
 const RECENT_BROKERS_KEY = 'recent_brokers';
 const ADMIN_LOGIN_PORT = 8091;
+// No compiled discovery host: every deployment provides the platform
+// directory via runtime config (window.__RTX5_RUNTIME_CONFIG__), build env,
+// or the Docker entrypoint. Empty means unconfigured and fails closed in
+// loadBrokerList, unless the environment already pins its own broker
+// (CONFIGURED_BROKER_ENTRY), which stays usable offline.
 const DEFAULT_DISCOVERY_BASE_URL = String(
   getRuntimeValue('DEFAULT_DISCOVERY_BASE_URL', 'VITE_DEFAULT_DISCOVERY_BASE_URL') ||
   viteEnv.VITE_DEFAULT_DISCOVERY_BASE_URL ||
-  'https://superbackend.orrnn.com'
+  ''
 ).replace(/\/+$/, '');
 export const BROKER_DISCOVERY_PATH = '/api/v2/broker/servers';
+export const DISCOVERY_NOT_CONFIGURED_ERROR =
+  'Broker discovery is not configured. Set DISCOVERY_BASE_URL (or VITE_DISCOVERY_BASE_URL) in the runtime config.';
 
 export const RUNTIME_API_HOST =
   (getRuntimeValue('API_HOST', 'VITE_API_HOST', 'API_URL', 'VITE_API_URL') ||
@@ -53,16 +60,16 @@ const comparableOrigin = (value = '') => {
 
 const normalizeDiscoveryBaseUrl = (value = '') => {
   const trimmed = String(value || '').replace(/\/+$/, '');
-  if (!trimmed) return DEFAULT_DISCOVERY_BASE_URL;
+  if (!trimmed) return '';
   const discoveryOrigin = comparableOrigin(trimmed);
   const brokerApiOrigins = [RUNTIME_API_HOST, RUNTIME_API_HOST_EXT]
     .map(comparableOrigin)
     .filter(Boolean);
-  if (brokerApiOrigins.includes(discoveryOrigin)) {
-    return DEFAULT_DISCOVERY_BASE_URL;
-  }
-  if (/backend\.orrnn\.com|brokerbackend|:8091(?:\/|$)/i.test(trimmed)) {
-    return DEFAULT_DISCOVERY_BASE_URL;
+  // Discovery must be the platform directory, never one broker's API hosts.
+  // A match means misconfiguration: return empty so discovery fails closed
+  // instead of silently substituting a vendor default host.
+  if (discoveryOrigin && brokerApiOrigins.includes(discoveryOrigin)) {
+    return '';
   }
   return trimmed;
 };
@@ -466,7 +473,15 @@ const loadBrokerList = async () => {
     return list;
   }
 
-  const url = `${DISCOVERY_BASE_URL.replace(/\/+$/, '')}${BROKER_DISCOVERY_PATH}`;
+  const discoveryBase = DISCOVERY_BASE_URL.replace(/\/+$/, '');
+  if (!discoveryBase) {
+    // Explicit fallback contract: an environment-pinned broker (BROKER_ID +
+    // API_HOST) does not need the platform directory, so sign-in proceeds
+    // offline. Otherwise fail closed with a clear configuration error.
+    if (CONFIGURED_BROKER_ENTRY) return [normalizeBrokerInfo(CONFIGURED_BROKER_ENTRY)];
+    throw new Error(DISCOVERY_NOT_CONFIGURED_ERROR);
+  }
+  const url = `${discoveryBase}${BROKER_DISCOVERY_PATH}`;
   console.log(`%c[Auth Request] GET ${redactUrlForLog(url)}`, 'color: #00bcd4; font-weight: bold;');
 
   let response;

@@ -36,7 +36,7 @@ const installBrowserGlobals = (runtimeConfig = {}) => {
 const importFreshBrokerAuth = () => import(`./brokerAuth.js?case=${++importId}`);
 
 test('concurrent login discovery shares one read and retries after it settles', async () => {
-  installBrowserGlobals();
+  installBrowserGlobals({ DISCOVERY_BASE_URL: 'https://platform.example.com' });
   let calls = 0;
   const pending = [];
   globalThis.fetch = () => { calls++; return new Promise(resolve => pending.push(resolve)); };
@@ -55,7 +55,7 @@ test('concurrent login discovery shares one read and retries after it settles', 
 
 for (const target of ['web', 'desktop']) {
   test(`discovered broker selection routes admin login to its HTTPS backend in ${target}`, async () => {
-    installBrowserGlobals({ BACKEND_TARGET: target });
+    installBrowserGlobals({ BACKEND_TARGET: target, DISCOVERY_BASE_URL: 'https://platform.example.com' });
     const calls = [];
     globalThis.fetch = async (url, options) => {
       calls.push({ url, options });
@@ -91,14 +91,14 @@ test('configured broker admin falls back to its env backend when discovery fails
 });
 
 const CONFIGURED_BROKER_ENV = {
-  BROKER_ID: 'trivanta-markets',
-  BROKER_NAME: 'Trivanta Markets',
-  API_HOST: 'https://trivanta.orrnn.com',
-  API_HOST_EXT: 'https://trivanta.orrnn.com',
-  FEED_WS_URL: 'wss://trivanta.orrnn.com/ws/feed',
-  FEED_STATUS_URL: 'https://trivanta.orrnn.com/ws/feed/status',
-  DEFAULT_MT5_SERVER: '51.195.188.172',
-  DISCOVERY_BASE_URL: 'https://superadmin-prod.orrnn.com',
+  BROKER_ID: 'acme',
+  BROKER_NAME: 'Acme Markets',
+  API_HOST: 'https://api.acme.example',
+  API_HOST_EXT: 'https://api.acme.example',
+  FEED_WS_URL: 'wss://feed.acme.example/ws/feed',
+  FEED_STATUS_URL: 'https://feed.acme.example/ws/feed/status',
+  DEFAULT_MT5_SERVER: '203.0.113.10',
+  DISCOVERY_BASE_URL: 'https://platform.example.com',
 };
 
 test('environment-configured broker keeps its discovery handle but uses .env hosts', async () => {
@@ -111,31 +111,31 @@ test('environment-configured broker keeps its discovery handle but uses .env hos
       status: 200,
       headers: { get: () => null },
       text: async () => JSON.stringify(options.method === 'GET' ? [{
-        broker_id: 'trivanta-markets',
-        broker_name: 'Trivanta Markets',
-        server: '51.195.188.172:443',
-        server_url: 'https://51.195.188.172:443',
-        ws_url: 'ws://51.195.188.172/ws/feed',
+        broker_id: 'acme',
+        broker_name: 'Acme Markets',
+        server: '203.0.113.10:443',
+        server_url: 'https://203.0.113.10:443',
+        ws_url: 'ws://203.0.113.10/ws/feed',
       }] : { token: 'test-token' }),
     };
   };
   const auth = await importFreshBrokerAuth();
   const [broker, ...rest] = await auth.fetchBrokerList();
-  assert.equal(calls[0], 'https://superadmin-prod.orrnn.com/api/v2/broker/servers');
+  assert.equal(calls[0], 'https://platform.example.com/api/v2/broker/servers');
   assert.equal(rest.length, 0);
-  assert.equal(broker.broker_id, 'trivanta-markets');
-  assert.equal(broker.name, 'Trivanta Markets');
-  assert.equal(broker.server, '51.195.188.172:443');
-  assert.equal(broker.backend_url, 'https://trivanta.orrnn.com');
-  assert.equal(broker.server_url, 'https://trivanta.orrnn.com');
-  assert.equal(broker.feed_ws_url, 'wss://trivanta.orrnn.com/ws/feed');
+  assert.equal(broker.broker_id, 'acme');
+  assert.equal(broker.name, 'Acme Markets');
+  assert.equal(broker.server, '203.0.113.10:443');
+  assert.equal(broker.backend_url, 'https://api.acme.example');
+  assert.equal(broker.server_url, 'https://api.acme.example');
+  assert.equal(broker.feed_ws_url, 'wss://feed.acme.example/ws/feed');
 
   // A previously stored record for the same broker cannot redirect login.
   await auth.loginAdmin(
-    { broker_id: 'trivanta-markets', backend_url: 'https://51.195.188.172:443', env: { API_HOST: 'https://old.example.com' } },
+    { broker_id: 'acme', backend_url: 'https://203.0.113.10:443', env: { API_HOST: 'https://old.example.com' } },
     { user: 'test-admin', password: 'test-password' }
   );
-  assert.equal(calls[1], 'https://trivanta.orrnn.com/manager/api/v2/admin/login');
+  assert.equal(calls[1], 'https://api.acme.example/manager/api/v2/admin/login');
 });
 
 test('environment-configured broker stays available when discovery is unreachable', async () => {
@@ -144,13 +144,13 @@ test('environment-configured broker stays available when discovery is unreachabl
   const auth = await importFreshBrokerAuth();
   const brokers = await auth.fetchBrokerList();
   assert.equal(brokers.length, 1);
-  assert.equal(brokers[0].broker_id, 'trivanta-markets');
-  assert.equal(brokers[0].server, '51.195.188.172');
-  assert.equal(brokers[0].backend_url, 'https://trivanta.orrnn.com');
+  assert.equal(brokers[0].broker_id, 'acme');
+  assert.equal(brokers[0].server, '203.0.113.10');
+  assert.equal(brokers[0].backend_url, 'https://api.acme.example');
 });
 
 test('discovery preserves platform handles and respects disabled records', async () => {
-  installBrowserGlobals();
+  installBrowserGlobals({ DISCOVERY_BASE_URL: 'https://platform.example.com' });
   const auth = await importFreshBrokerAuth();
   for (const enabled of [true, false]) {
     globalThis.fetch = async () => ({ ok: true, status: 200, text: async () => JSON.stringify([
@@ -172,8 +172,8 @@ for (const target of ['web', 'desktop']) {
       BROKER_ID: 'direct_broker',
       API_HOST: 'https://direct.example.com',
       DIRECT_MANAGER_ORIGINS: 'https://direct.example.com',
-      DEFAULT_DISCOVERY_BASE_URL: 'https://superadmin-prod.orrnn.com',
-      DISCOVERY_BASE_URL: 'https://superadmin-prod.orrnn.com',
+      DEFAULT_DISCOVERY_BASE_URL: 'https://platform.example.com',
+      DISCOVERY_BASE_URL: 'https://platform.example.com',
     });
     const calls = [];
     globalThis.fetch = async (url, options) => {
@@ -195,14 +195,14 @@ for (const target of ['web', 'desktop']) {
     assert.equal(broker.broker_id, 'direct_broker');
     assert.equal(broker.server, 'broker-server-5');
     await auth.loginAdmin(broker, { user: '10018', password: 'test-password' });
-    assert.equal(calls[0].url, 'https://superadmin-prod.orrnn.com/api/v2/broker/servers');
+    assert.equal(calls[0].url, 'https://platform.example.com/api/v2/broker/servers');
     assert.equal(calls[1].url, 'https://direct.example.com/api/v2/admin/login');
     assert.deepEqual(JSON.parse(calls[1].options.body), { user: '10018', password: 'test-password' });
   });
 }
 
 test('live discovery never fabricates brokers when records are empty or disabled', async () => {
-  installBrowserGlobals({ BROKER_ID: 'TEST' });
+  installBrowserGlobals({ BROKER_ID: 'TEST', DISCOVERY_BASE_URL: 'https://platform.example.com' });
   const auth = await importFreshBrokerAuth();
   for (const records of [[], [{ broker_id: 'TEST', enabled: false, server: 'broker-server-5' }]]) {
     globalThis.fetch = async () => ({ ok: true, status: 200, text: async () => JSON.stringify(records) });
@@ -250,7 +250,7 @@ test('getBrokerInfo recovers selected broker from local storage after desktop re
 });
 
 test('fetchBrokerList uses v2 discovery and keeps sanitized broker server handles', async () => {
-  installBrowserGlobals();
+  installBrowserGlobals({ DISCOVERY_BASE_URL: 'https://platform.example.com' });
   let requestedUrl = '';
   globalThis.fetch = async (url, options) => {
     requestedUrl = url;
@@ -268,7 +268,7 @@ test('fetchBrokerList uses v2 discovery and keeps sanitized broker server handle
             status: 'active',
             server: 'broker-server-42',
             backend_url: 'https://services.acme.example.com',
-            logo_url: 'https://superbackend.orrnn.com/api/v1/brokers/acme_broker/logo',
+            logo_url: 'https://platform.example.com/api/v1/brokers/acme_broker/logo',
           },
           {
             broker_id: 'disabled',
@@ -284,11 +284,11 @@ test('fetchBrokerList uses v2 discovery and keeps sanitized broker server handle
   const brokerAuth = await importFreshBrokerAuth();
   const list = await brokerAuth.fetchBrokerList();
 
-  assert.equal(requestedUrl, 'https://superbackend.orrnn.com/api/v2/broker/servers');
+  assert.equal(requestedUrl, 'https://platform.example.com/api/v2/broker/servers');
   assert.equal(list.length, 1);
   assert.equal(list[0].broker_id, 'acme_broker');
   assert.equal(list[0].name, 'Acme Markets');
-  assert.equal(list[0].logo_url, 'https://superbackend.orrnn.com/api/v1/brokers/acme_broker/logo');
+  assert.equal(list[0].logo_url, 'https://platform.example.com/api/v1/brokers/acme_broker/logo');
   assert.equal(list[0].server, 'broker-server-42');
   assert.equal(list[0].backend_url, 'https://services.acme.example.com');
   assert.equal(list[0].server_ip, '');
@@ -296,7 +296,7 @@ test('fetchBrokerList uses v2 discovery and keeps sanitized broker server handle
 });
 
 test('fetchBrokerList preserves discovered server handle without hardcoded broker rewrites', async () => {
-  installBrowserGlobals({ DISCOVERY_BASE_URL: 'https://superbackend.orrnn.com' });
+  installBrowserGlobals({ DISCOVERY_BASE_URL: 'https://platform.example.com' });
   globalThis.fetch = async () => ({
     ok: true,
     status: 200,
@@ -328,7 +328,7 @@ test('fetchBrokerList keeps discovered handle for login while displaying runtime
   installBrowserGlobals({
     BROKER_ID: 'acme_broker',
     DEFAULT_MT5_SERVER: '203.0.113.142',
-    DISCOVERY_BASE_URL: 'https://superbackend.orrnn.com',
+    DISCOVERY_BASE_URL: 'https://platform.example.com',
   });
   globalThis.fetch = async () => ({
     ok: true,
@@ -354,7 +354,7 @@ test('fetchBrokerList keeps discovered handle for login while displaying runtime
 });
 
 test('fetchBrokerList does not use the selected broker backend as discovery host', async () => {
-  installBrowserGlobals({ API_HOST: 'https://testbrokerbackend.orrnn.com' });
+  installBrowserGlobals({ API_HOST: 'https://backend.acme.example', DISCOVERY_BASE_URL: 'https://platform.example.com' });
   let requestedUrl = '';
   globalThis.fetch = async (url) => {
     requestedUrl = url;
@@ -368,7 +368,7 @@ test('fetchBrokerList does not use the selected broker backend as discovery host
   const brokerAuth = await importFreshBrokerAuth();
   await brokerAuth.fetchBrokerList();
 
-  assert.equal(requestedUrl, 'https://superbackend.orrnn.com/api/v2/broker/servers');
+  assert.equal(requestedUrl, 'https://platform.example.com/api/v2/broker/servers');
 });
 
 test('fetchBrokerList ignores runtime discovery when it points at selected broker services host', async () => {
@@ -388,9 +388,29 @@ test('fetchBrokerList ignores runtime discovery when it points at selected broke
   };
 
   const brokerAuth = await importFreshBrokerAuth();
-  await brokerAuth.fetchBrokerList();
+  await assert.rejects(
+    brokerAuth.fetchBrokerList(),
+    (error) => error?.message === brokerAuth.DISCOVERY_NOT_CONFIGURED_ERROR
+  );
 
-  assert.equal(requestedUrl, 'https://superbackend.orrnn.com/api/v2/broker/servers');
+  assert.equal(requestedUrl, '', 'self-referential discovery must fail closed without any fetch');
+});
+
+test('unconfigured discovery with no pinned broker fails closed with a clear error', async () => {
+  installBrowserGlobals();
+  let requestedUrl = '';
+  globalThis.fetch = async (url) => {
+    requestedUrl = url;
+    return { ok: true, status: 200, text: async () => '[]' };
+  };
+
+  const brokerAuth = await importFreshBrokerAuth();
+  await assert.rejects(
+    brokerAuth.fetchBrokerList(),
+    (error) => error?.message === brokerAuth.DISCOVERY_NOT_CONFIGURED_ERROR
+  );
+
+  assert.equal(requestedUrl, '', 'no discovery host configured means no request is issued');
 });
 
 test('loginAdmin omits server when the caller does not explicitly supply one', async () => {
@@ -583,7 +603,7 @@ test('loginManager sends the opaque server handle when discovery does not expose
   assert.equal(response.token, 'manager-token');
 });
 
-test('ORRNN public broker admin login uses the manager proxy prefix', async () => {
+test('public broker admin login uses the manager proxy prefix', async () => {
   installBrowserGlobals();
   let postedUrl = '';
   globalThis.fetch = async (url) => {
@@ -591,25 +611,25 @@ test('ORRNN public broker admin login uses the manager proxy prefix', async () =
     return {
       ok: true,
       status: 200,
-      text: async () => JSON.stringify({ token: 'admin-token', broker_id: 'testorrnn' }),
+      text: async () => JSON.stringify({ token: 'admin-token', broker_id: 'acme-test' }),
     };
   };
 
   const brokerAuth = await importFreshBrokerAuth();
   await brokerAuth.loginAdmin(
     {
-      broker_id: 'testorrnn',
-      name: 'Test Orrnn Broker',
-      server: 'testorrnn',
-      backend_url: 'https://testbrokerbackend.orrnn.com',
+      broker_id: 'acme-test',
+      name: 'Acme Test Broker',
+      server: 'acme-test',
+      backend_url: 'https://backend.acme.example',
     },
-    { user: '990701', password: 'secret', server: 'testorrnn' }
+    { user: '990701', password: 'secret', server: 'acme-test' }
   );
 
-  assert.equal(postedUrl, 'https://testbrokerbackend.orrnn.com/manager/api/v2/admin/login');
+  assert.equal(postedUrl, 'https://backend.acme.example/manager/api/v2/admin/login');
 });
 
-test('ORRNN public broker manager login uses the manager proxy prefix', async () => {
+test('public broker manager login uses the manager proxy prefix', async () => {
   installBrowserGlobals();
   let postedUrl = '';
   globalThis.fetch = async (url) => {
@@ -617,22 +637,22 @@ test('ORRNN public broker manager login uses the manager proxy prefix', async ()
     return {
       ok: true,
       status: 200,
-      text: async () => JSON.stringify({ token: 'manager-token', broker_id: 'testorrnn' }),
+      text: async () => JSON.stringify({ token: 'manager-token', broker_id: 'acme-test' }),
     };
   };
 
   const brokerAuth = await importFreshBrokerAuth();
   await brokerAuth.loginManager(
     {
-      broker_id: 'testorrnn',
-      name: 'Test Orrnn Broker',
-      server: 'testorrnn',
-      backend_url: 'https://testbrokerbackend.orrnn.com',
+      broker_id: 'acme-test',
+      name: 'Acme Test Broker',
+      server: 'acme-test',
+      backend_url: 'https://backend.acme.example',
     },
-    { user: '990702', password: 'secret', server: 'testorrnn' }
+    { user: '990702', password: 'secret', server: 'acme-test' }
   );
 
-  assert.equal(postedUrl, 'https://testbrokerbackend.orrnn.com/manager/api/v2/auth/login');
+  assert.equal(postedUrl, 'https://backend.acme.example/manager/api/v2/auth/login');
 });
 
 test('validateBrokerCredentials preserves validation state without returning raw license key', async () => {

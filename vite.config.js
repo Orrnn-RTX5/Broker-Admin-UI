@@ -44,10 +44,13 @@ viteLogger.error = (message, options) => {
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const apiHost    = env.VITE_API_HOST || env.VITE_API_URL || env.API_HOST || env.API_URL || 'https://backend.orrnn.com'
-  const apiHostExt = env.VITE_API_HOST_EXT || env.VITE_API_EXT_URL || env.API_HOST_EXT || env.API_EXT_URL || 'http://backend.orrnn.com:8091'
-  const superAdminHost = env.VITE_SUPER_ADMIN_API_HOST || env.SUPER_ADMIN_API_HOST || 'https://fxtrustsuperbackned.orrnn.com'
-  const wsFeedHost = env.VITE_FEED_WS_URL || env.VITE_WS_HOST || env.WS_HOST || 'wss://nexa.orrnn.com/ws/feed'
+  // Dev-server proxy targets only; never baked into the client bundle.
+  // Generic reserved-example hosts fail fast when .env is missing instead of
+  // silently proxying development traffic to a real tenant backend.
+  const apiHost    = env.VITE_API_HOST || env.VITE_API_URL || env.API_HOST || env.API_URL || 'https://broker.example.com'
+  const apiHostExt = env.VITE_API_HOST_EXT || env.VITE_API_EXT_URL || env.API_HOST_EXT || env.API_EXT_URL || 'http://broker.example.com:8091'
+  const superAdminHost = env.VITE_SUPER_ADMIN_API_HOST || env.SUPER_ADMIN_API_HOST || 'https://platform.example.com'
+  const wsFeedHost = env.VITE_FEED_WS_URL || env.VITE_WS_HOST || env.WS_HOST || 'wss://broker.example.com/ws/feed'
   const wsFeedUrl = new URL(wsFeedHost.replace(/^wss:/i, 'https:').replace(/^ws:/i, 'http:'))
   const wsTarget = wsFeedUrl.origin
   const useFeedDevProxy = mode === 'development' && String(env.VITE_FEED_USE_DEV_PROXY || '').toLowerCase() === 'true'

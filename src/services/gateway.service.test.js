@@ -5,7 +5,7 @@ import { gatewayGetRoutingOptions } from './gateway.service.js';
 
 test('LP choices use the manage_groups endpoint and preserve route metadata', async () => {
   const original = api.get;
-  const data = { items: [{ name: 'ORRNN', routing_mode: 'b_book' }] };
+  const data = { items: [{ name: 'Internal Desk', routing_mode: 'b_book' }] };
   api.get = async (url, config) => {
     assert.equal(url, '/manager/LPRoutingOptions');
     assert.equal(config.timeout, 15000);

@@ -11,7 +11,10 @@ api_host="${API_HOST:-${VITE_API_HOST:-}}"
 ws_host="${WS_HOST:-${VITE_WS_HOST:-}}"
 api_host_ext="${API_HOST_EXT:-${VITE_API_HOST_EXT:-}}"
 default_mt5_server="${DEFAULT_MT5_SERVER:-${VITE_DEFAULT_MT5_SERVER:-}}"
-default_discovery_base_url="${DEFAULT_DISCOVERY_BASE_URL:-${VITE_DEFAULT_DISCOVERY_BASE_URL:-https://superbackend.orrnn.com}}"
+# No compiled platform defaults: an unset discovery or Super Admin host stays
+# empty and the UI fails closed with a clear error, unless API_HOST/BROKER_ID
+# already pin this installation's own broker (offline sign-in still works).
+default_discovery_base_url="${DEFAULT_DISCOVERY_BASE_URL:-${VITE_DEFAULT_DISCOVERY_BASE_URL:-}}"
 discovery_base_url="${DISCOVERY_BASE_URL:-${VITE_DISCOVERY_BASE_URL:-$default_discovery_base_url}}"
 use_mock_discovery="${USE_MOCK_DISCOVERY:-${VITE_USE_MOCK_DISCOVERY:-false}}"
 backend_target="${BACKEND_TARGET:-${VITE_BACKEND_TARGET:-${BACKEND_MODE:-${VITE_BACKEND_MODE:-web}}}}"
@@ -24,7 +27,8 @@ feed_status_url="${FEED_STATUS_URL:-${VITE_FEED_STATUS_URL:-}}"
 feed_send_token="${FEED_SEND_TOKEN:-${VITE_FEED_SEND_TOKEN:-true}}"
 feed_broker_token="${FEED_BROKER_TOKEN:-${VITE_FEED_BROKER_TOKEN:-}}"
 direct_manager_origins="${DIRECT_MANAGER_ORIGINS:-${VITE_DIRECT_MANAGER_ORIGINS:-}}"
-super_admin_api_host="${SUPER_ADMIN_API_HOST:-${VITE_SUPER_ADMIN_API_HOST:-https://superbackend.orrnn.com}}"
+fix_relay_enabled="${FIX_RELAY_ENABLED:-${VITE_FIX_RELAY_ENABLED:-}}"
+super_admin_api_host="${SUPER_ADMIN_API_HOST:-${VITE_SUPER_ADMIN_API_HOST:-}}"
 
 normalize_origin() {
   printf '%s' "${1:-}" | sed -e 's#/*$##' -e 's#^http://##' -e 's#^https://##' | tr '[:upper:]' '[:lower:]'
@@ -50,6 +54,7 @@ window.__RTX5_RUNTIME_CONFIG__ = {
   FEED_SEND_TOKEN: "$(js_escape "$feed_send_token")",
   FEED_BROKER_TOKEN: "$(js_escape "$feed_broker_token")",
   DIRECT_MANAGER_ORIGINS: "$(js_escape "$direct_manager_origins")",
+  FIX_RELAY_ENABLED: "$(js_escape "$fix_relay_enabled")",
   SUPER_ADMIN_API_HOST: "$(js_escape "$super_admin_api_host")",
   API_HOST: "$(js_escape "$api_host")",
   WS_HOST: "$(js_escape "$ws_host")",
