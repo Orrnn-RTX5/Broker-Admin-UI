@@ -1,4 +1,26 @@
-import { api } from '../lib/api';
+import { api } from '../lib/api.js';
+
+// One UUIDv4 idempotency key per user click for the MoneyIdempotent-wrapped
+// money routes (DepositRequestApprove, WithdrawalRequestApprove,
+// PaymentRefundProcess). The backend reads the key from the `Idempotency-Key`
+// header only and refuses a missing key with 400 IDEMPOTENCY_KEY_REQUIRED, so
+// every approve/refund call below carries one. Callers mint the key at click
+// time and pass it as `{ idempotencyKey }` so a same-click retry reuses the
+// key; when no key is supplied the service mints one per call (never cached
+// at module level, never reused across clicks).
+export const newMoneyIdempotencyKey = () => {
+  const cryptoApi = globalThis.crypto;
+  if (cryptoApi?.randomUUID) return cryptoApi.randomUUID();
+  const bytes = cryptoApi.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+};
+
+const withIdempotencyKey = (options) => ({
+  headers: { 'Idempotency-Key': options?.idempotencyKey || newMoneyIdempotencyKey() },
+});
 
 export const PaymentService = {
   // --- PAYMENT METHODS ---
@@ -28,8 +50,8 @@ export const PaymentService = {
     const res = await api.post('/ext-api/DepositRequestCreate', data);
     return res.data;
   },
-  approveDeposit: async (depositId) => {
-    const res = await api.get('/ext-api/DepositRequestApprove', { params: { deposit_id: depositId } });
+  approveDeposit: async (depositId, options) => {
+    const res = await api.get('/ext-api/DepositRequestApprove', { params: { deposit_id: depositId }, ...withIdempotencyKey(options) });
     return res.data;
   },
   rejectDeposit: async (depositId, reason) => {
@@ -48,8 +70,8 @@ export const PaymentService = {
     const res = await api.post('/ext-api/WithdrawalRequestCreate', data);
     return res.data;
   },
-  approveWithdrawal: async (withdrawalId) => {
-    const res = await api.get('/ext-api/WithdrawalRequestApprove', { params: { withdrawal_id: withdrawalId } });
+  approveWithdrawal: async (withdrawalId, options) => {
+    const res = await api.get('/ext-api/WithdrawalRequestApprove', { params: { withdrawal_id: withdrawalId }, ...withIdempotencyKey(options) });
     return res.data;
   },
   rejectWithdrawal: async (withdrawalId, reason) => {
@@ -82,10 +104,10 @@ export const PaymentService = {
     const res = await api.get('/ext-api/PaymentCallbackProcess', { params });
     return res.data;
   },
-  processRefund: async (transactionId, reason) => {
+  processRefund: async (transactionId, reason, options) => {
     const params = { transaction_id: transactionId };
     if (reason) params.reason = reason;
-    const res = await api.get('/ext-api/PaymentRefundProcess', { params });
+    const res = await api.get('/ext-api/PaymentRefundProcess', { params, ...withIdempotencyKey(options) });
     return res.data;
   },
 

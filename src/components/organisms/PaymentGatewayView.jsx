@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PaymentService } from '../../services/payment.service';
+import { PaymentService, newMoneyIdempotencyKey } from '../../services/payment.service';
 import { normalizeArrayResponse, getApiErrorMessage } from '../../utils/apiShapes';
 import { RefreshCw, ToggleLeft, ToggleRight, Zap, RotateCcw } from 'lucide-react';
 
@@ -186,8 +186,11 @@ const RefundTab = () => {
     e.preventDefault();
     if (!form.transaction_id) { setError('Transaction ID is required.'); return; }
     setLoading(true); setError(''); setResult(null);
+    // One idempotency key per click: minted here so a retry of this same
+    // click reuses it, while the next click mints a fresh one.
+    const idempotencyKey = newMoneyIdempotencyKey();
     try {
-      const res = await PaymentService.processRefund(parseInt(form.transaction_id), form.reason || undefined);
+      const res = await PaymentService.processRefund(parseInt(form.transaction_id), form.reason || undefined, { idempotencyKey });
       setResult(res);
     } catch (err) { setError(getApiErrorMessage(err, 'Failed to process refund.')); }
     finally { setLoading(false); }

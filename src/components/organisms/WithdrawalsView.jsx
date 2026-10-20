@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { PaymentService } from '../../services/payment.service';
+import { PaymentService, newMoneyIdempotencyKey } from '../../services/payment.service';
 import { parseMoneyAmount, parsePositiveInteger } from '../../utils/adminValidation';
 import { normalizeArrayResponse, getApiErrorMessage } from '../../utils/apiShapes';
 import { Plus, RefreshCw, X, CheckCircle, XCircle, PauseCircle } from 'lucide-react';
@@ -163,8 +163,11 @@ const WithdrawalsView = () => {
 
   const doAction = async (action, row) => {
     setActionLoading(`${action}-${row.id}`);
+    // One idempotency key per click: minted here so a retry of this same
+    // click reuses it, while the next click mints a fresh one.
+    const idempotencyKey = newMoneyIdempotencyKey();
     try {
-      if (action === 'approve') { await PaymentService.approveWithdrawal(row.id); }
+      if (action === 'approve') { await PaymentService.approveWithdrawal(row.id, { idempotencyKey }); }
       else if (action === 'hold') { await PaymentService.holdWithdrawal(row.id); }
       fetchData();
     } catch (err) { alert(getApiErrorMessage(err, `Failed to ${action} withdrawal request.`)); }
