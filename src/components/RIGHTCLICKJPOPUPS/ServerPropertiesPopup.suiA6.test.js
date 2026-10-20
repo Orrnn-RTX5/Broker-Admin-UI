@@ -22,6 +22,10 @@ test('SUI-A6: both live call sites wire Help to the workspace help', () => {
   // ServerPropertiesPopup wirings (direct render and AdminDataTable pass-through).
   assert.equal(appSrc.match(/onHelp=\{\(\) => setHelpOpen\(true\)\}/g)?.length, 3);
   assert.match(appSrc, /<ServerPropertiesPopup[\s\S]*?onHelp=\{\(\) => setHelpOpen\(true\)\}/);
+  // Pin the AdminDataTable pass-through source explicitly (line ~1048): without
+  // this wiring AdminDataTable would receive undefined onHelp and its popup
+  // would always render the disabled fallback.
+  assert.match(appSrc, /<AdminDataTable[\s\S]*?onHelp=\{\(\) => setHelpOpen\(true\)\}/);
   // AdminDataTable forwards the handler to its popup.
   assert.match(tableSrc, /onHelp,/);
   assert.match(tableSrc, /onHelp=\{onHelp\}/);

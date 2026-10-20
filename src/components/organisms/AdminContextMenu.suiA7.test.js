@@ -9,6 +9,10 @@ test('SUI-A7: entries without a handler render disabled with a reason, never sil
   assert.match(src, /ADMIN_MENU_UNAVAILABLE_REASON = 'This action is not available in this workspace\.'/);
   assert.match(src, /const isDisabled = Boolean\(disabled \|\| !onClick\)/);
   assert.match(src, /if \(isDisabled\) \{\s*return;/s);
+  // Order pin: the guard must return BEFORE onClick()/onClose() run, so a
+  // disabled entry can never silently close the menu (no-op with side effect).
+  assert.match(src, /handleClick = \(e\) => \{\s*e\.stopPropagation\(\);\s*if \(isDisabled\) \{\s*return;\s*\}\s*onClick\(\);/s);
+  assert.match(src, /onClick\(\);\s*onClose\(\);/);
   assert.match(src, /aria-disabled=\{isDisabled\}/);
   assert.match(src, /title=\{isDisabled \? \(disabledReason \|\| ADMIN_MENU_UNAVAILABLE_REASON\) : undefined\}/);
   // Spot-check handler-less definitions: no onClick anywhere on these rows.
