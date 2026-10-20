@@ -50,8 +50,18 @@ test('Windows afterPack hook stamps the RTX icon without the legacy winCodeSign 
   assert.match(hook, /icon: iconPath/);
 });
 
-test('Web favicon points at the same RTX app icon copied into dist', () => {
-  assert.match(indexHtml, /<link rel="icon" href="%BASE_URL%logo V2\.ico" \/>/);
+test('Web shell boots from neutral title/brand and applies tenant favicon at runtime', () => {
+  assert.match(indexHtml, /<title>Broker Admin<\/title>/);
+  assert.ok(!/RTX5 Broker Admin/.test(indexHtml), 'static shell must not hardcode the live brand');
+  assert.ok(!/>RTX5 Admin</.test(indexHtml), 'loading brand must not hardcode the live brand');
+  assert.match(indexHtml, /<link id="app-favicon" rel="icon" href="%BASE_URL%logo V2\.ico" \/>/);
+  assert.match(indexHtml, /id="workspace-loading-brand-name"/);
+  assert.match(indexHtml, /FAVICON_URL/);
+  assert.match(indexHtml, /VITE_FAVICON_URL/);
+  const brandingSrc = readFileSync(join(repoRoot, 'src', 'utils', 'branding.js'), 'utf8');
+  assert.match(brandingSrc, /resolveBrokerFaviconUrl/);
+  assert.match(brandingSrc, /FAVICON_URL/);
+  assert.match(brandingSrc, /faviconUrl/);
 });
 
 test('RTX app icon uses a dark mark with the green 5 for light taskbar surfaces', async () => {

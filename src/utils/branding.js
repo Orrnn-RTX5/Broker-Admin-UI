@@ -68,6 +68,34 @@ const isUsableSupportEmail = (value) => {
   return !PLACEHOLDER_SUPPORT_EMAILS.has(trimmed.toLowerCase());
 };
 
+const isUsableFaviconUrl = (value) => {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return false;
+  return !PLACEHOLDER_LOGO_URLS.has(trimmed.toLowerCase());
+};
+
+export const resolveBrokerFaviconUrl = (brokerOverride = null) => {
+  const stored = readStoredBrokerInfo() || {};
+  const broker = brokerOverride && typeof brokerOverride === 'object'
+    ? { ...stored, ...brokerOverride }
+    : stored;
+
+  const explicitFavicon = [
+    broker.favicon_url,
+    broker.faviconUrl,
+    broker.favicon,
+    getRuntimeValue('FAVICON_URL', 'VITE_FAVICON_URL', 'BROKER_FAVICON_URL', 'VITE_BROKER_FAVICON_URL'),
+    viteEnv.VITE_FAVICON_URL,
+    viteEnv.VITE_BROKER_FAVICON_URL,
+  ]
+    .map((val) => String(val || '').trim())
+    .find(isUsableFaviconUrl);
+
+  if (explicitFavicon) return explicitFavicon;
+
+  return resolveBrokerLogoUrl(broker) || '';
+};
+
 export const resolveBrokerLogoUrl = (brokerOverride = null) => {
   const stored = readStoredBrokerInfo() || {};
   const broker = brokerOverride && typeof brokerOverride === 'object'
@@ -176,6 +204,7 @@ export const getBrokerBranding = (brokerOverride = null) => {
   const shortName = firstNonEmpty(brokerName, explicitProductName, 'Broker Admin');
   const monogram = getBrokerMonogram(shortName);
   const logoUrl = resolveBrokerLogoUrl(broker);
+  const faviconUrl = resolveBrokerFaviconUrl(broker);
 
   const supportEmail = [
     broker.support_email,
@@ -237,12 +266,43 @@ export const getBrokerBranding = (brokerOverride = null) => {
     shortName,
     monogram,
     logoUrl,
+    faviconUrl,
     supportEmail,
     supportName,
     vendorName,
     serverName,
     appVersion,
   };
+};
+
+export const applyBrokerBrandingToDocument = (brandingOverride = null) => {
+  if (typeof document === 'undefined') return null;
+  const branding = brandingOverride && typeof brandingOverride === 'object'
+    ? brandingOverride
+    : getBrokerBranding();
+  const title = String(branding?.appTitle || '').trim() || 'Broker Admin';
+  try {
+    document.title = title;
+  } catch { /* noop */ }
+  const faviconUrl = String(branding?.faviconUrl || '').trim();
+  if (faviconUrl) {
+    try {
+      let link = document.querySelector('link[rel="icon"]');
+      if (!link) {
+        link = document.createElement('link');
+        link.setAttribute('rel', 'icon');
+        document.head.appendChild(link);
+      }
+      link.setAttribute('href', faviconUrl);
+    } catch { /* noop */ }
+  }
+  try {
+    const brandName = document.getElementById('workspace-loading-brand-name');
+    if (brandName && branding?.productName) brandName.textContent = branding.productName;
+    const brandLogo = document.getElementById('workspace-loading-brand-logo');
+    if (brandLogo && branding?.logoUrl) brandLogo.setAttribute('src', branding.logoUrl);
+  } catch { /* noop */ }
+  return { title, faviconUrl };
 };
 
 export const formatBrokerConnectionStatus = ({

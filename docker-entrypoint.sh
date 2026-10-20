@@ -21,6 +21,11 @@ backend_target="${BACKEND_TARGET:-${VITE_BACKEND_TARGET:-${BACKEND_MODE:-${VITE_
 broker_id="${BROKER_ID:-${VITE_BROKER_ID:-}}"
 broker_name="${BROKER_NAME:-${VITE_BROKER_NAME:-}}"
 broker_server="${BROKER_SERVER:-${VITE_BROKER_SERVER:-}}"
+product_name="${PRODUCT_NAME:-${VITE_PRODUCT_NAME:-${APP_TITLE:-${VITE_APP_TITLE:-}}}}"
+app_title="${APP_TITLE:-${VITE_APP_TITLE:-}}"
+document_title="${DOCUMENT_TITLE:-${VITE_DOCUMENT_TITLE:-}}"
+logo_url="${LOGO_URL:-${VITE_LOGO_URL:-${BROKER_LOGO_URL:-${VITE_BROKER_LOGO_URL:-}}}}"
+favicon_url="${FAVICON_URL:-${VITE_FAVICON_URL:-${BROKER_FAVICON_URL:-${VITE_BROKER_FAVICON_URL:-}}}}"
 feed_broker_id="${FEED_BROKER_ID:-${VITE_FEED_BROKER_ID:-}}"
 feed_ws_url="${FEED_WS_URL:-${VITE_FEED_WS_URL:-}}"
 feed_status_url="${FEED_STATUS_URL:-${VITE_FEED_STATUS_URL:-}}"
@@ -51,6 +56,11 @@ window.__RTX5_RUNTIME_CONFIG__ = {
   BROKER_ID: "$(js_escape "$broker_id")",
   BROKER_NAME: "$(js_escape "$broker_name")",
   BROKER_SERVER: "$(js_escape "$broker_server")",
+  PRODUCT_NAME: "$(js_escape "$product_name")",
+  APP_TITLE: "$(js_escape "$app_title")",
+  DOCUMENT_TITLE: "$(js_escape "$document_title")",
+  LOGO_URL: "$(js_escape "$logo_url")",
+  FAVICON_URL: "$(js_escape "$favicon_url")",
   FEED_BROKER_ID: "$(js_escape "$feed_broker_id")",
   FEED_WS_URL: "$(js_escape "$feed_ws_url")",
   FEED_STATUS_URL: "$(js_escape "$feed_status_url")",

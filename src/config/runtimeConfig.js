@@ -17,10 +17,12 @@ export const getRuntimeValue = (...keys) => {
 };
 
 export {
+  applyBrokerBrandingToDocument,
   formatBrokerConnectionStatus,
   getBrokerBranding,
   getBrokerMonogram,
   readStoredBrokerInfo,
+  resolveBrokerFaviconUrl,
   resolveBrokerLogoUrl,
 } from '../utils/branding.js';
 

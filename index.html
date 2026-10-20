@@ -2,22 +2,99 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="%BASE_URL%logo V2.ico" />
+    <link id="app-favicon" rel="icon" href="%BASE_URL%logo V2.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RTX5 Broker Admin</title>
+    <title>Broker Admin</title>
     <link rel="stylesheet" href="%BASE_URL%workspace-loading.css" />
   </head>
   <body>
     <div id="root">
       <div class="workspace-loading-screen" role="status" aria-live="polite" aria-label="Loading admin workspace">
         <div class="workspace-loading-content">
-          <div class="workspace-loading-brand"><img src="%BASE_URL%admin-symbol.png" alt="" /><span>RTX5 Admin</span></div>
+          <div class="workspace-loading-brand"><img id="workspace-loading-brand-logo" src="%BASE_URL%admin-symbol.png" alt="" /><span id="workspace-loading-brand-name">Broker Admin</span></div>
           <span class="workspace-loading-spinner" aria-hidden="true"></span>
           <p class="workspace-loading-message">Preparing your workspace…</p>
         </div>
       </div>
     </div>
     <script src="%BASE_URL%runtime-config.js"></script>
+    <script>
+      // Pre-React white-label boot: apply tenant branding (title/brand/favicon/logo)
+      // from runtime-config + stored broker info before the workspace mounts.
+      // Neutral "Broker Admin" is only the missing-config display; live values
+      // come from broker config, VITE_*, or runtime-config keys.
+      (function () {
+        try {
+          var cfg = (typeof window !== 'undefined' && window.__RTX5_RUNTIME_CONFIG__) || {};
+          var pick = function () {
+            for (var i = 0; i < arguments.length; i += 1) {
+              var v = arguments[i];
+              if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
+            }
+            return '';
+          };
+          var readBrokerInfo = function () {
+            var tryRead = function (store) {
+              try {
+                if (!store || !store.getItem) return null;
+                var raw = store.getItem('broker_info');
+                return raw ? JSON.parse(raw) : null;
+              } catch (e) { return null; }
+            };
+            try {
+              return tryRead(window.sessionStorage) || tryRead(window.localStorage) || {};
+            } catch (e) { return {}; }
+          };
+          var broker = readBrokerInfo() || {};
+          var placeholderLogos = { '/assets/logo.png': 1, 'assets/logo.png': 1, '/logo-full-light.webp': 1, 'logo-full-light.webp': 1 };
+          var usableLogo = function (v) {
+            var t = String(v || '').trim();
+            if (!t) return false;
+            return !placeholderLogos[t.toLowerCase()];
+          };
+          var firstUsable = function (list) {
+            for (var i = 0; i < list.length; i += 1) {
+              var t = String(list[i] || '').trim();
+              if (t && usableLogo(t)) return t;
+            }
+            return '';
+          };
+          var humanize = function (id) {
+            var c = String(id || '').trim();
+            if (!c) return '';
+            return c.split(/[\s._-]+/).filter(Boolean).map(function (w) {
+              return w.charAt(0).toUpperCase() + w.slice(1);
+            }).join(' ');
+          };
+          var brokerId = pick(broker.broker_id, broker.brokerId, broker.id, cfg.BROKER_ID, cfg.VITE_BROKER_ID);
+          var brokerName = pick(broker.display_name, broker.displayName, broker.broker_name, broker.brokerName, broker.name, cfg.BROKER_NAME, cfg.VITE_BROKER_NAME, humanize(brokerId));
+          var explicitProduct = pick(broker.product_name, broker.productName, cfg.PRODUCT_NAME, cfg.VITE_PRODUCT_NAME, cfg.APP_TITLE, cfg.VITE_APP_TITLE);
+          var productName = explicitProduct || (brokerName
+            ? (/\badmin\b/i.test(brokerName) ? brokerName : brokerName + ' Admin')
+            : 'Broker Admin');
+          var appTitle = pick(broker.document_title, broker.documentTitle, cfg.DOCUMENT_TITLE, cfg.VITE_DOCUMENT_TITLE, cfg.APP_TITLE, cfg.VITE_APP_TITLE, productName) || 'Broker Admin';
+          var logoUrl = firstUsable([broker.logo_url, broker.logoUrl, cfg.LOGO_URL, cfg.VITE_LOGO_URL, cfg.BROKER_LOGO_URL, cfg.VITE_BROKER_LOGO_URL]);
+          var faviconUrl = firstUsable([broker.favicon_url, broker.faviconUrl, broker.favicon, cfg.FAVICON_URL, cfg.VITE_FAVICON_URL, cfg.BROKER_FAVICON_URL, cfg.VITE_BROKER_FAVICON_URL]) || logoUrl;
+          try { document.title = appTitle; } catch (e) {}
+          try {
+            var brandName = document.getElementById('workspace-loading-brand-name');
+            if (brandName) brandName.textContent = productName;
+          } catch (e) {}
+          try {
+            if (logoUrl) {
+              var brandLogo = document.getElementById('workspace-loading-brand-logo');
+              if (brandLogo) brandLogo.setAttribute('src', logoUrl);
+            }
+          } catch (e) {}
+          try {
+            if (faviconUrl) {
+              var link = document.getElementById('app-favicon') || document.querySelector('link[rel="icon"]');
+              if (link) link.setAttribute('href', faviconUrl);
+            }
+          } catch (e) {}
+        } catch (e) {}
+      })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

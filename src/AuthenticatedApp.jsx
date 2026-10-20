@@ -300,11 +300,22 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
     document.documentElement.setAttribute('data-density', density);
   }, [density]);
 
-  const { appTitle, productName } = getBrokerBranding();
+  const { appTitle, faviconUrl, productName } = getBrokerBranding();
 
   React.useEffect(() => {
     document.title = activeNode ? `${appTitle} · ${activeNode}` : appTitle;
   }, [activeNode, appTitle]);
+
+  React.useEffect(() => {
+    if (!faviconUrl) return;
+    let link = document.querySelector('link[rel="icon"]');
+    if (!link) {
+      link = document.createElement('link');
+      link.setAttribute('rel', 'icon');
+      document.head.appendChild(link);
+    }
+    link.setAttribute('href', faviconUrl);
+  }, [faviconUrl]);
 
   React.useEffect(() => {
     if (!canDownloadDesktopApp) return undefined;
