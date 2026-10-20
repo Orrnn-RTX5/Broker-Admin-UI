@@ -254,12 +254,16 @@ const SQLExportTab = () => (
     </div>
 );
 
-const ServerPropertiesPopup = ({ isOpen, onClose, serverName = "MainTrade Backup Server", serverId = "5" }) => {
+const ServerPropertiesPopup = ({ isOpen, onClose, onHelp, serverName = "MainTrade Backup Server", serverId = "5" }) => {
     const [activeTab, setActiveTab] = useState('Common');
 
     if (!isOpen) return null;
 
     const tabs = ['Common', 'Network', 'Backup', 'SQL Export', 'SQL Options', 'Folders', 'Service'];
+    // Sweep SUI-A6: this dialog edits no persisted state, so OK acknowledges
+    // and dismisses (same as Cancel); Help opens the workspace help when the
+    // caller wires onHelp, otherwise it is disabled with the reason.
+    const HELP_UNAVAILABLE = 'Help is not available for this dialog.';
 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-transparent drop-shadow-2xl">
@@ -302,9 +306,13 @@ const ServerPropertiesPopup = ({ isOpen, onClose, serverName = "MainTrade Backup
 
               {/* Action Footer */}
               <div className="h-[46px] border-t border-[#333] flex items-center justify-end px-3 gap-[6px] bg-[color:var(--bg-app)] shrink-0">
-                  <button className="w-[75px] h-[23px] border border-[#666] outline outline-1 outline-offset-1 outline-transparent focus:outline-[#00a2e8] rounded-[2px] bg-[color:var(--bg-surface-1)] text-[color:var(--text-primary)] text-[11.5px] hover:bg-[#444] hover:border-[#888] shadow-sm ml-2">OK</button>
+                  <button className="w-[75px] h-[23px] border border-[#666] outline outline-1 outline-offset-1 outline-transparent focus:outline-[#00a2e8] rounded-[2px] bg-[color:var(--bg-surface-1)] text-[color:var(--text-primary)] text-[11.5px] hover:bg-[#444] hover:border-[#888] shadow-sm ml-2" onClick={onClose}>OK</button>
                   <button className="w-[75px] h-[23px] border border-[#666] rounded-[2px] bg-[color:var(--bg-surface-1)] text-[color:var(--text-primary)] text-[11.5px] hover:bg-[#444] hover:border-[#888] shadow-sm" onClick={onClose}>Cancel</button>
-                  <button className="w-[75px] h-[23px] border border-[#666] rounded-[2px] bg-[color:var(--bg-surface-1)] text-[color:var(--text-primary)] text-[11.5px] hover:bg-[#444] hover:border-[#888] shadow-sm ml-2">Help</button>
+                  {onHelp ? (
+                    <button className="w-[75px] h-[23px] border border-[#666] rounded-[2px] bg-[color:var(--bg-surface-1)] text-[color:var(--text-primary)] text-[11.5px] hover:bg-[#444] hover:border-[#888] shadow-sm ml-2" onClick={onHelp}>Help</button>
+                  ) : (
+                    <button disabled title={HELP_UNAVAILABLE} className="w-[75px] h-[23px] border border-[#666] rounded-[2px] bg-[color:var(--bg-surface-1)] text-[color:var(--text-primary)] text-[11.5px] shadow-sm ml-2 disabled:opacity-50 disabled:cursor-not-allowed">Help</button>
+                  )}
               </div>
            </div>
         </div>

@@ -4,23 +4,37 @@ import {
   Copy, Upload, Download, Search, Check, ChevronRight
 } from 'lucide-react';
 
-const ContextMenuItem = ({ icon: Icon, iconColor, label, shortcut, rightArrow, checked, separator, onClick, onClose }) => {
+// Sweep SUI-A7: none of these actions has a backend in this workspace except
+// the caller-wired Add/Edit/Delete, so every other entry renders disabled
+// with the reason instead of closing the menu with no effect.
+export const ADMIN_MENU_UNAVAILABLE_REASON = 'This action is not available in this workspace.';
+export const ADMIN_MENU_ADD_UNAVAILABLE_REASON = 'Group creation is not permitted for this session.';
+export const ADMIN_MENU_DELETE_UNAVAILABLE_REASON = 'Group deletion is not permitted for this session.';
+export const ADMIN_MENU_NO_ROW_REASON = 'Select a group row first.';
+
+const ContextMenuItem = ({ icon: Icon, iconColor, label, shortcut, rightArrow, checked, separator, disabled, disabledReason, onClick, onClose }) => {
   if (separator) {
     return <div className="h-[1px] bg-[color:var(--border-default)] my-1 ml-6 mr-1"></div>;
   }
 
+  const isDisabled = Boolean(disabled || !onClick);
+
   const handleClick = (e) => {
     e.stopPropagation();
-    if (onClick) {
-      onClick();
+    if (isDisabled) {
+      return;
     }
+    onClick();
     onClose();
   };
 
   return (
     <div
       onClick={handleClick}
-      className="flex items-center w-full py-[4px] rounded-[2px] hover:bg-[color:var(--accent-500)]/18 text-[11.5px] text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] transition-colors group px-1"
+      role="menuitem"
+      aria-disabled={isDisabled}
+      title={isDisabled ? (disabledReason || ADMIN_MENU_UNAVAILABLE_REASON) : undefined}
+      className={`flex items-center w-full py-[4px] rounded-[2px] text-[11.5px] transition-colors group px-1 ${isDisabled ? 'opacity-50 cursor-not-allowed text-[color:var(--text-muted)]' : 'hover:bg-[color:var(--accent-500)]/18 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'}`}
     >
       <div className="w-6 flex items-center justify-center shrink-0">
         {checked && <Check size={12} className="text-[color:var(--text-primary)]" />}
@@ -68,9 +82,9 @@ const ContextMenu = ({ x, y, onClose, onAdd, onEdit, onDelete, selectedRow }) =>
     >
       <ContextMenuItem onClose={onClose} label="Servers" rightArrow />
       <ContextMenuItem onClose={onClose} separator />
-      <ContextMenuItem onClose={onClose} icon={Plus} iconColor="text-white" label="Add" shortcut="Ctrl+N" onClick={onAdd} />
-      <ContextMenuItem onClose={onClose} icon={Settings} iconColor="text-white" label="Edit" shortcut="Ctrl+U" onClick={selectedRow ? onEdit : null} />
-      <ContextMenuItem onClose={onClose} icon={X} iconColor="text-red-500" label="Delete" shortcut="Ctrl+D" onClick={selectedRow ? onDelete : null} />
+      <ContextMenuItem onClose={onClose} icon={Plus} iconColor="text-white" label="Add" shortcut="Ctrl+N" onClick={onAdd} disabled={!onAdd} disabledReason={ADMIN_MENU_ADD_UNAVAILABLE_REASON} />
+      <ContextMenuItem onClose={onClose} icon={Settings} iconColor="text-white" label="Edit" shortcut="Ctrl+U" onClick={selectedRow && onEdit ? onEdit : null} disabled={!selectedRow || !onEdit} disabledReason={!selectedRow ? ADMIN_MENU_NO_ROW_REASON : ADMIN_MENU_UNAVAILABLE_REASON} />
+      <ContextMenuItem onClose={onClose} icon={X} iconColor="text-red-500" label="Delete" shortcut="Ctrl+D" onClick={selectedRow && onDelete ? onDelete : null} disabled={!selectedRow || !onDelete} disabledReason={!selectedRow ? ADMIN_MENU_NO_ROW_REASON : ADMIN_MENU_DELETE_UNAVAILABLE_REASON} />
       <ContextMenuItem onClose={onClose} separator />
       <ContextMenuItem onClose={onClose} icon={ArrowUp} iconColor="text-[color:var(--text-muted)]" label="Move Up" />
       <ContextMenuItem onClose={onClose} icon={ArrowDown} iconColor="text-[color:var(--text-muted)]" label="Move Down" />

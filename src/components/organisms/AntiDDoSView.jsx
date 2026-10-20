@@ -1,6 +1,11 @@
 import React from 'react';
 import { Settings, CheckCircle2, User, AlertTriangle, Shield, Server, ArrowRight, ShieldAlert, Users } from 'lucide-react';
 
+// Sweep SUI-A6: vendor requests and proxy provisioning have no admin API, so
+// the buttons stay disabled with the reason instead of faking a request.
+const VENDOR_REQUEST_UNAVAILABLE = 'Vendor requests are handled by your platform provider and cannot be sent from this workspace.';
+const ADD_PROXY_UNAVAILABLE = 'Proxy servers are provisioned by your platform provider and cannot be added from this workspace.';
+
 const VendorItem = ({ logo, name, description }) => (
   <div className="flex gap-4 mb-8">
     <div className="w-[85px] h-[85px] bg-[color:var(--bg-app)] border border-[#333] shrink-0 flex items-center justify-center p-2">
@@ -11,7 +16,13 @@ const VendorItem = ({ logo, name, description }) => (
       <p className="text-[11px] text-[color:var(--text-muted)] leading-relaxed max-w-[1100px] mb-3">
         {description}
       </p>
-      <button className="bg-[#00a651] hover:bg-[#00964a] text-white px-4 py-1.5 rounded-[2px] text-[11.5px] font-medium transition-colors">
+      <button
+        type="button"
+        disabled
+        title={VENDOR_REQUEST_UNAVAILABLE}
+        aria-disabled="true"
+        className="bg-[#00a651] text-white px-4 py-1.5 rounded-[2px] text-[11.5px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
         Send request
       </button>
     </div>
@@ -40,7 +51,13 @@ const AntiDDoSView = () => {
             </h1>
             <a href="#" className="text-[12px] text-white hover:underline mt-[2px] block font-sans">How to set up</a>
           </div>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 border border-[#555] rounded-[2px] text-[11.5px] text-[color:var(--text-primary)] hover:bg-[#333] transition-colors mt-1">
+          <button
+            type="button"
+            disabled
+            title={ADD_PROXY_UNAVAILABLE}
+            aria-disabled="true"
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-[#555] rounded-[2px] text-[11.5px] text-[color:var(--text-primary)] transition-colors mt-1 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <CheckCircle2 size={13} className="text-white"/>
             Add Proxy Server
           </button>
@@ -183,7 +200,10 @@ const AntiDDoSView = () => {
 
         {/* Vendors Supported List */}
         <div className="mb-4">
-          <h2 className="text-[14px] font-normal text-[color:var(--text-primary)] mb-5">Vendors supported:</h2>
+          <h2 className="text-[14px] font-normal text-[color:var(--text-primary)] mb-2">Vendors supported:</h2>
+          <p role="note" className="text-[11px] text-[color:var(--text-muted)] leading-relaxed mb-5 font-sans">
+            {VENDOR_REQUEST_UNAVAILABLE}
+          </p>
 
           <VendorItem 
             logo={

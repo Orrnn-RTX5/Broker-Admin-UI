@@ -5,6 +5,7 @@ import * as ContextMenu from '@radix-ui/react-context-menu';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useDataFetch } from '../../hooks/useCore';
 import { useAuthStore } from '../../store/authStore';
+import AdminContextMenu from './AdminContextMenu';
 import { ManagerService } from '../../services/manager.service';
 import { AccountsService } from '../../services/accounts.service';
 import { canAccessView } from '../../utils/permissions';
@@ -103,6 +104,10 @@ const ServerGroupsExplorer = ({
   const setSubgroupDraft = (next) => setView(current => ({ ...current, subgroupDraft: typeof next === 'function' ? next(current.subgroupDraft) : next }));
   const setLocalSearch = (next) => setView(current => ({ ...current, localSearch: next }));
   const [menuNode, setMenuNode] = useState(null);
+  // Sweep SUI-A7: group rows use the shared AdminContextMenu with its
+  // existing Add/Edit/Delete definitions; folder and account rows keep the
+  // radix menu that already serves them.
+  const [adminMenu, setAdminMenu] = useState(null);
   const lastRefresh = useRef(refreshTrigger);
   const fetchGroups = useCallback(() => {
     const force = lastRefresh.current !== refreshTrigger;
@@ -393,6 +398,13 @@ const ServerGroupsExplorer = ({
             const node = id ? visibleNodes.find(item => item.id === id) : null;
             if (!node) { event.preventDefault(); return; }
             select(node);
+            if (node.type === 'group') {
+              event.preventDefault();
+              setMenuNode(null);
+              setAdminMenu({ x: event.clientX, y: event.clientY, node });
+              return;
+            }
+            setAdminMenu(null);
             setMenuNode(node);
           }}>
             {visibleNodes.map((node, index) => {
@@ -453,6 +465,17 @@ const ServerGroupsExplorer = ({
           {menuNode && menu(menuNode)}
           </ContextMenu.Root>
         </table>
+        {adminMenu && (
+          <AdminContextMenu
+            x={adminMenu.x}
+            y={adminMenu.y}
+            selectedRow={adminMenu.node.group ?? adminMenu.node}
+            onClose={() => setAdminMenu(null)}
+            onAdd={canLifecycle ? () => addGroup(containerOf(adminMenu.node)) : undefined}
+            onEdit={adminMenu.node.group?._allocationSummary ? undefined : () => openSettings(adminMenu.node)}
+            onDelete={canDelete(adminMenu.node) && !deleting ? () => deleteGroup(adminMenu.node) : undefined}
+          />
+        )}
         {!canRead ? (
           <p role="alert" className="dummy-group-empty">
             {canLoadGroups ? 'Account access required to open this folder.' : 'Group access required.'}

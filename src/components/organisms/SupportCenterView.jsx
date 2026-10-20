@@ -4,6 +4,10 @@ import { getBrokerBranding } from '../../utils/branding';
 
 const SupportCenterView = () => {
   const { supportName, supportEmail, vendorName, productName } = getBrokerBranding();
+  // Sweep SUI-A6: external Support Center sign-in has no integration in this
+  // workspace, so the button stays disabled with the reason instead of
+  // accepting credentials it cannot submit.
+  const ENTER_UNAVAILABLE = 'Support Center sign-in is not available in this workspace. Contact support at the email above for assistance.';
 
   return (
     <div className="flex-1 bg-[color:var(--bg-app)] overflow-y-auto no-scrollbar py-6 px-8 rounded-tl-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] text-[color:var(--text-primary)]">
@@ -52,9 +56,19 @@ const SupportCenterView = () => {
             <a href="#" className="text-[12px] text-white hover:underline font-sans">Password recovery</a>
           </div>
 
-          <button className="w-full bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-700)] text-[color:var(--accent-contrast)] py-2 rounded-[2px] text-[13px] font-medium transition-colors mb-5 h-[34px] flex items-center justify-center">
+          <button
+            type="button"
+            disabled
+            title={ENTER_UNAVAILABLE}
+            aria-disabled="true"
+            className="w-full bg-[color:var(--accent-500)] text-[color:var(--accent-contrast)] py-2 rounded-[2px] text-[13px] font-medium transition-colors mb-3 h-[34px] flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             Enter {supportName}
           </button>
+
+          <p role="note" className="text-[12px] text-[color:var(--text-muted)] mb-5 font-sans text-center">
+            {ENTER_UNAVAILABLE}
+          </p>
 
           <div className="text-[12px] text-[color:var(--text-muted)] mb-3 font-sans">
             Don't have a Support Center account? <a href="#" className="text-white hover:underline">Register</a>
