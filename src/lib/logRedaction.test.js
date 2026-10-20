@@ -26,6 +26,23 @@ test('redactForLog redacts license key and license secret field names', () => {
   );
 });
 
+test('redactForLog redacts the Idempotency-Key header value (SUI-A1 dev-log gap)', () => {
+  assert.deepEqual(
+    redactForLog({
+      headers: {
+        'Idempotency-Key': '123e4567-e89b-42d3-a456-426614174000',
+        'Content-Type': 'application/json',
+      },
+    }),
+    {
+      headers: {
+        'Idempotency-Key': '[REDACTED]',
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+});
+
 test('redactUrlForLog redacts license query parameters', () => {
   assert.equal(
     redactUrlForLog('https://broker.example/validate?license_key=raw&broker_id=demo'),
