@@ -329,3 +329,30 @@ export const hasReachableViewInSubtree = (node, user) => {
   }
   return false;
 };
+
+// Labels rendered as dropdown folders (rather than navigable views) in the
+// sidebar navigator.
+export const LOCKED_DROPDOWN_LABELS = new Set(['Automations', 'Security', 'Platform Config', 'Network Cluster', 'Risk Management', 'Communications', 'Support Center']);
+
+// A labeled folder stays locked only while the session cannot reach any
+// permission-guarded view inside it. Permitted sessions expand the folder and
+// open its children; everyone else keeps the lock. Without a session the
+// folders fail closed exactly as before.
+export const isDropdownLockedForSession = (node, user) =>
+  LOCKED_DROPDOWN_LABELS.has(node.label) && !hasReachableViewInSubtree(node, user);
+
+// Navigation flags for a labeled dropdown folder, sharing the exact fields
+// TreeItem gates on (item.blockedNavigation gates the chevron, row click and
+// keyboard; item.lockedDropdown gates expansion + shows the lock). A folder
+// the session unlocked must NOT carry the label-level block: folder labels
+// are container-only and never navigate themselves, so keeping
+// blockedNavigation=true would leave permitted sessions with a disabled
+// chevron and dead rows — bit-for-bit the pre-fix behavior. A still-locked
+// folder keeps the label-level block.
+export const resolveFolderNavFlags = (node, user) => {
+  const locked = isDropdownLockedForSession(node, user);
+  return {
+    lockedDropdown: locked,
+    blockedNavigation: locked ? shouldBlockViewNavigation(node.label, user) : false,
+  };
+};

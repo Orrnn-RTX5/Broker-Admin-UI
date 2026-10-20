@@ -87,7 +87,12 @@ test('sidebar selection warns and blocks views the session cannot reach', () => 
   );
   assert.match(
     handlerMatch[0],
-    /const isLockedDropdownParent = typeof nodeOrLabel !== 'string' && nodeOrLabel\.lockedDropdown;[\s\S]*?const blockedForSession = shouldBlockViewNavigation\(label, currentUser\);[\s\S]*?if \(blockedForSession\) return;/,
+    /const viewTarget = resolveAdminViewTarget\(rawLabel\);[\s\S]*?const label = viewTarget\.view;/,
+    'menu entries without a dedicated renderer resolve to the view that renders their data'
+  );
+  assert.match(
+    handlerMatch[0],
+    /const isLockedDropdownParent = typeof nodeOrLabel !== 'string' && nodeOrLabel\.lockedDropdown;[\s\S]*?const blockedForSession = shouldBlockViewNavigation\(label, currentUser\);[\s\S]*?if \(blockedForSession\) \{/,
     'sidebar selection gates on session capabilities and stays silent for still-locked dropdown parents'
   );
 });
@@ -97,7 +102,9 @@ test('unavailable sidebar entries remain visible and cannot activate', () => {
   const treeItemSource = readSource('components/molecules/TreeItem.jsx');
 
   assert.match(sidebarSource, /newNode\.blockedNavigation\s*=\s*shouldBlockViewNavigation\(newNode\.label,\s*user\);/);
-  assert.match(sidebarSource, /newNode\.lockedDropdown\s*=\s*isDropdownLockedForSession\(newNode,\s*user\);/, 'folders lock only while the session reaches nothing inside');
+  assert.match(sidebarSource, /import \{ LOCKED_DROPDOWN_LABELS, resolveFolderNavFlags, shouldBlockViewNavigation \} from '\.\.\/\.\.\/config\/viewCapabilities';/);
+  assert.match(sidebarSource, /newNode\.lockedDropdown\s*=\s*folderFlags\.lockedDropdown;/, 'folders lock only while the session reaches nothing inside');
+  assert.match(sidebarSource, /newNode\.blockedNavigation\s*=\s*folderFlags\.blockedNavigation;/, 'unlocked folders must not carry the label-level block');
   assert.match(treeItemSource, /const showArrow = hasChildren \|\| item\.lockedDropdown;/);
   assert.match(treeItemSource, /Boolean\(item\.blockedNavigation \|\| item\.lockedDropdown \|\| item\.disabled\)/);
   assert.match(treeItemSource, /const handleArrowClick = \(e\) => \{\s*e\.stopPropagation\(\);\s*if \(isBlockedNavigation\) return;/);

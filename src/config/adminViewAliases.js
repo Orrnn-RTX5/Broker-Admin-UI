@@ -10,10 +10,11 @@ export const ADMIN_VIEW_ALIASES = Object.freeze({
   // on the Managers directory Online tab (ManagerOnline), so that is the
   // closest existing equivalent.
   'Online Users': Object.freeze({ view: 'Managers', initialTab: 'Online' }),
-  // No dedicated main-area Journal screen exists. The broker journal already
-  // renders in the Operations Terminal dock (ServerJournal + useServerJournal
-  // over the same fetchServerJournal data layer), so the main-area Journal
-  // renderer reuses that exact surface and data layer.
+  // The main-area Journal screen (JournalView) reuses the exact surface and
+  // data layer as the Operations Terminal dock (ServerJournal +
+  // useServerJournal over the same fetchServerJournal data layer), so the
+  // Window-menu and header Journal entries render live data, never the empty
+  // group-lookup state.
   Journal: Object.freeze({ view: 'Journal' }),
 });
 

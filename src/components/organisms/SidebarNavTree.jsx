@@ -2,16 +2,7 @@ import { useMemo } from 'react';
 import TreeItem from '../molecules/TreeItem';
 import GroupsNavigation from './GroupsNavigation';
 import { sidebarData } from '../../data/terminalData.jsx';
-import { hasReachableViewInSubtree, shouldBlockViewNavigation } from '../../config/viewCapabilities';
-
-const LOCKED_DROPDOWN_LABELS = new Set(['Automations', 'Security', 'Platform Config', 'Network Cluster', 'Risk Management', 'Communications', 'Support Center']);
-
-// A labeled folder stays locked only while the session cannot reach any
-// permission-guarded view inside it. Permitted sessions expand the folder and
-// open its children; everyone else keeps the lock. Without a session the
-// folders fail closed exactly as before.
-const isDropdownLockedForSession = (node, user) =>
-  LOCKED_DROPDOWN_LABELS.has(node.label) && !hasReachableViewInSubtree(node, user);
+import { LOCKED_DROPDOWN_LABELS, resolveFolderNavFlags, shouldBlockViewNavigation } from '../../config/viewCapabilities';
 
 const SidebarNavTree = ({ user, onNodeSelect, onNodePrepare, onNodeDoubleClick, onLockedDropdownClick, selectedNodeLabel, selectedNodeId, refreshTrigger, groupExplorerReveal }) => {
 
@@ -29,7 +20,9 @@ const SidebarNavTree = ({ user, onNodeSelect, onNodePrepare, onNodeDoubleClick, 
         newNode.blockedNavigation = shouldBlockViewNavigation(newNode.label, user);
 
         if (LOCKED_DROPDOWN_LABELS.has(newNode.label)) {
-          newNode.lockedDropdown = isDropdownLockedForSession(newNode, user);
+          const folderFlags = resolveFolderNavFlags(newNode, user);
+          newNode.lockedDropdown = folderFlags.lockedDropdown;
+          newNode.blockedNavigation = folderFlags.blockedNavigation;
           newNode.initiallyExpanded = false;
           if (newNode.children) {
             newNode.children = cloneTree(newNode.children);

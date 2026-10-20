@@ -37,6 +37,7 @@ import {
   getLatestDesktopInstaller,
 } from './config/desktopRelease';
 import { getViewCapabilityToast, shouldBlockViewNavigation } from './config/viewCapabilities';
+import { resolveAdminViewTarget } from './config/adminViewAliases';
 import { DEFAULT_WORKSPACE_LAYOUT } from './config/workspaceLayout';
 import { resolveGroupExplorerNode, sameGroupExplorerLocation, getHistoryEntryView, retireGroupHistory } from './utils/groupExplorerNavigation';
 import { Download, FolderTree, Hash, Network, RefreshCcw, ShieldAlert, Users } from 'lucide-react';
@@ -178,6 +179,10 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
   // Navigation lasts until the workspace is reopened, reloaded, or reset.
   const [activeTab, setActiveTab] = React.useState(defaultLandingView);
   const [serverTargetTab, setServerTargetTab] = React.useState(() => getInitialServerTabForLabel(activeTab));
+  // Preset tab for views reached through a menu alias (e.g. Online Users →
+  // Managers/Online). Undefined for direct navigation, where the view keeps
+  // its own default tab.
+  const [activeViewInitialTab, setActiveViewInitialTab] = React.useState(undefined);
   const [groupExplorerLocation, setGroupExplorerLocation] = React.useState(() => resolveGroupExplorerNode('Groups'));
   const [groupExplorerReveal, setGroupExplorerReveal] = React.useState(() => (
     activeTab === 'Groups' ? { ...resolveGroupExplorerNode('Groups'), revision: 0 } : null
@@ -421,11 +426,18 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
     }
 
     setSelectedSidebarNodeId(null);
-    let label = typeof nodeOrLabel === 'string' ? nodeOrLabel : nodeOrLabel.label;
-    if (label === 'SuperAdmin' || label === 'Platform Super Admin') {
+    const rawLabel = typeof nodeOrLabel === 'string' ? nodeOrLabel : nodeOrLabel.label;
+    if (rawLabel === 'SuperAdmin' || rawLabel === 'Platform Super Admin') {
       setIsSuperAdminOpen(true);
       return;
     }
+    // Window-menu / header entries without a dedicated renderer resolve to
+    // the existing view that already renders their data (SUI-A3), so they
+    // never fall through to the empty group-lookup state. Gating, toasts and
+    // history all run on the resolved view.
+    const viewTarget = resolveAdminViewTarget(rawLabel);
+    const label = viewTarget.view;
+    setActiveViewInitialTab(viewTarget.initialTab);
     const isLockedDropdownParent = typeof nodeOrLabel !== 'string' && nodeOrLabel.lockedDropdown;
 
     // Capability gating is session-aware: a statically locked view stays
@@ -435,7 +447,10 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
     const blockedForSession = shouldBlockViewNavigation(label, currentUser);
     const viewCapabilityToast = getViewCapabilityToast(label);
     if (!isLockedDropdownParent && viewCapabilityToast && (blockedForSession || !staticallyBlocked)) notify(viewCapabilityToast);
-    if (blockedForSession) return;
+    if (blockedForSession) {
+      setActiveViewInitialTab(undefined);
+      return;
+    }
     setServerTargetTab(getInitialServerTabForLabel(label));
     if (label === activeNode) return;
     openView(label);
@@ -997,7 +1012,7 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
           ) : canViewActive && activeNode === 'Allocations' ? (
             <AllocationsView />
           ) : canViewActive && activeNode === 'Managers' ? (
-            <ManagersView refreshTrigger={refreshKey} searchQuery={searchQuery} sortDirection={tableSortDirection} onRowsChange={handleRowsChange} />
+            <ManagersView refreshTrigger={refreshKey} searchQuery={searchQuery} sortDirection={tableSortDirection} onRowsChange={handleRowsChange} initialTab={activeViewInitialTab} />
           ) : canViewActive && activeNode === 'Dashboard' ? <BrokerDashboard onNavigate={handleNodeSelect} /> : canViewActive && activeNode === 'Groups' ? (
             <GroupsExplorer
               dummyActionsRef={dummyGroupsRef}
@@ -1026,6 +1041,7 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
               viewType={activeNode}
               orderFilterHost={orderFilterHost}
               onAddClick={handleAddClick}
+              onHelp={() => setHelpOpen(true)}
               onGroupsChanged={handleGroupSaved}
               initialServerTab={serverTargetTab}
               refreshTrigger={refreshKey}
@@ -1090,6 +1106,7 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
           <ServerPropertiesPopup
             isOpen={serverPopupData.isOpen}
             onClose={() => setServerPopupData(null)}
+            onHelp={() => setHelpOpen(true)}
             serverName={serverPopupData.target}
             serverId={serverPopupData.id}
           />

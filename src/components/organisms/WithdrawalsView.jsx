@@ -63,7 +63,7 @@ const AddWithdrawalPopup = ({ onClose, onSaved }) => {
           <span className="text-[12px] font-semibold text-[color:var(--text-primary)] flex-1">New Withdrawal Request</span>
           <button onClick={onClose} className="text-white hover:text-white"><X size={14} /></button>
         </div>
-        <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3">
+        <form onSubmit={handleSubmit} noValidate className="p-4 flex flex-col gap-3">
           <div className="grid grid-cols-3 gap-3">
             <FormLabel t="Account Login" req><input className={inp} type="number" value={form.login} onChange={e => set('login', e.target.value)} /></FormLabel>
             <FormLabel t="Amount" req><input className={inp} type="number" step="0.01" value={form.amount} onChange={e => set('amount', e.target.value)} /></FormLabel>
@@ -102,7 +102,7 @@ const RejectPopup = ({ row, onClose, onSaved }) => {
           <span className="text-[12px] font-semibold text-[color:var(--text-primary)] flex-1">Reject Withdrawal #{row.id}</span>
           <button onClick={onClose} className="text-white hover:text-white"><X size={14} /></button>
         </div>
-        <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3">
+        <form onSubmit={handleSubmit} noValidate className="p-4 flex flex-col gap-3">
           <div className="flex flex-col gap-0.5">
             <label className="text-[10px] text-white uppercase tracking-wider">Reason (optional)</label>
             <input value={reason} onChange={e => setReason(e.target.value)}

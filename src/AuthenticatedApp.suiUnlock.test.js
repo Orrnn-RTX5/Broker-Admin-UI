@@ -17,13 +17,18 @@ test('SUI-A4/A5: sidebar lock flags are session-aware, not hardcoded', () => {
   );
   assert.match(
     sidebarSource,
-    /hasReachableViewInSubtree/,
+    /import \{ LOCKED_DROPDOWN_LABELS, resolveFolderNavFlags, shouldBlockViewNavigation \} from '\.\.\/\.\.\/config\/viewCapabilities';/,
     'locked folders must consult reachable session views before locking'
   );
   assert.match(
     sidebarSource,
-    /newNode\.lockedDropdown\s*=\s*isDropdownLockedForSession\(newNode,\s*user\);/,
+    /newNode\.lockedDropdown\s*=\s*folderFlags\.lockedDropdown;/,
     'folders lock only while the session reaches nothing inside'
+  );
+  assert.match(
+    sidebarSource,
+    /newNode\.blockedNavigation\s*=\s*folderFlags\.blockedNavigation;/,
+    'unlocked folders must not carry the label-level block that disables chevron and rows'
   );
   assert.match(
     sidebarSource,
@@ -44,7 +49,7 @@ test('SUI-A4/A5: selection gates on session capabilities and hides stale locked 
   );
   assert.match(
     handlerMatch[0],
-    /if \(blockedForSession\) return;/,
+    /if \(blockedForSession\) \{/,
     'sessions without the capability must stay blocked'
   );
   assert.match(

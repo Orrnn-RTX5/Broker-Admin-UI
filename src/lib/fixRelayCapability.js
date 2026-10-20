@@ -9,7 +9,9 @@
 //      deployment by docker-entrypoint.sh; readable via getRuntimeValue),
 //   2. a deployment-gated entry reported in the broker capability registry
 //      environment list (services/brokerCapabilities.js; read-only, no new
-//      backend endpoint),
+//      backend endpoint). NOTE: no backend emits such an entry today and
+//      GatewaysView does not fetch the registry, so this leg is parsed when
+//      present but currently never fires — the live sources are (1) and (3).
 //   3. the build-time VITE_FIX_RELAY_ENABLED value, kept only as a fallback
 //      default for builds deployed without a runtime config.
 //

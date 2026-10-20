@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { canAccessView, hasPermission, PERMISSION_KEYS } from './utils/permissions.js';
 import { getHistoryEntryView, resolveGroupExplorerNode, sameGroupExplorerLocation } from './utils/groupExplorerNavigation.js';
+import { resolveAdminViewTarget } from './config/adminViewAliases.js';
 
 const source = readFileSync(new URL('./AuthenticatedApp.jsx', import.meta.url), 'utf8');
 
@@ -47,6 +48,8 @@ const createHandlers = ({
     getHistoryEntryView,
     resolveGroupExplorerNode,
     sameGroupExplorerLocation,
+    resolveAdminViewTarget,
+    setActiveViewInitialTab: (tab) => { state.initialTab = tab; },
     notify: (notice) => state.notices.push(notice),
     setSavedSearches: (update) => { state.searches = update(state.searches); },
     setSelectedSidebarNodeId: (id) => { state.selectedId = id; },

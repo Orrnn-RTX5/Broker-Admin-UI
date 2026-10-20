@@ -66,6 +66,7 @@ const TimeSettingsView = lazy(() => import('./TimeSettingsView'));
 const AntiDDoSView = lazy(() => import('./AntiDDoSView'));
 const SupportCenterView = lazy(() => import('./SupportCenterView'));
 const ManagersView = lazy(() => import('./ManagersView'));
+const JournalView = lazy(() => import('./JournalView'));
 const SwapFreeGroupsView = lazy(() => import('./SwapFreeGroupsView'));
 const LeveragesView = lazy(() => import('./LeveragesView'));
 const LeverageScheduleView = lazy(() => import('./LeverageScheduleView'));
@@ -761,6 +762,7 @@ const AdminDataTableContent = ({
   viewType,
   orderFilterHost,
   onAddClick,
+  onHelp,
   onGroupsChanged,
   initialServerTab,
   refreshTrigger,
@@ -1488,6 +1490,12 @@ const AdminDataTableContent = ({
   if (viewType === 'Managers') {
     return <ManagersView refreshTrigger={refreshTrigger} searchQuery={searchQuery} sortDirection={sortDirection} />;
   }
+  // Main-area broker journal (SUI-A3): same ServerJournal surface and data
+  // layer as the Operations Terminal dock, so the Window-menu and header
+  // Journal entries render live data instead of the empty group-lookup state.
+  if (viewType === 'Journal') {
+    return <JournalView />;
+  }
 
   // --- NETWORK CLUSTER INJECTION ---
   if (viewType === 'Network Cluster') {
@@ -1699,6 +1707,7 @@ const AdminDataTableContent = ({
           <ServerPropertiesPopup
             isOpen={serverPopupData.isOpen}
             onClose={() => setServerPopupData(null)}
+            onHelp={onHelp}
             serverName={serverPopupData.target}
             serverId={serverPopupData.id}
           />
