@@ -50,6 +50,7 @@ import { WorkspaceViewReady } from './components/organisms/WorkspaceStartup.jsx'
 import { useWorkspaceStartupReady } from './hooks/useWorkspaceStartup';
 import { formatBrokerConnectionStatus, getBrokerBranding } from './utils/branding';
 import { shouldParentHandleEscape } from './utils/dialogEscape';
+import { buildImportFailureToast, buildImportValidationToast, parseImportFile } from './utils/importValidation';
 
 // Keep the terminal and navigation available while a requested view or dialog
 // downloads. Screens that are never opened do not belong in the startup path.
@@ -141,7 +142,6 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
   const kb = useKbStatus();
 
   const [selectedGroup, setSelectedGroup] = React.useState(null);
-  const dummyGroupsRef = React.useRef(null);
   const [isPopupOpen, setIsPopupOpen] = React.useState(false);
   // Opened by double-clicking an account: that account's group, on Margin, without the Accounts tab.
   const [groupPopupFromAccount, setGroupPopupFromAccount] = React.useState(false);
@@ -174,6 +174,9 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
   const [savedSearches, setSavedSearches] = useLocalStorage(getSearchesStorageKey(), {}, 'sessionStorage');
   React.useEffect(() => {
     try { localStorage.removeItem(LEGACY_SEARCHES_KEY); } catch { /* noop */ }
+    // SUI-A10: the removed local-only dummy-groups store persisted under this
+    // key; drop stale copies so no device-only group data lingers.
+    try { localStorage.removeItem('rtx5-admin-dummy-groups-v1'); } catch { /* noop */ }
   }, []);
   const defaultLandingView = DEFAULT_WORKSPACE_LAYOUT.view;
   // Navigation lasts until the workspace is reopened, reloaded, or reset.
@@ -567,11 +570,6 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
   const openEditTarget = React.useCallback((target) => {
     if (!target) return false;
 
-    if (target.type === 'group' && target.row?.isDummy) {
-      dummyGroupsRef.current?.editGroup(target.row);
-      return true;
-    }
-
     if (target.type === 'group') {
       if(!canViewGroup(currentUser,target.row?.name || target.row?.group)) return false;
       setSelectedGroup(target.row);
@@ -709,20 +707,7 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
     });
   };
 
-  const parseImportFile = (text) => {
-    const trimmed = text.trim();
-    if (!trimmed) throw new Error('file is empty');
-    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-      const parsed = JSON.parse(trimmed);
-      const rows = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.rows) ? parsed.rows : null;
-      if (!rows) throw new Error('JSON has no rows array');
-      return { format: 'JSON', view: parsed?.view || null, count: rows.length };
-    }
-    const lines = trimmed.split(/\r?\n/).filter((line) => line.trim() !== '');
-    if (lines.length < 2) throw new Error('CSV needs a header row and at least one data row');
-    return { format: 'CSV', view: null, count: lines.length - 1 };
-  };
-
+  // Validate-only: parses the file and reports the row count. Nothing is imported.
   const handleImport = () => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -731,18 +716,10 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
       const f = e.target.files?.[0];
       if (!f) return;
       try {
-        const summary = parseImportFile(await f.text(), f.name);
-        notify({
-          title: 'Import validated',
-          description: `${summary.format}: ${summary.count} rows in ${f.name}${summary.view ? ` (view: ${summary.view})` : ''}`,
-          tone: 'success',
-        });
+        const summary = parseImportFile(await f.text());
+        notify(buildImportValidationToast(summary, f.name));
       } catch (err) {
-        notify({
-          title: 'Import failed',
-          description: `${f.name}: ${err.message}`,
-          tone: 'danger',
-        });
+        notify(buildImportFailureToast(f.name, err));
       }
     };
     input.click();
@@ -780,10 +757,6 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
     if (!target || !canCreateDeleteGroups) return;
     if (target.type === 'group-branch') {
       notify({ title: 'Group migration required', description: 'Open each group to preview complete migration and verified deletion.', tone: 'warning' });
-      return;
-    }
-    if (target.type === 'group' && target.row?.isDummy) {
-      dummyGroupsRef.current?.deleteGroup(target.row);
       return;
     }
     if (target.type === 'group') {
@@ -847,8 +820,8 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
 
   React.useEffect(() => {
     const onKey = (e) => {
-      // Local group dialogs own their keyboard and drafts until saved or cancelled.
-      if (e.target?.closest?.('.dgp-modal, .dummy-group-action-dialog')) return;
+      // The live Add-subgroup dialog owns its keyboard and draft until saved or cancelled.
+      if (e.target?.closest?.('.dummy-group-action-dialog')) return;
       const mod = e.ctrlKey || e.metaKey;
       const tag = e.target?.tagName;
       const typing = tag === 'INPUT' || tag === 'TEXTAREA' || e.target?.isContentEditable;
@@ -1019,7 +992,6 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
             <ManagersView refreshTrigger={refreshKey} searchQuery={searchQuery} sortDirection={tableSortDirection} onRowsChange={handleRowsChange} initialTab={activeViewInitialTab} />
           ) : canViewActive && activeNode === 'Dashboard' ? <BrokerDashboard onNavigate={handleNodeSelect} /> : canViewActive && activeNode === 'Groups' ? (
             <GroupsExplorer
-              dummyActionsRef={dummyGroupsRef}
               key={`${groupIdentity}:${groupExplorerLocation.id}`}
               location={groupExplorerLocation}
               onNavigate={navigateGroupExplorer}
