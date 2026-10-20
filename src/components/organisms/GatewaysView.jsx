@@ -26,6 +26,7 @@ import {
   gatewaySaveFeedConfig,
 } from '../../services/gateway.service';
 import { buildFeedConfigPayload, normalizeFeedProvider } from '../../lib/feedConfigPayload';
+import { isFixRelayEnabled, resolveGatewayTools } from '../../lib/fixRelayCapability';
 import { useToast } from '../ui/useToast';
 import NamedLPConnectionsPanel from './NamedLPConnectionsPanel';
 import './gateways-view.css';
@@ -126,7 +127,7 @@ const SETUP_STEPS = [
   { id: 'routing', title: 'Set up order routing', description: 'Choose where client orders go.' },
 ];
 
-const GATEWAY_TOOLS = [
+const GATEWAY_TOOLS_BASE = [
   { section: 'connections', title: 'Provider connections', description: 'FIX sessions, credentials, connect and disconnect' },
   { section: 'quotes', title: 'Price sources & quotes', description: 'Symbol mappings, live prices and feed health' },
   { section: 'routing', title: 'Order routing', description: 'Execution routes, groups and symbol rules' },
@@ -139,9 +140,15 @@ const GATEWAY_TOOLS = [
   { section: 'journal', id: 'baselines', title: 'Calculation baselines', description: 'Broker calculation settings and revisions' },
   { section: 'permissions', title: 'Manager permissions', description: 'Manager access, configuration and grants' },
   { section: 'readiness', title: 'Gateway readiness', description: 'B-book private FIX session health and capabilities' },
-  ...(import.meta.env.VITE_FIX_RELAY_ENABLED === 'true' ? [{ section: 'readiness', id: 'relay', title: 'Superadmin FIX relay', description: 'Relay credentials, subscriptions and connection status' }] : []),
   { section: 'legacy', title: 'Legacy price feed', description: 'Single provider, market data credentials and SSL' },
 ];
+
+// The Superadmin FIX relay panel is a runtime capability, not a build flag:
+// visible iff the per-deployment feature switch enables it (runtime config,
+// broker capability registry environment, then the build-time env as a
+// fallback default). Unconfigured deployments stay closed.
+const getGatewayTools = (enabled = isFixRelayEnabled()) =>
+  resolveGatewayTools(GATEWAY_TOOLS_BASE, enabled);
 
 // Opening a tool loads it once; closing it retains any unsaved draft.
 const GatewayDetails = ({ id, title, description, children }) => {
@@ -277,7 +284,8 @@ const GatewaysView = () => {
   const [visitedSections, setVisitedSections] = useState(['connections']);
   const [search, setSearch] = useState('');
   const searchTerms = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const searchResults = searchTerms.length ? GATEWAY_TOOLS.filter((tool) => {
+  const gatewayTools = getGatewayTools();
+  const searchResults = searchTerms.length ? gatewayTools.filter((tool) => {
     const text = `${tool.title} ${tool.description} ${SECTION_BY_ID[tool.section].label}`.toLowerCase();
     return searchTerms.every((term) => text.includes(term));
   }) : [];
@@ -568,7 +576,7 @@ const GatewaysView = () => {
 
         <GatewaySection section={SECTION_BY_ID.readiness} active={activeSection === 'readiness'} mounted={visitedSections.includes('readiness')}>
           <PrivateFIXReadinessPanel /><BrokerCapabilitiesPanel />
-          {import.meta.env.VITE_FIX_RELAY_ENABLED === 'true' && <GatewayDetails id="relay" title="Superadmin FIX relay" description="Configure the separate FIX relay and inspect its connection status."><FixRelayConfigPanel /></GatewayDetails>}
+          {isFixRelayEnabled() && <GatewayDetails id="relay" title="Superadmin FIX relay" description="Configure the separate FIX relay and inspect its connection status."><FixRelayConfigPanel /></GatewayDetails>}
         </GatewaySection>
 
         <GatewaySection section={SECTION_BY_ID.legacy} active={activeSection === 'legacy'} mounted={visitedSections.includes('legacy')}>
