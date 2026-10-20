@@ -46,7 +46,7 @@ test('getBrokerBranding returns neutral white-label defaults when no broker is c
 test('getBrokerBranding derives Trivanta Markets branding and discovery logo URL from runtime config', () => {
   globalThis.window.__RTX5_RUNTIME_CONFIG__ = {
     BROKER_ID: 'trivanta-markets',
-    DISCOVERY_BASE_URL: 'https://superadmin-prod.orrnn.com/',
+    DISCOVERY_BASE_URL: 'https://superadmin-prod.example.test/',
     DEFAULT_MT5_SERVER: 'trivanta-live-01',
   };
 
@@ -59,7 +59,7 @@ test('getBrokerBranding derives Trivanta Markets branding and discovery logo URL
   assert.equal(branding.monogram, 'TM');
   assert.equal(
     branding.logoUrl,
-    'https://superadmin-prod.orrnn.com/api/v1/brokers/trivanta-markets/logo'
+    'https://superadmin-prod.example.test/api/v1/brokers/trivanta-markets/logo'
   );
   assert.equal(branding.serverName, 'trivanta-live-01');
 });
@@ -67,7 +67,7 @@ test('getBrokerBranding derives Trivanta Markets branding and discovery logo URL
 test('resolveBrokerLogoUrl ignores legacy placeholder logo paths and derives broker logo endpoint', () => {
   globalThis.window.__RTX5_RUNTIME_CONFIG__ = {
     BROKER_ID: 'trivanta-markets',
-    DISCOVERY_BASE_URL: 'https://superadmin-prod.orrnn.com',
+    DISCOVERY_BASE_URL: 'https://superadmin-prod.example.test',
   };
 
   assert.equal(
@@ -75,7 +75,7 @@ test('resolveBrokerLogoUrl ignores legacy placeholder logo paths and derives bro
       broker_id: 'trivanta-markets',
       logo_url: '/assets/logo.png',
     }),
-    'https://superadmin-prod.orrnn.com/api/v1/brokers/trivanta-markets/logo'
+    'https://superadmin-prod.example.test/api/v1/brokers/trivanta-markets/logo'
   );
 
   assert.equal(
@@ -83,7 +83,7 @@ test('resolveBrokerLogoUrl ignores legacy placeholder logo paths and derives bro
       broker_id: 'trivanta-markets',
       logo_url: '/logo-full-light.webp',
     }),
-    'https://superadmin-prod.orrnn.com/api/v1/brokers/trivanta-markets/logo'
+    'https://superadmin-prod.example.test/api/v1/brokers/trivanta-markets/logo'
   );
 });
 

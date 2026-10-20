@@ -43,9 +43,9 @@ test('getSuperAdminOrigin uses runtime config and returns empty string when unco
   assert.equal(getSuperAdminOrigin(), '');
 
   globalThis.window.__RTX5_RUNTIME_CONFIG__ = {
-    SUPER_ADMIN_API_HOST: 'https://superadmin-prod.orrnn.com/',
+    SUPER_ADMIN_API_HOST: 'https://superadmin-prod.example.test/',
   };
-  assert.equal(getSuperAdminOrigin(), 'https://superadmin-prod.orrnn.com');
+  assert.equal(getSuperAdminOrigin(), 'https://superadmin-prod.example.test');
   delete globalThis.window.__RTX5_RUNTIME_CONFIG__;
 });
 

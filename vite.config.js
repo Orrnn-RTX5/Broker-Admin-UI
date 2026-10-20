@@ -44,13 +44,14 @@ viteLogger.error = (message, options) => {
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  // Dev-server proxy targets only; never baked into the client bundle.
-  // Generic reserved-example hosts fail fast when .env is missing instead of
-  // silently proxying development traffic to a real tenant backend.
-  const apiHost    = env.VITE_API_HOST || env.VITE_API_URL || env.API_HOST || env.API_URL || 'https://broker.example.com'
-  const apiHostExt = env.VITE_API_HOST_EXT || env.VITE_API_EXT_URL || env.API_HOST_EXT || env.API_EXT_URL || 'http://broker.example.com:8091'
-  const superAdminHost = env.VITE_SUPER_ADMIN_API_HOST || env.SUPER_ADMIN_API_HOST || 'https://platform.example.com'
-  const wsFeedHost = env.VITE_FEED_WS_URL || env.VITE_WS_HOST || env.WS_HOST || 'wss://broker.example.com/ws/feed'
+  const apiHost    = env.VITE_API_HOST || env.VITE_API_URL || env.API_HOST || env.API_URL || ''
+  const apiHostExt = env.VITE_API_HOST_EXT || env.VITE_API_EXT_URL || env.API_HOST_EXT || env.API_EXT_URL || ''
+  const superAdminHost = env.VITE_SUPER_ADMIN_API_HOST || env.SUPER_ADMIN_API_HOST || ''
+  const wsFeedHost = env.VITE_FEED_WS_URL || env.VITE_WS_HOST || env.WS_HOST || ''
+  if (!apiHost) throw new Error('VITE_API_HOST is not configured (set VITE_API_HOST/VITE_API_URL).')
+  if (!apiHostExt) throw new Error('VITE_API_HOST_EXT is not configured (set VITE_API_HOST_EXT/VITE_API_EXT_URL).')
+  if (!superAdminHost) throw new Error('VITE_SUPER_ADMIN_API_HOST is not configured (set VITE_SUPER_ADMIN_API_HOST/SUPER_ADMIN_API_HOST).')
+  if (!wsFeedHost) throw new Error('VITE_FEED_WS_URL is not configured (set VITE_FEED_WS_URL/VITE_WS_HOST/WS_HOST).')
   const wsFeedUrl = new URL(wsFeedHost.replace(/^wss:/i, 'https:').replace(/^ws:/i, 'http:'))
   const wsTarget = wsFeedUrl.origin
   const useFeedDevProxy = mode === 'development' && String(env.VITE_FEED_USE_DEV_PROXY || '').toLowerCase() === 'true'
