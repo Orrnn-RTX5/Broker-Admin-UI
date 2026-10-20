@@ -58,6 +58,14 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
   const tabs = ['Common', 'Permissions', 'Group Access', 'Reports', 'IP Access List'];
 
   const renderContent = () => {
+    // The allowlist comes from the manager record (ip_whitelist). Nothing is
+    // hardcoded: an unconfigured manager shows an explicit empty state.
+    const ipAllowlist = (() => {
+      const raw = manager?.ip_whitelist ?? manager?.ipWhitelist ?? manager?.allowed_ips;
+      if (Array.isArray(raw)) return raw.map((entry) => String(entry ?? '').trim()).filter(Boolean);
+      if (typeof raw === 'string' && raw.trim() !== '') return raw.split(',').map((entry) => entry.trim()).filter(Boolean);
+      return [];
+    })();
     switch (activeTab) {
       case 'Group Access': return <GroupAccessFields mode={groupMode} groups={assignedGroups} onChange={(mode,groups)=>{setGroupMode(mode);setAssignedGroups(groups);}} />;
       case 'Common':
@@ -293,12 +301,18 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
                     <div className="flex-1">To</div>
                   </div>
 
-                  <div className="flex items-center py-1 px-2 border-b border-[color:var(--bg-surface-2)] hover:bg-blue-600/30">
-                    <div className="flex-1 flex items-center text-[12px] text-[color:var(--text-primary)]">
-                      <span className="text-white mr-2 border border-green-500 rounded-sm w-[14px] h-[10px] relative"><span className="absolute top-[2px] left-[-2px] w-[16px] border-b border-green-500"></span></span> 81.29.145.69
-                    </div>
-                    <div className="flex-1 text-[12px] text-[color:var(--text-primary)]">81.29.145.69</div>
-                  </div>
+                  {ipAllowlist.length === 0 ? (
+                    <div className="py-2 px-2 text-[12px] text-[color:var(--text-muted)]">No IP restrictions configured</div>
+                  ) : (
+                    ipAllowlist.map((entry, index) => (
+                      <div key={index} className="flex items-center py-1 px-2 border-b border-[color:var(--bg-surface-2)] hover:bg-blue-600/30">
+                        <div className="flex-1 flex items-center text-[12px] text-[color:var(--text-primary)]">
+                          <span className="text-white mr-2 border border-green-500 rounded-sm w-[14px] h-[10px] relative"><span className="absolute top-[2px] left-[-2px] w-[16px] border-b border-green-500"></span></span> {entry}
+                        </div>
+                        <div className="flex-1 text-[12px] text-[color:var(--text-primary)]">{entry}</div>
+                      </div>
+                    ))
+                  )}
 
                 </div>
               </div>

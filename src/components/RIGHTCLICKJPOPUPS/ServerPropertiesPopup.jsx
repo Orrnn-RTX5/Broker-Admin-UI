@@ -75,8 +75,8 @@ const CommonTab = () => (
     </div>
 );
 
-const NetworkTab = () => (
-    <div className="flex flex-col h-full pl-3 pt-3">
+const NetworkTab = ({ address = '', publicAddress = '' }) => (
+   <div className="flex flex-col h-full pl-3 pt-3">
         <div className="flex gap-4 items-start">
             <ServerIcon />
             <div className="text-[11px] text-[color:var(--text-primary)] leading-[1.3] pr-8 pt-1">
@@ -89,7 +89,7 @@ const NetworkTab = () => (
            <div className="flex items-center gap-2 h-[22px]">
               <span className="text-[11px] text-[color:var(--text-primary)] ml-6 mr-1">Address:</span>
               <div className="w-[200px] h-full border border-[#555] bg-[color:var(--bg-app)] flex items-center justify-between text-[11px] p-[1px] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)] cursor-pointer">
-                 <span className="bg-[#00609c] text-white px-1.5 h-full flex items-center w-[85%]">89.21.67.29</span>
+                 <span className="bg-[#00609c] text-white px-1.5 h-full flex items-center w-[85%]">{address || 'not configured'}</span>
                  <div className="w-[16px] h-full bg-[#333] border-l border-[#444] flex items-center justify-center hover:bg-[#444]">
                     <ChevronDown size={12} className="text-[color:var(--text-muted)]" />
                  </div>
@@ -124,7 +124,7 @@ const NetworkTab = () => (
                </div>
                <div className="flex gap-2 h-full">
                   <div className="flex-1 border border-[#555] bg-[color:var(--bg-app)] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]">
-                     <div className="px-1.5 py-[3px] flex items-center gap-1.5 text-[11px] text-white bg-[#003859] cursor-default select-none"><Monitor size={11} className="text-white" /> 89.21.67.29:440</div>
+                     <div className="px-1.5 py-[3px] flex items-center gap-1.5 text-[11px] text-white bg-[#003859] cursor-default select-none"><Monitor size={11} className="text-white" /> {publicAddress || 'not configured'}</div>
                   </div>
                   <div className="flex flex-col gap-1.5 pt-[1px] w-[64px]">
                      <button className="flex-1 border border-[#555] rounded-[2px] bg-[#333] text-[color:var(--text-primary)] text-[11px] hover:bg-[#444] hover:border-[#666]">Add</button>
@@ -254,7 +254,7 @@ const SQLExportTab = () => (
     </div>
 );
 
-const ServerPropertiesPopup = ({ isOpen, onClose, onHelp, serverName = "MainTrade Backup Server", serverId = "5" }) => {
+const ServerPropertiesPopup = ({ isOpen, onClose, onHelp, serverName = "MainTrade Backup Server", serverId = "5", serverAddress = '', publicAddress = '' }) => {
     const [activeTab, setActiveTab] = useState('Common');
 
     if (!isOpen) return null;
@@ -296,7 +296,7 @@ const ServerPropertiesPopup = ({ isOpen, onClose, onHelp, serverName = "MainTrad
               {/* Content Canvas */}
               <div className="flex-1 bg-[#222222] border-t border-[#333] relative">
                   {activeTab === 'Common' && <CommonTab />}
-                  {activeTab === 'Network' && <NetworkTab />}
+                  {activeTab === 'Network' && <NetworkTab address={serverAddress} publicAddress={publicAddress} />}
                   {activeTab === 'Backup' && <BackupTab />}
                   {activeTab === 'SQL Export' && <SQLExportTab />}
                   {(activeTab === 'SQL Options' || activeTab === 'Folders' || activeTab === 'Service') && (

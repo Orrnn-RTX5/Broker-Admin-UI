@@ -2,20 +2,38 @@ import React, { useState } from 'react';
 import { Server, Zap, Cpu, MemoryStick as Memory, HardDrive, Share2, Activity, Clock, ShieldAlert, BarChart3, Database, Router, CheckCircle2, Lock, List, MapPin, Cloud } from 'lucide-react';
 import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "react-simple-maps";
 import { deterministicInt, deterministicRatio } from '../../lib/deterministicChart';
+import { useServers } from '../../hooks/useServers';
 
 // Use the robust topojson host provided
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
-const networkNodesData = [
-   { id: 5, type: 'Backup Server', server: 'MainTrade Backup Server', ipv4: '89.21.67.29', pubAddr: '89.21.67.29:440', basePri: '', curPri: '', cpu: '0%', threads: 42, memory: '20 739', sockets: 118, connect: '', trafficIn: '0', trafficOut: '0' },
-   { id: 1, type: 'Main Trade Server', server: 'Main Trade Server', ipv4: '86.104.251.172', pubAddr: '86.104.251.172:440', basePri: '', curPri: '', cpu: '0%', threads: 154, memory: '46 162', sockets: 156, connect: '23', trafficIn: '0', trafficOut: '0' },
-   { id: 2, type: 'Access Server', server: 'Access Server', ipv4: '86.104.251.172', pubAddr: '86.104.251.172:443', basePri: '0', curPri: '0', cpu: '2%', threads: 73, memory: '46 160', sockets: 156, connect: '13', trafficIn: '0', trafficOut: '0' },
-   { id: 3, type: 'History Server', server: 'History Server', ipv4: '86.104.251.172', pubAddr: '86.104.251.172:441', basePri: '', curPri: '', cpu: '0%', threads: 71, memory: '46 162', sockets: 159, connect: '10', trafficIn: '0', trafficOut: '0' },
-   { id: 4, type: 'Backup Server', server: 'Local Main Status Server', ipv4: '86.104.251.172', pubAddr: '86.104.251.172:442', basePri: '', curPri: '', cpu: '1%', threads: 42, memory: '46 162', sockets: 157, connect: '', trafficIn: '0', trafficOut: '0' },
-   { id: 6, type: 'Backup Server', server: 'Backup Server', ipv4: '89.21.67.29', pubAddr: '89.21.67.29:441', basePri: '', curPri: '', cpu: '2%', threads: 14, memory: '20 740', sockets: 118, connect: '', trafficIn: '0', trafficOut: '0' },
-   { id: 7, type: 'Access Server', server: 'Access Server', ipv4: '89.21.67.29', pubAddr: '89.21.67.29:443', basePri: '0', curPri: '0', cpu: '1%', threads: 74, memory: '20 740', sockets: 119, connect: '7', trafficIn: '0', trafficOut: '0' },
-   { id: 8, type: 'Backup Server', server: 'TradeProcessor SQL_Export', ipv4: '23.106.230.130', pubAddr: '23.106.230.130:444', basePri: '', curPri: '', cpu: '0%', threads: 53, memory: '24 955', sockets: 114, connect: '', trafficIn: '0', trafficOut: '0' },
-];
+// Server rows come from the broker API (GET /api/v2/admin/broker-servers via
+// useServers). There is no demo fallback: a broker with nothing configured
+// gets an explicit empty state, never fake addresses.
+const NOT_CONFIGURED = 'not configured';
+
+const pickText = (server, keys) => {
+   for (const key of keys) {
+      const value = server?.[key];
+      if (value !== undefined && value !== null && String(value).trim() !== '') return String(value);
+   }
+   return '';
+};
+
+const normalizeServerNodes = (payload) => {
+   const list = Array.isArray(payload) ? payload : (payload?.servers || payload?.data || payload?.items || []);
+   if (!Array.isArray(list)) return [];
+   return list.map((server, index) => ({
+      key: pickText(server, ['id', 'server_id']) || `server-${index}`,
+      id: pickText(server, ['id', 'server_id']) || NOT_CONFIGURED,
+      type: pickText(server, ['type', 'server_type', 'role']) || NOT_CONFIGURED,
+      server: pickText(server, ['name', 'server_name', 'host', 'hostname']) || NOT_CONFIGURED,
+      ipv4: pickText(server, ['ipv4', 'server_ip', 'ip', 'host', 'address']) || NOT_CONFIGURED,
+      ipv6: pickText(server, ['ipv6']),
+      pubAddr: pickText(server, ['public_address', 'publicAddress', 'pub_addr', 'external_address']) || NOT_CONFIGURED,
+      memory: pickText(server, ['memory', 'memory_mb', 'ram_mb', 'ram']) || NOT_CONFIGURED,
+   }));
+};
 
 const renderIcon = (type) => {
    if (type === 'Main Trade Server') return <Database size={13} className="text-white" />;
@@ -86,7 +104,29 @@ const NetworkOverviewMap = () => (
 
 
 
-const NetworkNodesTable = () => (
+const NetworkNodesTable = ({ nodes = [], loading = false, error = null }) => {
+   if (loading) {
+      return (
+         <div className="flex-1 flex items-center justify-center text-[color:var(--text-muted)] text-sm">
+            Loading servers…
+         </div>
+      );
+   }
+   if (error) {
+      return (
+         <div className="flex-1 flex items-center justify-center text-[color:var(--text-muted)] text-sm">
+            Failed to load servers{error?.message ? `: ${error.message}` : ''}
+         </div>
+      );
+   }
+   if (nodes.length === 0) {
+      return (
+         <div className="flex-1 flex items-center justify-center text-[color:var(--text-muted)] text-sm">
+            No servers configured
+         </div>
+      );
+   }
+   return (
    <div className="flex-1 overflow-auto no-scrollbar bg-[color:var(--bg-app)]">
       <div className="flex border-b border-black/40 bg-[color:var(--bg-surface-2)] sticky top-0 z-10 shadow-sm text-[11px] font-medium text-[color:var(--text-primary)]">
          <div className="w-40 px-3 py-1.5 border-r border-black/20 truncate">Type</div>
@@ -106,8 +146,8 @@ const NetworkNodesTable = () => (
          <div className="w-20 px-3 py-1.5 border-r border-black/20 text-right truncate">Traffic Out</div>
          <div className="flex-1 bg-[color:var(--bg-surface-2)]"></div>
       </div>
-      {networkNodesData.map((node, idx) => (
-         <div key={idx} className={`flex text-[11px] border-b border-black/10 cursor-default hover:bg-blue-600/20 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
+      {nodes.map((node, idx) => (
+         <div key={node.key || idx} className={`flex text-[11px] border-b border-black/10 cursor-default hover:bg-blue-600/20 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
             <div className="w-40 px-3 py-1 border-r border-black/10 flex items-center gap-1.5 truncate">
                {renderIcon(node.type)}
                <span className="text-[color:var(--text-primary)]">{node.type}</span>
@@ -117,25 +157,26 @@ const NetworkNodesTable = () => (
             <div className="w-32 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)]">{node.ipv6}</div>
             <div className="w-40 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)]">{node.pubAddr}</div>
             <div className="w-12 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right">{node.id}</div>
-            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right">{node.basePri}</div>
-            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right">{node.curPri}</div>
-            <div className="w-16 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right">{node.cpu}</div>
-            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right">{node.threads}</div>
+            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right"></div>
+            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right"></div>
+            <div className="w-16 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right"></div>
+            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right"></div>
             <div className="w-24 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right">{node.memory}</div>
-            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right">{node.sockets}</div>
-            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right">{node.connect}</div>
-            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right">{node.trafficIn}</div>
-            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right">{node.trafficOut}</div>
+            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right"></div>
+            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right"></div>
+            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right"></div>
+            <div className="w-20 px-3 py-1 border-r border-black/10 text-[color:var(--text-muted)] text-right"></div>
             <div className="flex-1"></div>
          </div>
       ))}
       {[...Array(15)].map((_, i) => (
-         <div key={i} className={`flex border-b border-black/5 opacity-40 ${(networkNodesData.length + i) % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
+         <div key={i} className={`flex border-b border-black/5 opacity-40 ${(nodes.length + i) % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
             <div className="w-full h-[26px] border-r border-black/10"></div>
          </div>
       ))}
    </div>
-);
+   );
+};
 
 const NetworkGraphPanel = ({ title, type, servers }) => {
    const generatePath = (points, max, colorType, seed) => {
@@ -325,13 +366,34 @@ const NetworkCluster = () => {
    const topTabs = ['Cluster', 'Ultency Matching Engines', 'Hosted Access Servers', 'Sponsored VPS'];
    const bottomTabs = ['Overview', 'Nodes', 'CPU', 'Memory', 'Disk', 'Connections', 'Traffic', 'Latency', 'Network Packets', 'Trade'];
 
-   const serversList = [
-      { type: 'Backup Server', name: 'MainTrade Backup Server', memory: '20 739' },
-      { type: 'Main Trade Server', name: 'Main Trade Server', memory: '46 162' },
-      { type: 'Access Server', name: 'Access Server', memory: '46 160' },
-      { type: 'History Server', name: 'History Server', memory: '46 162' },
-      { type: 'Backup Server', name: 'Local Main Status Server', memory: '46 162' },
-   ];
+   const { data: serversPayload, loading: serversLoading, error: serversError } = useServers();
+   const nodes = normalizeServerNodes(serversPayload);
+   const serversList = nodes.map((node) => ({ type: node.type, name: node.server, memory: node.memory }));
+
+   const renderServerPanel = (title, type) => {
+      if (serversLoading) {
+         return (
+            <div className="flex-1 flex items-center justify-center text-[color:var(--text-muted)] text-sm">
+               Loading servers…
+            </div>
+         );
+      }
+      if (serversError) {
+         return (
+            <div className="flex-1 flex items-center justify-center text-[color:var(--text-muted)] text-sm">
+               Failed to load servers{serversError?.message ? `: ${serversError.message}` : ''}
+            </div>
+         );
+      }
+      if (serversList.length === 0) {
+         return (
+            <div className="flex-1 flex items-center justify-center text-[color:var(--text-muted)] text-sm">
+               No servers configured
+            </div>
+         );
+      }
+      return <NetworkGraphPanel title={title} type={type} servers={serversList} />;
+   };
 
    return (
       <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative">
@@ -340,7 +402,7 @@ const NetworkCluster = () => {
             <div className="flex justify-between items-start mb-4">
                <div>
                   <h2 className="text-white text-[15px] font-semibold flex items-center gap-2">
-                     Network Cluster: <span className="text-[color:var(--text-muted)] font-normal text-sm">23 online</span>
+                     Network Cluster: <span className="text-[color:var(--text-muted)] font-normal text-sm">{serversLoading ? '…' : `${nodes.length} online`}</span>
                   </h2>
                   {bottomTab === 'Nodes' && (
                      <p className="text-[color:var(--text-muted)] text-[12px] mt-0.5">Monitor the platform infrastructure, manage network settings, and scale the cluster for load balancing</p>
@@ -386,11 +448,11 @@ const NetworkCluster = () => {
          {/* Main Content Area based on bottom tab selection */}
          <div className="flex-1 flex flex-col overflow-hidden bg-[color:var(--bg-app)]">
             {bottomTab === 'Overview' && <NetworkOverviewMap />}
-            {bottomTab === 'Nodes' && <NetworkNodesTable />}
-            {bottomTab === 'CPU' && <NetworkGraphPanel title="CPU Performance" type="CPU" servers={serversList} />}
-            {bottomTab === 'Memory' && <NetworkGraphPanel title="Memory Usage" type="Memory" servers={serversList} />}
-            {bottomTab === 'Disk' && <NetworkGraphPanel title="Disk Activity" type="Disk" servers={serversList} />}
-            {bottomTab === 'Connections' && <NetworkGraphPanel title="Connections" type="Connections" servers={serversList} />}
+            {bottomTab === 'Nodes' && <NetworkNodesTable nodes={nodes} loading={serversLoading} error={serversError} />}
+            {bottomTab === 'CPU' && renderServerPanel("CPU Performance", "CPU")}
+            {bottomTab === 'Memory' && renderServerPanel("Memory Usage", "Memory")}
+            {bottomTab === 'Disk' && renderServerPanel("Disk Activity", "Disk")}
+            {bottomTab === 'Connections' && renderServerPanel("Connections", "Connections")}
             {/* Fallback for empty tabs */}
             {['Traffic', 'Latency', 'Network Packets', 'Trade'].includes(bottomTab) && (
                <div className="flex-1 flex items-center justify-center text-[color:var(--text-muted)] text-sm">

@@ -351,11 +351,9 @@ const FirewallTab = () => {
        { n: '@{Microsoft.Windows.SecHealthUI_...', pr: 'domain, private', act: 'allow', addr: '*', port: 'Any', proto: 'Any', inf: 'All', app: '' },
        { n: 'AllJoyn Router (TCP-In)', pr: 'domain, private', act: 'allow', addr: '', port: '9955', proto: 'TCP', inf: 'All', app: 'c:\\windows\\system32\\svchost.exe' },
        { n: 'Cast to Device streaming server (HT...', pr: 'private', act: 'allow', addr: 'LocalSubnet', port: '10246', proto: 'TCP', inf: 'All', app: 'system' },
-       { n: 'Centroid_Allow_Checkmk_Monitoring', pr: 'all', act: 'allow', addr: '3.11.129.113', port: '6556', proto: 'TCP', inf: 'All', app: '' },
        { n: 'Core Networking - Destination Unreach...', pr: 'all', act: 'allow', addr: '', port: '', proto: 'ICMPv6', inf: 'All', app: 'system' },
        { n: 'Cast to Device streaming server (RTSP...', pr: 'private', act: 'allow', addr: 'LocalSubnet', port: '23554, 23555, 23556', proto: 'TCP', inf: 'All', app: 'c:\\windows\\system32\\mdeserver.exe' },
        { n: 'Cast to Device UPnP Events (TCP-In)', pr: 'public', act: 'allow', addr: '', port: '2869', proto: 'TCP', inf: 'All', app: 'system' },
-       { n: 'Centroid_Allow_WinRM_HTTPS', pr: 'all', act: 'allow', addr: '3.11.129.113, 18.132.165.131', port: '11111', proto: 'TCP', inf: 'All', app: '' },
        { n: 'Core Networking - Dynamic Host Config...', pr: 'all', act: 'allow', addr: '', port: '68', proto: 'UDP', inf: 'All', app: 'c:\\windows\\system32\\svchost.exe' },
     ];
 
