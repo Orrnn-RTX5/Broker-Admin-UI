@@ -2,11 +2,18 @@ import { useMemo } from 'react';
 import TreeItem from '../molecules/TreeItem';
 import GroupsNavigation from './GroupsNavigation';
 import { sidebarData } from '../../data/terminalData.jsx';
-import { shouldBlockViewNavigation } from '../../config/viewCapabilities';
+import { hasReachableViewInSubtree, shouldBlockViewNavigation } from '../../config/viewCapabilities';
 
 const LOCKED_DROPDOWN_LABELS = new Set(['Automations', 'Security', 'Platform Config', 'Network Cluster', 'Risk Management', 'Communications', 'Support Center']);
 
-const SidebarNavTree = ({ onNodeSelect, onNodePrepare, onNodeDoubleClick, onLockedDropdownClick, selectedNodeLabel, selectedNodeId, refreshTrigger, groupExplorerReveal }) => {
+// A labeled folder stays locked only while the session cannot reach any
+// permission-guarded view inside it. Permitted sessions expand the folder and
+// open its children; everyone else keeps the lock. Without a session the
+// folders fail closed exactly as before.
+const isDropdownLockedForSession = (node, user) =>
+  LOCKED_DROPDOWN_LABELS.has(node.label) && !hasReachableViewInSubtree(node, user);
+
+const SidebarNavTree = ({ user, onNodeSelect, onNodePrepare, onNodeDoubleClick, onLockedDropdownClick, selectedNodeLabel, selectedNodeId, refreshTrigger, groupExplorerReveal }) => {
 
   const prepareNode = event => {
     if (!onNodePrepare) return;
@@ -19,11 +26,14 @@ const SidebarNavTree = ({ onNodeSelect, onNodePrepare, onNodeDoubleClick, onLock
     const cloneTree = (nodes) =>
       nodes.map((node) => {
         const newNode = { ...node };
-        newNode.blockedNavigation = shouldBlockViewNavigation(newNode.label);
+        newNode.blockedNavigation = shouldBlockViewNavigation(newNode.label, user);
 
         if (LOCKED_DROPDOWN_LABELS.has(newNode.label)) {
-          newNode.lockedDropdown = true;
+          newNode.lockedDropdown = isDropdownLockedForSession(newNode, user);
           newNode.initiallyExpanded = false;
+          if (newNode.children) {
+            newNode.children = cloneTree(newNode.children);
+          }
         } else if (newNode.label === 'Groups') {
           newNode.id = 'groups';
           newNode.type = 'groups-root';
@@ -44,7 +54,7 @@ const SidebarNavTree = ({ onNodeSelect, onNodePrepare, onNodeDoubleClick, onLock
       });
 
     return cloneTree(sidebarData);
-  }, []);
+  }, [user]);
 
   return (
     <div role="tree" aria-label="Navigator items" onPointerOver={prepareNode} onFocusCapture={prepareNode} className="w-[280px] h-full bg-[color:var(--bg-surface-1)] flex flex-col border-r border-[color:var(--border-default)] overflow-y-auto no-scrollbar py-2 shadow-[var(--shadow-sm)]">

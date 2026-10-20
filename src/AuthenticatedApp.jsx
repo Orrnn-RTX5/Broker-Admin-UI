@@ -48,6 +48,7 @@ import { StatusDot } from './components/ui/Badge';
 import { WorkspaceViewReady } from './components/organisms/WorkspaceStartup.jsx';
 import { useWorkspaceStartupReady } from './hooks/useWorkspaceStartup';
 import { formatBrokerConnectionStatus, getBrokerBranding } from './utils/branding';
+import { shouldParentHandleEscape } from './utils/dialogEscape';
 
 // Keep the terminal and navigation available while a requested view or dialog
 // downloads. Screens that are never opened do not belong in the startup path.
@@ -427,9 +428,14 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
     }
     const isLockedDropdownParent = typeof nodeOrLabel !== 'string' && nodeOrLabel.lockedDropdown;
 
+    // Capability gating is session-aware: a statically locked view stays
+    // blocked unless this session's capabilities grant it. The stale "locked"
+    // toast is suppressed for views the session just unlocked.
+    const staticallyBlocked = shouldBlockViewNavigation(label);
+    const blockedForSession = shouldBlockViewNavigation(label, currentUser);
     const viewCapabilityToast = getViewCapabilityToast(label);
-    if (!isLockedDropdownParent && viewCapabilityToast) notify(viewCapabilityToast);
-    if (shouldBlockViewNavigation(label)) return;
+    if (!isLockedDropdownParent && viewCapabilityToast && (blockedForSession || !staticallyBlocked)) notify(viewCapabilityToast);
+    if (blockedForSession) return;
     setServerTargetTab(getInitialServerTabForLabel(label));
     if (label === activeNode) return;
     openView(label);
@@ -869,6 +875,9 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
         return;
       }
       if (e.key === 'Escape') {
+        // A nested popup (e.g. Funding inside Account Edit) dismisses itself;
+        // closing the parent here would strand it and lose context.
+        if (!shouldParentHandleEscape(e)) return;
         if (isPopupOpen) setIsPopupOpen(false);
         else if (editingAccount) setEditingAccount(null);
         else if (viewingTrade) setViewingTrade(null);
@@ -941,6 +950,7 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
       <div className="admin-workspace-upper">
         <MarketWatchDock>
         <SidebarNavTree
+          user={currentUser}
           onNodeSelect={handleNodeSelect}
           onNodePrepare={prepareGatewayNavigation}
           onNodeDoubleClick={handleNodeDoubleClick}

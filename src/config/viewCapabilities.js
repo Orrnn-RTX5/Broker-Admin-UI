@@ -1,3 +1,5 @@
+import { canAccessView, requiredPermissionForView } from '../utils/permissions.js';
+
 export const VIEW_CAPABILITY_STATUS = Object.freeze({
   WORKING: 'working',
   PARTIAL: 'partial',
@@ -286,7 +288,44 @@ export const getViewCapabilityToast = (viewName) => {
   };
 };
 
-export const shouldBlockViewNavigation = (viewName) => {
+export const shouldBlockViewNavigation = (viewName, user) => {
   const { status } = getViewCapability(viewName);
-  return status === LOCKED_NO_API || status === API_AVAILABLE_NOT_INTEGRATED || status === CONTAINER_ONLY;
+  // Container-only folder labels never navigate themselves; permitted sessions
+  // expand them and open the children instead.
+  if (status === CONTAINER_ONLY) return true;
+  const staticallyLocked = status === LOCKED_NO_API || status === API_AVAILABLE_NOT_INTEGRATED;
+  if (!staticallyLocked) return false;
+  // No session (legacy single-arg callers, pre-auth render): fail closed.
+  if (user === undefined || user === null) return true;
+  // A statically locked view without a permission mapping has no session
+  // capability that could grant it — it stays locked even for admins.
+  if (requiredPermissionForView(viewName) === null) return true;
+  // Otherwise the session's own capabilities decide: permitted sessions reach
+  // the view, everyone else stays locked. No new permissions are granted here;
+  // the central permission map in utils/permissions.js remains authoritative.
+  return !canAccessView(user, viewName);
+};
+
+// A labeled dropdown folder unlocks for exactly the sessions that can reach at
+// least one permission-guarded view inside it (the folder itself or any nested
+// descendant). Views without a permission mapping never unlock a folder on
+// their own, so purely static folders stay locked.
+export const hasReachableViewInSubtree = (node, user) => {
+  if (!node || user === undefined || user === null) return false;
+  const stack = [node];
+  while (stack.length > 0) {
+    const candidate = stack.pop();
+    if (!candidate || typeof candidate.label !== 'string') continue;
+    if (
+      requiredPermissionForView(candidate.label) !== null &&
+      canAccessView(user, candidate.label) &&
+      !shouldBlockViewNavigation(candidate.label, user)
+    ) {
+      return true;
+    }
+    if (Array.isArray(candidate.children)) {
+      for (const child of candidate.children) stack.push(child);
+    }
+  }
+  return false;
 };

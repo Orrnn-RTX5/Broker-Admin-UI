@@ -106,5 +106,6 @@ test('app shell refresh preserves existing navigation and table wiring', () => {
   assert.match(app, /<span>\{activeNode\}<\/span>/, 'the active view remains visible in its heading');
   assert.match(toolbar, /onClick=\{onAddClick\}/);
   assert.match(toolbar, /onChange=\{\(e\) => onSearchChange\?\.\(e\.target\.value\)\}/);
-  assert.match(sidebar, /newNode\.blockedNavigation\s*=\s*shouldBlockViewNavigation\(newNode\.label\);/);
+  assert.match(sidebar, /newNode\.blockedNavigation\s*=\s*shouldBlockViewNavigation\(newNode\.label,\s*user\);/);
+  assert.match(sidebar, /user=\{currentUser\}|user, onNodeSelect/, 'sidebar lock flags follow the session user');
 });

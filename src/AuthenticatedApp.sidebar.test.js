@@ -75,7 +75,7 @@ test('Server status panel remounts when the server changes', () => {
   );
 });
 
-test('sidebar selection warns and blocks locked non-working views', () => {
+test('sidebar selection warns and blocks views the session cannot reach', () => {
   const appSource = readSource('AuthenticatedApp.jsx');
   const handlerMatch = appSource.match(/const\s+handleNodeSelect\s*=\s*\(nodeOrLabel\)\s*=>\s*\{[\s\S]*?\n\s{2}\};/);
 
@@ -87,8 +87,8 @@ test('sidebar selection warns and blocks locked non-working views', () => {
   );
   assert.match(
     handlerMatch[0],
-    /const isLockedDropdownParent = typeof nodeOrLabel !== 'string' && nodeOrLabel\.lockedDropdown;[\s\S]*?const viewCapabilityToast = getViewCapabilityToast\(label\);[\s\S]*?if \(!isLockedDropdownParent && viewCapabilityToast\) notify\(viewCapabilityToast\);[\s\S]*?if \(shouldBlockViewNavigation\(label\)\) return;/,
-    'sidebar text selection should suppress the popup for locked dropdown parent rows'
+    /const isLockedDropdownParent = typeof nodeOrLabel !== 'string' && nodeOrLabel\.lockedDropdown;[\s\S]*?const blockedForSession = shouldBlockViewNavigation\(label, currentUser\);[\s\S]*?if \(blockedForSession\) return;/,
+    'sidebar selection gates on session capabilities and stays silent for still-locked dropdown parents'
   );
 });
 
@@ -96,7 +96,8 @@ test('unavailable sidebar entries remain visible and cannot activate', () => {
   const sidebarSource = readSource('components/organisms/SidebarNavTree.jsx');
   const treeItemSource = readSource('components/molecules/TreeItem.jsx');
 
-  assert.match(sidebarSource, /newNode\.blockedNavigation\s*=\s*shouldBlockViewNavigation\(newNode\.label\);/);
+  assert.match(sidebarSource, /newNode\.blockedNavigation\s*=\s*shouldBlockViewNavigation\(newNode\.label,\s*user\);/);
+  assert.match(sidebarSource, /newNode\.lockedDropdown\s*=\s*isDropdownLockedForSession\(newNode,\s*user\);/, 'folders lock only while the session reaches nothing inside');
   assert.match(treeItemSource, /const showArrow = hasChildren \|\| item\.lockedDropdown;/);
   assert.match(treeItemSource, /Boolean\(item\.blockedNavigation \|\| item\.lockedDropdown \|\| item\.disabled\)/);
   assert.match(treeItemSource, /const handleArrowClick = \(e\) => \{\s*e\.stopPropagation\(\);\s*if \(isBlockedNavigation\) return;/);
