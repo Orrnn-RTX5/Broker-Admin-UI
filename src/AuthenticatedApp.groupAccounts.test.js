@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { canAccessView, hasPermission, PERMISSION_KEYS } from './utils/permissions.js';
 import { getHistoryEntryView, resolveGroupExplorerNode, sameGroupExplorerLocation } from './utils/groupExplorerNavigation.js';
 import { resolveAdminViewTarget } from './config/adminViewAliases.js';
+import { getViewCapabilityToast as realGetViewCapabilityToast } from './config/viewCapabilities.js';
 
 const source = readFileSync(new URL('./AuthenticatedApp.jsx', import.meta.url), 'utf8');
 
@@ -19,6 +20,7 @@ const createHandlers = ({
   location = resolveGroupExplorerNode('Groups'),
   history = [activeNode],
   currentIndex = 0,
+  useRealToast = false,
 } = {}) => {
   const state = {
     activeNode,
@@ -65,7 +67,9 @@ const createHandlers = ({
     setHistory: (update) => { state.history = update(state.history); },
     setCurrentIndex: (next) => { state.currentIndex = next; },
     getInitialServerTabForLabel: (label) => label === 'Local Main Status Server' ? 'Status' : null,
-    getViewCapabilityToast: (label) => { state.capabilityLabels.push(label); },
+    getViewCapabilityToast: useRealToast
+      ? (label) => { state.capabilityLabels.push(label); return realGetViewCapabilityToast(label); }
+      : (label) => { state.capabilityLabels.push(label); },
     shouldBlockViewNavigation: () => false,
     setIsSuperAdminOpen: () => {},
     setServerPopupData: () => {},
@@ -118,6 +122,15 @@ test('root, Admin, and dynamic group folders use canonical Groups view and revea
       assert.deepEqual(state.capabilityLabels, []);
     }
   }
+});
+
+test('expanding an unlocked folder never toasts (folder expand is chrome, not a view request)', () => {
+  // The harness stubs the capability gate open, so this asserts the toast
+  // suppression only. In production the real gate keeps the container label
+  // blocked, so no view opens either.
+  const { select, state } = createHandlers({ permissions: ['risk_management'], useRealToast: true });
+  select({ label: 'Risk Management', lockedDropdown: false, children: [{ label: 'Exposure' }] });
+  assert.deepEqual(state.notices, []);
 });
 
 test('reserved group labels remain dynamic folders instead of activating unrelated views', () => {

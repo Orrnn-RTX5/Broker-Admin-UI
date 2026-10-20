@@ -439,6 +439,10 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
     const label = viewTarget.view;
     setActiveViewInitialTab(viewTarget.initialTab);
     const isLockedDropdownParent = typeof nodeOrLabel !== 'string' && nodeOrLabel.lockedDropdown;
+    // Expanding an unlocked folder is navigation chrome, not a view request:
+    // never toast for it (the container label stays capability-blocked, so
+    // firing its info toast on every expand would spam permitted sessions).
+    const isUnlockedFolderExpand = typeof nodeOrLabel !== 'string' && nodeOrLabel.lockedDropdown === false;
 
     // Capability gating is session-aware: a statically locked view stays
     // blocked unless this session's capabilities grant it. The stale "locked"
@@ -446,7 +450,7 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
     const staticallyBlocked = shouldBlockViewNavigation(label);
     const blockedForSession = shouldBlockViewNavigation(label, currentUser);
     const viewCapabilityToast = getViewCapabilityToast(label);
-    if (!isLockedDropdownParent && viewCapabilityToast && (blockedForSession || !staticallyBlocked)) notify(viewCapabilityToast);
+    if (!isLockedDropdownParent && !isUnlockedFolderExpand && viewCapabilityToast && (blockedForSession || !staticallyBlocked)) notify(viewCapabilityToast);
     if (blockedForSession) {
       setActiveViewInitialTab(undefined);
       return;
