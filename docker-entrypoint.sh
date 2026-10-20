@@ -30,6 +30,9 @@ direct_manager_origins="${DIRECT_MANAGER_ORIGINS:-${VITE_DIRECT_MANAGER_ORIGINS:
 fix_relay_enabled="${FIX_RELAY_ENABLED:-${VITE_FIX_RELAY_ENABLED:-}}"
 super_admin_api_host="${SUPER_ADMIN_API_HOST:-${VITE_SUPER_ADMIN_API_HOST:-}}"
 
+[ -z "$default_discovery_base_url" ] && echo 'WARNING: DEFAULT_DISCOVERY_BASE_URL is not configured; broker discovery will fail visibly at runtime.' >&2
+[ -z "$super_admin_api_host" ] && echo 'WARNING: SUPER_ADMIN_API_HOST is not configured; Super Admin API calls will fail visibly at runtime.' >&2
+
 normalize_origin() {
   printf '%s' "${1:-}" | sed -e 's#/*$##' -e 's#^http://##' -e 's#^https://##' | tr '[:upper:]' '[:lower:]'
 }

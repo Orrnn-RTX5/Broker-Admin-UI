@@ -41,19 +41,31 @@ viteLogger.error = (message, options) => {
   defaultLoggerError.call(viteLogger, message, options)
 }
 
+// Deploy requires ONLY BROKER_ID/API_HOST/FEED_WS_URL/FEED_STATUS_URL
+// (prepare-admin-env.mjs + deploy-admin-runtime.sh). The dev server needs the
+// API + feed hosts for its proxy; the ext/super-admin hosts are optional and
+// default to '' so they fail visibly at runtime where used, never at build.
+export function resolveDevProxyHosts(env = {}, { strict = false } = {}) {
+  const source = env || {};
+  const apiHost = source.VITE_API_HOST || source.VITE_API_URL || source.API_HOST || source.API_URL || ''
+  const apiHostExt = source.VITE_API_HOST_EXT || source.VITE_API_EXT_URL || source.API_HOST_EXT || source.API_EXT_URL || ''
+  const superAdminHost = source.VITE_SUPER_ADMIN_API_HOST || source.SUPER_ADMIN_API_HOST || ''
+  const wsFeedHost = source.VITE_FEED_WS_URL || source.VITE_WS_HOST || source.WS_HOST || ''
+  if (strict) {
+    if (!apiHost) throw new Error('VITE_API_HOST is not configured (set VITE_API_HOST/VITE_API_URL).')
+    if (!wsFeedHost) throw new Error('VITE_FEED_WS_URL is not configured (set VITE_FEED_WS_URL/VITE_WS_HOST/WS_HOST).')
+  }
+  return { apiHost, apiHostExt, superAdminHost, wsFeedHost }
+}
+
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const apiHost    = env.VITE_API_HOST || env.VITE_API_URL || env.API_HOST || env.API_URL || ''
-  const apiHostExt = env.VITE_API_HOST_EXT || env.VITE_API_EXT_URL || env.API_HOST_EXT || env.API_EXT_URL || ''
-  const superAdminHost = env.VITE_SUPER_ADMIN_API_HOST || env.SUPER_ADMIN_API_HOST || ''
-  const wsFeedHost = env.VITE_FEED_WS_URL || env.VITE_WS_HOST || env.WS_HOST || ''
-  if (!apiHost) throw new Error('VITE_API_HOST is not configured (set VITE_API_HOST/VITE_API_URL).')
-  if (!apiHostExt) throw new Error('VITE_API_HOST_EXT is not configured (set VITE_API_HOST_EXT/VITE_API_EXT_URL).')
-  if (!superAdminHost) throw new Error('VITE_SUPER_ADMIN_API_HOST is not configured (set VITE_SUPER_ADMIN_API_HOST/SUPER_ADMIN_API_HOST).')
-  if (!wsFeedHost) throw new Error('VITE_FEED_WS_URL is not configured (set VITE_FEED_WS_URL/VITE_WS_HOST/WS_HOST).')
-  const wsFeedUrl = new URL(wsFeedHost.replace(/^wss:/i, 'https:').replace(/^ws:/i, 'http:'))
-  const wsTarget = wsFeedUrl.origin
+  const { apiHost, apiHostExt, superAdminHost, wsFeedHost } = resolveDevProxyHosts(env, { strict: command === 'serve' })
+  const serving = command === 'serve'
+  const wsTarget = serving && wsFeedHost
+    ? new URL(wsFeedHost.replace(/^wss:/i, 'https:').replace(/^ws:/i, 'http:')).origin
+    : ''
   const useFeedDevProxy = mode === 'development' && String(env.VITE_FEED_USE_DEV_PROXY || '').toLowerCase() === 'true'
   const configuredFeedProxyOrigin = useFeedDevProxy ? String(env.VITE_FEED_WS_PROXY_ORIGIN || '').trim() : ''
   let feedProxyOrigin = ''

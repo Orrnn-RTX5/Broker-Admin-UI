@@ -33,6 +33,14 @@ export const getSuperAdminBaseUrl = () => isLocalWeb()
   ? '/super-admin-api'
   : getSuperAdminOrigin();
 
+// An empty origin would silently degrade into a relative fetch against the
+// Admin UI origin, swallowing the misconfiguration. Fail visibly instead.
+export const requireSuperAdminBaseUrl = () => {
+  const baseUrl = getSuperAdminBaseUrl();
+  if (!baseUrl) throw new Error('Super-admin API host is not configured. Set SUPER_ADMIN_API_HOST.');
+  return baseUrl;
+};
+
 const readSessionValue = (key) => {
   if (typeof sessionStorage === 'undefined') return '';
   return sessionStorage.getItem(key) || '';
@@ -128,7 +136,7 @@ export const loginSuperAdmin = async (credentials = {}) => {
   };
   try {
     const response = await client.post(
-      `${getSuperAdminBaseUrl()}/api/v1/admin/auth/login`,
+      `${requireSuperAdminBaseUrl()}/api/v1/admin/auth/login`,
       payload,
       { headers: { 'Content-Type': 'application/json' } }
     );
@@ -146,7 +154,7 @@ export const loginSuperAdmin = async (credentials = {}) => {
 
 export const checkSuperAdminHealth = async () => {
   try {
-    const response = await client.get(`${getSuperAdminBaseUrl()}/health`, { timeout: 10_000 });
+    const response = await client.get(`${requireSuperAdminBaseUrl()}/health`, { timeout: 10_000 });
     return { ok: true, data: response.data };
   } catch (error) {
     return { ok: false, error: normalizeError(error).message };
@@ -155,7 +163,7 @@ export const checkSuperAdminHealth = async () => {
 
 export const checkSuperAdminReadiness = async () => {
   try {
-    const response = await client.get(`${getSuperAdminBaseUrl()}/readiness`, { timeout: 10_000 });
+    const response = await client.get(`${requireSuperAdminBaseUrl()}/readiness`, { timeout: 10_000 });
     return { ok: true, data: response.data };
   } catch (error) {
     return { ok: false, error: normalizeError(error).message };
@@ -177,7 +185,7 @@ export const executeSuperAdminOperation = async (operationOrId, options = {}) =>
   if (!operation) throw new Error(`Unknown Super Admin operation: ${operationOrId}`);
 
   const path = interpolatePath(operation.path, options.pathParams);
-  const requestUrl = `${getSuperAdminBaseUrl()}${path}`;
+  const requestUrl = `${requireSuperAdminBaseUrl()}${path}`;
   const headers = authHeaders(operation, options.headers);
   let data = options.body;
 
@@ -217,7 +225,7 @@ export const startSuperAdminStream = async (operationId, options = {}, onEvent =
   const operation = getSuperAdminOperation(operationId);
   if (!operation?.stream) throw new Error('The selected operation is not a stream.');
   const path = interpolatePath(operation.path, options.pathParams);
-  const url = new URL(`${getSuperAdminBaseUrl()}${path}`, window.location.origin);
+  const url = new URL(`${requireSuperAdminBaseUrl()}${path}`, window.location.origin);
   Object.entries(options.query || {}).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, value);
   });

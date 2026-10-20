@@ -7,6 +7,9 @@ import {
   clearSuperAdminSession,
   getSuperAdminOrigin,
   getSuperAdminBaseUrl,
+  requireSuperAdminBaseUrl,
+  executeSuperAdminOperation,
+  loginSuperAdmin,
 } from './superAdmin.service.js';
 
 // Setup mock sessionStorage
@@ -77,4 +80,19 @@ test('clearSuperAdminSession clears stored token and user', () => {
   assert.equal(session.isAuthenticated, false);
   assert.equal(session.token, '');
   assert.equal(session.user, null);
+});
+
+test('super-admin requests throw visibly when the origin is unconfigured', async () => {
+  delete globalThis.window.__RTX5_RUNTIME_CONFIG__;
+  const previousHostname = globalThis.window.location.hostname;
+  globalThis.window.location.hostname = 'admin.example.test';
+  try {
+    assert.equal(getSuperAdminOrigin(), '');
+    assert.equal(getSuperAdminBaseUrl(), '');
+    assert.throws(() => requireSuperAdminBaseUrl(), /Super-admin API host is not configured\. Set SUPER_ADMIN_API_HOST\./);
+    await assert.rejects(() => loginSuperAdmin({ username: 'sa', password: 'secret' }), /Super-admin API host is not configured/);
+    await assert.rejects(() => executeSuperAdminOperation('auth_me'), /Super-admin API host is not configured/);
+  } finally {
+    globalThis.window.location.hostname = previousHostname;
+  }
 });
