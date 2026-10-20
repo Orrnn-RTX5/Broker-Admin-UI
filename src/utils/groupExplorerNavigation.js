@@ -1,5 +1,3 @@
-import { normalizeDummyPath } from './dummyGroups.js';
-
 const rootLocation = () => ({ type: 'root', id: 'groups', label: 'Groups' });
 const adminLocation = () => ({ type: 'admin', id: 'groups:admin', label: 'Admin' });
 
@@ -21,15 +19,6 @@ const accountGroupName = (account) => {
 export const resolveGroupExplorerNode = (node) => {
   if (node === 'Groups') return rootLocation();
   if (!node || typeof node !== 'object' || Array.isArray(node)) return null;
-
-  if (node.type === 'dummy-folder' && typeof node.path === 'string') {
-    try {
-      const path = normalizeDummyPath(node.path);
-      return { type: 'dummy-folder', id: `dummy-folder:${path}`, label: path.split('\\').at(-1), path };
-    } catch {
-      return null;
-    }
-  }
 
   if (node.type === 'server-folder' && typeof node.path === 'string') {
     const path = node.path.trim();

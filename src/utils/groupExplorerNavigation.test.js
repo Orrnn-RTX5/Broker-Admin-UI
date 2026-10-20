@@ -54,24 +54,18 @@ test('history reader supports legacy string entries and folder-aware entries', (
   assert.equal(getHistoryEntryView({ view: {} }), 'Groups');
 });
 
-test('dummy folders preserve full nested paths and canonicalize user-entered separators', () => {
-  const result = resolveGroupExplorerNode({ type: 'dummy-folder', path: ' admin / demo / 0042 ', label: 'wrong', id: 'wrong' });
-  assert.deepEqual(result, {
-    type: 'dummy-folder', id: 'dummy-folder:Admin\\demo\\0042', label: '0042', path: 'Admin\\demo\\0042',
-  });
-  assert.deepEqual(resolveGroupExplorerNode(result), result);
-  for (const label of ['Groups', 'Trading Accounts', 'Admin']) {
-    const folder = resolveGroupExplorerNode({ type: 'dummy-folder', path: `Admin\\${label}` });
-    assert.equal(folder.type, 'dummy-folder');
-    assert.equal(folder.path, `Admin\\${label}`);
+test('SUI-A10: retired dummy-folder nodes never enter navigator history', () => {
+  // The local-only dummy-groups surface was removed; its node type is unknown
+  // and must resolve to null like any other unrecognized shape.
+  for (const node of [
+    { type: 'dummy-folder', path: ' admin / demo / 0042 ', label: 'wrong', id: 'wrong' },
+    { type: 'dummy-folder', path: 'Admin\\demo\\0042' },
+    { type: 'dummy-folder', path: 'Outside\\demo' },
+    { type: 'dummy-folder', path: '' },
+    { type: 'dummy-folder', path: null },
+  ]) {
+    assert.equal(resolveGroupExplorerNode(node), null);
   }
-});
-
-test('invalid dummy locations do not enter navigator history', () => {
-  for (const path of ['', 'Admin\\..\\demo', 'Admin\\\\demo', 'Admin\\bad*name', null, {}]) {
-    assert.equal(resolveGroupExplorerNode({ type: 'dummy-folder', path }), null);
-  }
-  assert.equal(resolveGroupExplorerNode({ type: 'dummy-folder', path: 'Outside\\demo' }).path, 'Outside\\demo', 'folders beside Admin are valid');
 });
 
 test('server folders resolve from their group-name prefix and keep identity by path', () => {
@@ -84,17 +78,13 @@ test('server folders resolve from their group-name prefix and keep identity by p
   assert.equal(sameGroupExplorerLocation(folder, { type: 'group', groupName: 'real\\pro' }), false);
 });
 
-test('dummy folder identity distinguishes parents, siblings and server-data locations', () => {
+test('SUI-A10: retired dummy locations fall back to the Groups root, never a device-only folder', () => {
   const folder = { type: 'dummy-folder', path: 'Admin\\demo\\0042' };
   assert.equal(sameGroupExplorerLocation(folder, { ...folder, label: 'New label', count: 9 }), true);
-  assert.equal(sameGroupExplorerLocation(folder, { type: 'dummy-folder', path: 'Admin/demo/0042' }), true);
-  assert.equal(sameGroupExplorerLocation(folder, { type: 'dummy-folder', path: 'Admin\\demo' }), false);
-  assert.equal(sameGroupExplorerLocation(folder, { type: 'dummy-folder', path: 'Admin\\real\\0042' }), false);
-  assert.equal(sameGroupExplorerLocation(folder, { type: 'group', groupName: folder.path }), false);
+  assert.equal(sameGroupExplorerLocation(folder, { type: 'root' }), true);
   assert.equal(sameGroupExplorerLocation({ type: 'dummy-folder', path: 'Admin' }, { type: 'admin' }), false);
-  const historyEntry = { view: 'Groups', groupExplorerLocation: resolveGroupExplorerNode(folder) };
+  const historyEntry = { view: 'Groups', groupExplorerLocation: { type: 'group', groupName: 'real\\new' } };
   assert.equal(getHistoryEntryView(historyEntry), 'Groups');
-  assert.deepEqual(resolveGroupExplorerNode(historyEntry.groupExplorerLocation), resolveGroupExplorerNode(folder));
 });
 
 test('retired source folders leave history and selection targeting the exact destination', () => {

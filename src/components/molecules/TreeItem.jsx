@@ -11,14 +11,11 @@ const TreeItem = ({ item, level = 0, onSelect, onDoubleClick, selectedLabel, sel
   const isBlockedNavigation = Boolean(item.blockedNavigation || item.lockedDropdown || item.disabled);
   const isActive = !isBlockedNavigation && (selectedId ? selectedId === item.id : selectedLabel === item.label);
   const Icon = item.icon || (hasChildren ? Folder : File);
-  const isGroupFolder = ['groups-root', 'groups-admin', 'group', 'dummy-folder', 'server-folder'].includes(item.type);
+  const isGroupFolder = ['groups-root', 'groups-admin', 'group', 'server-folder'].includes(item.type);
   const revealRevision = groupExplorerReveal && (
     item.containsGroups
     || item.type === 'groups-root'
     || (item.type === 'groups-admin' && groupExplorerReveal.type !== 'root')
-    || (item.type === 'dummy-folder' && groupExplorerReveal.type === 'dummy-folder' && (
-      groupExplorerReveal.path === item.path || groupExplorerReveal.path?.startsWith(`${item.path}\\`)
-    ))
     || (item.type === 'server-folder' && (
       (groupExplorerReveal.type === 'server-folder' && (
         groupExplorerReveal.path === item.path || groupExplorerReveal.path?.startsWith(`${item.path}\\`)
