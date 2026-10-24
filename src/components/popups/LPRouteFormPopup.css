@@ -1,0 +1,84 @@
+.lp-route-form-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99998;
+  background: var(--bg-overlay);
+  backdrop-filter: blur(3px);
+}
+
+.lp-route-form-dialog {
+  position: fixed;
+  z-index: 99999;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  width: min(800px, calc(100vw - 32px));
+  max-height: min(560px, calc(100dvh - 32px));
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-1);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, .45);
+  color: var(--text-primary);
+  font: var(--ui-font-base)/1.5 var(--font-sans, sans-serif);
+}
+
+.lp-route-form-heading { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 20px; border-bottom: 1px solid var(--border-default); }
+.lp-route-form-heading h2 { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0; overflow-wrap: anywhere; font-size: 14px; font-weight: 600; line-height: 1.35; }
+.lp-route-form-heading h2 svg { flex-shrink: 0; color: var(--text-secondary); }
+.lp-route-form-close { display: grid; flex: 0 0 28px; place-items: center; height: 28px; padding: 0; border: 1px solid transparent; border-radius: var(--radius-md); background: transparent; color: var(--text-secondary); cursor: pointer; }
+.lp-route-form-close:hover:not(:disabled) { border-color: var(--border-default); background: var(--bg-surface-2); color: var(--text-primary); }
+.lp-route-form-tabs { display: grid; flex-shrink: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 6px 20px; border-bottom: 1px solid var(--border-default); background: color-mix(in srgb, var(--bg-surface-2) 45%, var(--bg-surface-1)); }
+.lp-route-form-tabs button { min-width: 0; min-height: 34px; padding: 5px 10px; border: 1px solid transparent; border-radius: var(--radius-md); background: transparent; color: var(--text-secondary); text-align: left; font: inherit; font-weight: 500; cursor: pointer; }
+.lp-route-form-tabs button:hover { background: var(--bg-surface-2); }
+.lp-route-form-tabs button[aria-pressed="true"] { border-color: color-mix(in srgb, var(--accent-500) 30%, var(--border-default)); background: var(--accent-50); color: var(--text-primary); }
+.lp-route-form { display: flex; flex: 0 1 auto; flex-direction: column; min-height: 0; overflow: hidden; }
+.lp-route-form-body { display: flex; flex: 0 1 auto; flex-direction: column; gap: 20px; min-width: 0; min-height: 0; padding: 16px 20px; overflow: auto; overscroll-behavior: contain; scrollbar-color: var(--border-strong) transparent; }
+.lp-route-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+.lp-route-form-grid.is-identification { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.lp-route-form-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.lp-route-form-field > label { color: var(--text-primary); font-size: var(--ui-font-base); font-weight: 500; line-height: 1.4; }
+.lp-route-form-field > small { color: var(--text-secondary); font-size: var(--ui-font-small); line-height: 1.5; }
+.lp-route-form-dialog .lp-route-form-control {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  outline: none;
+  background: color-mix(in srgb, var(--bg-surface-2) 70%, var(--bg-surface-1));
+  color: var(--text-primary);
+  font-size: var(--ui-font-base);
+}
+.lp-route-form-control::placeholder { color: var(--text-muted); }
+.lp-route-form-control:hover:not(:disabled) { border-color: var(--text-tertiary); }
+.lp-route-form-dialog .lp-route-form-control:focus { border-color: var(--accent-500); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-500) 12%, transparent); }
+.lp-route-form-select { cursor: pointer; }
+.lp-route-form-dialog .lp-route-hidden-group { width: auto; min-width: 150px; max-width: 100%; }
+.lp-route-form-dialog :is(button, input, select):disabled { opacity: .55; cursor: not-allowed; }
+.lp-route-form-dialog :is(button, input[type="checkbox"]):focus-visible { outline: 2px solid var(--info-500); outline-offset: 2px; }
+.lp-route-form-footer { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 20px; border-top: 1px solid var(--border-default); background: color-mix(in srgb, var(--bg-surface-2) 45%, var(--bg-surface-1)); }
+.lp-route-form-required { color: var(--text-secondary); font-size: var(--ui-font-small); }
+.lp-route-form-actions { display: flex; gap: 8px; }
+.lp-route-form-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 72px; height: 32px; padding: 0 12px; border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--bg-surface-2); color: var(--text-primary); font: inherit; font-weight: 500; white-space: nowrap; cursor: pointer; }
+.lp-route-form-actions button:hover:not(:disabled) { border-color: var(--text-tertiary); background: var(--bg-surface-3); }
+.lp-route-form-actions .lp-route-form-cancel { border-color: transparent; background: transparent; }
+.lp-route-form-actions .lp-route-form-submit { min-width: 104px; border-color: var(--accent-500); background: var(--accent-500); color: var(--accent-contrast); }
+.lp-route-form-actions .lp-route-form-submit:hover:not(:disabled) { border-color: var(--accent-600); background: var(--accent-600); }
+
+@media (max-width: 760px) {
+  .lp-route-form-dialog { width: calc(100vw - 24px); max-height: min(560px, calc(100dvh - 24px)); }
+  .lp-route-form-heading { padding-inline: 16px; }
+  .lp-route-form-tabs { padding-inline: 12px; }
+  .lp-route-form-body { padding: 12px 16px; }
+  .lp-route-form-footer { padding-inline: 16px; }
+}
+@media (max-width: 480px) {
+  .lp-route-form-grid, .lp-route-form-grid.is-identification { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .lp-route-form-tabs { gap: 2px; padding-inline: 8px; }
+  .lp-route-form-tabs button { padding-inline: 4px; text-align: center; }
+  .lp-route-form-footer { flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
+  .lp-route-form-actions { margin-left: auto; }
+}

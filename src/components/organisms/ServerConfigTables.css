@@ -338,11 +338,89 @@
   white-space: nowrap;
 }
 
+/* Server Settings shares the compact full-width layout used by Navigator grids.
+   Keep these refinements scoped so the Swap Rates screen retains its layout. */
+.server-config-table-view--settings .server-config-table-toolbar {
+  flex-wrap: wrap;
+  min-height: 44px;
+  padding: 8px 14px;
+}
+.server-config-table-view--settings .server-config-table-search { flex: 0 1 318px; }
+.server-config-table-view--settings .server-config-table-toolbar > button { margin-left: auto; }
+.server-config-table-view--settings .server-config-table-search-field {
+  flex: 1 1 260px;
+  min-width: 0;
+  width: 260px;
+  height: 26px;
+  border-color: var(--border-default);
+}
+.server-config-table-view--settings .server-config-table-search-field:focus-within {
+  border-color: var(--accent-500);
+  outline: 1px solid var(--accent-500);
+}
+.server-settings-clear {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.server-settings-clear:hover { background: var(--bg-surface-2); color: var(--text-primary); }
+.server-settings-clear:focus-visible,
+.server-config-table-view--settings .server-config-table-scroll:focus-visible {
+  outline: 2px solid var(--accent-500);
+  outline-offset: -2px;
+}
+.server-config-table-grid--settings th:first-child,
+.server-config-table-grid--settings th:nth-child(2) { width: calc((100% - 140px) / 2); }
+.server-config-table-grid--settings th:last-child { width: 140px; }
+.server-config-table-grid--settings th {
+  height: 34px;
+  padding: 0 14px;
+  border-bottom-color: var(--border-default);
+  border-right-color: var(--border-subtle);
+  background: var(--bg-toolbar);
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+}
+.server-config-table-grid--settings td {
+  padding: 4px 14px;
+  border-right: 0;
+  border-bottom-color: var(--border-subtle);
+}
+.server-config-table-grid--settings .server-config-table-key { font-weight: 500; }
+.server-config-table-grid--settings th:last-child,
+.server-config-table-grid--settings .server-config-table-action-cell { text-align: right; }
+.server-config-table-grid--settings .server-config-table-actions { justify-content: flex-end; }
+.server-config-table-view--settings .server-config-table-button--quiet { border-color: transparent; }
+.server-config-table-view--settings .server-config-table-button--quiet:hover:not(:disabled) { border-color: var(--border-default); }
+.server-config-table-view--settings .server-config-table-button--secondary {
+  background: var(--bg-surface-1);
+  border-color: var(--border-default);
+}
+.server-config-table-view--settings .server-config-table-footer {
+  min-height: 34px;
+  padding: 8px 14px;
+  font-size: 10px;
+}
+.server-config-table-view--settings .server-config-table-message,
+.server-config-table-view--settings .server-config-table-lookup { padding-left: 14px; padding-right: 14px; }
+
 @media (max-width: 700px) {
   .server-config-table-heading { align-items: flex-start; min-height: 0; }
   .server-config-table-toolbar { align-items: stretch; flex-wrap: wrap; }
   .server-config-table-search { flex: 1 1 100%; }
   .server-config-table-search-field { flex: 1 1 auto; width: auto; }
+  .server-config-table-view--settings .server-config-table-search-field { width: auto; }
   .server-config-table-toolbar > .server-config-table-button { margin-left: auto; }
   .server-config-table-lookup { flex-wrap: wrap; gap: 6px 10px; }
   .server-config-table-footer span:last-child { display: none; }

@@ -35,6 +35,7 @@ export const buildSymbolRows = (configuredRows = [], lpEntries = []) => {
       category: entry.category || '',
       enabled: false,
       configured: false,
+      detailsPending: Boolean(entry.detailsPending),
     });
   }
   return [...configured, ...unconfigured];
@@ -50,7 +51,7 @@ export const filterSymbolRows = (rows = [], { search = '', category = '', type =
     if (status === 'enabled' && !(row.configured && row.enabled)) return false;
     if (status === 'disabled' && !(row.configured && !row.enabled)) return false;
     if (status === 'configured' && !row.configured) return false;
-    if (status === 'not_configured' && row.configured) return false;
+    if (status === 'not_configured' && (row.configured || row.detailsPending)) return false;
     return true;
   });
 };
@@ -69,8 +70,11 @@ export const categoryFilterOptions = (categories = [], rows = []) => {
 
 /** "8 configured · 72 not configured" */
 export const symbolCountSummary = (rows = []) => {
-  const configured = rows.filter((row) => row.configured).length;
-  return `${configured} configured · ${rows.length - configured} not configured`;
+  const list = Array.isArray(rows) ? rows : [];
+  const pending = list.filter((row) => row.detailsPending).length;
+  if (pending > 0 && pending === list.length) return `${list.length} live symbols`;
+  const configured = list.filter((row) => row.configured).length;
+  return `${configured} configured · ${list.length - configured} not configured`;
 };
 
 /**

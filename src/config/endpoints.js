@@ -304,15 +304,17 @@ export const buildAdminStateWsUrl = (ticket) => {
   return url.toString();
 };
 
-const isLocalFeedDevFlagOn = (runtimeKey, viteKey) => {
+const isLocalFeedDevFlagOn = (runtimeKey, viteKey, defaultValue = 'false') => {
+  if (isDesktopBackendTarget()) return false;
+  const raw = getRuntimeValue(runtimeKey, viteKey) ?? viteEnv[viteKey];
   const isDev = viteEnv.DEV === true || viteEnv.MODE === 'development';
-  if (!isDev || typeof window === 'undefined') return false;
-  const explicit = String(getRuntimeValue(runtimeKey, viteKey) ?? viteEnv[viteKey] ?? 'false').toLowerCase();
-  return explicit === 'true' && isLocalWebHostname(window.location?.hostname);
+  if ((!isDev && raw === undefined) || typeof window === 'undefined') return false;
+  const explicit = String(raw ?? defaultValue).trim().toLowerCase();
+  return !['false', '0', 'no', 'off'].includes(explicit) && explicit === 'true' && isLocalWebHostname(window.location?.hostname);
 };
 
 export const shouldUseFeedDevProxy = () =>
-  isLocalFeedDevFlagOn('FEED_USE_DEV_PROXY', 'VITE_FEED_USE_DEV_PROXY');
+  isLocalFeedDevFlagOn('FEED_USE_DEV_PROXY', 'VITE_FEED_USE_DEV_PROXY', 'true');
 
 // Only the status fetch is subject to CORS; the feed WebSocket is not, and some
 // brokers reject it when the proxy rewrites its Origin. This proxies the status
@@ -359,7 +361,18 @@ export const buildFeedWsUrl = ({ useProxy = shouldUseFeedDevProxy() } = {}) => {
     ...authContext,
     token: sendToken ? authContext.token : null,
   });
-  const proxiedUrl = useProxy ? toLocalDevFeedProxyUrl(authenticatedUrl) : authenticatedUrl;
+  if (useProxy) {
+    try {
+      const upstream = new URL(
+        authenticatedUrl.replace(/^wss:/i, 'https:').replace(/^ws:/i, 'http:'),
+        typeof window !== 'undefined' ? window.location?.href : 'http://localhost'
+      );
+      writeDevProxyCookie(DEV_PROXY_FEED_COOKIE, upstream.origin);
+    } catch {
+      // Fallback handled below when constructing the proxied URL.
+    }
+  }
+  const proxiedUrl = useProxy ? toLocalDevFeedProxyUrl(authenticatedUrl, true) : authenticatedUrl;
   try {
     const url = new URL(proxiedUrl, typeof window !== 'undefined' ? window.location.href : 'http://localhost');
     if (url.protocol === 'https:') url.protocol = 'wss:';

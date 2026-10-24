@@ -144,7 +144,8 @@
   background: var(--accent-500);
   content: '';
 }
-.gpp-tab:focus-visible { outline: 1px solid var(--accent-600); outline-offset: -4px; }
+.gpp-tab:focus,
+.gpp-tab:focus-visible { outline: none; }
 .gpp-tab-dirty { width: 6px; height: 6px; border-radius: 50%; background: var(--warning-500); }
 
 /* --- Body ----------------------------------------------------------------- */
@@ -530,6 +531,12 @@
 .gpp-btn:disabled { cursor: not-allowed; opacity: 0.5; }
 .gpp-btn:focus-visible { outline: 2px solid var(--accent-600); outline-offset: 1px; }
 .gpp-btn.is-primary { border-color: var(--accent-500); background: var(--accent-500); color: #fff; }
+.gpp-btn.is-primary:disabled {
+  border-color: var(--border-default);
+  background: var(--bg-surface-3);
+  color: var(--text-muted);
+  opacity: 0.55;
+}
 .gpp-btn.is-primary:hover:not(:disabled) { border-color: var(--accent-700); background: var(--accent-700); }
 .gpp-btn.is-ghost { min-width: 0; border-color: transparent; background: transparent; color: var(--text-secondary); }
 .gpp-btn.is-ghost:hover:not(:disabled),

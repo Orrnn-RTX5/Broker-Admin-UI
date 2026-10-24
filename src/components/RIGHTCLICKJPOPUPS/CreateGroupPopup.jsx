@@ -232,8 +232,8 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
                 <section className="group-create-section" data-section="risk" data-active={activeSection === 'risk'} aria-labelledby="group-risk-title">
                   <header><h2 id="group-risk-title">Risk & access</h2><p>Define margin thresholds and trading permissions.</p></header>
                   <div className="group-create-grid group-create-risk">
-                    <GroupField label="Margin call (%)">{numericInput('marginCallLevel', { min: 0, step: 'any' }, null, '%')}</GroupField>
-                    <GroupField label="Stop out (%)">{numericInput('stopOutLevel', { min: 0, step: 'any' }, null, '%')}</GroupField>
+                    <GroupField label="Margin call (%)">{numericInput('marginCallLevel', { min: 0, step: 'any', placeholder: '150' }, null, '%')}</GroupField>
+                    <GroupField label="Stop out (%)">{numericInput('stopOutLevel', { min: 0, step: 'any', placeholder: '50' }, null, '%')}</GroupField>
                   </div>
                   <div className="group-create-permissions">{[['demo', 'Demo accounts', 'Use this group for demo trading.'], ['tradeAllowed', 'Trading enabled', 'Allow accounts in this group to trade.'], ['negativeBalanceProtection', 'Negative balance protection', 'Protect accounts from negative balances.']].map(([name, label, hint]) => <AccountPermission key={name} name={name} label={label} hint={hint} checked={!!formData[name]} onChange={handleChange} disabled={isLoading} />)}</div>
                 </section>

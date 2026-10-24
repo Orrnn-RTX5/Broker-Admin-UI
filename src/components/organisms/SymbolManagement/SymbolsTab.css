@@ -1,0 +1,214 @@
+/* Match the full-width instrument grid used by the Navigator's Symbols view. */
+.symbols-management-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg-app);
+}
+
+.symbols-management-table-scroll {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.symbols-management-table-scroll:focus-visible {
+  outline: 1px solid var(--border-strong);
+  outline-offset: -1px;
+}
+
+.symbols-management-table.ui-grid {
+  width: 100%;
+  min-width: 1280px;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: var(--ui-font-base);
+}
+
+.symbols-management-table.ui-grid thead th { width: 10%; }
+
+.symbols-management-table.ui-grid thead th {
+  height: 34px;
+  padding: 0 14px;
+  background: var(--bg-toolbar);
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: .045em;
+  border-bottom: 1px solid var(--border-default);
+  cursor: default;
+}
+
+.symbols-management-table.ui-grid thead th + th {
+  border-left: 1px solid var(--border-subtle);
+}
+
+.symbols-management-table.ui-grid tbody td {
+  height: 34px;
+  padding: 0 14px;
+  background: var(--bg-app);
+  color: var(--text-secondary);
+  border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 70%, transparent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.symbols-management-table.ui-grid tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--bg-surface-1) 35%, var(--bg-app));
+}
+
+.symbols-management-table.ui-grid tbody tr:hover td {
+  background: var(--bg-surface-2);
+}
+
+.symbols-management-table :is(th, td):is(:nth-child(5), :nth-child(6), :nth-child(7)) {
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+.symbols-management-table tbody :is(td:nth-child(5), td:nth-child(6), td:nth-child(7)) {
+  font-family: var(--font-mono);
+}
+
+.symbols-management-table.ui-grid .symbols-management-code {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.symbols-management-parent {
+  margin-left: 8px;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.symbols-management-feed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.symbols-management-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 0;
+  font-size: 10px;
+  line-height: 1.4;
+  font-weight: 400;
+}
+
+.symbols-management-status::before {
+  content: none;
+}
+
+.symbols-management-status[data-tone="enabled"] {
+  color: var(--accent-500);
+}
+
+.symbols-management-status[data-tone="disabled"] {
+  color: var(--danger-500);
+}
+
+.symbols-management-status[data-tone="pending"] {
+  color: var(--text-secondary);
+}
+
+.symbols-management-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.symbols-management-table .symbols-management-toggle {
+  min-width: 44px;
+  padding: 0;
+  justify-content: flex-start;
+  color: var(--accent-500);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.symbols-management-table .symbols-management-toggle:hover:not(:disabled) {
+  color: var(--accent-500);
+  background: var(--accent-50);
+}
+
+.symbols-management-table .ui-btn {
+  min-height: 24px;
+  height: 24px;
+  border-radius: 2px;
+}
+
+.symbols-management-table .ui-btn-icon { width: 26px; }
+
+.symbols-management-table.ui-grid .symbols-management-empty {
+  height: 120px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.symbols-management-notice {
+  margin: 0;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-default);
+  color: var(--text-secondary);
+}
+
+.symbols-management-footer {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  min-height: 40px;
+  padding: 6px 14px;
+  border-top: 1px solid var(--border-default);
+  background: var(--bg-toolbar);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.symbols-management-help { position: relative; min-width: 0; }
+.symbols-management-help summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  color: var(--text-muted);
+  list-style: none;
+  cursor: pointer;
+}
+.symbols-management-help summary::-webkit-details-marker { display: none; }
+.symbols-management-help summary:hover,
+.symbols-management-help[open] summary { color: var(--text-primary); }
+.symbols-management-help summary:focus-visible { outline: 1px solid var(--accent-500); outline-offset: 2px; }
+.symbols-management-help p {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 3;
+  width: min(360px, 70cqw);
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-2);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-sm);
+  line-height: 1.6;
+}
+
+@container symbols-workspace (max-width: 520px) {
+  .symbols-management-help p { left: 0; right: auto; }
+}

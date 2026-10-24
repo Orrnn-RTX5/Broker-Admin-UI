@@ -14,7 +14,7 @@ const symbolPersistStorage = createBrowserDeferredPersistStorage();
 
 const getCurrentBrokerScope = () => {
   try {
-    return String(localStorage.getItem('brokerId') || 'anonymous').trim();
+    return String(localStorage.getItem('brokerId') || 'anonymous').trim().toLowerCase();
   } catch {
     return 'anonymous';
   }

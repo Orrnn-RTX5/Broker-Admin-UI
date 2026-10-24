@@ -4,7 +4,7 @@ import GroupsNavigation from './GroupsNavigation';
 import { sidebarData } from '../../data/terminalData.jsx';
 import { shouldBlockViewNavigation } from '../../config/viewCapabilities';
 
-const LOCKED_DROPDOWN_LABELS = new Set(['Automations', 'Security', 'Platform Config', 'Network Cluster', 'Risk Management', 'Communications', 'Support Center']);
+const LOCKED_DROPDOWN_LABELS = new Set(['Automations', 'Security', 'Platform Config', 'Network Cluster', 'Risk Management', 'Communications']);
 
 const SidebarNavTree = ({ onNodeSelect, onNodePrepare, onNodeDoubleClick, onLockedDropdownClick, selectedNodeLabel, selectedNodeId, refreshTrigger, groupExplorerReveal }) => {
 

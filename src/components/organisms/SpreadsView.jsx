@@ -1,162 +1,128 @@
-import React, { useState } from 'react';
+﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Activity, Loader2, Plus, Search, Trash2, X } from 'lucide-react';
 import { ManagerService } from '../../services/manager.service';
-import { Plus, Search } from 'lucide-react';
 import CreateSpreadSchedulePopup from '../popups/CreateSpreadSchedulePopup';
 import LpSymbolDatalist from '../atoms/LpSymbolDatalist';
 import { getApiErrorMessage } from '../../utils/apiShapes';
+import './SpreadsView.css';
 
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-const SpreadsView = () => {
+const SpreadsView = ({ refreshTrigger = 0 }) => {
   const [symbol, setSymbol] = useState('');
   const [searchedSymbol, setSearchedSymbol] = useState('');
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [searched, setSearched] = useState(false);
   const [isAddPopupOpen, setIsAddPopupOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState({ visible: false });
+  const searchRef = useRef(null);
+  const previousRefresh = useRef(refreshTrigger);
+  const requestId = useRef(0);
 
-  const fetchSchedules = async (sym) => {
+  const fetchSchedules = useCallback(async (sym) => {
+    const currentRequest = ++requestId.current;
     setLoading(true);
     setError('');
     setData([]);
     try {
       const res = await ManagerService.getSpreadScheduleList(sym);
-      if (Array.isArray(res)) setData(res);
-      else if (res?.data && Array.isArray(res.data)) setData(res.data);
-      else setData([]);
+      if (currentRequest !== requestId.current) return;
+      setData(Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : []);
     } catch (err) {
-      setError(getApiErrorMessage(err, 'Unable to load spread schedules.'));
-      setData([]);
+      if (currentRequest === requestId.current) setError(getApiErrorMessage(err, 'Unable to load spread schedules.'));
     } finally {
-      setLoading(false);
+      if (currentRequest === requestId.current) setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    if (previousRefresh.current === refreshTrigger) return;
+    previousRefresh.current = refreshTrigger;
+    if (searchedSymbol) fetchSchedules(searchedSymbol);
+  }, [refreshTrigger, searchedSymbol, fetchSchedules]);
+
+  useEffect(() => {
+    if (!contextMenu.visible) return;
+    const dismiss = event => { if (event.key === 'Escape') setContextMenu({ visible: false }); };
+    window.addEventListener('keydown', dismiss);
+    return () => window.removeEventListener('keydown', dismiss);
+  }, [contextMenu.visible]);
+
+  const handleSearch = event => {
+    event.preventDefault();
+    if (!symbol.trim() || loading) return;
+    const nextSymbol = symbol.trim();
+    setSearchedSymbol(nextSymbol);
+    fetchSchedules(nextSymbol);
   };
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (!symbol.trim()) return;
-    setSearchedSymbol(symbol.trim());
-    setSearched(true);
-    fetchSchedules(symbol.trim());
+  const handleContextMenu = (event, row) => {
+    event.preventDefault();
+    setContextMenu({ visible: true, x: Math.min(event.clientX, window.innerWidth - 184), y: Math.min(event.clientY, window.innerHeight - 84), row });
   };
 
-  const handleContextMenu = (e, row) => {
-    e.preventDefault();
-    setContextMenu({ visible: true, x: e.clientX, y: e.clientY, row });
-  };
-
-  const handleDelete = async () => {
-    if (!contextMenu.row) return;
-    const id = contextMenu.row.id;
-    if (window.confirm(`Delete spread schedule ID ${id}?`)) {
-      try {
-        await ManagerService.deleteSpreadSchedule(id);
-        fetchSchedules(searchedSymbol);
-      } catch (err) {
-        alert('Failed to delete: ' + (err.response?.data?.error || err.message));
-      }
-    }
+  const handleDelete = async row => {
     setContextMenu({ visible: false });
+    if (!row || !window.confirm(`Delete spread schedule ID ${row.id}?`)) return;
+    try {
+      await ManagerService.deleteSpreadSchedule(row.id);
+      fetchSchedules(searchedSymbol);
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Unable to delete spread schedule.'));
+    }
   };
 
   return (
-    <div className="flex-1 bg-[color:var(--bg-app)] flex flex-col overflow-hidden relative"
-      onClick={() => setContextMenu({ visible: false })}
-      onContextMenu={(e) => e.preventDefault()}>
-
-      {/* Top Bar */}
-      <div className="flex items-center gap-3 overflow-x-auto px-3 py-1.5 bg-[color:var(--bg-surface-1)] border-b border-black/40 shrink-0">
-        <button type="button" onClick={() => setIsAddPopupOpen(true)}
-          className="flex shrink-0 items-center gap-1.5 whitespace-nowrap h-[24px] px-3 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] transition-colors">
-          <Plus size={12} /> Add Schedule
-        </button>
-
-        <form onSubmit={handleSearch} className="flex shrink-0 items-center gap-2 sm:ml-2">
-          <div className="flex border border-[#555] bg-[color:var(--bg-app)] h-[22px] items-center rounded-[2px] w-[160px] sm:w-[200px]">
-            <div className="px-1.5"><Search size={11} className="text-white" /></div>
-            <input type="text" aria-label="Symbol for spread schedules" value={symbol} onChange={e => setSymbol(e.target.value)} placeholder="Filter by symbol…"
-              list="spreads-symbol-options" autoComplete="off"
-              className="bg-transparent outline-none w-full text-[11px] text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] h-full" />
-            <LpSymbolDatalist id="spreads-symbol-options" />
-          </div>
-          <button type="submit" className="h-[22px] px-3 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] text-white text-[11px] rounded-[2px] transition-colors">
-            Load
-          </button>
-        </form>
-
-        {searchedSymbol && <span className="text-[11px] text-white">Showing: <strong className="text-white">{searchedSymbol}</strong></span>}
-
-      </div>
-
-      {/* Grid Header */}
-      <div className="flex bg-[#333] border-b border-black/40 select-none shrink-0">
-        <div className="w-[60px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">ID</div>
-        <div className="w-[100px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Symbol</div>
-        <div className="w-[100px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Group</div>
-        <div className="w-[100px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Day</div>
-        <div className="w-[100px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">From</div>
-        <div className="w-[100px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">To</div>
-        <div className="w-[120px] px-3 py-1.5 text-[11px] font-medium text-[color:var(--text-primary)] border-r border-black/20">Spread Override</div>
-        <div className="flex-1"></div>
-      </div>
-
-      {/* Table Body */}
-      <div className="flex-1 overflow-auto bg-[color:var(--bg-app)]">
-        {!searched && (
-          <div role="status" className="m-4 w-fit rounded-[4px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] px-4 py-3 text-[12px] text-[color:var(--text-secondary)]">
-            Search a symbol to load its spread schedules.
-          </div>
-        )}
-
-        {searched && loading && <div role="status" className="m-4 w-fit rounded-[4px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] px-4 py-3 text-[12px] text-[color:var(--text-secondary)]">Loading spread schedules...</div>}
-
-        {searched && !loading && error && <div role="alert" className="m-4 w-fit rounded-[4px] border border-[color:var(--danger-500)]/30 bg-[color:var(--danger-500)]/10 px-4 py-3 text-[12px] text-[color:var(--danger-500)]">{error}</div>}
-
-        {searched && !loading && !error && data.length === 0 && (
-          <div role="status" className="m-4 w-fit rounded-[4px] border border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] px-4 py-3 text-[12px] text-[color:var(--text-secondary)]">No spread schedules found for <strong className="text-[color:var(--text-primary)]">{searchedSymbol}</strong>.</div>
-        )}
-
-        {data.map((row, idx) => (
-          <div key={row.id || idx} onContextMenu={e => handleContextMenu(e, row)}
-            className={`flex cursor-default border-b border-black/10 transition-colors hover:bg-blue-600/20 ${idx % 2 === 0 ? 'bg-[color:var(--bg-app)]' : 'bg-[color:var(--bg-surface-1)]'}`}>
-            <div className="w-[60px] px-3 py-1 text-[12px] text-[color:var(--text-primary)] border-r border-black/10">{row.id}</div>
-            <div className="w-[100px] px-3 py-1 text-[12px] text-white border-r border-black/10 truncate">{row.symbol}</div>
-            <div className="w-[100px] px-3 py-1 text-[12px] text-white border-r border-black/10 truncate">{row.group_name}</div>
-            <div className="w-[100px] px-3 py-1 text-[12px] text-white border-r border-black/10">{DAY_LABELS[row.day_of_week] ?? row.day_of_week}</div>
-            <div className="w-[100px] px-3 py-1 text-[12px] text-white border-r border-black/10">{row.time_from}</div>
-            <div className="w-[100px] px-3 py-1 text-[12px] text-white border-r border-black/10">{row.time_to}</div>
-            <div className="w-[120px] px-3 py-1 text-[12px] text-white border-r border-black/10">{row.spread_override}</div>
-            <div className="flex-1"></div>
-          </div>
-        ))}
-
-      </div>
-
-      {/* Status Bar */}
-      <div className="h-7 border-t border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] text-[color:var(--text-secondary)] flex items-center px-4 text-[11px] select-none shrink-0">
-        <span>Spread Schedules: <strong className="tabular-nums text-[color:var(--text-primary)]">{data.length}</strong>{searchedSymbol ? ` for ${searchedSymbol}` : ''}</span>
-      </div>
-
-      {isAddPopupOpen && (
-        <CreateSpreadSchedulePopup
-          onClose={() => setIsAddPopupOpen(false)}
-          onCreated={() => searchedSymbol && fetchSchedules(searchedSymbol)}
-        />
-      )}
-
-      {contextMenu.visible && (
-        <div className="fixed z-[9999] bg-[color:var(--bg-surface-1)] border border-[color:var(--border-default)] shadow-2xl py-1 min-w-[180px] text-[12px] text-[color:var(--text-secondary)] rounded-[2px]"
-          style={{ top: contextMenu.y, left: contextMenu.x }}>
-          <div className="px-5 py-1 hover:bg-[color:var(--accent-500)] hover:text-white cursor-pointer select-none"
-            onClick={() => { setIsAddPopupOpen(true); setContextMenu({ visible: false }); }}>Add Schedule</div>
-          <div className="h-[1px] bg-[color:var(--border-default)] my-1 mx-2"></div>
-          <div className="px-5 py-1 hover:bg-red-600 hover:text-white cursor-pointer select-none text-red-400"
-            onClick={handleDelete}>Delete</div>
+    <section className="spreads-view" aria-label="Spreads workspace" onClick={() => setContextMenu({ visible: false })}>
+      <header className="spreads-heading">
+        <h1><Activity size={13} aria-hidden="true" />Spreads</h1>
+        {searchedSymbol && !loading && !error && <span className="spreads-count">{data.length} {data.length === 1 ? 'schedule' : 'schedules'}</span>}
+        <div className="spreads-toolbar">
+          <form onSubmit={handleSearch} className="spreads-lookup">
+            <div className="spreads-search">
+              <Search size={13} aria-hidden="true" />
+              <input ref={searchRef} type="text" aria-label="Symbol for spread schedules" value={symbol} onChange={event => setSymbol(event.target.value)} placeholder="Enter a symbol…" list="spreads-symbol-options" autoComplete="off" spellCheck={false} />
+              {symbol && <button type="button" className="spreads-clear" aria-label="Clear symbol input" onClick={() => { setSymbol(''); searchRef.current?.focus(); }}><X size={12} aria-hidden="true" /></button>}
+              <LpSymbolDatalist id="spreads-symbol-options" />
+            </div>
+            <button type="submit" className="spreads-button" disabled={!symbol.trim() || loading}>{loading ? 'Loading…' : 'Load'}</button>
+          </form>
+          <button type="button" className="spreads-button is-primary" onClick={() => setIsAddPopupOpen(true)}><Plus size={13} aria-hidden="true" />Add Schedule</button>
         </div>
-      )}
-    </div>
+      </header>
+      {error && <div className="spreads-notice" role="alert"><span>{error}</span><button type="button" className="spreads-button" disabled={loading} onClick={() => fetchSchedules(searchedSymbol)}>Retry</button></div>}
+      <div className="spreads-scroll" tabIndex={0} aria-label="Spread schedule grid">
+        <table className="spreads-table" aria-label="Spread schedules" aria-busy={loading}>
+          <colgroup><col className="spreads-col-id" /><col /><col className="spreads-col-group" /><col /><col /><col /><col className="spreads-col-override" /><col className="spreads-col-actions" /></colgroup>
+          <thead><tr>{['ID', 'Symbol', 'Group', 'Day', 'Start time', 'End time', 'Spread override (pts)'].map(label => <th scope="col" key={label}>{label}</th>)}<th scope="col" className="spreads-actions">Actions</th></tr></thead>
+          <tbody>{data.map((row, index) => <tr key={row.id ?? index} onContextMenu={event => handleContextMenu(event, row)}>
+            <td className="spreads-id">{row.id ?? '—'}</td>
+            <td className="spreads-symbol" title={row.symbol}>{row.symbol || '—'}</td>
+            <td title={row.group_name}>{row.group_name || '—'}</td>
+            <td>{DAY_LABELS[row.day_of_week] ?? row.day_of_week ?? '—'}</td>
+            <td className="spreads-time">{row.time_from ?? '—'}</td>
+            <td className="spreads-time">{row.time_to ?? '—'}</td>
+            <td className="spreads-number">{row.spread_override ?? '—'}</td>
+            <td className="spreads-actions"><button type="button" className="spreads-row-action" aria-label={`Delete schedule ${row.id}`} title="Delete schedule" onClick={() => handleDelete(row)}><Trash2 size={13} aria-hidden="true" /></button></td>
+          </tr>)}</tbody>
+        </table>
+        {!data.length && !error && <div className="spreads-empty" role="status">
+          <span className="spreads-empty-icon">{loading ? <Loader2 size={18} className="spreads-spin" aria-hidden="true" /> : <Activity size={18} aria-hidden="true" />}</span>
+          <strong>{loading ? 'Loading spread schedules…' : searchedSymbol ? 'No spread schedules found' : 'Load spread schedules'}</strong>
+          <p>{loading ? `Retrieving schedules for ${searchedSymbol}.` : searchedSymbol ? `No schedules are configured for ${searchedSymbol}. Add a schedule or load another symbol.` : 'Enter a symbol and select Load to view its scheduled spread overrides.'}</p>
+        </div>}
+      </div>
+      <footer className="spreads-footer">
+        <span className="spreads-footer-tab">Spreads</span>
+        <span className="spreads-footer-summary" role="status">{searchedSymbol && <strong>{searchedSymbol}</strong>}<span>{loading ? 'Loading…' : error ? 'Request failed' : searchedSymbol ? `${data.length} ${data.length === 1 ? 'schedule' : 'schedules'}` : 'No symbol loaded'}</span></span>
+      </footer>
+      {isAddPopupOpen && <CreateSpreadSchedulePopup initialSymbol={searchedSymbol} onClose={() => setIsAddPopupOpen(false)} onCreated={() => searchedSymbol && fetchSchedules(searchedSymbol)} />}
+      {contextMenu.visible && <div className="spreads-context" style={{ top: contextMenu.y, left: contextMenu.x }} onClick={event => event.stopPropagation()}>
+        <button type="button" onClick={() => { setIsAddPopupOpen(true); setContextMenu({ visible: false }); }}><Plus size={13} aria-hidden="true" />Add Schedule</button>
+        <button type="button" className="is-danger" onClick={() => handleDelete(contextMenu.row)}><Trash2 size={13} aria-hidden="true" />Delete Schedule</button>
+      </div>}
+    </section>
   );
 };
 

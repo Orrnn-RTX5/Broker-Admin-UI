@@ -187,17 +187,43 @@ const ServerGroupsExplorer = ({
     onNavigate?.(node);
   };
   const select = (node) => setSelection({ id: node.id, sidebarId: selectedNodeId });
-  const openSettings = (node) => {
-    if (node?.group?._allocationSummary) return;
-    const target = getGroupsExplorerEditTarget(node);
-    if (target) onGroupEdit?.({ ...node, group: target.row });
-  };
-  // An account opens its group's properties (Margin / Symbols / Commissions), like MT5 Manager.
-  const openAccountGroup = (node) => {
-    const groupName = node.account?.group || node.groupName || '';
+  const resolveAccountGroupNode = (node) => {
+    const groupName = node?.account?.group || node?.groupName || accountGroupName || '';
+    if (!groupName) return null;
     const record = groupNodes.find(group => group.groupName.toLowerCase() === String(groupName).toLowerCase());
     const name = record?.groupName || groupName;
-    if (name) onAccountGroupOpen?.({ ...(record?.group && typeof record.group === 'object' ? record.group : {}), group: name });
+    return record || {
+      type: 'group',
+      id: `group:${name}`,
+      label: name,
+      groupName: name,
+      group: { name, group: name },
+    };
+  };
+  const canOpenSettings = (node) => Boolean(node) && (
+    (node.type === 'group' && !node.group?._allocationSummary) ||
+    (node.type === 'group-account' && Boolean(resolveAccountGroupNode(node)) && !resolveAccountGroupNode(node)?.group?._allocationSummary)
+  );
+  // An account opens its group's properties (Margin / Symbols / Commissions), like MT5 Manager.
+  const openAccountGroup = (node) => {
+    const record = resolveAccountGroupNode(node);
+    if (!record) return;
+    const name = record.groupName;
+    const groupPayload = { ...(record.group && typeof record.group === 'object' ? record.group : {}), name, group: name };
+    if (onAccountGroupOpen) {
+      onAccountGroupOpen(groupPayload);
+    } else {
+      onGroupEdit?.({ ...record, group: groupPayload });
+    }
+  };
+  const openSettings = (node) => {
+    if (!canOpenSettings(node)) return;
+    if (node.type === 'group-account') {
+      openAccountGroup(node);
+      return;
+    }
+    const target = getGroupsExplorerEditTarget(node);
+    if (target) onGroupEdit?.({ ...node, group: target.row });
   };
   // Folders and main groups open; a client group (no subgroups) opens its properties.
   const activate = (node) => {
@@ -214,9 +240,18 @@ const ServerGroupsExplorer = ({
   const branchNames = (path) => groupNodes
     .filter(group => group.groupName.toLowerCase() === path.toLowerCase() || group.groupName.toLowerCase().startsWith(`${path.toLowerCase()}${SEPARATOR}`))
     .map(group => group.groupName);
-  const canDelete = (node) => canLifecycle && Boolean(node) && (node.type === 'group' || node.type === 'server-folder');
+  const canDelete = (node) => canLifecycle && Boolean(node) && (
+    node.type === 'group' ||
+    node.type === 'server-folder' ||
+    (node.type === 'group-account' && Boolean(resolveAccountGroupNode(node)))
+  );
   const deleteGroup = (node) => {
     if (!canDelete(node)) return;
+    if (node.type === 'group-account') {
+      const groupNode = resolveAccountGroupNode(node);
+      if (groupNode) onGroupDelete?.(getGroupsExplorerEditTarget(groupNode));
+      return;
+    }
     if (isBranch(node)) {
       const path = node.type === 'server-folder' ? node.path : node.groupName;
       onGroupDelete?.({ type: 'group-branch', path, names: branchNames(path) });
@@ -336,7 +371,7 @@ const ServerGroupsExplorer = ({
           <button
             type="button"
             className="dummy-btn-action dummy-btn-secondary"
-            disabled={selectedNode?.type !== 'group' || selectedNode?.group?._allocationSummary}
+            disabled={!canOpenSettings(selectedNode)}
             onClick={() => openSettings(selectedNode)}
           >
             <Pencil size={12} strokeWidth={2} />

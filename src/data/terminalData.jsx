@@ -25,6 +25,7 @@ import {
   HardDrive,
   Link,
   LifeBuoy,
+  Bug,
   ShoppingBag,
   TrendingUp,
   LineChart,
@@ -358,8 +359,11 @@ export const sidebarData = [
               { 
                 label: "Support Center", 
                 icon: LifeBuoy,
-                initiallyExpanded: true,
+                navigationOnly: true,
+                initiallyExpanded: false,
                 children: [
+                  { label: "Bug Reports", icon: Bug },
+                  ...[
                   { label: "News", icon: OrangeNewsIcon },
                   { label: "Articles", icon: BlueArticlesIcon },
                   { label: "Orrnn Leads", icon: BlueUsersIcon },
@@ -372,6 +376,7 @@ export const sidebarData = [
                   { label: "Service Desk", icon: BlueHeadsetIcon },
                   { label: "Online Assistant", icon: BlueMessageIcon },
                   { label: "Search", icon: BlueSearchIcon }
+                  ].map(item => ({ ...item, disabled: true }))
                 ]
               },
               {

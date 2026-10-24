@@ -1,0 +1,32 @@
+/* Category quotes align directly with the admin workspace and browser directory. */
+.symbols-list-page { --symbols-list-text: #fff; color: var(--symbols-list-text); font-family: var(--font-sans); }
+[data-theme="light"] .symbols-list-page { --symbols-list-text: var(--text-primary); }
+.symbols-list-page > .symbols-page-header { justify-content: flex-start; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-height: 44px; padding: 8px 14px; border-bottom: 0; background: var(--bg-toolbar); }
+.symbols-list-page .symbols-page-heading h1 { font-size: 13px; font-weight: 600; }
+.symbols-list-page .symbols-back-button { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 28px; height: 28px; min-height: 28px; padding: 0; border: 0; border-radius: 3px; background: transparent; color: inherit; cursor: pointer; }
+.symbols-list-page .symbols-back-button:hover { background: var(--bg-surface-2); }
+.symbols-list-page .symbols-back-button:focus-visible { outline: 1px solid var(--accent-500); outline-offset: -1px; }
+.symbols-list-count { margin-left: auto; font-size: 11px; }
+.symbols-list-search { display: flex; align-items: center; gap: 7px; width: 280px; max-width: 100%; min-width: 0; height: 28px; padding: 0 8px; border: 1px solid var(--border-default); border-radius: 3px; background: var(--bg-surface-1); color: inherit; font-size: 11px; cursor: text; }
+.symbols-list-search svg { flex-shrink: 0; }
+.symbols-list-search input { flex: 1; width: 100%; min-width: 0; height: 100%; padding: 0; border: 0; outline: none; box-shadow: none; background: transparent; color: inherit; font: inherit; }
+.symbols-list-search input::placeholder { color: var(--symbols-list-text); opacity: 1; }
+.symbols-list-search input:focus-visible { outline: none; box-shadow: none; }
+.symbols-list-search:focus-within { border-color: var(--accent-500); }
+.symbols-list-page .symbols-list-content { padding: 0; }
+.symbols-list-page .symbols-list-panel { border: 0; border-radius: 0; background: var(--bg-app); }
+.symbols-list-page .symbols-browser-table { table-layout: fixed; color: inherit; }
+.symbols-list-page .symbols-browser-table thead { background: var(--bg-toolbar); }
+.symbols-list-page .symbols-browser-table th { position: relative; width: 25%; height: 34px; color: inherit; font-size: 10px; font-weight: 600; letter-spacing: .045em; text-transform: uppercase; }
+.symbols-list-page .symbols-browser-table th + th::before { position: absolute; top: 10px; bottom: 10px; left: 0; width: 1px; background: var(--border-subtle); content: ''; }
+.symbols-list-page .symbols-browser-table th,
+.symbols-list-page .symbols-browser-table td { padding: 7px 14px; text-align: left; border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 70%, transparent); }
+.symbols-list-page .symbols-browser-table td { height: 34px; }
+.symbols-list-page .symbols-browser-table td:first-child { font-family: var(--font-mono); }
+.symbols-list-page .symbols-browser-table tbody tr:nth-child(even) { background: color-mix(in srgb, var(--bg-surface-1) 35%, var(--bg-app)); }
+.symbols-list-page .symbols-browser-table tbody tr:hover { background: var(--bg-surface-2); }
+.symbols-list-page .symbols-browser-table .symbols-list-empty { height: 120px; text-align: center; }
+.symbols-list-page .symbols-list-footer { min-height: 40px; padding: 8px 14px; background: var(--bg-toolbar); color: inherit; }
+@container symbols-workspace (max-width: 760px) {
+  .symbols-list-page .symbols-list-search { flex: 1 1 100%; width: 100%; }
+}

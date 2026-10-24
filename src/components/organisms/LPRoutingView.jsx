@@ -1,18 +1,11 @@
 import { useAuthStore } from '../../store/authStore';
-import { canEditGroup, canEditGroups, canManageGroupLifecycle } from '../../utils/groupAccess';
-import React, { useState, useEffect, useMemo, useCallback, useId } from 'react';
-import { Plus, RefreshCw, X, Edit2, Trash2, GitBranch, Network, Loader2, ChevronUp, ChevronDown, ArrowLeft, Search } from 'lucide-react';
+import { canEditGroup, canEditGroups } from '../../utils/groupAccess';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { Plus, X, Edit2, Trash2, GitBranch, Network, Loader2, ArrowLeft, Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { RoutingService } from '../../services/routing.service';
 import { ManagerService } from '../../services/manager.service';
-import { gatewayGetRoutingOptions } from '../../services/gateway.service';
 import LPRouteFormPopup from '../popups/LPRouteFormPopup';
 import './LPRoutingView.css';
-
-const ROUTING_MODE_COLOR = {
-  b_book: 'text-[color:var(--success-500)]',
-  a_book: 'text-[color:var(--info-500)]',
-  hybrid: 'text-[color:var(--warning-500)]',
-};    
 
 const ROUTING_MODE_LABEL = {
   b_book: 'B-Book',
@@ -25,13 +18,6 @@ const FALLBACK_LABEL = {
   b_book:         'B-Book',
   reject:         'Reject',
 };
-
-const RouteIcon = (props) => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
-    <circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/>
-    <path d="M6 9v3a6 6 0 0 0 6 6h3"/>
-  </svg>
-);
 
 const KV = ({ label, value, mono }) => (
   <div className="flex items-start justify-between gap-4 py-1 border-b" style={{ borderColor: 'var(--border-3)' }}>
@@ -49,59 +35,6 @@ const ErrBox = ({ msg }) => {
       {msg}
     </div>
   );
-};
-
-// ─── Routing Options Panel ─────────────────────────────────────────────────────
-const LpRoutingOptionsPanel = () => {
-  const [options, setOptions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState(false);
-  const [err, setErr] = useState('');
-  const panelId = useId();
-  const fetchOptions = useCallback(() => {
-    setLoading(true);
-    setErr('');
-    gatewayGetRoutingOptions()
-      .then(res => setOptions(res.items || []))
-      .catch(e => setErr(e.message || 'Failed to fetch routing options'))
-      .finally(() => setLoading(false));
-  }, []);
-  useEffect(() => {
-    const timerId = window.setTimeout(fetchOptions, 0);
-    return () => window.clearTimeout(timerId);
-  }, [fetchOptions]);
-
-  return <section className="lp-route-providers" aria-label="Available routing providers">
-    <header className="lp-route-providers-head">
-      <button type="button" className="lp-route-providers-toggle" aria-expanded={expanded} aria-controls={panelId} onClick={() => setExpanded(value => !value)}>
-        <span className="lp-route-provider-icon"><Network size={14} aria-hidden="true" /></span>
-        <span className="lp-route-providers-title">Available providers</span>
-        <span className="lp-route-provider-count">{loading ? 'Loading…' : err ? 'Unavailable' : `${options.length} endpoint${options.length === 1 ? '' : 's'}`}</span>
-        {!loading && !err && <span className="lp-route-provider-connected">{options.filter(option => option.connected).length} connected</span>}
-      </button>
-      <div className="lp-route-provider-tools">
-        <button type="button" className="lp-route-icon-button" aria-label="Refresh routing providers" title="Refresh providers" disabled={loading} onClick={fetchOptions}><RefreshCw size={13} className={loading ? 'lp-route-spinning' : undefined} aria-hidden="true" /></button>
-        <button type="button" className="lp-route-icon-button" aria-label={expanded ? 'Collapse routing providers' : 'Expand routing providers'} aria-expanded={expanded} aria-controls={panelId} onClick={() => setExpanded(value => !value)}>{expanded ? <ChevronUp size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}</button>
-      </div>
-    </header>
-    {expanded && <div id={panelId} className="lp-route-provider-body">
-      {err && <div className="lp-route-notice is-error" role="alert">{err}</div>}
-      {loading && !options.length && <div className="lp-route-provider-empty" role="status">Loading routing providers…</div>}
-      {!loading && !err && !options.length && <div className="lp-route-provider-empty">No routing providers available.</div>}
-      <div className="lp-route-provider-grid">
-        {options.map(option => <article key={option.id} className="lp-route-provider-card">
-          <header><div><strong title={option.name}>{option.name}</strong><span>{option.adapter_type || 'Provider'}</span></div><span className={`lp-route-mode ${ROUTING_MODE_COLOR[option.routing_mode] || ''}`}>{ROUTING_MODE_LABEL[option.routing_mode] || option.routing_mode}</span></header>
-          <dl>
-            <div><dt>Route value</dt><dd title={option.route_value}>{option.route_value ?? '—'}</dd></div>
-            <div><dt>Connection</dt><dd className={`lp-route-status ${option.connected ? 'is-active' : 'is-off'}`}>{option.connected ? 'Connected' : 'Disconnected'}</dd></div>
-            <div><dt>Trading</dt><dd>{option.trade_connected ? 'Enabled' : 'Disabled'}</dd></div>
-            <div><dt>Route type</dt><dd>{option.is_internal_route ? 'Internal' : option.is_external_route ? 'External LP' : '—'}</dd></div>
-          </dl>
-          <p title={option.supported_symbols?.join(', ')}>{option.supported_symbols?.length ? `Symbols: ${option.supported_symbols.join(', ')}` : 'No symbol filter specified'}</p>
-        </article>)}
-      </div>
-    </div>}
-  </section>;
 };
 
 const GroupDashboardPanel = ({ groupName, onClose }) => {
@@ -273,7 +206,7 @@ const GroupDashboardPanel = ({ groupName, onClose }) => {
   );
 };
 
-const LPRoutingView = () => {
+const LPRoutingView = ({ refreshTrigger = 0 }) => {
  const currentUser=useAuthStore(state=>state.user);
  const canWrite=canEditGroups(currentUser);
   const [data, setData]               = useState([]);
@@ -286,8 +219,12 @@ const LPRoutingView = () => {
   const [filterEnabled, setFilterEnabled] = useState('all'); // 'all' | 'active' | 'off'
   const [search, setSearch]           = useState('');
   const [blankUiGroup, setBlankUiGroup] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(100);
+  const [pageInput, setPageInput] = useState(null);
+  const gridScrollRef = useRef(null);
 
-  const fetchRoutes = async () => {
+  const fetchRoutes = useCallback(async () => {
     setLoading(true);
     setLoadError('');
     try {
@@ -300,9 +237,12 @@ const LPRoutingView = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { fetchRoutes(); }, []);
+  useEffect(() => {
+    const timerId = window.setTimeout(fetchRoutes, 0);
+    return () => window.clearTimeout(timerId);
+  }, [fetchRoutes, refreshTrigger]);
 
   const filtered = useMemo(() => {
     return data.filter((r) => {
@@ -316,11 +256,25 @@ const LPRoutingView = () => {
     });
   }, [data, filterEnabled, search]);
 
-  const stats = useMemo(() => ({
-    total:   data.length,
-    active:  data.filter((r) => r.enabled).length,
-    off:     data.filter((r) => !r.enabled).length,
-  }), [data]);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const pageStart = (currentPage - 1) * pageSize;
+  const visibleRows = filtered.slice(pageStart, pageStart + pageSize);
+  const rangeLabel = filtered.length ? `${pageStart + 1}-${pageStart + visibleRows.length} of ${filtered.length}` : '0 of 0';
+  const goToPage = nextPage => {
+    setPage(Math.max(1, Math.min(nextPage, pageCount)));
+    setPageInput(null);
+    gridScrollRef.current?.scrollTo({ top: 0 });
+  };
+  const resetPage = () => {
+    setPage(1);
+    setPageInput(null);
+    gridScrollRef.current?.scrollTo({ top: 0 });
+  };
+  const commitPageInput = () => {
+    const nextPage = Number(pageInput);
+    goToPage(pageInput?.trim() && Number.isInteger(nextPage) ? nextPage : currentPage);
+  };
 
   const handleContextMenu = (e, row) => {
     e.preventDefault();
@@ -371,31 +325,33 @@ const LPRoutingView = () => {
         />
       ) : (
         <>
-          <div className="lp-routes-toolbar">
-            {canWrite && <button type="button" className="lp-route-button is-primary" onClick={openCreate}><Plus size={13} aria-hidden="true" />Add Route</button>}
-            <div className="lp-routes-filters" role="group" aria-label="Route status filters">
-              {['all', 'active', 'off'].map(filter => <button type="button" key={filter} aria-pressed={filterEnabled === filter} onClick={() => setFilterEnabled(filter)}>
-                {filter === 'all' ? 'All' : filter === 'active' ? 'Active' : 'Off'}<span>{stats[filter === 'all' ? 'total' : filter]}</span>
-              </button>)}
+          <header className="lp-routes-heading">
+            <h1><Network size={13} aria-hidden="true" />LP Routing</h1>
+            {!loading && data.length > 0 && <span className="lp-routes-count">{filtered.length === data.length ? `${data.length} rows` : `${filtered.length} of ${data.length} rows`}</span>}
+            <div className="lp-routes-toolbar">
+              <div className="lp-routes-search">
+                <Search size={13} aria-hidden="true" />
+                <input aria-label="Search routing rules" placeholder="Search group, symbol or LP…" value={search} onChange={event => { setSearch(event.target.value); resetPage(); }} />
+                {search && <button type="button" aria-label="Clear routing search" title="Clear search" onClick={event => { setSearch(''); resetPage(); event.currentTarget.parentElement.querySelector('input')?.focus(); }}><X size={12} aria-hidden="true" /></button>}
+              </div>
+              <select className="lp-routes-status-filter" aria-label="Filter routing rules by status" value={filterEnabled} onChange={event => { setFilterEnabled(event.target.value); resetPage(); }}>
+                <option value="all">All statuses</option>
+                <option value="active">Active</option>
+                <option value="off">Off</option>
+              </select>
+              {canWrite && <button type="button" className="lp-route-button is-primary" onClick={openCreate}><Plus size={13} aria-hidden="true" />Add Route</button>}
             </div>
-            <div className="lp-routes-search">
-              <Search size={13} aria-hidden="true" />
-              <input aria-label="Search routing rules" placeholder="Search group, symbol or LP…" value={search} onChange={event => setSearch(event.target.value)} />
-              {search && <button type="button" aria-label="Clear routing search" title="Clear search" onClick={event => { setSearch(''); event.currentTarget.parentElement.querySelector('input')?.focus(); }}><X size={12} aria-hidden="true" /></button>}
-            </div>
-            <div className="lp-routes-toolbar-end"><span role="status">{filtered.length} route{filtered.length === 1 ? '' : 's'}</span><button type="button" className="lp-route-icon-button" aria-label="Refresh routing rules" title="Refresh routes" disabled={loading} onClick={fetchRoutes}><RefreshCw size={13} aria-hidden="true" className={loading ? 'lp-route-spinning' : undefined} /></button></div>
-          </div>
+          </header>
           <div className="lp-routes-workspace">
-            {canManageGroupLifecycle(currentUser) && <LpRoutingOptionsPanel />}
             {loadError && <div className="lp-route-notice is-error" role="alert"><span>{loadError}</span><button type="button" className="lp-route-button" disabled={loading} onClick={fetchRoutes}>Retry</button></div>}
             <div className="lp-routes-split">
               <div className="lp-routes-grid-panel">
-                <div className="lp-routes-grid-scroll" tabIndex={0} aria-label="Routing rules">
+                <div ref={gridScrollRef} className="lp-routes-grid-scroll" tabIndex={0} aria-label="Routing rules">
                   <table className="lp-routes-table" aria-label="LP routing rules" aria-busy={loading}>
-                    <colgroup><col className="lp-route-col-id" /><col className="lp-route-col-status" /><col /><col className="lp-route-col-symbol" /><col className="lp-route-col-mode" /><col /><col className="lp-route-col-priority" /><col className="lp-route-col-fallback" /><col className="lp-route-col-volume" /><col className="lp-route-col-actions" /></colgroup>
-                    <thead><tr>{['ID', 'Status', 'Group', 'Symbol', 'Mode', 'LP provider', 'Priority', 'Fallback', 'Max volume'].map(label => <th key={label} scope="col">{label}</th>)}<th scope="col" aria-label="Route actions" /></tr></thead>
+                    <colgroup>{Array.from({ length: 9 }, (_, index) => <col key={index} className="lp-route-data-column" />)}<col className="lp-route-col-actions" /></colgroup>
+                    <thead><tr>{['ID', 'Status', 'Group', 'Symbol', 'Mode', 'LP provider', 'Priority', 'Fallback', 'Max volume'].map(label => <th key={label} scope="col">{label}</th>)}<th scope="col" className="lp-route-row-actions" aria-label="Route actions">Actions</th></tr></thead>
                     <tbody>
-                      {filtered.map((row, index) => {
+                      {visibleRows.map((row, index) => {
                         const rowId = row.route_id ?? row.id;
                         const isSelected = (selectedRow?.route_id ?? selectedRow?.id) === rowId;
                         return <tr key={rowId ?? index} tabIndex={0} aria-selected={isSelected} className={isSelected ? 'is-selected' : ''}
@@ -403,11 +359,11 @@ const LPRoutingView = () => {
                           onDoubleClick={event => { event.stopPropagation(); setBlankUiGroup(row.group_name); }}
                           onContextMenu={event => handleContextMenu(event, row)}
                           onKeyDown={event => { if (event.target !== event.currentTarget) return; if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedRow(row); } else if (event.key === 'Escape') setSelectedRow(null); }}>
-                          <td><span className="lp-route-id"><RouteIcon /><span>{rowId ?? '—'}</span></span></td>
+                          <td><span className="lp-route-id">{rowId ?? '—'}</span></td>
                           <td><span className={`lp-route-status ${row.enabled ? 'is-active' : 'is-off'}`}>{row.enabled ? 'Active' : 'Off'}</span></td>
-                          <td title={row.group_name}>{row.group_name || '—'}</td>
+                          <td className="lp-route-group" title={row.group_name}>{row.group_name || '—'}</td>
                           <td className="lp-route-mono" title={row.symbol_pattern}>{row.symbol_pattern || '—'}</td>
-                          <td><span className={`lp-route-mode ${ROUTING_MODE_COLOR[row.routing_mode] || ''}`}>{ROUTING_MODE_LABEL[row.routing_mode] || row.routing_mode || '—'}</span></td>
+                          <td><span className="lp-route-mode">{ROUTING_MODE_LABEL[row.routing_mode] || row.routing_mode || '—'}</span></td>
                           <td title={row.lp_name}>{row.lp_name || '—'}</td>
                           <td className="lp-route-number">{row.priority ?? '—'}</td>
                           <td title={FALLBACK_LABEL[row.fallback_policy] || row.fallback_policy}>{FALLBACK_LABEL[row.fallback_policy] || row.fallback_policy || '—'}</td>
@@ -424,7 +380,18 @@ const LPRoutingView = () => {
                     {!loading && !loadError && !data.length && canWrite && <button type="button" className="lp-route-button" onClick={openCreate}><Plus size={12} aria-hidden="true" />Add Route</button>}
                   </div>}
                 </div>
-                <footer className="lp-routes-grid-footer"><span>{filtered.length === data.length ? `${data.length} routing rules` : `${filtered.length} of ${data.length} routing rules`}</span><span>{selectedRow ? `Route #${selectedRow.route_id ?? selectedRow.id} selected` : 'Select a route to view details'}</span></footer>
+                <footer className="lp-routes-grid-footer" aria-label="Routing pagination">
+                  <span className="lp-route-footer-tab">LP Routing</span>
+                  <nav className="lp-route-page-controls" aria-label="Routing pages">
+                    <span className="lp-route-page-range" aria-live="polite" aria-label={`Rows ${rangeLabel}`}><strong>Rows</strong><span>{loading ? 'Loading…' : loadError ? 'Unavailable' : rangeLabel}</span></span>
+                    <button type="button" aria-label="First routing page" disabled={loading || currentPage === 1} onClick={() => goToPage(1)}><ChevronsLeft size={14} aria-hidden="true" /></button>
+                    <button type="button" aria-label="Previous routing page" disabled={loading || currentPage === 1} onClick={() => goToPage(currentPage - 1)}><ChevronLeft size={14} aria-hidden="true" /></button>
+                    <label className="lp-route-page-number"><span>Page</span><input aria-label="Routing page number" type="text" inputMode="numeric" value={pageInput ?? String(currentPage)} disabled={loading} onChange={event => setPageInput(event.target.value)} onBlur={commitPageInput} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); commitPageInput(); } else if (event.key === 'Escape') setPageInput(null); }} /><span>/ {pageCount}</span></label>
+                    <button type="button" aria-label="Next routing page" disabled={loading || currentPage === pageCount} onClick={() => goToPage(currentPage + 1)}><ChevronRight size={14} aria-hidden="true" /></button>
+                    <button type="button" aria-label="Last routing page" disabled={loading || currentPage === pageCount} onClick={() => goToPage(pageCount)}><ChevronsRight size={14} aria-hidden="true" /></button>
+                    <select aria-label="Routing rows per page" value={pageSize} disabled={loading} onChange={event => { setPageSize(Number(event.target.value)); resetPage(); }}>{[50, 100, 250].map(size => <option key={size} value={size}>{size} rows</option>)}</select>
+                  </nav>
+                </footer>
               </div>
               {detailOpen && <aside className="lp-route-details" aria-label="Selected route details">
                 <header><div><GitBranch size={13} aria-hidden="true" /><strong>Route #{selectedRow.route_id ?? selectedRow.id}</strong></div><button type="button" className="lp-route-icon-button" aria-label="Close route details" onClick={() => setSelectedRow(null)}><X size={13} aria-hidden="true" /></button></header>

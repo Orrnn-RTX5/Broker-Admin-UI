@@ -1,10 +1,12 @@
 import { useEffect, useState, useMemo } from 'react';
+import { ArrowLeft, Search } from 'lucide-react';
 import useSymbolStore from '../../../store/useSymbolStore';
 import { isMarketQuoteFresh } from '../../../utils/marketWatch';
 import './SymbolWorkspace.css';
+import './SymbolListPage.css';
 
 const quoteColorClass = direction => {
-  if (direction === 'up') return 'text-[color:var(--market-profit)]';
+  if (direction === 'up') return 'text-[color:var(--info-500)]';
   if (direction === 'down') return 'text-[color:var(--market-loss)]';
   return 'text-[color:var(--text-muted)]';
 };
@@ -38,32 +40,33 @@ const SymbolListPage = ({ group, onBack, catalogue = [] }) => {
   return (
     <div className="symbols-list-page">
       <header className="symbols-page-header">
-        <div className="symbols-page-heading">
-          <h1>{group} Symbols</h1>
-          <p>Browse instruments and their latest available quotes.</p>
-        </div>
         <button
           type="button"
           onClick={() => onBack?.()}
-          className="ui-btn ui-btn-secondary ui-btn-sm symbols-back-button"
+          className="symbols-back-button"
+          aria-label="Back to categories"
+          title="Back to categories"
         >
-          Back to categories
+          <ArrowLeft size={16} aria-hidden="true" />
         </button>
+        <div className="symbols-page-heading">
+          <h1>{group} Symbols</h1>
+        </div>
+        <span className="symbols-list-count">{symbols.length} {symbols.length === 1 ? 'symbol' : 'symbols'} in this category</span>
+        <label className="symbols-list-search">
+          <Search size={13} aria-hidden="true" />
+          <input
+            type="search"
+            aria-label={`Search ${group} symbols`}
+            placeholder={`Search ${group.toLowerCase()} symbols...`}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </label>
       </header>
 
       <div className="symbols-list-content">
         <div className="symbols-list-panel">
-          <div className="symbols-list-toolbar">
-            <input
-              type="search"
-              aria-label={`Search ${group} symbols`}
-              placeholder={`Search ${group.toLowerCase()} symbols...`}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="ui-input ui-input-sm"
-            />
-            <span>{symbols.length} {symbols.length === 1 ? 'symbol' : 'symbols'} in this category</span>
-          </div>
           <div className="symbols-table-scroll">
             <table className="symbols-browser-table">
               <thead>

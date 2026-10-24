@@ -64,7 +64,6 @@ const createHandlers = ({
     getInitialServerTabForLabel: (label) => label === 'Local Main Status Server' ? 'Status' : null,
     getViewCapabilityToast: (label) => { state.capabilityLabels.push(label); },
     shouldBlockViewNavigation: () => false,
-    setIsSuperAdminOpen: () => {},
     setServerPopupData: () => {},
   });
   const create = new Function(...Object.keys(makeBindings()), `

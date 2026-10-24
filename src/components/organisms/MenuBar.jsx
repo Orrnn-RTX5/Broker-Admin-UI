@@ -3,7 +3,7 @@ import {
   Files, BookOpen, Maximize2,
   ArrowLeft, ArrowRight, RefreshCcw,
   Download, FileCheck, Printer, LogOut, Palette, Power,
-  Rows3, FileSpreadsheet, Info, Clock, Settings, ShieldCheck,
+  Rows3, FileSpreadsheet, Info, Clock, Settings,
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import './MenuBar.css';
@@ -133,8 +133,6 @@ const MenuBar = ({
             active={autoRefresh}
             onClick={() => { if (autoRefresh) onPauseAutomation?.(); else onStartAutomation?.(); }}
           />
-          <DropdownMenuSeparator />
-          <Item icon={ShieldCheck} label="Platform Super Admin" onClick={() => onMenuSelect?.('SuperAdmin')} />
         </DropdownMenuContent>
       </DropdownMenu>
 

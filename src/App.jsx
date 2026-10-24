@@ -19,7 +19,6 @@ import { canAccessView } from './utils/permissions';
 import { loadGatewayWorkspace } from './utils/gatewayWorkspace';
 import { primeGatewayConnections } from './services/gatewayStartup';
 import { AccountsService } from './services/accounts.service';
-import { getSuperAdminSession, SUPER_ADMIN_SESSION_EVENT } from './services/superAdmin.service';
 import WorkspaceStartup, { StartupLoadingScreen } from './components/organisms/WorkspaceStartup.jsx';
 import { AuthService } from './services/auth.service';
 import './styles/adminWorkspace.css';
@@ -43,15 +42,11 @@ const acquireMarketFeed = createSharedFeedLease({
 const AdminLogin = React.lazy(() => import('./components/organisms/BrokerAuthScreens').then(module => ({ default: module.AdminLogin })));
 const ManagerLogin = React.lazy(() => import('./components/organisms/BrokerAuthScreens').then(module => ({ default: module.ManagerLogin })));
 const ManualBrokerEntry = React.lazy(() => import('./components/organisms/BrokerAuthScreens').then(module => ({ default: module.ManualBrokerEntry })));
-const SuperAdminAuthScreen = React.lazy(() => import('./components/organisms/SuperAdminAuthScreen').then(module => ({ default: module.SuperAdminAuthScreen })));
-const SuperAdminConsole = React.lazy(() => import('./components/organisms/SuperAdminConsole').then(module => ({ default: module.SuperAdminConsole })));
 const AUTH_PATHS = new Set([
   '/',
   '/manager-login',
   '/admin-login',
   '/broker-manual-entry',
-  '/super-admin-login',
-  '/super-admin',
 ]);
 
 const useBrowserPath = () => {
@@ -105,8 +100,13 @@ const AppRoutes = () => {
   const canPreloadPositions = canAccessView(user, 'Positions');
   const canPreloadDeals = canAccessView(user, 'Deals');
   const canPreloadGateways = canAccessView(user, 'Gateways');
-  const marketFeedEnabled = isAuthenticated && Boolean(accessToken) && !pathname.startsWith('/super-admin');
-  const marketFeedScope = `${user?.broker_id || ''}:${user?.login ?? user?.id ?? ''}`;
+  const marketFeedEnabled = isAuthenticated && Boolean(accessToken);
+  const marketFeedBrokerScope = String(
+    user?.broker_id ||
+    (typeof localStorage !== 'undefined' ? localStorage.getItem('brokerId') : '') ||
+    ''
+  ).trim().toLowerCase();
+  const marketFeedScope = `${marketFeedBrokerScope}:${user?.login ?? user?.id ?? ''}`;
 
   React.useEffect(() => {
     // Open the live feed while the workspace downloads, rather than after its first render.
@@ -117,9 +117,9 @@ const AppRoutes = () => {
   }, [marketFeedEnabled, marketFeedScope]);
 
   React.useEffect(() => {
-    if (!isAuthenticated || !accessToken || pathname.startsWith('/super-admin') || validateAuthSession()) return;
+    if (!isAuthenticated || !accessToken || validateAuthSession()) return;
     void AuthService.primeStartupMe();
-  }, [isAuthenticated, accessToken, pathname]);
+  }, [isAuthenticated, accessToken]);
 
   React.useEffect(() => {
     // Commit the shell as soon as its module is ready. Suspending the entire
@@ -135,7 +135,7 @@ const AppRoutes = () => {
   }, []);
 
   React.useEffect(() => {
-    if (!warmupReady || !loadedWorkspace || !isAuthenticated || pathname.startsWith('/super-admin')) return undefined;
+    if (!warmupReady || !loadedWorkspace || !isAuthenticated) return undefined;
     // Give the landing view and live feed the first download/connection slots.
     // Less frequent workspaces warm after the initial render, as in Manager.
     const timer = setTimeout(() => {
@@ -143,13 +143,13 @@ const AppRoutes = () => {
       void loadGatewayWorkspace().catch(() => {});
     }, 0);
     return () => clearTimeout(timer);
-  }, [warmupReady, loadedWorkspace, isAuthenticated, pathname]);
+  }, [warmupReady, loadedWorkspace, isAuthenticated]);
 
   React.useEffect(() => {
-    if (!warmupReady || !allocationIdentity || !canPreloadGateways || pathname.startsWith('/super-admin') || validateAuthSession()) return undefined;
+    if (!warmupReady || !allocationIdentity || !canPreloadGateways || validateAuthSession()) return undefined;
     const timer = setTimeout(() => { void primeGatewayConnections(); }, 1000);
     return () => clearTimeout(timer);
-  }, [warmupReady, allocationIdentity, canPreloadGateways, pathname]);
+  }, [warmupReady, allocationIdentity, canPreloadGateways]);
 
   React.useEffect(() => {
     if (!warmupReady || !allocationIdentity || !canPreloadAccounts || AUTH_PATHS.has(pathname) || validateAuthSession()) return;
@@ -175,16 +175,16 @@ const AppRoutes = () => {
   }, [warmupReady, managerIdentity, pathname]);
 
   React.useEffect(() => {
-    if (!warmupReady || !allocationIdentity || !canPreloadOrders || pathname.startsWith('/super-admin') || validateAuthSession()) return;
+    if (!warmupReady || !allocationIdentity || !canPreloadOrders || validateAuthSession()) return;
     // Share this early first-page request with the Orders view when it opens.
     void primeOrders();
-  }, [warmupReady, allocationIdentity, canPreloadOrders, pathname]);
+  }, [warmupReady, allocationIdentity, canPreloadOrders]);
 
   React.useEffect(() => {
-    if (!warmupReady || !allocationIdentity || pathname.startsWith('/super-admin') || validateAuthSession()) return;
+    if (!warmupReady || !allocationIdentity || validateAuthSession()) return;
     if (canPreloadPositions) void primePositions();
     if (canPreloadDeals) void primeDeals();
-  }, [warmupReady, allocationIdentity, canPreloadPositions, canPreloadDeals, pathname]);
+  }, [warmupReady, allocationIdentity, canPreloadPositions, canPreloadDeals]);
 
   React.useEffect(() => {
     if (!statusScope || AUTH_PATHS.has(pathname) || validateAuthSession()) return;
@@ -199,7 +199,7 @@ const AppRoutes = () => {
       clearServerJournalCache();
       return undefined;
     }
-    if (!accessToken || pathname.startsWith('/super-admin') || startupPrimed.current === journalSession
+    if (!accessToken || startupPrimed.current === journalSession
       || DEFAULT_WORKSPACE_LAYOUT.operationsTab !== 'Journal' || DEFAULT_WORKSPACE_LAYOUT.operationsCollapsed) return undefined;
     // Overlap the first server request with the workspace download. This is a
     // one-shot request handoff, so every reload still reads the current server.
@@ -212,14 +212,12 @@ const AppRoutes = () => {
       clearTimeout(timer);
       discardServerJournalStartup(journalSession);
     };
-  }, [accessToken, isAuthenticated, journalSession, pathname]);
+  }, [accessToken, isAuthenticated, journalSession]);
 
   const resetWorkspaceLayout = React.useCallback(() => {
     setGlobalTheme(DEFAULT_WORKSPACE_LAYOUT.theme);
     setWorkspaceRevision((revision) => revision + 1);
   }, []);
-
-  const [superAdminSession, setSuperAdminSession] = React.useState(() => getSuperAdminSession());
 
   React.useLayoutEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -246,16 +244,6 @@ const AppRoutes = () => {
     };
   }, [globalTheme]);
 
-  React.useEffect(() => {
-    const handleSuperAdminSessionChange = (e) => {
-      setSuperAdminSession(e.detail || getSuperAdminSession());
-    };
-    window.addEventListener(SUPER_ADMIN_SESSION_EVENT, handleSuperAdminSessionChange);
-    return () => {
-      window.removeEventListener(SUPER_ADMIN_SESSION_EVENT, handleSuperAdminSessionChange);
-    };
-  }, []);
-
   const handleAuthSuccess = React.useCallback((session, redirectPath) => {
     const accessToken = getAuthAccessToken(session);
     const refreshToken = getAuthRefreshToken(session) || accessToken;
@@ -277,35 +265,6 @@ const AppRoutes = () => {
       navigate('/', { replace: true });
     }
   }, [isAuthenticated, navigate, pathname]);
-
-  // Direct Super Admin routes take precedence
-  if (pathname === '/super-admin-login') {
-    return (
-      <SuperAdminAuthScreen
-        navigate={navigate}
-        onLoginSuccess={() => navigate('/super-admin', { replace: true })}
-        onSwitchToBrokerLogin={() => navigate('/admin-login')}
-      />
-    );
-  }
-
-  if (pathname === '/super-admin') {
-    if (superAdminSession.isAuthenticated) {
-      return (
-        <SuperAdminConsole
-          onClose={() => navigate(isAuthenticated ? '/admin-dashboard' : '/')}
-          onNavigateBrokerLogin={() => navigate('/admin-login')}
-        />
-      );
-    }
-    return (
-      <SuperAdminAuthScreen
-        navigate={navigate}
-        onLoginSuccess={() => navigate('/super-admin', { replace: true })}
-        onSwitchToBrokerLogin={() => navigate('/admin-login')}
-      />
-    );
-  }
 
   if (!isAuthenticated) {
     if (pathname === '/manager-login') {

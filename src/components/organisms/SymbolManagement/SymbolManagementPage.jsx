@@ -6,6 +6,7 @@ import SessionsTab from './SessionsTab';
 import CommissionSwapTab from './CommissionSwapTab';
 import AdvancedTab from './AdvancedTab';
 import './SymbolWorkspace.css';
+import './SymbolManagementHeader.css';
 
 const TABS = [
   { id: 'symbols', label: 'Symbols' },
@@ -18,6 +19,7 @@ const TABS = [
 
 const SymbolManagementPage = () => {
   const [activeTab, setActiveTab] = useState('symbols');
+  const [toolbarTarget, setToolbarTarget] = useState(null);
   const tabsId = useId();
 
   return (
@@ -25,10 +27,8 @@ const SymbolManagementPage = () => {
       <header className="symbols-page-header">
         <div className="symbols-page-heading">
           <h1>Symbol Management</h1>
-          <p>
-            Configure instruments, categories, LP mappings, sessions, commissions, and visibility.
-          </p>
         </div>
+        <div className="symbols-management-header-controls" ref={setToolbarTarget} hidden={activeTab !== 'symbols'} />
       </header>
 
       <div className="symbol-management-tabs" role="tablist" aria-label="Symbol management">
@@ -60,8 +60,8 @@ const SymbolManagementPage = () => {
         ))}
       </div>
 
-      <div className="symbol-management-content" role="tabpanel" id={`${tabsId}-panel`} aria-labelledby={`${tabsId}-${activeTab}`} tabIndex={0}>
-        {activeTab === 'symbols'    && <SymbolsTab />}
+      <div className={`symbol-management-content${activeTab === 'symbols' ? ' symbol-management-content--symbols' : ''}`} role="tabpanel" id={`${tabsId}-panel`} aria-labelledby={`${tabsId}-${activeTab}`} tabIndex={0}>
+        {activeTab === 'symbols'    && <SymbolsTab toolbarTarget={toolbarTarget} />}
         {activeTab === 'categories' && <CategoriesTab />}
         {activeTab === 'mappings'   && <LpMappingsTab />}
         {activeTab === 'sessions'   && <SessionsTab />}

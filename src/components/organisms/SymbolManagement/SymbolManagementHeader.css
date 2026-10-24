@@ -1,0 +1,87 @@
+/* Header-only refinement; match the compact Navigator workspace controls. */
+.symbol-management-page > .symbols-page-header {
+  align-items: center;
+  gap: 8px 16px;
+  min-height: 44px;
+  padding: 8px 14px;
+}
+
+.symbol-management-page .symbols-page-heading h1 {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 18px;
+  letter-spacing: 0;
+}
+
+.symbol-management-page .symbols-management-header-controls { flex: 1 1 0; }
+.symbol-management-page .symbols-management-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.symbols-management-filters {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.symbols-management-toolbar-summary {
+  flex-shrink: 0;
+  margin-left: 2px;
+  font-size: 11px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.symbols-management-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.symbol-management-page .symbols-management-toolbar :is(.ui-input, .ui-btn) {
+  height: 26px;
+  min-height: 26px;
+  padding-block: 0;
+  border-radius: 3px;
+  font-size: 11px;
+  box-shadow: none;
+}
+
+.symbol-management-page .symbols-management-toolbar .ui-input { line-height: 24px; }
+.symbol-management-page .symbols-management-toolbar .ui-input:focus { border-color: var(--accent-500); }
+.symbol-management-page .symbols-management-toolbar .ui-btn:focus-visible { outline: 1px solid var(--accent-500); outline-offset: 2px; }
+
+.symbol-management-page .symbol-management-tabs { scrollbar-width: thin; }
+.symbol-management-page .symbol-management-tab { line-height: 16px; letter-spacing: 0; }
+.symbol-management-page .symbol-management-tab + .symbol-management-tab::before { top: 11px; bottom: 11px; }
+
+/* Put the title/actions on one row and the related filters below on laptops. */
+@container symbols-workspace (max-width: 1100px) {
+  .symbol-management-page > .symbols-page-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  .symbol-management-page .symbols-page-heading { grid-column: 1; grid-row: 1; }
+  .symbol-management-page .symbols-management-header-controls:not([hidden]),
+  .symbol-management-page .symbols-management-toolbar { display: contents; }
+  .symbol-management-page .symbols-management-actions { grid-column: 2; grid-row: 1; justify-self: end; }
+  .symbol-management-page .symbols-management-filters { grid-column: 1 / -1; grid-row: 2; }
+}
+
+@container symbols-workspace (max-width: 520px) {
+  .symbol-management-page > .symbols-page-header { padding: 8px 12px; gap: 8px; }
+  .symbols-management-filters > .relative { flex: 1 1 100%; }
+  .symbol-management-page .symbols-management-filters input.ui-input { width: 100% !important; }
+  .symbols-management-filters > select.ui-input { flex: 1 1 100px; min-width: 0; }
+  .symbols-management-toolbar-summary { flex-basis: 100%; margin-left: 0; }
+}
+
+@container symbols-workspace (max-width: 340px) {
+  .symbol-management-page .symbols-management-actions { grid-column: 1 / -1; grid-row: 2; }
+  .symbol-management-page .symbols-management-filters { grid-row: 3; }
+}

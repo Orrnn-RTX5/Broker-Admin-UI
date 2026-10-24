@@ -5,10 +5,21 @@ export const marketCategories = ['Metals', 'Forex', 'Indices', 'Crypto', 'Commod
 const name = row => String(typeof row === 'string' ? row : row?.symbol || row?.Symbol || '').trim().toUpperCase();
 
 const currencies = new Set('AED ARS AUD BRL CAD CHF CLP CNH CNY CZK DKK EUR GBP HKD HUF IDR ILS INR ISK JPY KRW MXN MYR NOK NZD PHP PLN RON RUB SAR SEK SGD THB TRY TWD USD ZAR'.split(' '));
+const cryptoQuotes = Object.freeze([...currencies, 'USDT', 'USDC', 'BTC', 'ETH']);
+const cryptoQuoteSet = new Set(cryptoQuotes);
 const cryptoBases = new Set('BTC ETH SOL XRP LTC BCH ADA DOGE DOT LINK LNK BNB AVAX AVX MATIC TRX UNI AAVE AERO ALGO APT ARB ASTER ATOM BONK BRETT CAKE CFX COAI COMP CRO CRV DEXE DYDX ENA ENS ETC FARTCOIN FET FIL FLOKI FLOW GALA GLM GLMR GRT HBAR HYPE ICP IMX INJ IOTA IP JTO JUP KAIA KSM LDO MANA MORPHO MYX NEAR ONDO OP PENDLE PENGU PEPE PI POL PUMP PYTH QNT RAY RENDER SAND SEI SHIB SNX STRK STX SUI SYRUP TAO THETA TIA TON TRUMP TWT VET VIRTUAL WAL WIF WLD WLFI XLM XMR XPL XTZ ZEC PAXG XAUT'.split(' '));
 const indices = new Set('CHINAH CN50 CHINA50 CHN50 EURX EUSTX50 GOLDINDEX HSTECH JPYX KR200 NETH25 SCI25 SPA35 ESP35 SWI20 TWN US2000 US400 USDX VIX GER30 DAX CAC FTSE DJI NDX'.split(' '));
 const commodities = new Set('WTI BRENT USOIL UKOIL OIL NATGAS NGAS COFFEE SUGAR LDSUGAR CORN WHEAT COCOA COTTON SOYBEANS SOYBEAN SBEAN ALUMINIUM COPPER LEAD NICKEL ZINC GASOLINE CRUDE SPOTBRENT SPOTCRUDE BRENTOIL WTOIL'.split(' '));
 const bonds = new Set('EUBOBL EUBUND UKGILT US_TBOND USTN10YR USTN2YR USTN5YR'.split(' '));
+
+const isCryptoPair = (root) => {
+  if (cryptoBases.has(root)) return true;
+  // Every quote in this set is 3 or 4 characters, so two lookups replace a scan of the whole list.
+  const quote4 = root.slice(-4);
+  if (cryptoQuoteSet.has(quote4) && cryptoBases.has(root.slice(0, -4))) return true;
+  const quote3 = root.slice(-3);
+  return cryptoQuoteSet.has(quote3) && cryptoBases.has(root.slice(0, -3));
+};
 
 export function inferMarketCategory(symbol) {
   // Exchange-qualified equity names must be checked before stripping suffixes.
@@ -19,7 +30,7 @@ export function inferMarketCategory(symbol) {
   if (indices.has(root)) return 'Indices';
   if (commodities.has(root)) return 'Commodities';
   if (root.length === 6 && currencies.has(root.slice(0, 3)) && currencies.has(root.slice(3)) && root.slice(0, 3) !== root.slice(3)) return 'Forex';
-  if (cryptoBases.has(root) || [...currencies, 'USDT', 'USDC', 'BTC', 'ETH'].some(quote => root.endsWith(quote) && cryptoBases.has(root.slice(0, -quote.length)))) return 'Crypto';
+  if (isCryptoPair(root)) return 'Crypto';
   return defaultCategory({symbol}) || 'Others';
 }
 
