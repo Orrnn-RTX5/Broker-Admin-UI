@@ -47,7 +47,7 @@ test('Integration view preserves existing service content', () => {
     'SMS Gateways',
     'Messenger Channels',
     'KYC Checks',
-    'Use end-to-end brokerage analytics for RTX5.',
+    'Use end-to-end brokerage analytics.',
     'Offer your traders free virtual hosting for round-the-clock trading.',
     'Send newsletters and personal emails to your traders.',
     "Send automatic SMS to verify clients' contact details for newly opened accounts.",

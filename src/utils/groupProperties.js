@@ -1,3 +1,5 @@
+import { validGroupRevision } from './groupAuthority.js';
+
 // Pure helpers behind the Group properties dialog
 // (components/RIGHTCLICKJPOPUPS/GroupPropertiesPopup.jsx):
 //   - Margin tab: form <-> group record, validation, changed-fields diff.
@@ -150,16 +152,29 @@ export const describeAccountsUpdated = (response) => {
 // Symbols tab
 // ---------------------------------------------------------------------------
 
+const normalizeOptionalStopsLevelPoints = (value) => {
+  if (value === undefined || value === null || String(value).trim() === '') return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.max(0, Math.trunc(parsed));
+};
+
 /** Row shape used by the Symbols tab table (from one GroupSymbolsGet entry). */
-export const normalizeGroupSymbolRow = (raw, { persisted = true } = {}) => ({
-  symbol: String(raw?.symbol ?? '').trim(),
-  spread_markup: Math.max(0, Math.trunc(toFiniteNumber(raw?.spread_markup, 0))),
-  commission: Math.max(0, toFiniteNumber(raw?.commission, 0)),
-  swap_multiplier: Math.max(0, toFiniteNumber(raw?.swap_multiplier, 1)),
-  trade_allowed: raw?.trade_allowed !== false,
-  configured: raw?.configured !== false,
-  persisted,
-});
+export const normalizeGroupSymbolRow = (raw, { persisted = true } = {}) => {
+  const hasStopsField = Boolean(raw && typeof raw === 'object' && ('stops_level_points' in raw || 'stopsLevelPoints' in raw));
+  return {
+    symbol: String(raw?.symbol ?? '').trim(),
+    spread_markup: Math.max(0, Math.trunc(toFiniteNumber(raw?.spread_markup, 0))),
+    commission: Math.max(0, toFiniteNumber(raw?.commission, 0)),
+    swap_multiplier: Math.max(0, toFiniteNumber(raw?.swap_multiplier, 1)),
+    trade_allowed: raw?.trade_allowed !== false,
+    configured: raw?.configured !== false,
+    persisted,
+    ...(hasStopsField
+      ? { stops_level_points: normalizeOptionalStopsLevelPoints(raw?.stops_level_points ?? raw?.stopsLevelPoints) }
+      : {}),
+  };
+};
 
 /**
  * Normalizes a GroupSymbolsGet / GroupSymbolsSave response.
@@ -268,6 +283,9 @@ export const groupSymbolEditForm = (row) => ({
   commission: String(row?.commission ?? 0),
   swap_multiplier: String(row?.swap_multiplier ?? 1),
   trade_allowed: row?.trade_allowed !== false,
+  ...(row && 'stops_level_points' in row
+    ? { stops_level_points: row.stops_level_points !== null && row.stops_level_points !== undefined ? String(row.stops_level_points) : '' }
+    : {}),
 });
 
 /** Validates the per-symbol edit form. Returns { values, errors }. */
@@ -288,6 +306,20 @@ export const validateGroupSymbolEdit = (form) => {
   if (swap.error) errors.swap_multiplier = `Swap multiplier ${swap.error}.`;
   else values.swap_multiplier = swap.value;
 
+  if (form && 'stops_level_points' in form) {
+    const rawStops = String(form.stops_level_points ?? '').trim();
+    if (rawStops === '') {
+      values.stops_level_points = null;
+    } else {
+      const parsedStops = Number(rawStops);
+      if (!Number.isFinite(parsedStops) || !Number.isInteger(parsedStops) || parsedStops < 0 || parsedStops > 2147483647) {
+        errors.stops_level_points = 'Stops level override must be a whole number of points between 0 and 2147483647 (or blank to inherit).';
+      } else {
+        values.stops_level_points = parsedStops;
+      }
+    }
+  }
+
   return { values, errors };
 };
 
@@ -302,6 +334,7 @@ export const toGroupSymbolPayloadRow = (row) => ({
   commission: row.commission,
   swap_multiplier: row.swap_multiplier,
   trade_allowed: row.trade_allowed,
+  ...(row && 'stops_level_points' in row ? { stops_level_points: row.stops_level_points ?? null } : {}),
 });
 
 /** True when the staged list (order or values) differs from the loaded one. */
@@ -315,6 +348,66 @@ export const buildGroupSymbolsSavePayload = (group, rows) => ({
   group,
   symbols: (rows || []).map(toGroupSymbolPayloadRow),
 });
+
+// A source row carries per-symbol terms when any value differs from the defaults
+// GroupSymbolsSave applies to a row that omits them.
+const hasPerSymbolTerms = (row) => row.spread_markup !== 0 || row.commission !== 0
+  || row.swap_multiplier !== 1 || row.trade_allowed === false
+  || (row.stops_level_points !== undefined && row.stops_level_points !== null);
+
+/**
+ * Plan for copying a source group's per-symbol terms to a duplicate:
+ *   { status: 'none' }          the source has no per-symbol terms;
+ *   { status: 'unrestricted' }  the source has terms but the new group allows all symbols
+ *                               (an empty list), so there is no symbol to attach them to;
+ *   { status: 'copy', rows }    GroupSymbolsSave rows: one per symbol the new group allows,
+ *                               in its order, with the source's terms where it had them.
+ * Source-only symbols are left out, so the save never changes the list the user submitted.
+ */
+export const planDuplicateSymbolTerms = (sourceResponse, allowedSymbols = []) => {
+  const source = normalizeGroupSymbolsResponse(sourceResponse).rows;
+  if (!source.some(hasPerSymbolTerms)) return { status: 'none' };
+  const terms = new Map(source.map((row) => [upper(row.symbol), row]));
+  const seen = new Set();
+  const rows = [];
+  for (const raw of allowedSymbols) {
+    const symbol = String(raw ?? '').trim();
+    if (!symbol || seen.has(upper(symbol))) continue;
+    seen.add(upper(symbol));
+    rows.push(toGroupSymbolPayloadRow(terms.get(upper(symbol)) || createGroupSymbolRow(symbol)));
+  }
+  return rows.length ? { status: 'copy', rows } : { status: 'unrestricted' };
+};
+
+// GroupSymbolsSave answers 200 even when a per-symbol calculation approval was refused or not queued: the outcome
+// is in calculation_approval.symbols[].state (group_symbol_approval.go:73-82 entry, :84-98 view; the save is never
+// failed by it, group_symbols_bulk.go:1046-1056). `queued` is normal (the worker finishes it) and is not a warning.
+// Returns { symbols, reason } for the refused or not-queued symbols, or null when none.
+// Not covered here, so a later refusal is not visible at save time: commission_approval (the save queues it durably in
+// the same transaction, group_symbols_bulk.go:1001-1017), and calculation symbols beyond the reporting cap, which are
+// counted in calculation_approval.truncated (group_symbol_approval.go:95, :222) and are not listed in symbols.
+export const unapprovedSymbolTerms = (saveResponse) => {
+  const entries = Array.isArray(saveResponse?.calculation_approval?.symbols) ? saveResponse.calculation_approval.symbols : [];
+  const missed = entries.filter((entry) => entry?.state === 'refused' || entry?.state === 'not_queued');
+  if (missed.length === 0) return null;
+  const reasons = [...new Set(missed.map((entry) => entry.reason).filter(Boolean))];
+  return { symbols: missed.map((entry) => String(entry.symbol)), reason: reasons.join(', ') || 'not approved' };
+};
+
+/**
+ * Copies the duplicate's per-symbol terms. Only when a copy is planned, it reads the NEW group's
+ * GroupSymbolsGet revision (sent as expected_revision only when valid, otherwise the key is omitted),
+ * then saves through `save(group, rows, revision)`. Resolves { status, unapproved }: status is the plan
+ * status ('none' | 'unrestricted' | 'copy'); unapproved is unapprovedSymbolTerms of the save answer.
+ */
+export const copyDuplicateSymbolTerms = async ({ read, save }, group, sourceResponse, allowedSymbols) => {
+  const plan = planDuplicateSymbolTerms(sourceResponse, allowedSymbols);
+  if (plan.status !== 'copy') return { status: plan.status, unapproved: null };
+  const current = await read(group);
+  const revision = validGroupRevision(current?.revision);
+  const response = await save(group, plan.rows, revision);
+  return { status: 'copy', unapproved: unapprovedSymbolTerms(response) };
+};
 
 // ---------------------------------------------------------------------------
 // Commissions tab

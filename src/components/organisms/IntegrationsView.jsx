@@ -28,7 +28,7 @@ const integrationSections = [
     icon: 'analytics',
     state: 'attention',
     statusLabel: 'Setup required',
-    description: 'Use end-to-end brokerage analytics for RTX5.',
+    description: 'Use end-to-end brokerage analytics.',
     metrics: [
       { label: 'MasterSite ID', value: 'Not specified', muted: true },
       { label: 'Data export', value: 'Not configured', muted: true },

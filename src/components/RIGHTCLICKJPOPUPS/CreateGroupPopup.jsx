@@ -2,7 +2,8 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { AlertCircle, ChevronDown, LoaderCircle, ShieldCheck, X } from 'lucide-react';
 import './CreateGroupPopup.css';
-import { subgroupCreatePayload } from '../../utils/groupAuthority.js';
+import { duplicateOverrideSeed, duplicateRoutingOverride, groupCreateBody, groupUpdateBody } from '../../utils/groupAuthority.js';
+import { copyDuplicateSymbolTerms } from '../../utils/groupProperties.js';
 import { ManagerService } from '../../services/manager.service';
 import { BrokerGroupDefaultsApi } from '../../services/brokerGroupDefaults.service';
 import { GROUP_LEVERAGE_MAX, GROUP_LEVERAGE_MIN, applyBrokerDefaultLeverage, createGroupLeverageHint, groupCreateLeverageError } from '../../utils/brokerGroupDefaults';
@@ -43,7 +44,8 @@ const FORM_SECTIONS = [
   ['symbols', 'Symbols', 'Allowed instruments'],
 ];
 
-const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
+// copySymbolTermsFrom: the source group's GroupSymbolsGet response when this is a duplicate.
+const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData, copySymbolTermsFrom }) => {
   const errorId = useId();
   const sectionId = useId();
   const dialogRef = useRef(null);
@@ -88,7 +90,9 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
   
   const [parentGroup, setParentGroup] = useState(draftData?.parentGroup || initialData?.parentGroup || '');
   const [parentLoading, setParentLoading] = useState(false);
-  const changedFields = useRef(new Set());
+  // A subgroup duplicate starts with the source's own overrides as changed: they keep the source's
+  // values, are not overwritten by the parent lookup below, and are the only overrides created.
+  const changedFields = useRef(new Set(initialData ? [] : duplicateOverrideSeed(draftData?.overriddenFields)));
   // Broker default leverage for new groups: int pre-fills an untouched empty
   // field; unset or unreadable leaves it empty and required (never 0).
   const [leverageDefault, setLeverageDefault] = useState(() => ({ status: initialData ? 'none' : 'loading', value: null }));
@@ -159,16 +163,41 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData }) => {
     setError(null);
     try {
       const validated = buildGroupRiskPayload({ ...formData, name: formData.name.trim(), currency: formData.currency.trim() });
-      // bookType owns routingMode (UI-2): a book change is always a routing override.
-      const changed = [...new Set([...changedFields.current, ...(changedFields.current.has('bookType') ? ['routingMode'] : [])])];
-      const payload = initialData ? validated : subgroupCreatePayload(validated, parentGroup.trim(), changed);
 
+      let termsWarning = '';
       if (initialData) {
-        await ManagerService.updateGroup(payload);
+        // Edit: only the fields that differ from the loaded record (groupUpdateBody). Nothing changed, no call.
+        const update = groupUpdateBody(validated, initialData, changedFields.current);
+        if (!update) {
+          setError('No changes');
+          return;
+        }
+        await ManagerService.updateGroup(update);
       } else {
-        await ManagerService.createGroup(payload);
+        // bookType owns routingMode (UI-2): a book change is always a routing override.
+        const changed = [...new Set([...changedFields.current, ...(changedFields.current.has('bookType') ? ['routingMode'] : [])])];
+        // The body never carries symbolSettings or overriddenFields (groupCreateBody -> groupWriteBody).
+        // A duplicate (root or subgroup) keeps the source's own routingMode when it is not the derived value (duplicateRoutingOverride).
+        const routingOverride = duplicateRoutingOverride(draftData, validated);
+        await ManagerService.createGroup(groupCreateBody({ ...validated, ...(routingOverride ? { routingMode: routingOverride } : {}) }, parentGroup.trim(), changed));
+        if (copySymbolTermsFrom) {
+          // The group exists at this point; a failed copy is reported, never undone by deleting the group.
+          try {
+            const copied = await copyDuplicateSymbolTerms({
+              read: (group) => ManagerService.getGroupAllowedSymbols(group),
+              save: (group, rows, revision) => ManagerService.saveGroupAllowedSymbols(group, rows, revision),
+            }, validated.name, copySymbolTermsFrom, validated.symbolsAllowed);
+            if (copied.status === 'unrestricted') termsWarning = 'per-symbol terms were not copied because the new group allows all symbols';
+            else if (copied.unapproved) termsWarning = `group created; per-symbol terms for ${copied.unapproved.symbols.join(', ')} were not approved: ${copied.unapproved.reason}`;
+          } catch (copyError) {
+            termsWarning = `group created but per-symbol terms were not copied: ${getApiErrorMessage(copyError, 'Error saving symbol settings')}`;
+          }
+        }
       }
-      if (onCreated) onCreated();
+      if (onCreated) {
+        if (termsWarning) onCreated(termsWarning);
+        else onCreated();
+      }
       onClose();
     } catch (err) {
       // Axios puts the backend's reason in response.data; err.message is only "Request failed with status code 400".

@@ -8,6 +8,7 @@ import { getApiErrorMessage } from '../../utils/apiShapes';
 import { filterAllocationGroups } from '../../utils/allocations';
 import { createCacheIdentity } from '../../utils/cacheIdentity';
 import { getAllocationGroupRecord, peekAllocations, primeAllocations, subscribeAllocations } from '../../services/allocation.service';
+import { ManagerService } from '../../services/manager.service';
 
 const CreateGroupPopup = lazy(() => import('../RIGHTCLICKJPOPUPS/CreateGroupPopup'));
 const GroupPropertiesPopup = lazy(() => import('../RIGHTCLICKJPOPUPS/GroupPropertiesPopup'));
@@ -114,9 +115,15 @@ function AllocationTable({ identity, currentUser }) {
     const record = await fullRecord(group);
     if (!record) return;
     const { id: _id, ...copy } = record;
-    setGroupEditor({ draftData: { ...copy, name: `${group.name}-copy` } });
+    // Per-symbol terms come from GroupSymbolsGet (it carries trade_allowed; the record's symbolSettings does not).
+    // If they cannot be read, the duplicate is not opened, so it cannot silently lack the source's terms.
+    let copySymbolTermsFrom;
+    try { copySymbolTermsFrom = await ManagerService.getGroupAllowedSymbols(group.name); }
+    catch (error) { setActionError(getApiErrorMessage(error, 'The group could not be duplicated.')); return; }
+    setGroupEditor({ draftData: { ...copy, name: `${group.name}-copy` }, copySymbolTermsFrom });
   };
-  const afterGroupSaved = () => { setGroupEditor(null); refresh(); };
+  // A warning means the group was created but its per-symbol terms were not copied; the list still refreshes.
+  const afterGroupSaved = (warning) => { setGroupEditor(null); refresh(); if (warning) setActionError(warning); };
 
   return (
     <div className="alloc-view">
@@ -260,6 +267,7 @@ function AllocationTable({ identity, currentUser }) {
         <CreateGroupPopup
           initialData={groupEditor.initialData}
           draftData={groupEditor.draftData}
+          copySymbolTermsFrom={groupEditor.copySymbolTermsFrom}
           onClose={() => setGroupEditor(null)}
           onCreated={afterGroupSaved}
         />

@@ -98,3 +98,9 @@ test("Double-clicking an account opens its group's Margin / Symbols / Commission
   assert.match(src, /loadGroupTreePages\(ManagerService\.getGroupList, \{ arrayKeys: GROUP_LIST_ARRAY_KEYS \}\)/, 'margin values are reloaded from the server');
   assert.match(src, /findGroupRecord\(rows, currentGroupName\)/);
 });
+
+test('Migration: destination suggestions reuse the same group-list load (no extra request)', () => {
+  assert.match(src, /setGroupRows\(Array\.isArray\(rows\) \? rows : \[\]\);/);
+  assert.match(src, /<GroupMigrationPanel[^>]*groupRows=\{groupRows\}/);
+  assert.equal((src.match(/ManagerService\.getGroupList/g) || []).length, 1, 'the group list is still fetched once by this effect');
+});

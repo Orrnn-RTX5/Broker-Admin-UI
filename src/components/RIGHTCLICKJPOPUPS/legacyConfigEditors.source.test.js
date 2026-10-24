@@ -71,3 +71,10 @@ test('group properties: revisions, leverage, lock/conflict text and account crea
   assert.match(create, /<FundingPopup login=\{created\.login\}/);
   assert.doesNotMatch(create, /Credit|Balance:/);
 });
+
+test('account create wizard: netting option disabled and submit refuses it before the request', () => {
+  assert.match(create, /ACCOUNT_MODE_CREATE_OPTIONS\.map/);
+  assert.match(create, /disabled=\{option\.disabled\}/);
+  assert.doesNotMatch(create, /ACCOUNT_MODE_OPTIONS\.map/);
+  assert.match(create, /const \{ payload, errors: nextErrors \} = buildAccountCreatePayload\(form, groupContext\);\s*if \(!payload\) \{\s*setErrors\(nextErrors\);\s*return;/);
+});

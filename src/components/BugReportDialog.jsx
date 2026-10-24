@@ -168,7 +168,7 @@ export default function BugReportDialog({ onClose, onSubmitted, page = '' }) {
                 <span className="bug-report-module-badge">ISSUE TELEMETRY</span>
               </div>
               <Dialog.Description className="bug-report-subtitle">
-                Share an issue with the RTX5 platform team.
+                Share an issue with the platform support team.
               </Dialog.Description>
             </div>
             <div className="bug-report-header-meta">
@@ -195,7 +195,7 @@ export default function BugReportDialog({ onClose, onSubmitted, page = '' }) {
               </div>
               <h3>Bug report submitted</h3>
               <p className="bug-report-help">
-                The RTX5 platform team can see this report. Quote this reference if you follow it up.
+                The platform support team can see this report. Quote this reference if you follow it up.
               </p>
               <div className="bug-report-reference">
                 <code>{receipt.report_id}</code>

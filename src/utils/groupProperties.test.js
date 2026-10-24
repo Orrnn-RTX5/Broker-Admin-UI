@@ -6,6 +6,9 @@ import {
   buildCommissionSchedulePayload,
   buildGroupSymbolsSavePayload,
   buildMarginChanges,
+  copyDuplicateSymbolTerms,
+  planDuplicateSymbolTerms,
+  unapprovedSymbolTerms,
   buildMarginForm,
   commissionFormFromSchedule,
   findGroupRecord,
@@ -201,6 +204,92 @@ test('updateGroupSymbolRow + dirty detection + save payload', () => {
     ],
   });
   assert.deepEqual(buildGroupSymbolsSavePayload('g', []), { group: 'g', symbols: [] }, 'empty list = unrestricted');
+});
+
+const DUPLICATE_SOURCE = { unrestricted: false, blocked: [], symbols: [
+  { symbol: 'EURUSD', spread_markup: 2, commission: 3.5, swap_multiplier: 1.5, trade_allowed: true, configured: true },
+  { symbol: 'XAUUSD', spread_markup: 0, commission: 0, swap_multiplier: 1, trade_allowed: false, configured: true },
+  { symbol: 'GBPUSD', spread_markup: 0, commission: 0, swap_multiplier: 1, trade_allowed: true, configured: false },
+] };
+
+test('duplicate: the copy plan carries all four terms per row, follows the new group list, and never widens it', () => {
+  // The user dropped GBPUSD and added USDJPY (no source terms) while duplicating.
+  assert.deepEqual(planDuplicateSymbolTerms(DUPLICATE_SOURCE, ['USDJPY', 'xauusd', 'EURUSD']), { status: 'copy', rows: [
+    { symbol: 'USDJPY', spread_markup: 0, commission: 0, swap_multiplier: 1, trade_allowed: true },
+    { symbol: 'XAUUSD', spread_markup: 0, commission: 0, swap_multiplier: 1, trade_allowed: false },
+    { symbol: 'EURUSD', spread_markup: 2, commission: 3.5, swap_multiplier: 1.5, trade_allowed: true },
+  ] });
+});
+
+test('duplicate: no plan when the source has only default terms or no source terms at all', () => {
+  const defaults = { symbols: [{ symbol: 'EURUSD', spread_markup: 0, commission: 0, swap_multiplier: 1, trade_allowed: true }] };
+  assert.deepEqual(planDuplicateSymbolTerms(defaults, ['EURUSD']), { status: 'none' });
+  assert.deepEqual(planDuplicateSymbolTerms({ symbols: [], unrestricted: true }, ['EURUSD']), { status: 'none' });
+  assert.deepEqual(planDuplicateSymbolTerms(undefined, ['EURUSD']), { status: 'none' });
+});
+
+test('duplicate: a source with terms but an unrestricted new group reports unrestricted (not a silent no-op)', () => {
+  assert.deepEqual(planDuplicateSymbolTerms(DUPLICATE_SOURCE, []), { status: 'unrestricted' });
+  assert.deepEqual(planDuplicateSymbolTerms(DUPLICATE_SOURCE, ['  ', '']), { status: 'unrestricted' });
+});
+
+const REVISION = 'lcr1:0123456789abcdef01234567';
+const APPROVED_ANSWER = { calculation_approval: { symbols: [{ symbol: 'EURUSD', state: 'approved', approved: true }] } };
+test('duplicate: copy reads the NEW group revision and saves the rows with it', async () => {
+  const reads = [];
+  const saves = [];
+  const api = {
+    read: async (group) => { reads.push(group); return { group, revision: REVISION, symbols: [] }; },
+    save: async (group, rows, revision) => { saves.push({ group, rows, revision }); return APPROVED_ANSWER; },
+  };
+  assert.deepEqual(await copyDuplicateSymbolTerms(api, 'real\copy', DUPLICATE_SOURCE, ['EURUSD']), { status: 'copy', unapproved: null });
+  assert.deepEqual(reads, ['real\copy']);
+  assert.equal(saves.length, 1);
+  assert.equal(saves[0].group, 'real\copy');
+  assert.equal(saves[0].revision, REVISION, 'the save carries the revision read from the new group');
+  for (const row of saves[0].rows) {
+    assert.deepEqual(Object.keys(row).sort(), ['commission', 'spread_markup', 'swap_multiplier', 'symbol', 'trade_allowed']);
+  }
+});
+
+test('duplicate: an empty or invalid revision is omitted (key absent, never empty), a valid one is passed through', async () => {
+  const seen = [];
+  let current = {};
+  const api = { read: async () => current, save: async (group, rows, revision) => { seen.push(revision); return APPROVED_ANSWER; } };
+  for (const revision of ['', 'lcr1:xyz', 'lcr1:0123456789ABCDEF01234567', null, undefined]) {
+    current = { revision };
+    await copyDuplicateSymbolTerms(api, 'g', DUPLICATE_SOURCE, ['EURUSD']);
+  }
+  assert.deepEqual(seen, [undefined, undefined, undefined, undefined, undefined], 'no key is sent without a valid revision');
+  current = { revision: REVISION };
+  await copyDuplicateSymbolTerms(api, 'g', DUPLICATE_SOURCE, ['EURUSD']);
+  assert.equal(seen.at(-1), REVISION, 'a valid revision is passed through');
+});
+
+test('duplicate: nothing is read or saved when there is no copy, and failures reach the caller', async () => {
+  let calls = 0;
+  const api = { read: async () => { calls += 1; return {}; }, save: async () => { calls += 1; return APPROVED_ANSWER; } };
+  assert.deepEqual(await copyDuplicateSymbolTerms(api, 'g', { symbols: [] }, ['EURUSD']), { status: 'none', unapproved: null });
+  assert.deepEqual(await copyDuplicateSymbolTerms(api, 'g', DUPLICATE_SOURCE, []), { status: 'unrestricted', unapproved: null });
+  assert.equal(calls, 0);
+  await assert.rejects(copyDuplicateSymbolTerms({ read: async () => { throw new Error('group not visible'); }, save: async () => { calls += 1; } }, 'g', DUPLICATE_SOURCE, ['EURUSD']), /group not visible/);
+  await assert.rejects(copyDuplicateSymbolTerms({ read: async () => ({}), save: async () => { throw new Error('symbol not in catalogue'); } }, 'g', DUPLICATE_SOURCE, ['EURUSD']), /symbol not in catalogue/);
+  assert.equal(calls, 0, 'a failed read never reaches the save');
+});
+
+test('duplicate: refused and not-queued calculation approvals are reported by symbol; queued and approved are not warnings', async () => {
+  const answer = { calculation_approval: { outcome: 'mixed', symbols: [
+    { symbol: 'EURUSD', state: 'approved', approved: true },
+    { symbol: 'GBPUSD', state: 'refused', approved: false, reason: 'CALCULATION_GATE_NO_SESSION' },
+    { symbol: 'USDJPY', state: 'not_queued', approved: false, reason: 'APPROVAL_QUEUE_FULL' },
+    { symbol: 'XAUUSD', state: 'queued', approved: false, reason: 'APPROVAL_QUEUED' },
+  ] } };
+  const api = { read: async () => ({}), save: async () => answer };
+  const outcome = await copyDuplicateSymbolTerms(api, 'g', DUPLICATE_SOURCE, ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD']);
+  assert.deepEqual(outcome.unapproved, { symbols: ['GBPUSD', 'USDJPY'], reason: 'CALCULATION_GATE_NO_SESSION, APPROVAL_QUEUE_FULL' });
+  assert.equal(unapprovedSymbolTerms(APPROVED_ANSWER), null);
+  assert.equal(unapprovedSymbolTerms({ calculation_approval: { symbols: [{ symbol: 'XAUUSD', state: 'queued', reason: 'APPROVAL_QUEUED' }] } }), null);
+  assert.equal(unapprovedSymbolTerms(undefined), null, 'an answer without calculation_approval is not a warning');
 });
 
 // ------------------------------------------------------------ Commissions

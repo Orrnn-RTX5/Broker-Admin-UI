@@ -61,8 +61,10 @@ import {
   filterGroupSymbolRows,
   isGroupSymbolEditable,
   normalizeGroupSymbolOverrides,
+  stageGroupSymbolStopsOverride,
   summarizeGroupSymbols,
   toggleStagedOverride,
+  validateGroupSymbolStopsOverride,
 } from '../../utils/groupSymbolOverrides';
 import './GroupPropertiesPopup.css';
 
@@ -405,6 +407,8 @@ const GroupPropertiesPopup = ({
   const [marginLoading, setMarginLoading] = useState(true);
   const [marginLoadError, setMarginLoadError] = useState('');
   const [syncedAt, setSyncedAt] = useState(null);
+  // Rows from the same group-list load, used to suggest migration destinations.
+  const [groupRows, setGroupRows] = useState([]);
   useEffect(() => {
     let cancelled = false;
     setMarginLoading(true);
@@ -412,6 +416,7 @@ const GroupPropertiesPopup = ({
     loadGroupTreePages(ManagerService.getGroupList, { arrayKeys: GROUP_LIST_ARRAY_KEYS })
       .then((rows) => {
         if (cancelled) return;
+        setGroupRows(Array.isArray(rows) ? rows : []);
         const record = findGroupRecord(rows, currentGroupName);
         if (!record) {
           setMarginLoadError(`Group "${currentGroupName}" was not found on the server.`);
@@ -600,7 +605,7 @@ const GroupPropertiesPopup = ({
     const row = symbolRows[index];
     if (!row) return;
     setSelectedSymbolIndex(index);
-    setSymbolEditor({ index, symbol: row.symbol, form: groupSymbolEditForm(row), errors: {} });
+    setSymbolEditor({ index, symbol: row.symbol, form: groupSymbolEditForm({ ...row, stops_level_points: row.stops_level_points ?? null }), errors: {} });
   };
 
   const setSymbolEditorField = (field) => (event) => {
@@ -782,12 +787,14 @@ const GroupPropertiesPopup = ({
         persistedRef.current = true;
         setOverridesView(normalizeGroupSymbolOverrides(res));
         setStagedOverrides(new Map());
-        const off = changes.filter((change) => !change.trade_allowed).length;
-        const on = changes.length - off;
+        const off = changes.filter((change) => change.trade_allowed === false).length;
+        const on = changes.filter((change) => change.trade_allowed === true).length;
+        const stopsChanged = changes.filter((change) => 'stops_level_points' in change).length;
         summary.push([
           off && `${off} symbol${off === 1 ? '' : 's'} turned off.`,
           on && `${on} symbol${on === 1 ? '' : 's'} follow global again.`,
-        ].filter(Boolean).join(' '));
+          stopsChanged && `${stopsChanged} symbol stop-distance override${stopsChanged === 1 ? '' : 's'} updated.`,
+        ].filter(Boolean).join(' ') || 'Symbol overrides saved.');
       }
 
       notify({ title: 'Group updated', description: `${currentGroupName} — ${summary.join(' ')}`, tone: 'success' });
@@ -894,7 +901,7 @@ const GroupPropertiesPopup = ({
                 <GroupAccountsTab groupName={currentGroupName} onOpenAccount={onOpenAccount} />
               )}
 
-              {activeTab === 'Migration' && <GroupMigrationPanel source={currentGroupName} api={groupMigration} canManage={!readOnly && canManageGroupLifecycle(user)} disabled={isSaving || marginDirty || symbolsDirty || overridesDirty} onMigrated={value => { persistedRef.current = true; onSaved?.({ action: 'migrated', ...value }); }} onDeleted={value => { onSaved?.({ action: 'deleted', ...value }); onClose(); }} />}
+              {activeTab === 'Migration' && <GroupMigrationPanel source={currentGroupName} api={groupMigration} canManage={!readOnly && canManageGroupLifecycle(user)} groupRows={groupRows} disabled={isSaving || marginDirty || symbolsDirty || overridesDirty} onMigrated={value => { persistedRef.current = true; onSaved?.({ action: 'migrated', ...value }); }} onDeleted={value => { onSaved?.({ action: 'deleted', ...value }); onClose(); }} />}
               {activeTab === 'Inheritance' && <GroupAuthorityPanel name={currentGroupName} readGroup={ManagerService.getGroup} updateGroup={(name, payload) => ManagerService.updateGroup({ ...payload, originalName: name })} canManage={!readOnly} disabled={isSaving || marginDirty || symbolsDirty || overridesDirty} onSaved={fresh => { persistedRef.current = true; setGroupRevision(readRevision(fresh)); setInitialLeverage(String(fresh.leverage ?? '')); setLeverage(String(fresh.leverage ?? '')); const next = buildMarginForm(fresh); setInitialMargin(next); setMarginForm(next); onSaved?.(); }} />}
               {/* --- MARGIN TAB --- */}
               {activeTab === 'Margin' && (
@@ -1014,10 +1021,11 @@ const GroupPropertiesPopup = ({
                     </div>
                   )}
                   <div className="border border-[color:var(--border-default)] bg-[color:var(--bg-app)] overflow-hidden rounded-sm">
-                    <div className="grid grid-cols-[1fr_84px_120px_70px_64px] border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] text-[11px] font-medium text-[color:var(--text-muted)]">
+                    <div className="grid grid-cols-[1fr_76px_110px_136px_64px_60px] border-b border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] text-[11px] font-medium text-[color:var(--text-muted)]">
                       <div className="px-3 py-1.5 border-r border-[color:var(--border-default)]">Symbol</div>
                       <div className="px-2 py-1.5 border-r border-[color:var(--border-default)] text-center">Global</div>
                       <div className="px-2 py-1.5 border-r border-[color:var(--border-default)] text-center">Group</div>
+                      <div className="px-2 py-1.5 border-r border-[color:var(--border-default)] text-center">Stops (pts)</div>
                       <div className="px-2 py-1.5 border-r border-[color:var(--border-default)] text-center">Effective</div>
                       <div className="px-2 py-1.5 text-center">Trading</div>
                     </div>
@@ -1038,10 +1046,11 @@ const GroupPropertiesPopup = ({
                         const statusColor = row.status === 'global'
                           ? 'text-[color:var(--text-muted)]'
                           : row.status === 'override_off' ? 'text-amber-400' : 'text-[color:var(--danger-500)]';
+                        const hasStopsOverride = row.stopsLevelPoints !== null && row.stopsLevelPoints !== undefined;
                         return (
                           <div
                             key={row.symbol}
-                            className={`grid grid-cols-[1fr_84px_120px_70px_64px] border-b border-black/10 items-center ${row.staged ? 'bg-amber-500/5' : ''}`}
+                            className={`grid grid-cols-[1fr_76px_110px_136px_64px_60px] border-b border-black/10 items-center ${row.staged ? 'bg-amber-500/5' : ''}`}
                           >
                             <div className="px-3 py-1 border-r border-black/10 truncate font-mono text-[color:var(--text-primary)] min-w-0" title={row.category || undefined}>
                               {row.symbol}{row.staged && <span className="ml-1 text-amber-400">*</span>}
@@ -1051,6 +1060,43 @@ const GroupPropertiesPopup = ({
                             </div>
                             <div className={`px-2 py-1 border-r border-black/10 text-center truncate ${statusColor}`} title={status.hint}>
                               {status.label}
+                            </div>
+                            <div className="px-1.5 py-0.5 border-r border-black/10 flex items-center gap-1">
+                              <input
+                                type="number"
+                                min="0"
+                                max="2147483647"
+                                step="1"
+                                disabled={readOnly}
+                                value={hasStopsOverride ? String(row.stopsLevelPoints) : ''}
+                                placeholder={`Inherit (${row.instrumentStopsLevelPoints ?? 0})`}
+                                aria-label={`Stops level points for ${row.symbol}`}
+                                onChange={(event) => {
+                                  const raw = event.target.value;
+                                  const check = validateGroupSymbolStopsOverride(raw);
+                                  if (check.error) {
+                                    setSaveError(`${row.symbol}: ${check.error}`);
+                                    return;
+                                  }
+                                  setSaveError(null);
+                                  setStagedOverrides((current) => stageGroupSymbolStopsOverride(current, row, check.value));
+                                }}
+                                className="gpp-input text-[10px] px-1.5 py-0.5 h-6 w-full min-w-0 font-mono"
+                              />
+                              {hasStopsOverride && !readOnly && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSaveError(null);
+                                    setStagedOverrides((current) => stageGroupSymbolStopsOverride(current, row, null));
+                                  }}
+                                  title={`Reset ${row.symbol} stops level to inherit instrument default (${row.instrumentStopsLevelPoints ?? 0} pts)`}
+                                  aria-label={`Reset stops level for ${row.symbol}`}
+                                  className="px-1 py-0.5 text-[9px] border border-[color:var(--border-default)] rounded-sm text-[color:var(--text-secondary)] hover:bg-white/10 shrink-0"
+                                >
+                                  Inherit
+                                </button>
+                              )}
                             </div>
                             <div className={`px-2 py-1 border-r border-black/10 text-center font-medium ${row.effective ? 'text-emerald-400' : 'text-[color:var(--text-muted)]'}`}>
                               {row.effective ? 'ON' : 'OFF'}
@@ -1270,9 +1316,12 @@ const GroupPropertiesPopup = ({
                 <input id="gs-swap" type="number" min="0" step="any" value={symbolEditor.form.swap_multiplier} onChange={setSymbolEditorField('swap_multiplier')} className="gpp-input" />
               </Field>
             </div>
+            <Field label="Stops level override (points)" htmlFor="gs-stops-level" hint="Whole points (0–2147483647). Leave blank to inherit the symbol default." error={symbolEditor.errors.stops_level_points}>
+              <input id="gs-stops-level" type="number" min="0" max="2147483647" step="1" placeholder="Inherit symbol default" value={symbolEditor.form.stops_level_points ?? ''} onChange={setSymbolEditorField('stops_level_points')} className="gpp-input" />
+            </Field>
             <CheckboxField id="gs-trading" label="Trading allowed" description="Accounts in this group can open positions on this symbol." checked={symbolEditor.form.trade_allowed} onChange={setSymbolEditorField('trade_allowed')} />
             {Object.entries(symbolEditor.errors)
-              .filter(([field, message]) => message && !['spread_markup', 'commission', 'swap_multiplier'].includes(field))
+              .filter(([field, message]) => message && !['spread_markup', 'commission', 'swap_multiplier', 'stops_level_points'].includes(field))
               .map(([, message]) => <div key={message} className="gpp-field-error">{message}</div>)}
           </ModalShell>
         )}

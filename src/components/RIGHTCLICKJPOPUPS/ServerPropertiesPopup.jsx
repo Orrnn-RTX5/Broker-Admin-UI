@@ -36,35 +36,35 @@ const CommonTab = () => (
             </div>
             <div className="flex items-center gap-2 h-[22px]">
                 <span className="w-[70px] text-right text-[11px] text-[color:var(--text-primary)]">Name:</span>
-                <input className="flex-1 h-full border border-[#555] bg-[color:var(--bg-app)] text-white px-1.5 text-[11px] outline-none focus:border-[#00a2e8] focus:bg-[#003859] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" defaultValue="MainTrade Backup Server" />
+                <input className="flex-1 h-full border border-[#555] bg-[color:var(--bg-app)] text-white px-1.5 text-[11px] outline-none focus:border-[#00a2e8] focus:bg-[#003859] shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" defaultValue="" />
             </div>
             
             <div className="flex items-center gap-4 h-[22px]">
                 <div className="flex items-center gap-2 flex-1 h-full">
                     <span className="w-[70px] text-right text-[11px] text-[color:var(--text-primary)]">ID:</span>
-                    <input className="flex-1 h-full border border-[#555] bg-[color:var(--bg-app)] text-white px-1.5 text-[11px] outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" defaultValue="5" />
+                    <input className="flex-1 h-full border border-[#555] bg-[color:var(--bg-app)] text-white px-1.5 text-[11px] outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" defaultValue="" />
                 </div>
                 <div className="flex items-center gap-2 flex-1 h-full">
                     <span className="w-[60px] text-right text-[11px] text-[color:var(--text-primary)] pr-1">Password:</span>
-                    <input className="flex-1 h-full border border-[#555] bg-[color:var(--bg-app)] text-white px-1.5 text-[11px] outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" type="password" defaultValue="password123" />
+                    <input className="flex-1 h-full border border-[#555] bg-[color:var(--bg-app)] text-white px-1.5 text-[11px] outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" type="password" />
                 </div>
             </div>
 
             <div className="flex items-center gap-4 h-[22px] mt-2">
                 <div className="flex items-center gap-2 flex-1 h-full">
                     <span className="w-[70px] text-right text-[11px] text-[color:var(--text-primary)]">Latitude:</span>
-                    <input className="flex-1 h-full border border-[#555] bg-[color:var(--bg-app)] text-white px-1.5 text-[11px] outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" defaultValue="52.37590000" />
+                    <input className="flex-1 h-full border border-[#555] bg-[color:var(--bg-app)] text-white px-1.5 text-[11px] outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" defaultValue="" />
                 </div>
                 <div className="flex items-center gap-2 flex-1 h-full">
                     <span className="w-[60px] text-right text-[11px] text-[color:var(--text-primary)] pr-1">Longitude:</span>
-                    <input className="flex-1 h-full border border-[#555] bg-[color:var(--bg-app)] text-white px-1.5 text-[11px] outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" defaultValue="4.89750000" />
+                    <input className="flex-1 h-full border border-[#555] bg-[color:var(--bg-app)] text-white px-1.5 text-[11px] outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" defaultValue="" />
                 </div>
             </div>
 
             <div className="flex items-center gap-2 h-[22px] mt-2">
                 <span className="w-[100px] text-right text-[11px] text-[color:var(--text-primary)]">Optimization time:</span>
                 <div className="relative w-[54px] h-full">
-                   <input className="w-full h-full border border-[#555] bg-[color:var(--bg-app)] text-white px-1.5 text-[11px] outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" defaultValue="03:47" />
+                   <input className="w-full h-full border border-[#555] bg-[color:var(--bg-app)] text-white px-1.5 text-[11px] outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" defaultValue="" />
                    <div className="absolute right-[1px] top-[1px] bottom-[1px] w-[15px] flex flex-col border-l border-[#444] bg-[#333]">
                       <div className="flex-1 flex items-center justify-center border-b border-[#444] cursor-pointer hover:bg-[color:var(--bg-surface-3)]"><ChevronUp size={10} className="text-[color:var(--text-muted)]" /></div>
                       <div className="flex-1 flex items-center justify-center cursor-pointer hover:bg-[color:var(--bg-surface-3)]"><ChevronDown size={10} className="text-[color:var(--text-muted)]" /></div>
@@ -174,14 +174,14 @@ const BackupTab = () => (
 
             <div className="flex items-center gap-2 h-[22px] mt-2">
                 <span className="w-[100px] text-right text-[11px] text-[color:var(--text-primary)]">Backups path:</span>
-                <input className="flex-1 h-full border border-[#555] bg-[color:var(--bg-app)] text-white px-1.5 text-[11px] outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" defaultValue="D:\RTX5Backup\TradeMain" />
+                <input className="flex-1 h-full border border-[#555] bg-[color:var(--bg-app)] text-white px-1.5 text-[11px] outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" defaultValue="" />
             </div>
 
             <div className="flex items-center gap-6 h-[22px] mt-2">
                 <div className="flex items-center gap-2">
                     <span className="w-[100px] text-right text-[11px] text-[color:var(--text-primary)]">Backup time:</span>
                     <div className="relative w-[54px] h-full">
-                       <input className="w-full h-full border border-[#555] bg-[color:var(--bg-app)] text-white px-1.5 text-[11px] outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" defaultValue="00:17" />
+                       <input className="w-full h-full border border-[#555] bg-[color:var(--bg-app)] text-white px-1.5 text-[11px] outline-none shadow-[inset_0_1px_2px_rgba(0,0,0,0.5)]" defaultValue="" />
                        <div className="absolute right-[1px] top-[1px] bottom-[1px] w-[15px] flex flex-col border-l border-[#444] bg-[#333]">
                           <div className="flex-1 flex items-center justify-center border-b border-[#444] cursor-pointer hover:bg-[color:var(--bg-surface-3)]"><ChevronUp size={10} className="text-[color:var(--text-muted)]"/></div>
                           <div className="flex-1 flex items-center justify-center cursor-pointer hover:bg-[color:var(--bg-surface-3)]"><ChevronDown size={10} className="text-[color:var(--text-muted)]"/></div>
@@ -254,7 +254,7 @@ const SQLExportTab = () => (
     </div>
 );
 
-const ServerPropertiesPopup = ({ isOpen, onClose, onHelp, serverName = "MainTrade Backup Server", serverId = "5", serverAddress = '', publicAddress = '' }) => {
+const ServerPropertiesPopup = ({ isOpen, onClose, onHelp, serverName = "", serverId = "", serverAddress = '', publicAddress = '' }) => {
     const [activeTab, setActiveTab] = useState('Common');
 
     if (!isOpen) return null;

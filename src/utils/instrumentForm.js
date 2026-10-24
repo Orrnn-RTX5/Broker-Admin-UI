@@ -1,4 +1,4 @@
-export const numericInstrumentFields = ['digits', 'contract_size', 'tick_size', 'tick_value', 'spread', 'margin_rate', 'min_volume', 'max_volume', 'volume_step'];
+export const numericInstrumentFields = ['digits', 'contract_size', 'tick_size', 'tick_value', 'spread', 'stops_level_points', 'margin_rate', 'min_volume', 'max_volume', 'volume_step'];
 export const calcModes = ['forex', 'cfd_leverage', 'cfd_no_leverage', 'futures'];
 export const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 export const cryptoSessions = () => dayNames.map((_, day_of_week) => ({day_of_week, quote_from: '00:00', quote_to: '24:00', trade_from: '00:00', trade_to: '24:00'}));
@@ -40,7 +40,7 @@ export function categoryTemplate(category, instruments = [], symbol = '') {
     || matches.find(row => row.symbol === preferred) || matches[0];
   if (!canonical && !broker) return null;
   const starter = canonical ? {
-    spread: 0, margin_rate: 1, min_volume: 0.01, max_volume: 100, volume_step: 0.01,
+    spread: 0, stops_level_points: 0, margin_rate: 1, min_volume: 0.01, max_volume: 100, volume_step: 0.01,
     margin_currency: 'USD', profit_currency: 'USD', symbol_timezone: 'UTC',
     sessions: canonical === 'Crypto' ? cryptoSessions() : cryptoSessions().filter(row => row.day_of_week > 0 && row.day_of_week < 6),
     ...starters[canonical],
@@ -75,6 +75,14 @@ export function instrumentForm(source = {}) {
   source = source ?? {};
   const form = {symbol: '', description: '', category: '', symbol_timezone: 'UTC', calc_mode: '', margin_currency: '', profit_currency: '', enabled: false, sessions: [], ...Object.fromEntries(numericInstrumentFields.map(key => [key, '']))};
   for (const key of Object.keys(form)) if (source[key] !== undefined && source[key] !== null) form[key] = source[key];
+  if (form.stops_level_points === '') {
+    const aliasStops = source.stopsLevelPoints ?? source.stops_level ?? source.stopsLevel;
+    if (aliasStops !== undefined && aliasStops !== null && aliasStops !== '') {
+      form.stops_level_points = aliasStops;
+    } else if (supplied(source.digits)) {
+      form.stops_level_points = 0;
+    }
+  }
   form.sessions = form.sessions.map(session => ({...session, ...Object.fromEntries(['quote', 'trade'].flatMap(kind => {
     // Existing schedules inherit trading hours when both quote boundaries are
     // absent. Display that same effective schedule for administrator review.
@@ -90,12 +98,16 @@ export function instrumentPayload(form) {
   payload.symbol = payload.symbol.trim();
   if (!/^[A-Z0-9][A-Z0-9._-]{0,19}$/.test(payload.symbol)) throw new Error('Use the exact feed symbol: up to 20 uppercase letters, numbers, dots, underscores or hyphens.');
   for (const key of numericInstrumentFields) {
+    if (key === 'stops_level_points' && (payload[key] === '' || payload[key] === undefined || payload[key] === null)) {
+      payload[key] = 0;
+    }
     if (payload[key] === '' || !Number.isFinite(Number(payload[key]))) throw new Error(`${key.replaceAll('_', ' ')} is required; use the broker or LP specification.`);
     payload[key] = Number(payload[key]);
-    const zeroAllowed = ['digits', 'spread', 'margin_rate'].includes(key);
+    const zeroAllowed = ['digits', 'spread', 'stops_level_points', 'margin_rate'].includes(key);
     if (payload[key] < 0 || (!zeroAllowed && payload[key] === 0)) throw new Error(`${key.replaceAll('_', ' ')} is outside its allowed range.`);
   }
   if (!Number.isInteger(payload.digits) || payload.digits > 12 || !Number.isInteger(payload.spread)) throw new Error('Digits and spread must be whole numbers; digits must be at most 12.');
+  if (!Number.isInteger(payload.stops_level_points) || payload.stops_level_points < 0 || payload.stops_level_points > 2147483647) throw new Error('stops level points must be a whole number between 0 and 2147483647.');
   if (payload.min_volume > payload.max_volume) throw new Error('Minimum volume cannot exceed maximum volume.');
   for (const key of ['min_volume', 'max_volume']) {
     const ratio = payload[key] / payload.volume_step;

@@ -33,10 +33,17 @@ const CheckboxIcon = ({ checked, indeterminate, isRedCross }) => {
   );
 };
 
+// Server-backed group list: an array; a comma-separated string is split the same way
+// GroupAccessFields splits it; anything else (null, undefined) is an empty list.
+const normalizeGroupList = (value) => {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return String(value || '').split(',').map((group) => group.trim()).filter(Boolean);
+};
+
 const ManagerPropertiesPopup = ({ manager, onClose }) => {
   const [activeTab, setActiveTab] = useState('Common');
  const [groupMode,setGroupMode]=useState(manager?.group_access_mode || 'none');
- const [assignedGroups,setAssignedGroups]=useState(manager?.allowed_groups || []);
+ const [assignedGroups,setAssignedGroups]=useState(() => normalizeGroupList(manager?.allowed_groups));
   const [roleId, setRoleId] = useState(() => manager?.role_id || '');
 
   const { data: rolesResponse } = useRoles();
@@ -89,7 +96,7 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
                     <label className="text-[12px]">Login:</label>
                     <input
                       type="text"
-                      defaultValue={manager?.login || "900546"}
+                      defaultValue={manager?.login || ""}
                       className="bg-transparent border border-[color:var(--border-strong)] px-1 py-0.5 text-[12px] w-32 focus:outline-none focus:border-blue-500 text-[color:var(--text-primary)]"
                     />
                   </div>
@@ -104,12 +111,14 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
                 <div className="flex gap-2 flex-1 min-h-0">
                   <label className="text-[12px] mt-1 shrink-0">Groups:</label>
                   <div className="flex-1 border border-[color:var(--border-strong)] bg-transparent overflow-y-auto min-h-0">
-                    <div className="bg-[color:var(--bg-surface-1)] px-2 py-1 flex items-center text-[12px] text-[color:var(--text-primary)] hover:bg-blue-600/30 cursor-pointer">
-                      <span className="text-white mr-2">👥</span> demo\Propfirm
-                    </div>
-                    <div className="px-2 py-1 flex items-center text-[12px] text-[color:var(--text-primary)] hover:bg-blue-600/30 cursor-pointer border-t border-[color:var(--bg-surface-2)]">
-                      <span className="text-white mr-2">👥</span> Demo\propfirm
-                    </div>
+                    {assignedGroups.length === 0 && (
+                      <div className="py-2 px-2 text-[12px] text-[color:var(--text-muted)]">No groups listed</div>
+                    )}
+                    {assignedGroups.map((group, index) => (
+                      <div key={`${index}-${group}`} className={`px-2 py-1 flex items-center text-[12px] text-[color:var(--text-primary)] hover:bg-blue-600/30 cursor-pointer ${index === 0 ? 'bg-[color:var(--bg-surface-1)]' : 'border-t border-[color:var(--bg-surface-2)]'}`}>
+                        <span className="text-white mr-2">👥</span> {String(group)}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -172,11 +181,11 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
                       <div className="pl-6 flex flex-col border-l border-dotted border-[color:var(--text-muted)] ml-2.5">
                         <div className="flex items-center gap-1.5 py-[2px] relative before:absolute before:content-[''] before:w-3.5 before:h-[1px] before:border-t before:border-dotted before:border-[color:var(--text-muted)] before:-left-1.5 before:top-1/2 hover:bg-white/5">
                           <CheckboxIcon isRedCross={true} />
-                          <span className="text-[12px] text-[color:var(--text-primary)]">Connect using RTX5 Administrator</span>
+                          <span className="text-[12px] text-[color:var(--text-primary)]">Connect using Administrator</span>
                         </div>
                         <div className="flex items-center gap-1.5 py-[2px] relative before:absolute before:content-[''] before:w-3.5 before:h-[1px] before:border-t before:border-dotted before:border-[color:var(--text-muted)] before:-left-1.5 before:top-1/2 hover:bg-white/5">
                           <CheckboxIcon checked={true} />
-                          <span className="text-[12px] text-[color:var(--text-primary)]">Connect using RTX5 Manager</span>
+                          <span className="text-[12px] text-[color:var(--text-primary)]">Connect using Manager</span>
                         </div>
                       </div>
                     </div>
@@ -339,7 +348,7 @@ const ManagerPropertiesPopup = ({ manager, onClose }) => {
         {/* Title Bar */}
         <div className="flex justify-between items-center h-8 bg-[color:var(--bg-app)] px-3 cursor-move border-b border-white/5">
           <div className="text-[12px] text-[color:var(--text-primary)] flex items-center gap-2">
-            Manager: {manager?.name || "Propfirm"}
+            Manager: {manager?.name || "Manager"}
           </div>
           <div className="flex gap-2">
              <button className="w-[28px] h-[20px] flex items-center justify-center hover:bg-white/10 text-[color:var(--text-muted)]">

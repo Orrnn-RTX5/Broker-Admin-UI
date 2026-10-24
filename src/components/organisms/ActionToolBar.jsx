@@ -124,7 +124,7 @@ const ActionToolBar = ({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Tool icon={Bug} label="Report a Bug to the RTX5 platform team" onClick={onReportBug} />
+          <Tool icon={Bug} label="Report a bug to the platform support team" onClick={onReportBug} />
         </div>
       </div>
 

@@ -162,7 +162,7 @@ export const submitBugReport = async ({ form, attachments = [] }) => {
       throw new Error('Bug reporting is not configured on this server yet. Please contact your administrator.');
     }
     if (status === 502) {
-      throw new Error('The RTX5 support service could not be reached. Please try again in a moment.');
+      throw new Error('The support service could not be reached. Please try again in a moment.');
     }
     throw new Error(error?.response?.data?.error || error?.message || 'The report could not be submitted');
   }

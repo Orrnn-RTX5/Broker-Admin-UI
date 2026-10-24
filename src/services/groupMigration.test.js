@@ -8,11 +8,23 @@ const { createGroupMigration, migrationIsVerified } = await import('data:text/ja
 
 test('migration preview and execution keep source/destination identity including nested paths', async () => {
   const calls = [];
-  const api = createGroupMigration(async endpoint => { calls.push(new URL(endpoint, 'http://localhost')); return { ok: true, json: async () => ({ status: 'verified', migration_id: 'migration-one', history_verified: true }) }; });
+  const api = createGroupMigration(async (endpoint, init) => { calls.push({ url: new URL(endpoint, 'http://localhost'), init }); return { ok: true, json: async () => ({ status: 'verified', migration_id: 'migration-one', history_verified: true }) }; });
   await api.preview('real\\old & one', 'real\\new'); await api.migrate('real\\old & one', 'real\\new');
-  assert.equal(calls[0].pathname, '/GroupMigrationPreview'); assert.equal(calls[1].pathname, '/GroupMoveAccounts');
-  for (const call of calls) { assert.equal(call.searchParams.get('from_group'), 'real\\old & one'); assert.equal(call.searchParams.get('to_group'), 'real\\new'); }
+  // Preview is a read-only GET carrying the names in the query.
+  assert.equal(calls[0].url.pathname, '/GroupMigrationPreview'); assert.equal(calls[0].init.method, undefined);
+  assert.equal(calls[0].url.searchParams.get('from_group'), 'real\\old & one'); assert.equal(calls[0].url.searchParams.get('to_group'), 'real\\new');
+  // Migration uses the POST+JSON successor: the legacy mutating GET answers 410 Gone, and the backend rejects a query with a body.
+  assert.equal(calls[1].url.pathname, '/GroupMoveAccounts'); assert.equal(calls[1].url.search, '');
+  assert.equal(calls[1].init.method, 'POST'); assert.deepEqual(calls[1].init.body, { from_group: 'real\\old & one', to_group: 'real\\new' });
   assert.throws(() => api.preview('same', 'same'));
+  assert.throws(() => api.migrate('same', 'same'));
+});
+test('source deletion uses the POST+JSON successor with only the group field', async () => {
+  const calls = [];
+  const api = createGroupMigration(async (endpoint, init) => { calls.push({ url: new URL(endpoint, 'http://localhost'), init }); return { ok: true, json: async () => ({ group: 'real\\old & one', deleted: true }) }; });
+  assert.deepEqual(await api.remove('real\\old & one'), { group: 'real\\old & one', deleted: true });
+  assert.equal(calls[0].url.pathname, '/GroupDelete'); assert.equal(calls[0].url.search, '');
+  assert.equal(calls[0].init.method, 'POST'); assert.deepEqual(calls[0].init.body, { group: 'real\\old & one' });
 });
 test('deletion eligibility requires explicit verified history and migration identity', () => {
   assert.equal(migrationIsVerified({ status: 'verified', migration_id: 'id', history_verified: true }), true);

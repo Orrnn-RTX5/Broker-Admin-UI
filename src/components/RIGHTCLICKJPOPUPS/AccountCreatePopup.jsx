@@ -3,7 +3,7 @@ import { ManagerService } from '../../services/manager.service.js';
 import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { AdminConfigApi } from '../../services/adminConfigApi';
-import { ACCOUNT_MODE_OPTIONS, buildAccountCreatePayload, emptyAccountCreateForm, readCreatedLogin, readGroupCurrency, readGroupLeverage } from '../../utils/legacyConfig';
+import { ACCOUNT_MODE_CREATE_OPTIONS, buildAccountCreatePayload, emptyAccountCreateForm, readCreatedLogin, readGroupCurrency, readGroupLeverage } from '../../utils/legacyConfig';
 import { getApiErrorMessage } from '../../utils/apiShapes';
 import { useToast } from '../ui/useToast';
 import FundingPopup from './FundingPopup';
@@ -149,10 +149,10 @@ const AccountCreatePopup = ({ group, defaultLeverage, defaultCurrency, groupReco
             </Row>
             <Row label="Account mode:" htmlFor="create-mode" error={errors.accountMode}>
               <select id="create-mode" value={form.accountMode} onChange={setField('accountMode')} className={inputClassName}>
-                {ACCOUNT_MODE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                {ACCOUNT_MODE_CREATE_OPTIONS.map((option) => <option key={option.value} value={option.value} disabled={option.disabled}>{option.label}</option>)}
               </select>
             </Row>
-            <p>Netting or hedging is permanent after account creation.</p>
+            <p>Account mode is permanent after creation.</p>
             <Row label="Master password:" htmlFor="create-master" error={errors.masterPassword}>
               <input id="create-master" type="password" autoComplete="new-password" value={form.masterPassword} onChange={setField('masterPassword')} className={inputClassName} />
             </Row>

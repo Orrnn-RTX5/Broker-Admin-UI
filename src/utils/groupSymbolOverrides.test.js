@@ -7,8 +7,10 @@ import {
   filterGroupSymbolRows,
   isGroupSymbolEditable,
   normalizeGroupSymbolOverrides,
+  stageGroupSymbolStopsOverride,
   summarizeGroupSymbols,
   toggleStagedOverride,
+  validateGroupSymbolStopsOverride,
 } from './groupSymbolOverrides.js';
 
 const response = {
@@ -98,4 +100,50 @@ test('group trading off: nothing becomes effective, overrides can still be stage
   assert.equal(applyStagedOverride(eur, staged).effective, false, 'reset does not make it tradeable while group trading is off');
   assert.equal(applyStagedOverride(eur, staged).status, 'global');
   assert.equal(normalizeGroupSymbolOverrides(response).groupTrading, true, 'absent flag defaults to on');
+});
+
+test('stops_level_points override normalization, staging, reset to null, and compound changes', () => {
+  const view = normalizeGroupSymbolOverrides({
+    ...response,
+    symbols: [
+      { symbol: 'BTCUSD', category: 'crypto', global_enabled: true, group_override: null, effective: true, status: 'global', stops_level_points: null, instrument_stops_level_points: 15 },
+      { symbol: 'EURUSD', category: 'forex', global_enabled: true, group_override: 'off', effective: false, status: 'override_off', stops_level_points: 30, instrument_stops_level_points: 10 },
+    ],
+  });
+  const btc = bySymbol(view.rows, 'BTCUSD');
+  const eur = bySymbol(view.rows, 'EURUSD');
+  assert.equal(btc.stopsLevelPoints, null);
+  assert.equal(btc.instrumentStopsLevelPoints, 15);
+  assert.equal(eur.stopsLevelPoints, 30);
+  assert.equal(eur.instrumentStopsLevelPoints, 10);
+
+  let staged = stageGroupSymbolStopsOverride(new Map(), btc, 25);
+  assert.deepEqual(buildGroupSymbolOverrideChanges(staged), [
+    { symbol: 'BTCUSD', stops_level_points: 25 },
+  ]);
+  const shownBtc = applyStagedOverride(btc, staged);
+  assert.equal(shownBtc.stopsLevelPoints, 25);
+  assert.equal(shownBtc.staged, true);
+
+  // Compound change: also toggle trading off on BTCUSD while keeping stops_level_points=25
+  const compound = toggleStagedOverride(staged, shownBtc);
+  assert.deepEqual(buildGroupSymbolOverrideChanges(compound), [
+    { symbol: 'BTCUSD', trade_allowed: false, stops_level_points: 25 },
+  ]);
+
+  // Revert stops back to original null on staged -> removes staged entry
+  staged = stageGroupSymbolStopsOverride(staged, shownBtc, null);
+  assert.equal(staged.size, 0);
+
+  // Reset EURUSD stops override to null while leaving trade_allowed untouched
+  const stagedReset = stageGroupSymbolStopsOverride(new Map(), eur, null);
+  assert.deepEqual(buildGroupSymbolOverrideChanges(stagedReset), [
+    { symbol: 'EURUSD', stops_level_points: null },
+  ]);
+
+  assert.deepEqual(validateGroupSymbolStopsOverride(''), { value: null, error: null });
+  assert.deepEqual(validateGroupSymbolStopsOverride('0'), { value: 0, error: null });
+  assert.deepEqual(validateGroupSymbolStopsOverride('50'), { value: 50, error: null });
+  assert.ok(validateGroupSymbolStopsOverride('-1').error);
+  assert.ok(validateGroupSymbolStopsOverride('1.5').error);
 });

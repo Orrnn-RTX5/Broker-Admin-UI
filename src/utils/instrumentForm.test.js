@@ -164,3 +164,15 @@ test('overnight containment and week-boundary overlaps match server validation',
   assert.throws(() => instrumentPayload({...valid(), sessions: [saturday, saturday]}), /one session/);
   assert.throws(() => instrumentPayload({...valid(), sessions: [{...saturday, trade_to: '03:00'}]}), /fit inside/);
 });
+
+test('stops_level_points defaults to 0 when blank, preserves positive integers, and rejects invalid values', () => {
+  assert.equal(instrumentPayload(valid()).stops_level_points, 0);
+  assert.equal(instrumentPayload({...valid(), stops_level_points: ''}).stops_level_points, 0);
+  assert.equal(instrumentPayload({...valid(), stops_level_points: '0'}).stops_level_points, 0);
+  assert.equal(instrumentPayload({...valid(), stops_level_points: '25'}).stops_level_points, 25);
+  assert.equal(instrumentForm({symbol: 'EURUSD', stops_level_points: 18}).stops_level_points, 18);
+  assert.equal(instrumentForm({symbol: 'EURUSD', stopsLevelPoints: 12}).stops_level_points, 12);
+  for (const bad of ['-1', '1.5', '2147483648', 'abc']) {
+    assert.throws(() => instrumentPayload({...valid(), stops_level_points: bad}), /stops level points|Stops level/i);
+  }
+});

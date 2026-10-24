@@ -188,7 +188,7 @@ export const sidebarData = [
     initiallyExpanded: true,
     children: [
       {
-        label: "RTX5 Server",
+        label: "Server",
             icon: Cpu,
             initiallyExpanded: true,
             active: true,

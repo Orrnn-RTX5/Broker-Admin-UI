@@ -20,6 +20,17 @@ export const ACCOUNT_MODE_OPTIONS = Object.freeze([
   { value: 'netting', label: 'Netting' },
 ]);
 
+/**
+ * The options the account CREATE wizard renders. Netting is shown but DISABLED:
+ * the default B-book RAM engine cannot open netting accounts, so a netting
+ * account would be stranded (cannot deposit or trade). Hedging stays the
+ * default. The edit popup keeps ACCOUNT_MODE_OPTIONS (its mode is read-only).
+ */
+export const ACCOUNT_MODE_CREATE_OPTIONS = Object.freeze([
+  { value: 'hedging', label: 'Hedging', disabled: false },
+  { value: 'netting', label: 'Netting — not supported yet', disabled: true },
+]);
+
 export const LEVERAGE_MIN = 1;
 export const LEVERAGE_MAX = 10000;
 
@@ -258,8 +269,10 @@ export const buildAccountCreatePayload = (form, groupContext = null) => {
   if (email && !EMAIL_RE.test(email)) errors.email = 'Email is not valid.';
   const leverage = parseLeverage(form?.leverage);
   if (leverage.error) errors.leverage = leverage.error;
-  const mode = String(form?.accountMode ?? 'hedging').toLowerCase();
-  if (!ACCOUNT_MODE_OPTIONS.some((option) => option.value === mode)) errors.accountMode = 'Account mode must be hedging or netting.';
+  const mode = String(form?.accountMode ?? 'hedging').trim().toLowerCase();
+  // Fail closed: netting is refused before any request is sent (the RAM engine cannot open it).
+  if (mode === 'netting') errors.accountMode = 'Netting accounts are not supported yet. Select hedging.';
+  else if (!ACCOUNT_MODE_CREATE_OPTIONS.some((option) => !option.disabled && option.value === mode)) errors.accountMode = 'Account mode must be hedging or netting.';
   const master = String(form?.masterPassword ?? '');
   const investor = String(form?.investorPassword ?? '');
   if (master.length < 8) errors.masterPassword = 'Master password must have at least 8 characters.';

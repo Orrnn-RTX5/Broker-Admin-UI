@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  ACCOUNT_MODE_CREATE_OPTIONS,
   CONFIG_ERROR_CODES,
   buildAccountCreatePayload,
   buildAccountTradingChanges,
@@ -176,4 +177,22 @@ test('funding builds a ledger REQUEST, never a balance edit', () => {
   assert.equal(bad.payload, null);
   for (const key of ['kind', 'login', 'amount', 'currency']) assert.ok(bad.errors[key], key);
   assert.ok(buildFundingRequest('deposit', 1, { amount: '1.234', currency: 'USD' }).errors.amount);
+});
+
+test('account create wizard: netting shown disabled, hedging default, netting refused before any request', () => {
+  assert.deepEqual([...ACCOUNT_MODE_CREATE_OPTIONS], [
+    { value: 'hedging', label: 'Hedging', disabled: false },
+    { value: 'netting', label: 'Netting — not supported yet', disabled: true },
+  ]);
+  assert.equal(emptyAccountCreateForm('real', 100).accountMode, 'hedging');
+  const base = { ...emptyAccountCreateForm('real', 100), firstName: 'Ann', masterPassword: 'Secret-123', currency: 'USD' };
+  assert.equal(buildAccountCreatePayload({ ...base, accountMode: 'hedging' }).payload.AccountMode, 'hedging');
+  const refused = buildAccountCreatePayload({ ...base, accountMode: 'netting' });
+  assert.equal(refused.payload, null);
+  assert.match(refused.errors.accountMode, /Netting accounts are not supported yet/);
+  assert.equal(buildAccountCreatePayload({ ...base, accountMode: 'Netting' }).payload, null);
+  const padded = buildAccountCreatePayload({ ...base, accountMode: ' netting ' });
+  assert.equal(padded.payload, null);
+  assert.match(padded.errors.accountMode, /Netting accounts are not supported yet/);
+  assert.equal(buildAccountCreatePayload({ ...base, accountMode: ' hedging ' }).payload.AccountMode, 'hedging');
 });

@@ -86,6 +86,10 @@ const normalizeSymbolRow = (symbol, fallbackName = '') => {
   const source = typeof symbol === 'object' && symbol !== null ? symbol : {};
   const category = firstDefined(source.category, source.Category, source.path, source.Path);
   const parentSymbol = firstDefined(source.parentSymbol, source.ParentSymbol, source.parent_symbol, source.parent);
+  const rawStopsLevel = firstDefined(source.stops_level_points, source.stopsLevelPoints, source.stops_level, source.stopsLevel);
+  const stopsLevelPoints = rawStopsLevel !== undefined && rawStopsLevel !== null && rawStopsLevel !== ''
+    ? Math.max(0, Math.trunc(toNumber(rawStopsLevel, 0)))
+    : 0;
 
   return {
     ...source,
@@ -97,6 +101,8 @@ const normalizeSymbolRow = (symbol, fallbackName = '') => {
     category: category || '',
     contractSize: toNumber(firstDefined(source.contractSize, source.ContractSize, source.contract_size)),
     spread: toNumber(firstDefined(source.spread, source.Spread, source.spread_float, source.SpreadFloat)),
+    stops_level_points: stopsLevelPoints,
+    stopsLevelPoints,
     calcMode: firstDefined(source.calcMode, source.CalcMode, source.calc_mode, source.calculation_mode) || '',
     symbolType: normalizeSymbolType(source),
     parentSymbol: parentSymbol || '',

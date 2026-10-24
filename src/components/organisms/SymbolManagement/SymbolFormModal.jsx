@@ -80,7 +80,18 @@ export default function SymbolFormModal({symbol: existing, categories, instrumen
     finally {setSaving(false);}
   };
   const input = (key, label, type = 'text') => <label key={key} className="flex flex-col gap-1 text-xs">{label}
-    <input name={key} className="ui-input ui-input-sm" type={type} step={type === 'number' ? 'any' : undefined} value={form[key]} required={key !== 'description'} onChange={event => set(key, event.target.value)} />
+    <input
+      name={key}
+      className="ui-input ui-input-sm"
+      type={type}
+      step={key === 'stops_level_points' ? '1' : type === 'number' ? 'any' : undefined}
+      min={key === 'stops_level_points' ? '0' : undefined}
+      max={key === 'stops_level_points' ? '2147483647' : undefined}
+      placeholder={key === 'stops_level_points' ? '0 (no minimum)' : undefined}
+      value={form[key]}
+      required={key !== 'description' && key !== 'stops_level_points'}
+      onChange={event => set(key, event.target.value)}
+    />
   </label>;
   return <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{background: 'rgba(0,0,0,0.6)'}}>
     <section role="dialog" aria-modal="true" aria-label={existing ? 'Edit Symbol' : 'Add Symbol'} className="ui-card w-full max-w-3xl p-6 overflow-auto" style={{background: 'var(--surface)', maxHeight: '92vh'}}>

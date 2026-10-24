@@ -18,7 +18,7 @@ const profileLines = profile => profile?.status === 'available'
 const exportText = value => {
   const e = value.export;
   return [
-    `# RTX5 downstream ${e.role} session (FIX 4.4). One-time export; store it securely.`,
+    `# Downstream ${e.role} session (FIX 4.4). One-time export; store it securely.`,
     `AccessID=${e.access_id}`,
     `Role=${e.role}`,
     `SenderCompID=${e.sender_comp_id}`,
