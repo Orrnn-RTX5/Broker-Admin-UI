@@ -71,7 +71,6 @@ const createHandlers = ({
       ? (label) => { state.capabilityLabels.push(label); return realGetViewCapabilityToast(label); }
       : (label) => { state.capabilityLabels.push(label); },
     shouldBlockViewNavigation: () => false,
-    setIsSuperAdminOpen: () => {},
     setServerPopupData: () => {},
   });
   const create = new Function(...Object.keys(makeBindings()), `

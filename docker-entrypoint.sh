@@ -33,10 +33,8 @@ feed_send_token="${FEED_SEND_TOKEN:-${VITE_FEED_SEND_TOKEN:-true}}"
 feed_broker_token="${FEED_BROKER_TOKEN:-${VITE_FEED_BROKER_TOKEN:-}}"
 direct_manager_origins="${DIRECT_MANAGER_ORIGINS:-${VITE_DIRECT_MANAGER_ORIGINS:-}}"
 fix_relay_enabled="${FIX_RELAY_ENABLED:-${VITE_FIX_RELAY_ENABLED:-}}"
-super_admin_api_host="${SUPER_ADMIN_API_HOST:-${VITE_SUPER_ADMIN_API_HOST:-}}"
 
 [ -z "$default_discovery_base_url" ] && echo 'WARNING: DEFAULT_DISCOVERY_BASE_URL is not configured; broker discovery will fail visibly at runtime.' >&2
-[ -z "$super_admin_api_host" ] && echo 'WARNING: SUPER_ADMIN_API_HOST is not configured; Super Admin API calls will fail visibly at runtime.' >&2
 
 normalize_origin() {
   printf '%s' "${1:-}" | sed -e 's#/*$##' -e 's#^http://##' -e 's#^https://##' | tr '[:upper:]' '[:lower:]'
@@ -68,7 +66,6 @@ window.__RTX5_RUNTIME_CONFIG__ = {
   FEED_BROKER_TOKEN: "$(js_escape "$feed_broker_token")",
   DIRECT_MANAGER_ORIGINS: "$(js_escape "$direct_manager_origins")",
   FIX_RELAY_ENABLED: "$(js_escape "$fix_relay_enabled")",
-  SUPER_ADMIN_API_HOST: "$(js_escape "$super_admin_api_host")",
   API_HOST: "$(js_escape "$api_host")",
   WS_HOST: "$(js_escape "$ws_host")",
   API_HOST_EXT: "$(js_escape "$api_host_ext")",

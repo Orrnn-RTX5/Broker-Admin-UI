@@ -75,7 +75,7 @@ const TAB_INTRO = {
   Inheritance: 'Set the parent, purpose for newly created accounts, and manual overrides.',
   Migration: 'Preview and verify complete account/history migration before source deletion.',
   Margin: 'Please set up the mechanism of margin calculation for the group: execution mode and margin requirements.',
-  Symbols: 'Every symbol from Symbol Management. A symbol is tradeable in this group when it is enabled globally and not turned off for this group.',
+  Symbols: '',
   'Symbol List': 'Legacy allowed-symbols list with individual trade parameters per symbol.',
   Commissions: 'Please set up commissions for accounts in the group. Changes on this tab are saved immediately.',
 };
@@ -347,6 +347,7 @@ const GroupPropertiesPopup = ({
   const [initialCurrency, setInitialCurrency] = useState(() => readGroupCurrency(group));
   const [leverage, setLeverage] = useState(initialLeverage);
   const [showCreateAccount, setShowCreateAccount] = useState(false);
+  const [editedLeverage, setEditedLeverage] = useState(false);
   const leverageTouchedRef = useRef(false);
   const leverageChange = useMemo(() => buildGroupLeverageChange(initialLeverage, leverage), [initialLeverage, leverage]);
   const leverageDirty = leverage.trim() !== initialLeverage.trim();
@@ -370,8 +371,11 @@ const GroupPropertiesPopup = ({
   }, [currentGroupName]);
 
   const changeLeverage = (event) => {
+    const rawValue = event.target.value;
+    const hasTypedValue = String(rawValue).trim() !== '';
     leverageTouchedRef.current = true;
-    setLeverage(event.target.value);
+    setEditedLeverage(hasTypedValue);
+    setLeverage(hasTypedValue ? rawValue : initialLeverage);
   };
   // Only flag problems once the admin has touched the Margin fields.
   const marginErrors = useMemo(
@@ -379,10 +383,20 @@ const GroupPropertiesPopup = ({
     [marginDirty, marginForm]
   );
 
+  const [editedMarginLevels, setEditedMarginLevels] = useState({ marginCallLevel: false, stopOutLevel: false });
   const marginTouchedRef = useRef(false);
   const setMarginField = (field) => (event) => {
     const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
     marginTouchedRef.current = true;
+    if (field === 'marginCallLevel' || field === 'stopOutLevel') {
+      const hasTypedValue = String(value).trim() !== '';
+      setEditedMarginLevels((current) => ({ ...current, [field]: hasTypedValue }));
+      setMarginForm((current) => ({
+        ...current,
+        [field]: hasTypedValue ? value : initialMargin[field],
+      }));
+      return;
+    }
     setMarginForm((current) => ({ ...current, [field]: value }));
   };
 
@@ -404,10 +418,20 @@ const GroupPropertiesPopup = ({
           return;
         }
         const fresh = buildMarginForm(record);
-        setInitialMargin(fresh);
+        setInitialMargin((prevInitial) => {
+          if (!marginTouchedRef.current) {
+            setMarginForm(fresh);
+          } else {
+            setMarginForm((current) => rebaseMarginForm(prevInitial, current, fresh));
+          }
+          return fresh;
+        });
+        if (record.leverage !== undefined && record.leverage !== null && !leverageTouchedRef.current) {
+          const lev = String(record.leverage);
+          setInitialLeverage(lev);
+          setLeverage(lev);
+        }
         setSyncedAt(new Date());
-        // Keep anything the admin already typed; OK then sends only real differences.
-        if (!marginTouchedRef.current) setMarginForm(fresh);
       })
       .catch((error) => {
         if (!cancelled) setMarginLoadError(getApiErrorMessage(error, 'Failed to load the current group settings.'));
@@ -816,16 +840,11 @@ const GroupPropertiesPopup = ({
         aria-label={`Group properties: ${currentGroupName}`}
       >
         {/* Header */}
-        <div className="gpp-header" onPointerDown={(e) => dragControls.start(e)}>
-          <div className="gpp-header-icon"><Users size={15} aria-hidden="true" /></div>
+        <div className="gpp-header" onPointerDown={(e) => dragControls.start(e)} data-sync={syncStatus.tone || undefined}>
           <div className="gpp-header-copy">
-            <span className="gpp-eyebrow">Group properties</span>
             <span className="gpp-title" title={currentGroupName}>{currentGroupName}</span>
           </div>
           <div className="gpp-header-meta" onPointerDown={(e) => e.stopPropagation()}>
-            <span className={`gpp-sync ${syncStatus.tone}`} role="status" title={marginLoadError || undefined}>
-              <span className="gpp-sync-dot" aria-hidden="true" />{syncStatus.label}
-            </span>
             <button type="button" onClick={closeDialog} aria-label="Close" className="gpp-icon-button is-close"><X size={15} /></button>
           </div>
         </div>
@@ -850,7 +869,7 @@ const GroupPropertiesPopup = ({
 
         {/* Content */}
         <fieldset disabled={readOnly && activeTab !== 'Accounts'} className="gpp-body" role="tabpanel" aria-label={activeTab}>
-          <p className="gpp-intro">{TAB_INTRO[activeTab]}</p>
+          {TAB_INTRO[activeTab] && <p className="gpp-intro">{TAB_INTRO[activeTab]}</p>}
 
           {showHelp && (
             <div className="gpp-notice is-info gpp-help" role="note" style={{ marginBottom: 14 }}>
@@ -882,7 +901,7 @@ const GroupPropertiesPopup = ({
                 <div className="gpp-stack">
                   {marginLoadError && <Notice tone="danger">{marginLoadError}</Notice>}
 
-                  <Section title="Execution" description="How orders from accounts in this group are executed.">
+                  <Section title="Execution">
                     <div className="gpp-grid">
                       <SelectField
                         id="group-execution-mode"
@@ -896,46 +915,45 @@ const GroupPropertiesPopup = ({
                     </div>
                   </Section>
 
-                  <Section title="Margin requirements" description="Margin levels, in percent, at which a margin call is issued and positions are stopped out.">
+                  <Section title="Margin requirements">
                     <div className="gpp-grid">
                       <Field label="Margin call level" htmlFor="group-margin-call" error={marginErrors.marginCallLevel} hint="A margin call is issued below this level.">
                         <div className="gpp-input-group">
-                          <input id="group-margin-call" type="number" min="0" step="any" value={marginForm.marginCallLevel} onChange={setMarginField('marginCallLevel')} aria-invalid={Boolean(marginErrors.marginCallLevel)} disabled={marginLoading} className="gpp-input" />
+                          <input id="group-margin-call" type="number" min="0" step="any" placeholder={initialMargin.marginCallLevel || '150'} value={editedMarginLevels.marginCallLevel ? marginForm.marginCallLevel : ''} onChange={setMarginField('marginCallLevel')} aria-invalid={Boolean(marginErrors.marginCallLevel)} disabled={marginLoading} className="gpp-input" />
                           <span className="gpp-input-suffix" aria-hidden="true">%</span>
                         </div>
                       </Field>
                       <Field label="Stop out level" htmlFor="group-stop-out" error={marginErrors.stopOutLevel} hint="Must not exceed the margin call level.">
                         <div className="gpp-input-group">
-                          <input id="group-stop-out" type="number" min="0" step="any" value={marginForm.stopOutLevel} onChange={setMarginField('stopOutLevel')} aria-invalid={Boolean(marginErrors.stopOutLevel)} disabled={marginLoading} className="gpp-input" />
+                          <input id="group-stop-out" type="number" min="0" step="any" placeholder={initialMargin.stopOutLevel || '50'} value={editedMarginLevels.stopOutLevel ? marginForm.stopOutLevel : ''} onChange={setMarginField('stopOutLevel')} aria-invalid={Boolean(marginErrors.stopOutLevel)} disabled={marginLoading} className="gpp-input" />
                           <span className="gpp-input-suffix" aria-hidden="true">%</span>
                         </div>
                       </Field>
                     </div>
                   </Section>
 
-                  <Section title="Stop out handling" description="What happens to an account's balance after a stop out.">
+                  <Section title="Stop out handling">
                     <CheckboxField
                       id="group-negative-balance"
                       label="Compensate negative balance after stop out"
-                      description="Resets a negative balance to zero after positions are stopped out."
                       checked={marginForm.negativeBalanceProtection}
                       onChange={setMarginField('negativeBalanceProtection')}
                       disabled={marginLoading}
                     />
                   </Section>
-                  <Section title="Leverage" description="Leverage is locked while accounts in the group are trading.">
+                  <Section title="Leverage">
                     <Field label="Leverage" htmlFor="group-leverage" error={leverageDirty ? leverageChange.error : ''}>
                       <div className="gpp-input-group">
                         <span className="gpp-input-suffix" aria-hidden="true">1 :</span>
-                        <input id="group-leverage" type="number" min="1" max="10000" step="1" value={leverage} onChange={changeLeverage} aria-invalid={Boolean(leverageDirty && leverageChange.error)} disabled={marginLoading} className="gpp-input" />
+                        <input id="group-leverage" type="number" min="1" max="10000" step="1" placeholder={initialLeverage || '100'} value={editedLeverage ? leverage : ''} onChange={changeLeverage} aria-invalid={Boolean(leverageDirty && leverageChange.error)} disabled={marginLoading} className="gpp-input" />
                       </div>
                     </Field>
                   </Section>
 
-                  <Section title="Leverage" description="Leverage for accounts in this group. Locked while accounts in the group are trading.">
+                  <Section title="Leverage">
                     <div className="gpp-grid">
                       <Field label="Leverage (1 : N)" htmlFor="group-leverage" error={leverageDirty ? leverageChange.error : ''}>
-                        <input id="group-leverage" type="number" min="1" max="10000" step="1" value={leverage} onChange={changeLeverage} aria-invalid={Boolean(leverageDirty && leverageChange.error)} disabled={marginLoading} className="gpp-input" />
+                        <input id="group-leverage" type="number" min="1" max="10000" step="1" placeholder={initialLeverage || '100'} value={editedLeverage ? leverage : ''} onChange={changeLeverage} aria-invalid={Boolean(leverageDirty && leverageChange.error)} disabled={marginLoading} className="gpp-input" />
                       </Field>
                     </div>
                   </Section>
@@ -969,12 +987,6 @@ const GroupPropertiesPopup = ({
                   {overridesView && !overridesView.groupTrading && (
                     <div className="px-3 py-2 border border-red-500/40 bg-red-500/5 rounded-sm text-[11px] text-[color:var(--danger-500)]" role="note">
                       Trading is switched off for this group (or the group is disabled), so no symbol is tradeable. Overrides set here apply once it is on again.
-                    </div>
-                  )}
-                  {overridesView?.legacyAllowList && (
-                    <div className="px-3 py-2 border border-amber-500/40 bg-amber-500/5 rounded-sm text-[11px] text-amber-300" role="note">
-                      This group has a legacy allowed-symbols list ({overridesView.allowListCount} symbols). Symbols outside it stay blocked
-                      (&quot;Not in allow-list&quot;).
                     </div>
                   )}
                   <div className="flex items-center gap-2">
@@ -1228,7 +1240,7 @@ const GroupPropertiesPopup = ({
             ) : null}
           </div>
           <button type="button" onClick={closeDialog} disabled={isSaving} className="gpp-btn">Cancel</button>
-          <button type="button" onClick={handleOk} hidden={readOnly} disabled={isSaving || readOnly} className="gpp-btn is-primary">{isSaving ? 'Saving…' : 'OK'}</button>
+          <button type="button" onClick={handleOk} hidden={readOnly} disabled={isSaving || readOnly || !hasUnsavedChanges} className="gpp-btn is-primary">{isSaving ? 'Saving…' : 'OK'}</button>
         </div>
       </MotionDiv>
 

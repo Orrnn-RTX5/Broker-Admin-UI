@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Bug, Check, ChevronDown, Copy, FileText, Image as ImageIcon, Info, Loader2, Paperclip, X } from 'lucide-react';
+import { Bug, Check, ChevronDown, Copy, FileText, Image as ImageIcon, Info, Loader2, Paperclip, ShieldCheck, Terminal, X } from 'lucide-react';
 
 import {
   CATEGORY_LABELS,
@@ -39,7 +39,7 @@ const fieldClass = 'bug-report-field';
  * describe their own browser. Everything beyond title and description sits
  * behind a disclosure, so filing a quick report stays quick.
  */
-export default function BugReportDialog({ onClose }) {
+export default function BugReportDialog({ onClose, onSubmitted, page = '' }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [attachments, setAttachments] = useState([]);
   const [options, setOptions] = useState(null);
@@ -101,11 +101,13 @@ export default function BugReportDialog({ onClose }) {
 
   const titleLength = form.title.trim().length;
   const descriptionLength = form.description.trim().length;
-  const canSubmit = titleLength >= MIN_TITLE_LENGTH && descriptionLength >= MIN_DESCRIPTION_LENGTH && !submitting;
+  const titleReady = titleLength >= MIN_TITLE_LENGTH;
+  const descriptionReady = descriptionLength >= MIN_DESCRIPTION_LENGTH;
+  const canSubmit = titleReady && descriptionReady && !submitting;
   // A disabled button with no reason is what stopped the first reports.
-  const submitHint = titleLength < MIN_TITLE_LENGTH
+  const submitHint = !titleReady
       ? `Add a title (at least ${MIN_TITLE_LENGTH} characters) to send the report.`
-      : descriptionLength < MIN_DESCRIPTION_LENGTH
+      : !descriptionReady
           ? `Describe what happened (at least ${MIN_DESCRIPTION_LENGTH} characters) to send the report.`
           : '';
 
@@ -115,8 +117,9 @@ export default function BugReportDialog({ onClose }) {
     setSubmitting(true);
     setError(null);
     try {
-      const result = await submitBugReport({ form, attachments });
+      const result = await submitBugReport({ form: { ...form, page }, attachments });
       setReceipt(result);
+      onSubmitted?.(result, form);
     } catch (submitError) {
       setError(submitError?.message || 'The report could not be submitted');
     } finally {
@@ -133,6 +136,7 @@ export default function BugReportDialog({ onClose }) {
   };
 
   const storageDisabled = options && options.enabled === false;
+  const activeRouteLabel = page || (typeof window !== 'undefined' ? window.location?.pathname || '/' : '/');
 
   return (
     <Dialog.Root open onOpenChange={(open) => { if (!open && !submitting) onClose?.(); }}>
@@ -155,14 +159,33 @@ export default function BugReportDialog({ onClose }) {
           onEscapeKeyDown={(event) => { if (submitting) event.preventDefault(); }}
         >
           <header className="bug-report-header">
-            <span className="bug-report-header-icon"><Bug size={17} strokeWidth={1.7} aria-hidden="true" /></span>
+            <span className="bug-report-header-icon">
+              <Bug size={16} strokeWidth={1.8} aria-hidden="true" />
+            </span>
             <div className="bug-report-heading">
-              <Dialog.Title className="bug-report-title">Report a bug</Dialog.Title>
-              <Dialog.Description className="bug-report-subtitle">Share an issue with the RTX5 platform team.</Dialog.Description>
+              <div className="bug-report-title-row">
+                <Dialog.Title className="bug-report-title">Report a bug</Dialog.Title>
+                <span className="bug-report-module-badge">ISSUE TELEMETRY</span>
+              </div>
+              <Dialog.Description className="bug-report-subtitle">
+                Share an issue with the RTX5 platform team.
+              </Dialog.Description>
             </div>
-            <button type="button" onClick={onClose} disabled={submitting} aria-label="Close report dialog" className="bug-report-icon-button">
-              <X size={16} aria-hidden="true" />
-            </button>
+            <div className="bug-report-header-meta">
+              <span className="bug-report-route-pill" title={`Active view: ${activeRouteLabel}`}>
+                <Terminal size={11} aria-hidden="true" />
+                <span>{activeRouteLabel}</span>
+              </span>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={submitting}
+                aria-label="Close report dialog"
+                className="bug-report-icon-button bug-report-close-button"
+              >
+                <X size={15} aria-hidden="true" />
+              </button>
+            </div>
           </header>
 
           {receipt ? (
@@ -202,63 +225,125 @@ export default function BugReportDialog({ onClose }) {
                 ) : null}
 
                 <div className="bug-report-form-group">
-                  <label className={labelClass} htmlFor="bug-title">Title <span className="bug-report-required" aria-hidden="true">*</span></label>
+                  <label className={labelClass} htmlFor="bug-title">
+                    <span className="bug-report-label-text">Title</span>
+                    <span className={`bug-report-required ${titleReady ? 'bug-report-required--met' : ''}`}>
+                      Required
+                    </span>
+                  </label>
                   <input
-                    id="bug-title" className={fieldClass} value={form.title} onChange={update('title')}
-                    placeholder="Order rejected although the quote is live" maxLength={200} required
+                    id="bug-title"
+                    className={fieldClass}
+                    value={form.title}
+                    onChange={update('title')}
+                    placeholder="Order rejected although the quote is live"
+                    maxLength={200}
+                    required
                     disabled={submitting}
                   />
                 </div>
 
                 <div className="bug-report-form-group">
-                  <label className={labelClass} htmlFor="bug-description">What happened? <span className="bug-report-required" aria-hidden="true">*</span></label>
+                  <label className={labelClass} htmlFor="bug-description">
+                    <span className="bug-report-label-text">What happened?</span>
+                    <span className={`bug-report-required ${descriptionReady ? 'bug-report-required--met' : ''}`}>
+                      Required
+                    </span>
+                  </label>
                   <textarea
-                    id="bug-description" className={`${fieldClass} bug-report-description`}
-                    value={form.description} onChange={update('description')}
-                    placeholder="Describe what you were doing and what went wrong." maxLength={8000} required
+                    id="bug-description"
+                    className={`${fieldClass} bug-report-description`}
+                    value={form.description}
+                    onChange={update('description')}
+                    placeholder="Describe what you were doing and what went wrong."
+                    maxLength={8000}
+                    required
                     disabled={submitting}
                   />
                 </div>
 
                 <div className="bug-report-columns">
                   <div className="bug-report-form-group">
-                    <label className={labelClass} htmlFor="bug-category">Area</label>
-                    <select id="bug-category" className={fieldClass} value={form.category} onChange={update('category')} disabled={submitting}>
-                      {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
+                    <label className={labelClass} htmlFor="bug-category">
+                      <span className="bug-report-label-text">Area</span>
+                      <span className="bug-report-field-tag">MODULE</span>
+                    </label>
+                    <div className="bug-report-select-wrap">
+                      <select
+                        id="bug-category"
+                        className={fieldClass}
+                        value={form.category}
+                        onChange={update('category')}
+                        disabled={submitting}
+                      >
+                        {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={13} className="bug-report-select-chevron" aria-hidden="true" />
+                    </div>
                   </div>
                   <div className="bug-report-form-group">
-                    <label className={labelClass} htmlFor="bug-severity">Severity</label>
-                    <select id="bug-severity" className={fieldClass} value={form.severity} onChange={update('severity')} disabled={submitting}>
-                      {Object.entries(SEVERITY_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
+                    <label className={labelClass} htmlFor="bug-severity">
+                      <span className="bug-report-label-text">Severity</span>
+                      <span className={`bug-report-severity-pill bug-report-severity-pill--${form.severity}`}>
+                        {form.severity.toUpperCase()}
+                      </span>
+                    </label>
+                    <div className="bug-report-select-wrap">
+                      <span
+                        className={`bug-report-severity-dot bug-report-severity-dot--${form.severity}`}
+                        aria-hidden="true"
+                      />
+                      <select
+                        id="bug-severity"
+                        className={`${fieldClass} bug-report-select--with-dot`}
+                        value={form.severity}
+                        onChange={update('severity')}
+                        disabled={submitting}
+                      >
+                        {Object.entries(SEVERITY_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={13} className="bug-report-select-chevron" aria-hidden="true" />
+                    </div>
                   </div>
                 </div>
 
                 <section className="bug-report-attachments" aria-labelledby="bug-attachments-title">
                   <div className="bug-report-section-heading">
                     <h3 id="bug-attachments-title">Screenshots and logs</h3>
-                    <span className="bug-report-help">Optional · {attachments.length}/{MAX_ATTACHMENTS} files</span>
+                    <span className="bug-report-counter-pill">
+                      Optional · {attachments.length}/{MAX_ATTACHMENTS} files
+                    </span>
                   </div>
                   <div className="bug-report-upload-row">
                     <div className="bug-report-upload-copy">
-                      <span className="bug-report-upload-icon"><Paperclip size={17} strokeWidth={1.6} aria-hidden="true" /></span>
-                      <div><p>Attach a file or paste a screenshot</p><p className="bug-report-help">PNG, JPG, WebP, TXT or LOG · Up to {MAX_FILE_BYTES / (1024 * 1024)} MB each</p></div>
+                      <span className="bug-report-upload-icon">
+                        <Paperclip size={15} strokeWidth={1.7} aria-hidden="true" />
+                      </span>
+                      <div className="bug-report-upload-text">
+                        <p className="bug-report-upload-primary">Attach a file or paste a screenshot</p>
+                        <p className="bug-report-help">
+                          PNG, JPG, WebP, TXT or LOG · Up to {MAX_FILE_BYTES / (1024 * 1024)} MB each
+                        </p>
+                      </div>
                     </div>
                     <button
-                      type="button" onClick={() => fileInputRef.current?.click()}
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
                       disabled={submitting || attachments.length >= MAX_ATTACHMENTS}
-                      className="bug-report-button"
+                      className="bug-report-button bug-report-attach-btn"
                     >
-                      <Paperclip size={13} aria-hidden="true" /> Attach file
+                      <Paperclip size={12} aria-hidden="true" /> Attach file
                     </button>
                   </div>
                   <input
-                    ref={fileInputRef} type="file" multiple hidden
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    hidden
                     disabled={submitting}
                     accept="image/png,image/jpeg,image/webp,text/plain,.log,.txt"
                     onChange={(event) => { addFiles(event.target.files); event.target.value = ''; }}
@@ -268,12 +353,17 @@ export default function BugReportDialog({ onClose }) {
                       {attachments.map((file, index) => (
                         <li key={`${file.name}-${index}`}>
                           <span className="bug-report-file-name">
-                            {file.type.startsWith('image/') ? <ImageIcon size={14} aria-hidden="true" /> : <FileText size={14} aria-hidden="true" />}
+                            {file.type.startsWith('image/') ? (
+                              <ImageIcon size={13} aria-hidden="true" />
+                            ) : (
+                              <FileText size={13} aria-hidden="true" />
+                            )}
                             <span title={file.name}>{file.name}</span>
                           </span>
                           <span className="bug-report-file-size">{Math.max(1, Math.round(file.size / 1024))} KB</span>
                           <button
-                            type="button" aria-label={`Remove ${file.name}`}
+                            type="button"
+                            aria-label={`Remove ${file.name}`}
                             onClick={() => {
                               setAttachments((current) => current.filter((_, i) => i !== index));
                               setError(null);
@@ -290,59 +380,125 @@ export default function BugReportDialog({ onClose }) {
                   {/* Stated plainly, because a screenshot of this UI can contain
                       client names, balances and open positions. */}
                   <p className="bug-report-help bug-report-attachment-note">
-                    Paste with Ctrl+V. Attachments are shared with the platform team; remove sensitive details first.
+                    <span>
+                      Paste with <kbd className="bug-report-kbd">Ctrl+V</kbd>. Attachments are shared with the platform team; remove sensitive details first.
+                    </span>
                   </p>
                 </section>
 
-                <button
-                  type="button" onClick={() => setShowDetails((value) => !value)}
-                  className="bug-report-disclosure"
-                  aria-expanded={showDetails}
-                  aria-controls="bug-reproduction-details"
-                  disabled={submitting}
-                >
-                  <span><span className="bug-report-disclosure-label">Reproduction details <span className="bug-report-help">Optional</span></span><span className="bug-report-help">Steps to reproduce, expected result and actual result</span></span>
-                  <ChevronDown size={15} aria-hidden="true" />
-                </button>
+                <div className={`bug-report-accordion ${showDetails ? 'bug-report-accordion--open' : ''}`}>
+                  <button
+                    type="button"
+                    onClick={() => setShowDetails((value) => !value)}
+                    className="bug-report-disclosure"
+                    aria-expanded={showDetails}
+                    aria-controls="bug-reproduction-details"
+                    disabled={submitting}
+                  >
+                    <span className="bug-report-disclosure-copy">
+                      <span className="bug-report-disclosure-label">
+                        <span className="bug-report-disclosure-title">Reproduction details</span>
+                        <span className="bug-report-optional-pill">Optional</span>
+                      </span>
+                      <span className="bug-report-help">Steps to reproduce, expected result and actual result</span>
+                    </span>
+                    <span className="bug-report-disclosure-chevron">
+                      <ChevronDown size={14} aria-hidden="true" />
+                    </span>
+                  </button>
 
-                {showDetails ? (
-                  <div id="bug-reproduction-details" className="bug-report-details">
-                    <div className="bug-report-form-group">
-                      <label className={labelClass} htmlFor="bug-steps">Steps to reproduce (one per line)</label>
-                      <textarea id="bug-steps" className={fieldClass} value={form.steps} onChange={update('steps')} placeholder={'Open EURUSD\nClick Buy\nOrder is rejected'} disabled={submitting} />
-                    </div>
-                    <div className="bug-report-columns">
+                  {showDetails ? (
+                    <div id="bug-reproduction-details" className="bug-report-details">
                       <div className="bug-report-form-group">
-                        <label className={labelClass} htmlFor="bug-expected">Expected</label>
-                        <textarea id="bug-expected" className={fieldClass} value={form.expected} onChange={update('expected')} placeholder="What should happen?" disabled={submitting} />
+                        <label className={labelClass} htmlFor="bug-steps">
+                          <span className="bug-report-label-text">Steps to reproduce (one per line)</span>
+                          <span className="bug-report-field-tag">SEQUENCE</span>
+                        </label>
+                        <textarea
+                          id="bug-steps"
+                          className={fieldClass}
+                          value={form.steps}
+                          onChange={update('steps')}
+                          placeholder={'1. Open EURUSD\n2. Click Buy\n3. Order is rejected'}
+                          disabled={submitting}
+                        />
                       </div>
-                      <div className="bug-report-form-group">
-                        <label className={labelClass} htmlFor="bug-actual">Actual</label>
-                        <textarea id="bug-actual" className={fieldClass} value={form.actual} onChange={update('actual')} placeholder="What happened instead?" disabled={submitting} />
+                      <div className="bug-report-columns">
+                        <div className="bug-report-form-group">
+                          <label className={labelClass} htmlFor="bug-expected">
+                            <span className="bug-report-label-text">Expected</span>
+                            <span className="bug-report-field-tag bug-report-field-tag--expected">TARGET</span>
+                          </label>
+                          <textarea
+                            id="bug-expected"
+                            className={fieldClass}
+                            value={form.expected}
+                            onChange={update('expected')}
+                            placeholder="What should happen?"
+                            disabled={submitting}
+                          />
+                        </div>
+                        <div className="bug-report-form-group">
+                          <label className={labelClass} htmlFor="bug-actual">
+                            <span className="bug-report-label-text">Actual</span>
+                            <span className="bug-report-field-tag bug-report-field-tag--actual">OBSERVED</span>
+                          </label>
+                          <textarea
+                            id="bug-actual"
+                            className={fieldClass}
+                            value={form.actual}
+                            onChange={update('actual')}
+                            placeholder="What happened instead?"
+                            disabled={submitting}
+                          />
+                        </div>
                       </div>
                     </div>
+                  ) : null}
+                </div>
+
+                <div className="bug-report-environment">
+                  <div className="bug-report-environment-chips" aria-hidden="true">
+                    <span className="bug-report-telemetry-chip">
+                      <Info size={11} /> AUTO-DIAGNOSTICS
+                    </span>
+                    <span className="bug-report-telemetry-chip">APP VERSION</span>
+                    <span className="bug-report-telemetry-chip">OS &amp; BROWSER</span>
+                    <span className="bug-report-telemetry-chip">VIEWPORT</span>
+                    <span className="bug-report-telemetry-chip bug-report-telemetry-chip--secure">
+                      <ShieldCheck size={11} /> NO TOKENS / CREDENTIALS
+                    </span>
                   </div>
-                ) : null}
-
-                <p className="bug-report-environment">
-                  <Info size={14} aria-hidden="true" />
-                  <span>
+                  <p className="bug-report-environment-copy">
                     Your application version, browser, operating system and current screen are attached automatically.
                     Passwords and session tokens are never included.
-                  </span>
-                </p>
+                  </p>
+                </div>
 
                 {error ? (
                   <p role="alert" className="bug-report-notice bug-report-notice--error">{error}</p>
                 ) : null}
               </div>
               <footer className="bug-report-footer">
-                <p className="bug-report-submit-hint" id="bug-submit-hint" role="status">{submitting ? 'Sending your report…' : submitHint || 'Ready to send to the platform team.'}</p>
+                <div className="bug-report-status-wrap">
+                  <span
+                    className={`bug-report-status-dot ${canSubmit ? 'bug-report-status-dot--ready' : 'bug-report-status-dot--pending'}`}
+                    aria-hidden="true"
+                  />
+                  <p className="bug-report-submit-hint" id="bug-submit-hint" role="status">
+                    {submitting ? 'Sending your report…' : submitHint || 'Ready to send to the platform team.'}
+                  </p>
+                </div>
                 <div className="bug-report-actions">
                   <button type="button" onClick={onClose} disabled={submitting} className="bug-report-button">
                     Cancel
                   </button>
-                  <button type="submit" disabled={!canSubmit} aria-describedby="bug-submit-hint" className="bug-report-button bug-report-button--primary">
+                  <button
+                    type="submit"
+                    disabled={!canSubmit}
+                    aria-describedby="bug-submit-hint"
+                    className="bug-report-button bug-report-button--primary"
+                  >
                     {submitting && <Loader2 size={13} className="bug-report-spinner" aria-hidden="true" />}
                     {submitting ? 'Submitting…' : 'Submit report'}
                   </button>

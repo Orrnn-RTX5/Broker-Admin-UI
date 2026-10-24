@@ -1419,7 +1419,7 @@ const AdminDataTableContent = ({
     return <LeveragesView />;
   }
   if (viewType === 'LP Routing') {
-    return <LPRoutingView />;
+    return <LPRoutingView refreshTrigger={refreshTrigger} />;
   }
   if (viewType === 'Leverage Schedules') {
     return <LeverageScheduleView />;
@@ -1434,7 +1434,7 @@ const AdminDataTableContent = ({
     return <SessionOverridesView />;
   }
   if (viewType === 'Spreads') {
-    return <SpreadsView />;
+    return <SpreadsView refreshTrigger={refreshTrigger} />;
   }
   if (viewType === 'Custom Fields') {
     return <CustomFieldsView />;

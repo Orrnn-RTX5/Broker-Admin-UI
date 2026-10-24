@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Copy, ToggleLeft, ToggleRight, Edit2, Loader2, X, Wrench } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { Search, Plus, Copy, Edit2, Loader2, X, Wrench, Info } from 'lucide-react';
 import {
   symbolClone, symbolCategoryList,
 } from '../../../services/api';
@@ -8,9 +9,11 @@ import { getApiErrorMessage, normalizeArrayResponse } from '../../../utils/apiSh
 import { buildActionableErrorState } from '../../../utils/errorState';
 import { invalidateLpSymbols, loadLpSymbols } from '../../../utils/lpSymbols';
 import useSymbolStore from '../../../store/useSymbolStore';
+import { initialSymbolManagementState, rememberSymbolManagement } from '../../../utils/dynamicSymbolView';
 import SymbolFormModal from './SymbolFormModal';
 import BulkCloneWizard from './BulkCloneWizard';
 import ActionableErrorState from '../../atoms/ActionableErrorState';
+import './SymbolsTab.css';
 import {
   STATUS_FILTERS, buildSymbolRows, categoryFilterOptions, cloneSourceOptions, cloneDefaultsFromSource,
   filterSymbolRows, streamingState, symbolCountSummary,
@@ -257,12 +260,12 @@ const CloneModal = ({ categories, onClose, onSuccess, onConfigure }) => {
 
 // ─── Streaming indicator ───────────────────────────────────────────────────────
 const StreamingIndicator = ({ state }) => {
-  if (state === 'unknown') return null;
+  if (state === 'unknown') return <span className="symbols-management-feed">Awaiting</span>;
   const live = state === 'live';
   return (
     <span
-      className="ml-2 inline-flex items-center gap-1 text-[10px] align-middle"
-      style={{ color: 'var(--muted)', fontWeight: 400 }}
+      className="symbols-management-feed"
+      data-live={live}
       title={live ? 'The LP is streaming prices for this symbol' : 'No prices are streaming for this symbol'}
     >
       <span
@@ -284,11 +287,16 @@ const selectStreamedKey = (state) => {
 };
 
 // ─── Main Tab ──────────────────────────────────────────────────────────────────
-const SymbolsTab = () => {
-  const [symbols, setSymbols] = useState([]); // configured instruments
-  const [lpEntries, setLpEntries] = useState([]); // merged LP symbols (utils/lpSymbols)
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
+const SymbolsTab = ({ toolbarTarget }) => {
+  const [initial] = useState(() => initialSymbolManagementState(useSymbolStore.getState()));
+  const [symbols, setSymbols] = useState(initial.symbols); // configured instruments
+  const [lpEntries, setLpEntries] = useState(initial.lpEntries); // merged LP symbols (utils/lpSymbols)
+  const [categories, setCategories] = useState(initial.categories);
+  const [loading, setLoading] = useState(initial.loading);
+  const [syncing, setSyncing] = useState(initial.syncing);
+  const [fromDynamic, setFromDynamic] = useState(initial.fromDynamic);
+  const hasRowsRef = useRef(initial.symbols.length > 0 || initial.lpEntries.length > 0);
+  const requestRef = useRef(0);
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterType, setFilterType] = useState('');
@@ -306,8 +314,13 @@ const SymbolsTab = () => {
   );
 
   const load = async (force = false) => {
-    setLoading(true);
+    const requestId = requestRef.current + 1;
+    requestRef.current = requestId;
+    const current = () => requestId === requestRef.current;
+    const blocking = !hasRowsRef.current;
     setLoadError(null);
+    if (blocking) setLoading(true);
+    else setSyncing(true);
     try {
       const [symsResult, catsResult, lpResult] = await Promise.allSettled([
         InstrumentsService.getConfiguredInstruments({ page: 1, limit: SYMBOL_MANAGEMENT_LIMIT, search: '', enabled: '' }),
@@ -318,24 +331,32 @@ const SymbolsTab = () => {
         ),
         loadLpSymbols(InstrumentsService, { force }),
       ]);
+      if (!current()) return;
       const failures = [];
-      if (symsResult.status === 'fulfilled') {
-        setSymbols(normalizeSymbolManagementRows(symsResult.value));
-      } else {
-        setSymbols([]);
-        failures.push(`Symbols: ${getApiErrorMessage(symsResult.reason, 'symbol list request failed')}`);
-      }
-      if (catsResult.status === 'fulfilled') {
-        setCategories(normalizeCategoryRows(catsResult.value));
-      } else {
-        setCategories([]);
-        failures.push(`Categories: ${getApiErrorMessage(catsResult.reason, 'category list request failed')}`);
-      }
-      if (lpResult.status === 'fulfilled') {
-        setLpEntries(lpResult.value);
-      } else {
-        setLpEntries([]);
-        failures.push(`LP symbols: ${getApiErrorMessage(lpResult.reason, 'LP symbol catalogue request failed')}`);
+      const nextSymbols = symsResult.status === 'fulfilled'
+        ? normalizeSymbolManagementRows(symsResult.value)
+        : null;
+      const nextCategories = catsResult.status === 'fulfilled'
+        ? normalizeCategoryRows(catsResult.value)
+        : null;
+      const nextLpEntries = lpResult.status === 'fulfilled' ? lpResult.value : null;
+      if (nextSymbols) setSymbols(nextSymbols);
+      else if (!hasRowsRef.current) setSymbols([]);
+      if (!nextSymbols) failures.push(`Symbols: ${getApiErrorMessage(symsResult.reason, 'symbol list request failed')}`);
+      if (nextCategories) setCategories(nextCategories);
+      else if (!hasRowsRef.current) setCategories([]);
+      if (!nextCategories) failures.push(`Categories: ${getApiErrorMessage(catsResult.reason, 'category list request failed')}`);
+      if (nextLpEntries) setLpEntries(nextLpEntries);
+      else if (!hasRowsRef.current) setLpEntries([]);
+      if (!nextLpEntries) failures.push(`LP symbols: ${getApiErrorMessage(lpResult.reason, 'LP symbol catalogue request failed')}`);
+      if (nextSymbols || nextLpEntries) {
+        hasRowsRef.current = true;
+        setFromDynamic(false);
+        rememberSymbolManagement({
+          symbols: nextSymbols || symbols,
+          categories: nextCategories || categories,
+          lpEntries: nextLpEntries || lpEntries,
+        });
       }
       if (failures.length > 0) {
         setLoadError(buildActionableErrorState(failures.join(' '), {
@@ -344,7 +365,10 @@ const SymbolsTab = () => {
         }));
       }
     } finally {
-      setLoading(false);
+      if (current()) {
+        setLoading(false);
+        setSyncing(false);
+      }
     }
   };
 
@@ -354,12 +378,31 @@ const SymbolsTab = () => {
     return load(true);
   };
 
+  const streamedCount = useSymbolStore((state) => (
+    Array.isArray(state.feedSymbolNames) ? state.feedSymbolNames.length : state.symbolMetadata.length
+  ));
+
+  useEffect(() => {
+    if (!loading || hasRowsRef.current) return;
+    const seed = initialSymbolManagementState(useSymbolStore.getState());
+    if (seed.symbols.length === 0 && seed.lpEntries.length === 0) return;
+    setSymbols(seed.symbols);
+    setLpEntries(seed.lpEntries);
+    setCategories(seed.categories);
+    setFromDynamic(seed.fromDynamic);
+    setLoading(false);
+    setSyncing(true);
+    hasRowsRef.current = true;
+  }, [loading, streamedCount]);
+
   useEffect(() => {
     const loadTimer = window.setTimeout(() => {
       load();
     }, 0);
 
     return () => window.clearTimeout(loadTimer);
+    // Paint the feed first. This request refreshes that list and must not restart on each quote.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleToggle = async (sym) => {
@@ -387,57 +430,63 @@ const SymbolsTab = () => {
 
   const closeForm = () => { setModal(null); setEditTarget(null); setConfigureSymbol(''); };
 
-  return (
-    <div className="h-full flex flex-col gap-3 overflow-hidden">
-      {/* Toolbar */}
-      <div className="flex items-center gap-2 flex-wrap shrink-0">
+  const toolbar = (
+      <div className="symbols-management-toolbar">
+        <div className="symbols-management-filters">
         <div className="relative">
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--muted)' }} />
-          <input className="ui-input ui-input-sm" style={{ paddingLeft: 30, width: 200 }} placeholder="Search symbols…" value={search} onChange={e => setSearch(e.target.value)} />
+          <input type="search" aria-label="Search symbols" className="ui-input ui-input-sm" style={{ paddingLeft: 30, width: 200 }} placeholder="Search symbols…" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <select className="ui-input ui-input-sm" value={filterCategory} onChange={e => setFilterCategory(e.target.value)} style={{ width: 150 }}>
+        <select aria-label="Filter by category" className="ui-input ui-input-sm" value={filterCategory} onChange={e => setFilterCategory(e.target.value)} style={{ width: 150 }}>
           <option value="">All Categories</option>
           {categoryOptions.map(name => <option key={name} value={name}>{name}</option>)}
         </select>
-        <select className="ui-input ui-input-sm" value={filterType} onChange={e => setFilterType(e.target.value)} style={{ width: 130 }}>
+        <select aria-label="Filter by type" className="ui-input ui-input-sm" value={filterType} onChange={e => setFilterType(e.target.value)} style={{ width: 130 }}>
           <option value="">All Types</option>
           <option value="base">Base</option>
           <option value="derived">Derived</option>
         </select>
-        <select className="ui-input ui-input-sm" value={filterEnabled} onChange={e => setFilterEnabled(e.target.value)} style={{ width: 140 }}>
+        <select aria-label="Filter by status" className="ui-input ui-input-sm" value={filterEnabled} onChange={e => setFilterEnabled(e.target.value)} style={{ width: 140 }}>
           {STATUS_FILTERS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
         {!loading && (
-          <span className="text-xs" style={{ color: 'var(--muted)' }}>
+          <span className="symbols-management-toolbar-summary" style={{ color: 'var(--muted)' }}>
             {symbolCountSummary(rows)}
             {filtered.length !== rows.length && ` · ${filtered.length} shown`}
           </span>
         )}
-        <div className="flex-1" />
+        </div>
+        <div className="symbols-management-actions">
         <button onClick={() => setModal('clone')} className="ui-btn ui-btn-secondary ui-btn-sm">
           <Copy size={13} /> Clone
         </button>
         <button onClick={() => { setEditTarget(null); setConfigureSymbol(''); setModal('add'); }} className="ui-btn ui-btn-primary ui-btn-sm">
           <Plus size={13} /> Add Symbol
         </button>
+        </div>
       </div>
+  );
+
+  return (
+    <div className="symbols-management-panel">
+      {toolbarTarget && createPortal(toolbar, toolbarTarget)}
       {loadError && (
         <ActionableErrorState state={loadError} onAction={() => load(true)} compact className="m-0 shrink-0" />
       )}
 
-      {savedNotice && <p role="status" className="text-xs">{savedNotice}</p>}
-      <p className="text-xs" style={{color: 'var(--text-2)'}}>Enabled symbols remain subject to account group permissions, trading sessions and fresh executable quotes. Symbols marked “Not configured” stream from the LP but cannot be traded until you configure them.</p>
+      {savedNotice && <p role="status" className="symbols-management-notice">{savedNotice}</p>}
       {/* Table */}
-      <div className="ui-card flex-1 overflow-auto">
+      <div className="symbols-management-table-scroll" role="region" aria-label="Symbol instruments" tabIndex={0} aria-busy={loading}>
         {loading ? (
           <div className="flex items-center justify-center h-40 text-sm" style={{ color: 'var(--muted)' }}>
             <Loader2 size={16} className="animate-spin mr-2" /> Loading symbols…
           </div>
         ) : (
-          <table className="ui-grid w-full">
+          <table className="ui-grid symbols-management-table" aria-label="Symbol instruments">
             <thead>
               <tr>
                 <th>Symbol</th>
+                <th>Feed</th>
                 <th>Type</th>
                 <th>Category</th>
                 <th>Digits</th>
@@ -445,25 +494,23 @@ const SymbolsTab = () => {
                 <th>Spread</th>
                 <th>Calc Mode</th>
                 <th>Status</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={9} className="text-center py-10 text-sm" style={{ color: 'var(--muted)' }}>No symbols found.</td></tr>
+                <tr><td colSpan={10} className="symbols-management-empty">No symbols found.</td></tr>
               ) : filtered.map(s => s.configured ? (
                 <tr key={s.symbol}>
-                  <td style={{ color: 'var(--text)', fontWeight: 500 }}>
+                  <td className="symbols-management-code" title={s.parentSymbol ? `${s.symbol} · derived from ${s.parentSymbol}` : s.symbol}>
                     {s.symbol}
                     {s.symbolType === 'derived' && s.parentSymbol && (
-                      <span className="ml-2 ui-badge ui-badge-primary text-[10px]">derived: {s.parentSymbol}</span>
+                      <span className="symbols-management-parent">{s.parentSymbol}</span>
                     )}
-                    <StreamingIndicator state={streamingState(s.symbol, streamedNames)} />
                   </td>
+                  <td><StreamingIndicator state={streamingState(s.symbol, streamedNames)} /></td>
                   <td>
-                    <span className={`ui-badge text-[10px] ${s.symbolType === 'derived' ? 'ui-badge-warning' : 'ui-badge-success'}`}>
-                      {s.symbolType || 'base'}
-                    </span>
+                    {s.symbolType === 'derived' ? 'Derived' : 'Base'}
                   </td>
                   <td style={{ color: 'var(--text-2)' }}>{s.category || '—'}</td>
                   <td style={{ color: 'var(--text-2)' }}>{s.digits ?? '—'}</td>
@@ -474,27 +521,26 @@ const SymbolsTab = () => {
                   </td>
                   <td style={{ color: 'var(--text-2)' }}>{s.calcMode || '—'}</td>
                   <td>
-                    <span className={`ui-badge text-[10px] ${s.enabled ? 'ui-badge-success' : 'ui-badge-danger'}`}>
+                    <span className="symbols-management-status" data-tone={s.enabled ? 'enabled' : 'disabled'}>
                       {s.enabled ? 'Enabled' : 'Disabled'}
                     </span>
                   </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <div className="flex items-center justify-end gap-1">
+                  <td>
+                    <div className="symbols-management-row-actions">
                       <button
                         onClick={() => handleToggle(s)}
                         disabled={togglingSymbol === s.symbol}
-                        className="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm"
+                        className="ui-btn ui-btn-ghost ui-btn-sm symbols-management-toggle"
                         title={s.enabled ? 'Disable' : 'Enable'}
+                        aria-label={`${s.enabled ? 'Disable' : 'Enable'} ${s.symbol}`}
                       >
-                        {togglingSymbol === s.symbol
-                          ? <Loader2 size={13} className="animate-spin" />
-                          : s.enabled ? <ToggleRight size={14} style={{ color: 'var(--success-500)' }} /> : <ToggleLeft size={14} style={{ color: 'var(--muted)' }} />
-                        }
+                        {togglingSymbol === s.symbol ? 'Updating…' : s.enabled ? 'Disable' : 'Enable'}
                       </button>
                       <button
                         onClick={() => { setEditTarget(s); setModal('edit'); }}
                         className="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm"
                         title="Edit"
+                        aria-label={`Edit ${s.symbol}`}
                       >
                         <Edit2 size={13} />
                       </button>
@@ -503,10 +549,10 @@ const SymbolsTab = () => {
                 </tr>
               ) : (
                 <tr key={s.symbol}>
-                  <td style={{ color: 'var(--text-2)', fontWeight: 500 }}>
+                  <td className="symbols-management-code" title={s.symbol}>
                     {s.symbol}
-                    <StreamingIndicator state={streamingState(s.symbol, streamedNames)} />
                   </td>
+                  <td><StreamingIndicator state={streamingState(s.symbol, streamedNames)} /></td>
                   <td style={{ color: 'var(--muted)' }}>—</td>
                   <td style={{ color: 'var(--text-2)' }}>{s.category || '—'}</td>
                   <td style={{ color: 'var(--muted)' }}>—</td>
@@ -514,20 +560,29 @@ const SymbolsTab = () => {
                   <td style={{ color: 'var(--muted)' }}>—</td>
                   <td style={{ color: 'var(--muted)' }}>—</td>
                   <td>
-                    <span className="ui-badge ui-badge-neutral text-[10px]" title="Streams from the LP but has no instrument specifications; not tradable">
-                      Not configured
-                    </span>
+                    {s.detailsPending ? (
+                      <span className="symbols-management-status" data-tone="pending" title="Live feed symbol. Specifications are still loading.">
+                        Syncing
+                      </span>
+                    ) : (
+                      <span className="symbols-management-status" data-tone="pending" title="Streams from the LP but has no instrument specifications; not tradable">
+                        Not configured
+                      </span>
+                    )}
                   </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <div className="flex items-center justify-end gap-1">
+                  <td>
+                    {s.detailsPending ? null : (
+                    <div className="flex items-center justify-start gap-1">
                       <button
                         onClick={() => { setEditTarget(null); setConfigureSymbol(s.symbol); setModal('configure'); }}
                         className="ui-btn ui-btn-secondary ui-btn-sm"
                         title={`Configure ${s.symbol} as a tradable instrument`}
+                        aria-label={`Configure ${s.symbol}`}
                       >
                         <Wrench size={12} /> Configure
                       </button>
                     </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -535,6 +590,14 @@ const SymbolsTab = () => {
           </table>
         )}
       </div>
+
+      <footer className="symbols-management-footer">
+        <span role="status">{loading ? 'Loading symbols…' : fromDynamic ? `Showing ${filtered.length} live symbols${syncing ? ' · updating specifications' : ''}` : `Showing ${filtered.length} of ${rows.length} symbols${syncing ? ' · updating' : ''}`}</span>
+        <details className="symbols-management-help">
+          <summary><Info size={12} /> Trading requirements</summary>
+          <p>Enabled symbols remain subject to account group permissions, trading sessions and fresh executable quotes. Symbols marked “Not configured” stream from the LP but cannot be traded until you configure them.</p>
+        </details>
+      </footer>
 
       {/* Modals */}
       {(modal === 'add' || modal === 'edit' || modal === 'configure') && (

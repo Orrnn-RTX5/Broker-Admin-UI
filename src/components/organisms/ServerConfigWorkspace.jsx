@@ -1,13 +1,8 @@
 import React, { useState } from 'react';
 import {
   Activity,
-  ArrowRight,
   BookOpenCheck,
-  Clock3,
   Database,
-  HardDrive,
-  Radio,
-  RefreshCw,
   Settings2,
   ShieldCheck,
   ShieldOff,
@@ -58,12 +53,9 @@ const formatServerMetric = (key, value) => {
 
 const formatLabel = (key) => key.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 
-const MetricCard = ({ icon: Icon, label, value, note, tone = 'default' }) => (
+const MetricCard = ({ label, value, note, tone = 'default' }) => (
   <div className={`server-config-kpi ${tone !== 'default' ? `is-${tone}` : ''}`}>
-    <div className="server-config-kpi-top">
-      <span className="server-config-kpi-label">{label}</span>
-      {React.createElement(Icon, { size: 16, 'aria-hidden': true })}
-    </div>
+    <span className="server-config-kpi-label">{label}</span>
     <strong className="server-config-kpi-value" title={String(value)}>{value}</strong>
     <span className="server-config-kpi-note">{note}</span>
   </div>
@@ -76,14 +68,14 @@ const MetricRow = ({ label, value, tone = 'default' }) => (
   </div>
 );
 
-const StatusTab = ({ navigate, refreshTrigger }) => {
-  const { data, loading, error, lastUpdated, saved, refresh: load } = useServerStatus(refreshTrigger);
+const StatusTab = ({ refreshTrigger }) => {
+  const { data, loading, error, refresh: load } = useServerStatus(refreshTrigger);
   useWorkspaceStartupReady('view', Boolean(data || error) || !loading);
 
   if (!data && loading) {
     return (
       <div className="server-config-scroll" role="status" aria-label="Loading server status">
-        <div className="server-config-inner">
+        <div className="server-config-inner server-config-inner--status">
           <div className="server-config-skeleton-line" />
           <div className="server-config-kpi-grid">
             {Array.from({ length: 4 }, (_, index) => <div className="server-config-skeleton-card" key={index} />)}
@@ -119,23 +111,9 @@ const StatusTab = ({ navigate, refreshTrigger }) => {
 
   return (
     <div className="server-config-scroll">
-      <div className="server-config-inner">
-        <div className="server-config-section-head">
-          <div>
-            <div className="server-config-eyebrow">OVERVIEW</div>
-            <h2>Server health</h2>
-            <p>Current runtime and connection metrics from the server.</p>
-          </div>
-          <div className="server-config-head-actions">
-            <span className="server-config-updated">
-              <span className="server-config-updated-dot" />
-              {lastUpdated ? `${saved ? 'Saved snapshot' : 'Snapshot'} ${new Date(lastUpdated).toLocaleTimeString()}` : 'Awaiting snapshot'}
-            </span>
-            <button type="button" className="server-config-button server-config-button-secondary" onClick={load} disabled={loading}>
-              <RefreshCw size={13} className={loading ? 'server-config-spin' : ''} aria-hidden="true" />
-              {loading ? 'Refreshing' : 'Refresh'}
-            </button>
-          </div>
+      <div className="server-config-inner server-config-inner--status">
+        <div className="server-config-section-head server-config-section-head--status">
+          <h2>Server health</h2>
         </div>
 
         {error && (
@@ -146,10 +124,10 @@ const StatusTab = ({ navigate, refreshTrigger }) => {
         )}
 
         <div className="server-config-kpi-grid">
-          <MetricCard icon={Users} label="Active sessions" value={formatServerMetric('active_sessions', metrics.active_sessions)} note="Currently connected sessions" />
-          <MetricCard icon={Clock3} label="Uptime" value={uptime} note="Since the last server start" />
-          <MetricCard icon={HardDrive} label="Memory allocated" value={allocatedMemory} note="Runtime allocation" />
-          <MetricCard icon={Radio} label="Messaging" value={natsLabel} note="NATS connection" tone={natsTone} />
+          <MetricCard label="Active sessions" value={formatServerMetric('active_sessions', metrics.active_sessions)} note="Currently connected sessions" />
+          <MetricCard label="Uptime" value={uptime} note="Since the last server start" />
+          <MetricCard label="Memory allocated" value={allocatedMemory} note="Runtime allocation" />
+          <MetricCard label="Messaging" value={natsLabel} note="NATS connection" tone={natsTone} />
         </div>
 
         <div className="server-config-detail-grid">
@@ -195,24 +173,6 @@ const StatusTab = ({ navigate, refreshTrigger }) => {
           </section>
         )}
 
-        <div className="server-config-section-caption">CONFIGURATION</div>
-        <div className="server-config-shortcuts">
-          <button type="button" onClick={() => navigate('settings')}>
-            <Settings2 size={16} aria-hidden="true" />
-            <span><strong>Server settings</strong><small>Review and edit configuration keys</small></span>
-            <ArrowRight size={14} aria-hidden="true" />
-          </button>
-          <button type="button" onClick={() => navigate('swaps')}>
-            <Database size={16} aria-hidden="true" />
-            <span><strong>Swap rates</strong><small>Review financing for each symbol</small></span>
-            <ArrowRight size={14} aria-hidden="true" />
-          </button>
-          <button type="button" onClick={() => navigate('halt')}>
-            <ShieldOff size={16} aria-hidden="true" />
-            <span><strong>Trading controls</strong><small>Halt or resume a symbol</small></span>
-            <ArrowRight size={14} aria-hidden="true" />
-          </button>
-        </div>
       </div>
     </div>
   );
@@ -322,7 +282,7 @@ const ServerConfigWorkspace = ({ refreshTrigger = 0 }) => {
       </div>
       <div id="server-config-panel" className="server-config-tab-panel" role="tabpanel" aria-labelledby={`server-config-tab-${current.id}`}>
         <React.Suspense fallback={<div role="status" className="server-config-scroll">Loading section…</div>}>
-        {tab === 'status' && <StatusTab navigate={setTab} refreshTrigger={refreshTrigger} />}
+        {tab === 'status' && <StatusTab refreshTrigger={refreshTrigger} />}
         {tab === 'settings' && <ServerSettingsTab />}
         {tab === 'swaps' && <SwapRatesTab />}
         {tab === 'halt' && <TradingHaltTab />}

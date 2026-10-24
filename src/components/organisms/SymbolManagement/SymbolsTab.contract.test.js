@@ -23,6 +23,14 @@ test('SymbolsTab initial load uses InstrumentsService instead of legacy symbolLi
   assert.match(source, /withTimeout\(\s*symbolCategoryList\(\),\s*CATEGORY_LOAD_TIMEOUT_MS,/);
 });
 
+test('SymbolsTab paints the live feed before instrument requests finish', () => {
+  assert.match(source, /initialSymbolManagementState\(useSymbolStore\.getState\(\)\)/);
+  assert.match(source, /const blocking = !hasRowsRef\.current/);
+  assert.match(source, /if \(blocking\) setLoading\(true\)/);
+  assert.match(source, /detailsPending/);
+  assert.doesNotMatch(source, /const \[loading, setLoading\] = useState\(true\)/);
+});
+
 test('SymbolsTab lists unconfigured LP symbols with a Configure action', () => {
   assert.match(source, /loadLpSymbols\(InstrumentsService,\s*\{\s*force\s*\}\)/);
   assert.match(source, /buildSymbolRows\(symbols,\s*lpEntries\)/);

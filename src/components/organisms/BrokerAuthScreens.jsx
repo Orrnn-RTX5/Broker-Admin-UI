@@ -636,7 +636,6 @@ export const ManagerLogin = ({ navigate, onLoginSuccess }) => {
       }}
       switchToLabel="Admin login"
       onSwitchRole={() => navigate('/admin-login')}
-      onSuperAdminLogin={() => navigate('/super-admin-login')}
     >
 
       <Field id="manager-login" label="Login" type="number" icon={User} value={user} onChange={setUser} required />
@@ -829,7 +828,6 @@ export const AdminLogin = ({ navigate, onLoginSuccess }) => {
       onSwitchBroker={handleSwitchBroker}
       brokerLocked={!!runtimeLockedBroker}
       onRegisterBroker={runtimeLockedBroker ? undefined : () => navigate('/broker-manual-entry')}
-      onSuperAdminLogin={() => navigate('/super-admin-login')}
       rememberMe={rememberLogin}
       onRememberMeChange={handleRememberLoginChange}
     >
@@ -898,7 +896,6 @@ const LoginScreen = ({
   onRegisterBroker,
   switchToLabel,
   onSwitchRole,
-  onSuperAdminLogin,
   rememberMe = false,
   onRememberMeChange,
   children,
@@ -931,24 +928,15 @@ const LoginScreen = ({
               {loading ? <SpinnerLabel>Signing in</SpinnerLabel> : 'Sign in'}
             </button>
           </form>
-          <footer className="admin-login-footer">
-            {showFooterActions && (
+          {showFooterActions && (
+            <footer className="admin-login-footer">
               <div className="admin-login-footer-actions">
                 {!brokerLocked && onSwitchBroker && <button type="button" onClick={onSwitchBroker}>Switch broker</button>}
                 {!brokerLocked && onRegisterBroker && <button type="button" onClick={onRegisterBroker}>Register broker</button>}
                 {switchToLabel && onSwitchRole && <button type="button" onClick={onSwitchRole}>{switchToLabel}</button>}
               </div>
-            )}
-            <button
-              type="button"
-              onClick={onSuperAdminLogin || (() => {
-                window.history.pushState(null, '', '#super-admin-login');
-                window.dispatchEvent(new Event('popstate'));
-              })}
-            >
-              Super Admin Portal <ArrowRight size={12} aria-hidden="true" />
-            </button>
-          </footer>
+            </footer>
+          )}
         </>
       ) : (
       <>
@@ -1006,22 +994,6 @@ const LoginScreen = ({
           </div>
         )}
 
-        <div className="mt-5 pt-4 border-t border-[#edf0f4] flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-[12px] text-[#6b7280]">
-            <ShieldCheck size={14} className="text-[#4f46e5]" />
-            <span>Platform Provider</span>
-          </div>
-          <button
-            type="button"
-            onClick={onSuperAdminLogin || (() => {
-              window.history.pushState(null, '', '#super-admin-login');
-              window.dispatchEvent(new Event('popstate'));
-            })}
-            className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[#4f46e5] hover:text-[#4338ca] transition-colors"
-          >
-            <span>Super Admin Portal &rarr;</span>
-          </button>
-        </div>
       </div>
       </>
       )}

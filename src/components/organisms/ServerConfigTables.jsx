@@ -26,18 +26,18 @@ const EmptyState = ({ title, detail }) => (
   </div>
 );
 
-const TableHeader = ({ title, description, count, loading, onRefresh, searchLabel, searchPlaceholder, searchValue, onSearchChange, onSearch, searching, searchListId }) => (
+const TableHeader = ({ title, description, count, loading, onRefresh, searchLabel, searchPlaceholder, searchValue, onSearchChange, onSearch, searching, searchListId, compact = false, onClearSearch }) => (
   <>
-    <div className="server-config-table-heading">
+    {!compact && <div className="server-config-table-heading">
       <div className="server-config-table-heading-copy">
         <h2>{title}</h2>
         <p>{description}</p>
       </div>
       <span className="server-config-table-count">{count} {count === 1 ? 'record' : 'records'}</span>
-    </div>
+    </div>}
     <div className="server-config-table-toolbar">
       <form className="server-config-table-search" onSubmit={onSearch}>
-        <label htmlFor={`server-config-table-search-${searchLabel}`}>{searchLabel}</label>
+        <label className={compact ? 'sr-only' : undefined} htmlFor={`server-config-table-search-${searchLabel}`}>{searchLabel}</label>
         <div className="server-config-table-search-field">
           <Search size={13} aria-hidden="true" />
           <input
@@ -49,6 +49,7 @@ const TableHeader = ({ title, description, count, loading, onRefresh, searchLabe
             autoComplete="off"
             spellCheck={false}
           />
+          {onClearSearch && searchValue && <button type="button" className="server-settings-clear" aria-label="Clear setting lookup" onClick={onClearSearch} disabled={searching}><X size={12} aria-hidden="true" /></button>}
           {searchListId && <LpSymbolDatalist id={searchListId} />}
         </div>
         <button type="submit" className="server-config-table-button server-config-table-button--primary" disabled={searching || !searchValue.trim()}>
@@ -139,11 +140,10 @@ export const ServerSettingsTab = () => {
   };
 
   return (
-    <section className="server-config-table-view" aria-label="Server settings">
+    <section className="server-config-table-view server-config-table-view--settings" aria-label="Server settings">
       <TableHeader
+        compact
         title="Server Settings"
-        description="Review and update individual server parameters."
-        count={data.length}
         loading={loading}
         onRefresh={loadAll}
         searchLabel="Setting key"
@@ -152,6 +152,7 @@ export const ServerSettingsTab = () => {
         onSearchChange={(event) => { setSearchKey(event.target.value); setSearchResult(null); setSearchError(''); }}
         onSearch={handleSearch}
         searching={searching}
+        onClearSearch={() => { setSearchKey(''); setSearchResult(null); setSearchError(''); }}
       />
       <InlineMessage message={searchError} onDismiss={() => setSearchError('')} />
       <InlineMessage message={notice} type="success" onDismiss={() => setNotice('')} />
@@ -163,13 +164,14 @@ export const ServerSettingsTab = () => {
           <button type="button" onClick={() => setSearchResult(null)} aria-label="Close lookup result"><X size={13} /></button>
         </div>
       )}
-      <div className="server-config-table-scroll">
+      <div className="server-config-table-scroll" role="region" aria-label="Server settings table" tabIndex={0}>
         {loadError ? <ActionableErrorState title="Unable to load settings" message={loadError} actionLabel="Retry" onAction={loadAll} compact />
           : loading && data.length === 0 ? <EmptyState title="Loading settings…" detail="Retrieving current server parameters." />
             : data.length === 0 ? <EmptyState title="No settings found" detail="Refresh to check for newly available settings." />
               : (
                 <table className="server-config-table-grid server-config-table-grid--settings">
-                  <thead><tr><th scope="col">Key</th><th scope="col">Current value</th><th scope="col">Action</th></tr></thead>
+                  <caption className="sr-only">Server settings and their current values</caption>
+                  <thead><tr><th scope="col">Setting key</th><th scope="col">Current value</th><th scope="col">Actions</th></tr></thead>
                   <tbody>
                     {data.map((row) => {
                       const editing = editKey === row.key;
@@ -200,7 +202,7 @@ export const ServerSettingsTab = () => {
                                   <button type="button" className="server-config-table-button server-config-table-button--quiet" onClick={cancelEdit} disabled={saving}>Cancel</button>
                                 </div>
                               ) : (
-                                <button type="button" className="server-config-table-button server-config-table-button--quiet" onClick={() => beginEdit(row)} disabled={saving}><Pencil size={12} />Edit</button>
+                                <button type="button" className="server-config-table-button server-config-table-button--quiet" aria-label={`Edit setting ${row.key}`} onClick={() => beginEdit(row)} disabled={saving}><Pencil size={12} aria-hidden="true" />Edit</button>
                               )}
                             </td>
                           </tr>

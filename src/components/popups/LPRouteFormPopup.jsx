@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useCallback, useId, useRef } from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
 import { X, GitBranch, AlertCircle, Plus, Trash2, Loader2 } from 'lucide-react';
 import { RoutingService } from '../../services/routing.service';
 import { ManagerService } from '../../services/manager.service';
@@ -8,7 +8,7 @@ import { validateDispatchDelay, validateHiddenMarkup, validateLpRouteForm } from
 
 import { selectRouteOption, selectRoutingMode } from '../../utils/lpRouting.js';
 
-const MotionDiv = motion.div;
+import './LPRouteFormPopup.css';
 
 const ROUTING_MODES = [
   { value: 'b_book', label: 'B-Book (Internal)' },
@@ -59,20 +59,22 @@ const DEFAULT = {
   markup_max_limit: 30,
 };
 
-const inputCls =
-  'bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors w-full text-[12px]';
-const selectCls =
-  'bg-[color:var(--bg-surface-2)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors w-full text-[12px] cursor-pointer';
+const inputCls = 'lp-route-form-control';
+const selectCls = 'lp-route-form-control lp-route-form-select';
 
-const Field = ({ label, hint, children }) => (
-  <div className="flex flex-col gap-1.5">
-    <label className="text-[color:var(--text-secondary)] text-[11px]">
-      {label}
-      {hint && <span className="text-white ml-1.5 text-[10px]">{hint}</span>}
-    </label>
-    {children}
-  </div>
-);
+const Field = ({ label, hint, children }) => {
+  const fieldId = useId();
+  const hintId = useId();
+  return (
+    <div className="lp-route-form-field">
+      <label htmlFor={fieldId}>{label}</label>
+      {React.Children.map(children, child => React.isValidElement(child) && ['input', 'select'].includes(child.type)
+        ? React.cloneElement(child, { id: fieldId, 'aria-describedby': hint ? hintId : undefined })
+        : child)}
+      {hint && <small id={hintId}>{hint}</small>}
+    </div>
+  );
+};
 
 const DispatchDelaySection = () => {
   const [delayMs, setDelayMs] = useState('');
@@ -119,18 +121,18 @@ const DispatchDelaySection = () => {
   };
 
   return (
-    <div className="flex flex-col gap-3 border border-black/20 rounded-md p-4 bg-[color:var(--bg-surface-2)]">
+    <div className="flex flex-col gap-3 border border-[color:var(--border-default)] rounded-md p-4 bg-[color:var(--bg-surface-2)]">
       <div>
         <h3 className="text-sm font-semibold text-[color:var(--text-primary)]">Dispatch Delay</h3>
         <p className="text-[11px] text-[color:var(--text-muted)] mt-0.5">Configure the global LP dispatch delay.</p>
       </div>
       
       {loading ? (
-        <div className="py-4 flex justify-center"><Loader2 size={14} className="animate-spin text-white" /></div>
+        <div className="py-4 flex justify-center"><Loader2 size={14} className="animate-spin text-[color:var(--text-primary)]" /></div>
       ) : (
         <div className="flex flex-col gap-2 mt-2">
           {error && <div className="text-red-400 text-[11px]">{error}</div>}
-          {success && <div className="text-white text-[11px]">{success}</div>}
+          {success && <div className="text-[color:var(--success-500)] text-[11px]">{success}</div>}
           
           <div className="flex items-end gap-3">
             <div className="flex-1">
@@ -232,14 +234,15 @@ const HiddenMarkupSection = ({ initialGroup, groups }) => {
   };
 
   return (
-    <div className="flex flex-col gap-3 border border-black/20 rounded-md p-4 bg-[color:var(--bg-surface-2)]">
+    <div className="flex flex-col gap-3 border border-[color:var(--border-default)] rounded-md p-4 bg-[color:var(--bg-surface-2)]">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-sm font-semibold text-[color:var(--text-primary)]">Hidden Markups</h3>
           <p className="text-[11px] text-[color:var(--text-muted)] mt-0.5">Configure hidden markups for the entire group (*) or specific accounts.</p>
         </div>
         <select
-          className="bg-[color:var(--bg-surface-1)] border border-[#555] text-white px-2 py-1 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors text-[11px] min-w-[150px] cursor-pointer"
+          className={selectCls + ' lp-route-hidden-group'}
+          aria-label="Hidden markup group"
           value={selectedGroup}
           onChange={e => setSelectedGroup(e.target.value)}
         >
@@ -265,15 +268,15 @@ const HiddenMarkupSection = ({ initialGroup, groups }) => {
           <div></div>
         </div>
         {loading ? (
-          <div className="py-4 flex justify-center"><Loader2 size={14} className="animate-spin text-white" /></div>
+          <div className="py-4 flex justify-center"><Loader2 size={14} className="animate-spin text-[color:var(--text-primary)]" /></div>
         ) : err ? (
           <div className="py-2 text-red-400">{err}</div>
         ) : markups.length === 0 ? (
           <div className="py-3 text-center text-[11px] text-[color:var(--text-muted)] italic">No hidden markups found</div>
         ) : (
           markups.map(m => (
-            <div key={m.id || m.account_number} className="grid grid-cols-[1fr_1fr_40px] px-2 py-1.5 items-center border-b border-black/10 last:border-0 hover:bg-black/5">
-              <div className="font-mono text-[11px] text-white">{m.account_number}</div>
+            <div key={m.id || m.account_number} className="grid grid-cols-[1fr_1fr_40px] px-2 py-1.5 items-center border-b border-[color:var(--border-subtle)] last:border-0 hover:bg-[color:var(--bg-surface-3)]">
+              <div className="font-mono text-[11px] text-[color:var(--text-primary)]">{m.account_number}</div>
               <div className="font-mono text-[11px] text-[color:var(--accent-400)]">{m.hidden_markup}</div>
               <button
                 type="button"
@@ -288,10 +291,11 @@ const HiddenMarkupSection = ({ initialGroup, groups }) => {
       </div>
 
       {/* Add Form */}
-      <div className="flex items-center gap-2 mt-2 pt-3 border-t border-black/10">
+      <div className="flex items-center gap-2 mt-2 pt-3 border-t border-[color:var(--border-subtle)]">
         <div className="flex-1">
           <input 
-            className="bg-[color:var(--bg-surface-1)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors w-full font-mono text-[11px]"
+            className={inputCls + ' font-mono'}
+            aria-label="Hidden markup account"
             value={newAcc}
             onChange={e => setNewAcc(e.target.value)}
             placeholder="Account (* for all)"
@@ -299,7 +303,8 @@ const HiddenMarkupSection = ({ initialGroup, groups }) => {
         </div>
         <div className="flex-1">
           <input 
-            className="bg-[color:var(--bg-surface-1)] border border-[#555] text-white px-2 py-1.5 focus:border-[color:var(--accent-500)] focus:outline-none rounded-sm transition-colors w-full font-mono text-[11px]"
+            className={inputCls + ' font-mono'}
+            aria-label="Hidden markup value"
             type="number"
             step="0.00001"
             min="0"
@@ -325,6 +330,8 @@ const HiddenMarkupSection = ({ initialGroup, groups }) => {
 
 const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
   const isEdit = !!initialData;
+  const dialogRef = useRef(null);
+  const returnFocusRef = useRef(typeof document !== 'undefined' ? document.activeElement : null);
 
   const [form, setForm] = useState(() =>
     isEdit ? { ...DEFAULT, ...initialData } : { ...DEFAULT }
@@ -396,58 +403,32 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/50 flex justify-end">
-      <MotionDiv
-        initial={{ x: '100%' }}
-        animate={{ x: 0 }}
-        exit={{ x: '100%' }}
-        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="w-[750px] h-full bg-[color:var(--bg-surface-1)] border-l border-[color:var(--border-default)] shadow-2xl flex flex-col font-sans"
-      >
-        {/* Header */}
-        <div className="flex flex-col bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] select-none shrink-0">
-          <div className="flex items-center justify-between px-5 py-4">
-            <div className="flex items-center gap-2 text-white text-[15px] font-medium">
-              <GitBranch size={16} className="text-white" />
-              {isEdit
-                ? `Edit Route — ${initialData.group_name} / ${initialData.symbol_pattern}`
-                : 'Create LP Routing Rule'}
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-white hover:text-white hover:bg-[color:var(--bg-surface-2)] p-1.5 rounded-sm transition-colors"
-            >
-              <X size={16} />
-            </button>
-          </div>
-          
-          {/* Tabs */}
-          <div className="flex items-center px-5 gap-6 border-t border-black/20 bg-[color:var(--bg-surface-2)]">
-            {[
-              { id: 'basic', label: 'Basic Config' },
-              { id: 'rules', label: 'Processing Rules' },
-              { id: 'markups', label: 'Markups & Slippage' },
-            ].map(tab => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-3 text-[12px] font-medium transition-colors border-b-[3px] ${
-                  activeTab === tab.id 
-                    ? 'border-[color:var(--accent-500)] text-white'
-                    : 'border-transparent text-[color:var(--text-muted)] hover:text-white'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
+    <Dialog.Root open onOpenChange={open => { if (!open && !submitting) onClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="lp-route-form-overlay" />
+        <Dialog.Content ref={dialogRef} className="lp-route-form-dialog" aria-describedby={undefined}
+          onOpenAutoFocus={event => { event.preventDefault(); dialogRef.current?.querySelector(isEdit ? 'input:not([type="checkbox"])' : 'select')?.focus(); }}
+          onCloseAutoFocus={event => { event.preventDefault(); if (returnFocusRef.current?.isConnected) returnFocusRef.current.focus(); }}
+          onEscapeKeyDown={event => { if (submitting) event.preventDefault(); }}
+          onInteractOutside={event => event.preventDefault()}>
+
+        <header className="lp-route-form-heading">
+          <Dialog.Title><GitBranch size={16} aria-hidden="true" />{isEdit
+            ? `Edit Route — ${initialData.group_name} / ${initialData.symbol_pattern}`
+            : 'Create LP Routing Rule'}</Dialog.Title>
+          <Dialog.Close className="lp-route-form-close" aria-label="Close routing form" disabled={submitting}><X size={20} aria-hidden="true" /></Dialog.Close>
+        </header>
+        <nav className="lp-route-form-tabs" aria-label="Routing form sections">
+          {[
+            { id: 'basic', label: 'Basic Config' },
+            { id: 'rules', label: 'Processing Rules' },
+            { id: 'markups', label: 'Markups & Slippage' },
+          ].map(tab => <button key={tab.id} type="button" aria-pressed={activeTab === tab.id} onClick={() => setActiveTab(tab.id)}>{tab.label}</button>)}
+        </nav>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden bg-[color:var(--bg-app)] text-[12px]">
-          <div className="flex-1 overflow-y-auto no-scrollbar p-5 flex flex-col gap-6">
+        <form onSubmit={handleSubmit} className="lp-route-form">
+          <div className="lp-route-form-body">
             {error && (
               <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 p-3 rounded-sm text-red-400 shrink-0">
                 <AlertCircle size={14} className="mt-0.5 shrink-0" />
@@ -458,9 +439,9 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
             {/* TAB: BASIC CONFIG */}
             <div className={activeTab === 'basic' ? 'flex flex-col gap-6' : 'hidden'}>
               {/* Identification */}
-          <div className="flex flex-col gap-2.5 pb-3 border-b border-[#333]">
-            <p className="text-[10px] uppercase tracking-widest text-white font-semibold">Route Identification</p>
-            <div className="grid grid-cols-3 gap-3">
+          <div className="flex flex-col gap-2.5 pb-3 border-b border-[color:var(--border-subtle)]">
+            <p className="text-[10px] uppercase tracking-widest text-[color:var(--text-primary)] font-semibold">Route Identification</p>
+            <div className="lp-route-form-grid is-identification">
               <Field label="Group Name" hint="*required">
                 <select
                   className={selectCls + (isEdit ? ' opacity-50 cursor-not-allowed' : '')}
@@ -508,8 +489,8 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
 
           {/* Execution */}
           <div className="flex flex-col gap-2.5">
-            <p className="text-[10px] uppercase tracking-widest text-white font-semibold">Execution Settings</p>
-            <div className="grid grid-cols-2 gap-3">
+            <p className="text-[10px] uppercase tracking-widest text-[color:var(--text-primary)] font-semibold">Execution Settings</p>
+            <div className="lp-route-form-grid">
               <Field label="Routing Mode">
                 <select className={selectCls} value={form.routing_mode} onChange={(e) => setForm(current => selectRoutingMode(current, e.target.value, lpOptions))}>
                   {ROUTING_MODES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
@@ -561,8 +542,8 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
             <div className={activeTab === 'markups' ? 'flex flex-col gap-6' : 'hidden'}>
               <HiddenMarkupSection initialGroup={form.group_name} groups={groups} />
               
-              <div className="flex flex-col gap-3 pb-3 border-b border-[#333]">
-                <p className="text-[10px] uppercase tracking-widest text-white font-semibold">A-book markups</p>
+              <div className="flex flex-col gap-3 pb-3 border-b border-[color:var(--border-subtle)]">
+                <p className="text-[10px] uppercase tracking-widest text-[color:var(--text-primary)] font-semibold">A-book markups</p>
                 <Field label="Markup mode">
                   <select className={selectCls} value={form.markup_mode} onChange={(e) => set('markup_mode', e.target.value)}>
                     <option value="Standard">Standard</option>
@@ -572,7 +553,7 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
                   <input type="checkbox" checked={form.markup_take_positive} onChange={(e) => set('markup_take_positive', e.target.checked)} className="w-3.5 h-3.5 accent-blue-500" />
                   <span className="text-[color:var(--text-secondary)]">Take positive slippage</span>
                 </label>
-                <div className="grid grid-cols-2 gap-3 mt-1">
+                <div className="lp-route-form-grid mt-1">
                   <Field label="Send to LP after (min, ms)">
                     <input className={inputCls} type="number" value={form.markup_send_lp_min} onChange={(e) => set('markup_send_lp_min', e.target.value)} />
                   </Field>
@@ -594,12 +575,12 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3 pb-3 border-b border-[#333]">
-                <p className="text-[10px] uppercase tracking-widest text-white font-semibold">Modify processing rule</p>
+              <div className="flex flex-col gap-3 pb-3 border-b border-[color:var(--border-subtle)]">
+                <p className="text-[10px] uppercase tracking-widest text-[color:var(--text-primary)] font-semibold">Modify processing rule</p>
                 <Field label="Platform symbols and tags">
                   <input className={inputCls} value={form.rule_symbols} onChange={(e) => set('rule_symbols', e.target.value)} />
                 </Field>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="lp-route-form-grid">
                   <Field label="Logins">
                     <input className={inputCls} value={form.rule_logins} onChange={(e) => set('rule_logins', e.target.value)} />
                   </Field>
@@ -628,7 +609,7 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
                     <option value="Limit">Limit</option>
                   </select>
                 </Field>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="lp-route-form-grid">
                   <Field label="Order directions">
                     <select className={selectCls} value={form.rule_order_directions} onChange={(e) => set('rule_order_directions', e.target.value)}>
                       <option value="All">All</option>
@@ -667,31 +648,32 @@ const LPRouteFormPopup = ({ initialData, onClose, onSaved }) => {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between px-5 py-4 border-t border-[color:var(--border-default)] bg-[color:var(--bg-surface-1)] shrink-0">
-            <span className="text-[11px] text-[color:var(--text-muted)] italic">
-              * Some fields are required
+          <div className="lp-route-form-footer">
+            <span className="lp-route-form-required">
+              * Required fields
             </span>
-            <div className="flex justify-end gap-3">
+            <div className="lp-route-form-actions">
               <button
                 type="button"
                 onClick={onClose}
                 disabled={submitting}
-                className="px-5 py-2 bg-[color:var(--bg-surface-2)] hover:bg-[color:var(--bg-surface-3)] border border-black/20 text-white rounded-[3px] transition-colors disabled:opacity-50 text-[12px]"
+                className="lp-route-form-cancel"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={submitting || lpLoading || !!lpError || !lpOptions.length}
-                className="px-5 py-2 bg-[color:var(--accent-500)] hover:opacity-90 text-white rounded-[3px] transition-colors disabled:opacity-50 min-w-[120px] flex justify-center font-medium text-[12px]"
+                className="lp-route-form-submit"
               >
                 {submitting ? 'Saving...' : isEdit ? 'Update Route' : 'Create Route'}
               </button>
             </div>
           </div>
         </form>
-      </MotionDiv>
-    </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 };
 

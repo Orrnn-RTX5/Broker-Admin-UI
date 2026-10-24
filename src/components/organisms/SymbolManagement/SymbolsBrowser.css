@@ -1,0 +1,55 @@
+/* Category directory uses the same compact, full-width grid as the admin workspace. */
+.symbols-browser { --symbols-browser-text: #fff; overflow: hidden; font-family: var(--font-sans); color: var(--symbols-browser-text); }
+[data-theme="light"] .symbols-browser { --symbols-browser-text: var(--text-primary); }
+.symbols-browser > .symbols-page-header { min-height: 44px; padding: 8px 14px; gap: 12px; flex-wrap: wrap; background: var(--bg-toolbar); border-bottom: 0; }
+.symbols-browser .symbols-page-heading h1 { font-size: 13px; font-weight: 600; }
+.symbols-browser .symbols-page-summary { margin-left: auto; flex-direction: row; align-items: center; gap: 0; font-size: 11px; color: var(--symbols-browser-text); }
+.symbols-browser .symbols-page-summary span + span { margin-left: 12px; padding-left: 12px; border-left: 1px solid var(--border-default); }
+.symbols-browser .symbols-category-search { display: flex; align-items: center; gap: 7px; width: 280px; max-width: 100%; height: 28px; min-width: 0; padding: 0 8px; border: 1px solid var(--border-default); border-radius: 3px; background: var(--bg-surface-1); color: var(--symbols-browser-text); font-size: 11px; cursor: text; }
+.symbols-browser .symbols-category-search svg { flex-shrink: 0; }
+.symbols-browser .symbols-category-search input { flex: 1; min-width: 0; width: 100%; height: 100%; padding: 0; border: 0; outline: none; box-shadow: none; background: transparent; color: inherit; font: inherit; }
+.symbols-browser .symbols-category-search input::placeholder { color: var(--symbols-browser-text); opacity: 1; }
+.symbols-browser .symbols-category-search input:focus-visible { outline: none; box-shadow: none; }
+.symbols-browser .symbols-category-search:focus-within { border-color: var(--accent-500); }
+.symbols-browser .symbols-browser-content { flex: 1; min-height: 0; max-width: none; margin: 0; padding: 0; overflow: auto; }
+.symbols-browser .symbols-category-columns,
+.symbols-browser .symbols-category-card { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; align-items: center; }
+.symbols-browser .symbols-category-columns { position: sticky; top: 0; z-index: 1; min-height: 34px; border-bottom: 1px solid var(--border-default); background: var(--bg-toolbar); color: var(--symbols-browser-text); font-size: 10px; font-weight: 600; letter-spacing: .045em; text-transform: uppercase; }
+.symbols-browser .symbols-category-columns > span { position: relative; min-width: 0; padding: 0 14px; }
+.symbols-browser .symbols-category-columns > span + span::before { position: absolute; left: 0; top: 0; bottom: 0; width: 1px; background: var(--border-subtle); content: ''; }
+.symbols-browser .symbols-category-grid { display: flex; flex-direction: column; gap: 0; }
+.symbols-browser .symbols-category-card { flex-shrink: 0; width: 100%; min-height: 64px; padding: 10px 0; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 70%, transparent); border-radius: 0; background: var(--bg-app); color: var(--symbols-browser-text); }
+.symbols-browser .symbols-category-card:nth-child(even) { background: color-mix(in srgb, var(--bg-surface-1) 35%, var(--bg-app)); }
+.symbols-browser .symbols-category-card:hover { background: var(--bg-surface-2); }
+.symbols-browser .symbols-category-card:focus-visible { outline: 1px solid var(--accent-500); outline-offset: -1px; background: var(--accent-soft); }
+.symbols-browser .symbols-category-card > span { min-width: 0; padding-inline: 14px; }
+.symbols-browser .symbols-category-details { display: flex; flex-direction: column; gap: 4px; }
+.symbols-browser .symbols-category-title { font-size: 12px; font-weight: 600; line-height: 1.4; }
+.symbols-browser .symbols-category-description { font-size: 11px; line-height: 1.4; color: var(--symbols-browser-text); }
+.symbols-browser .symbols-category-count { padding-block: 0; border: 0; border-radius: 0; color: var(--symbols-browser-text); font: 500 12px var(--font-mono); }
+.symbols-browser .symbols-category-count-label { display: none; }
+.symbols-browser .symbols-category-preview { font: 11px var(--font-mono); color: var(--symbols-browser-text); }
+.symbols-browser .symbols-category-more { color: var(--symbols-browser-text); }
+.symbols-browser .symbols-category-action { justify-self: stretch; color: var(--info-500); font-size: 11px; }
+.symbols-browser .symbols-category-card:is(:hover, :focus-visible) .symbols-category-action { text-decoration: underline; text-underline-offset: 3px; }
+.symbols-category-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 48px 14px; text-align: center; }
+.symbols-category-empty strong { font-size: 13px; font-weight: 600; }
+.symbols-category-empty p { margin: 0 0 4px; color: var(--symbols-browser-text); font-size: 11px; }
+.symbols-browser-footer { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 16px; min-height: 40px; padding: 8px 14px; border-top: 1px solid var(--border-default); background: var(--bg-toolbar); color: var(--symbols-browser-text); font-size: 11px; }
+@container symbols-workspace (min-width: 481px) and (max-width: 1100px) {
+  .symbols-browser .symbols-category-card { min-height: 80px; }
+}
+@container symbols-workspace (max-width: 760px) {
+  .symbols-browser .symbols-category-columns,
+  .symbols-browser .symbols-category-card { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .symbols-browser .symbols-category-columns > :last-child,
+  .symbols-browser .symbols-category-action { display: none; }
+}
+@container symbols-workspace (max-width: 480px) {
+  .symbols-browser .symbols-category-search { width: 100%; }
+  .symbols-browser .symbols-category-columns { display: none; }
+  .symbols-browser .symbols-category-card { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 10px; padding-block: 14px; }
+  .symbols-browser .symbols-category-count { align-self: start; font-size: 11px; }
+  .symbols-browser .symbols-category-count-label { display: inline; font-family: var(--font-sans); font-weight: 400; }
+  .symbols-browser .symbols-category-preview { grid-column: 1 / -1; font-size: 10px; }
+}

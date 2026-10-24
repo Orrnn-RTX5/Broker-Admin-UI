@@ -78,6 +78,13 @@ test('symbolCountSummary reports configured and not configured counts', () => {
   assert.equal(symbolCountSummary([]), '0 configured · 0 not configured');
 });
 
+test('dynamic feed rows stay pending until instrument specifications arrive', () => {
+  const rows = buildSymbolRows([], [{ symbol: 'EURUSD', configured: false, category: 'Forex', detailsPending: true }]);
+  assert.equal(rows[0].detailsPending, true);
+  assert.equal(symbolCountSummary(rows), '1 live symbols');
+  assert.deepEqual(filterSymbolRows(rows, { status: 'not_configured' }), []);
+});
+
 test('streamingState is unknown until the feed inventory is known', () => {
   assert.equal(streamingState('EURUSD', null), 'unknown');
   assert.equal(streamingState('eurusd', ['EURUSD']), 'live');

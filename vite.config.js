@@ -61,12 +61,13 @@ export function resolveDevProxyHosts(env = {}, { strict = false } = {}) {
 // https://vite.dev/config/
 export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const { apiHost, apiHostExt, superAdminHost, wsFeedHost } = resolveDevProxyHosts(env, { strict: command === 'serve' })
+  const { apiHost, apiHostExt, wsFeedHost } = resolveDevProxyHosts(env, { strict: command === 'serve' })
   const serving = command === 'serve'
   const wsTarget = serving && wsFeedHost
     ? new URL(wsFeedHost.replace(/^wss:/i, 'https:').replace(/^ws:/i, 'http:')).origin
     : ''
-  const useFeedDevProxy = mode === 'development' && String(env.VITE_FEED_USE_DEV_PROXY || '').toLowerCase() === 'true'
+  const useFeedDevProxy = mode === 'development' && String(env.VITE_FEED_USE_DEV_PROXY ?? 'true').toLowerCase() !== 'false'
+  const stripFeedProxyOrigin = String(env.VITE_FEED_PROXY_STRIP_ORIGIN ?? 'true').toLowerCase() !== 'false'
   const configuredFeedProxyOrigin = useFeedDevProxy ? String(env.VITE_FEED_WS_PROXY_ORIGIN || '').trim() : ''
   let feedProxyOrigin = ''
   if (configuredFeedProxyOrigin) {
@@ -116,44 +117,28 @@ export default defineConfig(({ mode, command }) => {
       proxy: {
         // Market Feed WebSocket and HTTP Status
         '/ws/feed/status': createBrokerProxy(wsTarget, DEV_PROXY_FEED_COOKIE),
-        '/ws/feed': {
-          target: wsTarget,
-          changeOrigin: true,
-          secure: false,
+        '/ws/feed': createBrokerProxy(wsTarget, DEV_PROXY_FEED_COOKIE, {
           ws: true,
-          rewriteWsOrigin: !feedProxyOrigin,
+          rewriteWsOrigin: false,
+          wsOrigin: feedProxyOrigin,
+          stripWsOrigin: !feedProxyOrigin && stripFeedProxyOrigin,
           ...(feedProxyOrigin ? {
             bypass: (req) => {
               if (String(req.headers.upgrade || '').toLowerCase() !== 'websocket') return
               if (!isLocalSameOriginWsRequest(req)) return false
             },
-            configure: (proxy) => {
-              proxy.on('proxyReqWs', (proxyReq) => {
-                proxyReq.setHeader('Origin', feedProxyOrigin)
-              })
-            },
           } : {}),
-        },
-        '/ws': {
-          target: wsTarget,
-          changeOrigin: true,
-          secure: false,
+        }),
+        '/ws': createBrokerProxy(wsTarget, DEV_PROXY_FEED_COOKIE, {
           ws: true,
           rewriteWsOrigin: false,
-        },
+        }),
 
         // Gateway LP API
         '/api/v1': createBrokerProxy(apiHost, DEV_PROXY_BACKEND_COOKIE),
         '/api/v2': createBrokerProxy(apiHost, DEV_PROXY_BACKEND_COOKIE),
         '/manager': createBrokerProxy(apiHost, DEV_PROXY_BACKEND_COOKIE, { ws: true }),
         '/Manager': createBrokerProxy(apiHost, DEV_PROXY_BACKEND_COOKIE, { ws: true }),
-        // Platform Super Admin API uses an independent login/session.
-        '/super-admin-api': {
-          target: superAdminHost,
-          changeOrigin: true,
-          secure: false,
-          rewrite: (path) => path.replace(/^\/super-admin-api/, ''),
-        },
         // Port 8091 APIs: MarketDepth, SessionOverride, SpreadSchedule
         '/ext-api': createBrokerProxy(apiHostExt, DEV_PROXY_EXT_COOKIE, {
           rewrite: (path) => path.replace(/^\/ext-api/, ''),

@@ -1,5 +1,6 @@
 import { refreshGroupMembership } from './services/groupMembershipRefresh.js';
 import { startManagerAccessFeed } from './services/managerAccessFeed';
+import { bugReportHistoryScope, recordBugReportReceipt } from './services/bugReportHistory';
 import { getManagerDirectoryIdentity, invalidateManagerDirectory } from './services/managerDirectory.service';
 import { canViewGroup, canViewGroups, canManageGroupLifecycle, groupAccessKey } from './utils/groupAccess';
 import React from 'react';
@@ -58,7 +59,16 @@ const ServerConfigWorkspace = React.lazy(() => import('./components/organisms/Se
 const AllocationsView = React.lazy(() => import('./components/organisms/AllocationsView'));
 const AdminDataTable = React.lazy(() => import('./components/organisms/AdminDataTable'));
 const ManagersView = React.lazy(() => import('./components/organisms/ManagersView'));
+const preloadSymbolViews = () => {
+  void import('./components/organisms/AdminDataTable');
+  void import('./components/organisms/MarketsView');
+};
+preloadSymbolViews();
+
 const prepareGatewayNavigation = label => {
+  if (label === 'Symbols Browser' || label === 'Symbol Management' || label === 'Market Overview') {
+    preloadSymbolViews();
+  }
   if (label !== 'Gateways') return;
   void loadGatewayWorkspace().catch(() => {});
   void primeGatewayConnections();
@@ -74,8 +84,8 @@ const AccountEditPopup = React.lazy(() => import('./components/RIGHTCLICKJPOPUPS
 const TradeDetailsPopup = React.lazy(() => import('./components/RIGHTCLICKJPOPUPS/TradeDetailsPopup'));
 const HelpModal = React.lazy(() => import('./components/organisms/HelpModal').then(module => ({ default: module.HelpModal })));
 const BugReportDialog = React.lazy(() => import('./components/BugReportDialog'));
+const BugReportsView = React.lazy(() => import('./components/organisms/BugReportsView'));
 const AboutModal = React.lazy(() => import('./components/organisms/AboutModal').then(module => ({ default: module.AboutModal })));
-const SuperAdminConsole = React.lazy(() => import('./components/organisms/SuperAdminConsole').then(module => ({ default: module.SuperAdminConsole })));
 
 const WorkspaceViewFallback = () => (
   <div className="flex flex-1 items-center justify-center text-xs text-[color:var(--text-muted)]" role="status">
@@ -134,6 +144,11 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
   const [verifiedAccessToken, setVerifiedAccessToken] = React.useState(null);
   useWorkspaceStartupReady('identity', Boolean(accessToken) && verifiedAccessToken === accessToken);
   const currentUser = useAuthStore((state) => state.user);
+  const reportHistoryScope = React.useMemo(() => {
+    let brokerId = '';
+    try { brokerId = localStorage.getItem('brokerId') || ''; } catch { /* unavailable */ }
+    return bugReportHistoryScope(currentUser, brokerId);
+  }, [currentUser]);
   const tokenExpiresAt = useAuthStore((state) => state.tokenExpiresAt);
   const setUser = useAuthStore((state) => state.setUser);
   const connStatus = useConnectionStore((s) => s.status);
@@ -156,7 +171,6 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
   const [helpOpen, setHelpOpen] = React.useState(false);
   const [bugReportOpen, setBugReportOpen] = React.useState(false);
   const [aboutOpen, setAboutOpen] = React.useState(false);
-  const [isSuperAdminOpen, setIsSuperAdminOpen] = React.useState(false);
   const [rowCount, setRowCount] = React.useState({ total: 0, filtered: 0, visible: 0, bytes: 0 });
   const [orderFilterHost, setOrderFilterHost] = React.useState(null);
   const reportClientRowCount = React.useCallback((counts) => {
@@ -361,7 +375,7 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
 
   const canViewActive = canAccessView(currentUser, activeNode);
   const activeViewPermission = requiredPermissionForView(activeNode);
-  const isAccountEditView = ACCOUNT_EDIT_VIEW_TYPES.has(activeNode) || (activeNode === 'Groups' && groupExplorerLocation.type === 'group');
+  const isAccountEditView = ACCOUNT_EDIT_VIEW_TYPES.has(activeNode) || (activeNode === 'Groups' && (groupExplorerLocation.type === 'group' || groupExplorerLocation.type === 'server-folder'));
   const canEditAccounts = hasPermission(currentUser, PERMISSION_KEYS.EDIT_ACCOUNTS);
   const nativePendingTarget=nativePendingAccountTarget({selected:selectedEditTarget,activeView:activeNode,accountView:isAccountEditView,canView:canViewActive,user:currentUser,scope:isAuthenticated?getManagerTradeScope():''});
   React.useEffect(()=>{if(nativePendingTargetKey!==nativePendingTarget?.key)setNativePendingTargetKey(null);},[nativePendingTargetKey,nativePendingTarget?.key]);
@@ -441,10 +455,6 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
 
     setSelectedSidebarNodeId(null);
     const rawLabel = typeof nodeOrLabel === 'string' ? nodeOrLabel : nodeOrLabel.label;
-    if (rawLabel === 'SuperAdmin' || rawLabel === 'Platform Super Admin') {
-      setIsSuperAdminOpen(true);
-      return;
-    }
     // Window-menu / header entries without a dedicated renderer resolve to
     // the existing view that already renders their data (SUI-A3), so they
     // never fall through to the empty group-lookup state. Gating, toasts and
@@ -762,7 +772,10 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
     });
   }, [notify]);
 
-  const canDeleteSelectedTarget = Boolean(selectedEditTarget?.type === 'group' && canCreateDeleteGroups);
+  const canDeleteSelectedTarget = Boolean(
+    (selectedEditTarget?.type === 'group' || (activeNode === 'Groups' && selectedEditTarget?.type === 'account')) &&
+    canCreateDeleteGroups
+  );
   const handleToolbarDelete = React.useCallback(async (explicitTarget) => {
     const target = explicitTarget?.type === 'group' || explicitTarget?.type === 'group-branch' ? explicitTarget : selectedEditTarget;
     if (!target || !canCreateDeleteGroups) return;
@@ -770,16 +783,18 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
       notify({ title: 'Group migration required', description: 'Open each group to preview complete migration and verified deletion.', tone: 'warning' });
       return;
     }
-    if (target.type === 'group') {
-      const groupName = target.row?.name || target.row?.group || target.id;
+    if (target.type === 'group' || (target.type === 'account' && activeNode === 'Groups')) {
+      const groupName = target.type === 'group'
+        ? (target.row?.name || target.row?.group || target.id)
+        : (target.row?.group || target.row?.Group || target.row?.group_name || target.row?.groupName || groupExplorerLocation?.groupName || groupExplorerLocation?.path);
       if (!groupName) return;
-      setSelectedGroup({ ...(target.row || {}), name: groupName, initialTab: 'Migration' });
+      setSelectedGroup({ ...(target.type === 'group' ? (target.row || {}) : {}), name: groupName, group: groupName, initialTab: 'Migration' });
       setGroupPopupFromAccount(false);
       setIsPopupOpen(true);
     } else {
       notify({ title: 'Delete unavailable', description: `Deleting ${target.type} is not supported from the toolbar.`, tone: 'warning' });
     }
-  }, [selectedEditTarget, canCreateDeleteGroups, notify]);
+  }, [selectedEditTarget, canCreateDeleteGroups, notify, activeNode, groupExplorerLocation]);
 
   const canAdd = activeNode === 'Groups' && canCreateDeleteGroups;
 
@@ -966,7 +981,7 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
         </MarketWatchDock>
 
         <div className="admin-workspace-main">
-          {!(canViewActive && ['Dashboard', 'Managers', 'Integrations', 'Gateways', 'Market Overview', 'Symbols Browser', 'Symbol Management', 'Allocations'].includes(activeNode)) && (
+          {!(canViewActive && ['Dashboard', 'Managers', 'Integrations', 'Gateways', 'Market Overview', 'Symbols Browser', 'Symbol Management', 'Allocations', 'Bug Reports', 'LP Routing', 'Spreads'].includes(activeNode)) && (
           <div className={activeNode === 'Symbols' ? 'admin-symbols-heading' : activeNode === 'Orders' ? 'admin-orders-heading' : activeNode === 'Positions' ? 'admin-positions-heading' : activeNode === 'Trading Accounts' ? 'admin-trading-heading' : 'min-h-10 bg-[color:var(--bg-surface-1)] border-b border-[color:var(--border-default)] flex items-center px-4 gap-3 text-xs text-[color:var(--text-muted)] shadow-[var(--shadow-sm)] select-none'}>
             <div role="heading" aria-level="1" className="flex items-center gap-2 text-[color:var(--text-primary)] font-semibold tracking-wide" style={{ fontSize: activeNode === 'Trading Accounts' ? '13px' : '14px', lineHeight: '18px' }}>
               {activeNode === 'Groups' ? (
@@ -999,6 +1014,8 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
             <ServerConfigWorkspace key={groupIdentity} refreshTrigger={refreshKey} />
           ) : canViewActive && activeNode === 'Allocations' ? (
             <AllocationsView />
+          ) : canViewActive && activeNode === 'Bug Reports' ? (
+            <BugReportsView key={reportHistoryScope} scope={reportHistoryScope} onReportBug={() => setBugReportOpen(true)} searchQuery={searchQuery} onSearchChange={setSearchQuery} />
           ) : canViewActive && activeNode === 'Managers' ? (
             <ManagersView refreshTrigger={refreshKey} searchQuery={searchQuery} sortDirection={tableSortDirection} onRowsChange={handleRowsChange} initialTab={activeViewInitialTab} />
           ) : canViewActive && activeNode === 'Dashboard' ? <BrokerDashboard onNavigate={handleNodeSelect} /> : canViewActive && activeNode === 'Groups' ? (
@@ -1101,13 +1118,8 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
       </AnimatePresence>
 
       {helpOpen && <HelpModal open={helpOpen} onOpenChange={setHelpOpen} />}
-      {bugReportOpen && <BugReportDialog onClose={() => setBugReportOpen(false)} />}
+      {bugReportOpen && <BugReportDialog key={reportHistoryScope} page={activeNode} onClose={() => setBugReportOpen(false)} onSubmitted={(receipt, form) => recordBugReportReceipt(reportHistoryScope, receipt, form)} />}
       {aboutOpen && <AboutModal open={aboutOpen} onOpenChange={setAboutOpen} />}
-      {isSuperAdminOpen && (
-        <div className="fixed inset-0 z-[10000]">
-          <SuperAdminConsole onClose={() => setIsSuperAdminOpen(false)} />
-        </div>
-      )}
       </React.Suspense>
 
 
