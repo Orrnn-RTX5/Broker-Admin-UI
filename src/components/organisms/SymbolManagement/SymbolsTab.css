@@ -66,12 +66,12 @@
   background: var(--bg-surface-2);
 }
 
-.symbols-management-table :is(th, td):is(:nth-child(5), :nth-child(6), :nth-child(7)) {
+.symbols-management-table :is(th, td):is(:nth-child(6), :nth-child(7), :nth-child(8)) {
   text-align: left;
   font-variant-numeric: tabular-nums;
 }
 
-.symbols-management-table tbody :is(td:nth-child(5), td:nth-child(6), td:nth-child(7)) {
+.symbols-management-table tbody :is(td:nth-child(6), td:nth-child(7), td:nth-child(8)) {
   font-family: var(--font-mono);
 }
 
@@ -211,4 +211,11 @@
 
 @container symbols-workspace (max-width: 520px) {
   .symbols-management-help p { left: 0; right: auto; }
+}
+
+/* Bulk "Configure selected" checkbox column. */
+.symbols-management-table.ui-grid :is(th, td).symbols-management-select {
+  width: 28px;
+  padding-right: 0;
+  text-align: center;
 }

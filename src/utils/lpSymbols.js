@@ -17,18 +17,23 @@ const symbolNameOf = (row) => {
 const categoryNameOf = row => row && typeof row === 'object'
   ? [row.category, row.Category, row.path, row.Path].map(value => String(value ?? '').trim()).find(Boolean) || '' : '';
 
+// Catalogue flag (G2): whether the symbol is inside the broker's feed scope.
+// Older catalogues have no flag; every row they list is in scope.
+const inScopeOf = row => !(row && typeof row === 'object' && row.in_scope === false);
+
 /**
  * Merges the LP catalogue with the configured instruments.
- * Returns [{ symbol, configured, instrument, category, fromLp }] sorted by symbol.
+ * Returns [{ symbol, configured, instrument, category, fromLp, inScope }] sorted by symbol.
  * `instrument` is the configured row (null when not configured); `fromLp` is
- * false for a configured instrument the LP catalogue does not list.
+ * false for a configured instrument the LP catalogue does not list; `inScope`
+ * is false for a relay symbol outside the broker feed scope (not quoted yet).
  */
 export const mergeLpSymbols = (catalogue = [], configured = []) => {
   const bySymbol = new Map();
   for (const row of Array.isArray(catalogue) ? catalogue : []) {
     const symbol = symbolNameOf(row);
     if (!symbol || bySymbol.has(symbol)) continue;
-    bySymbol.set(symbol, { symbol, configured: false, instrument: null, category: categoryNameOf(row) || inferMarketCategory(symbol), fromLp: true });
+    bySymbol.set(symbol, { symbol, configured: false, instrument: null, category: categoryNameOf(row) || inferMarketCategory(symbol), fromLp: true, inScope: inScopeOf(row) });
   }
   for (const row of Array.isArray(configured) ? configured : []) {
     const symbol = symbolNameOf(row);
@@ -40,6 +45,7 @@ export const mergeLpSymbols = (catalogue = [], configured = []) => {
       instrument: row,
       category: categoryNameOf(row) || existing?.category || inferMarketCategory(symbol),
       fromLp: Boolean(existing),
+      inScope: existing ? existing.inScope : true,
     });
   }
   return [...bySymbol.values()].sort((a, b) => a.symbol.localeCompare(b.symbol));

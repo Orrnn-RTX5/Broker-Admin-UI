@@ -4,7 +4,7 @@ import { Search, Plus, Copy, Edit2, Loader2, X, Wrench, Info } from 'lucide-reac
 import {
   symbolClone, symbolCategoryList,
 } from '../../../services/api';
-import { InstrumentsService } from '../../../services/instruments.service';
+import { InstrumentsService, getCatalogueFlags } from '../../../services/instruments.service';
 import { getApiErrorMessage, normalizeArrayResponse } from '../../../utils/apiShapes';
 import { buildActionableErrorState } from '../../../utils/errorState';
 import { invalidateLpSymbols, loadLpSymbols } from '../../../utils/lpSymbols';
@@ -12,6 +12,8 @@ import useSymbolStore from '../../../store/useSymbolStore';
 import { initialSymbolManagementState, rememberSymbolManagement } from '../../../utils/dynamicSymbolView';
 import SymbolFormModal from './SymbolFormModal';
 import BulkCloneWizard from './BulkCloneWizard';
+import BulkConfigureModal from './BulkConfigureModal';
+import { MAX_BULK_SYMBOLS } from './bulkConfigure';
 import ActionableErrorState from '../../atoms/ActionableErrorState';
 import './SymbolsTab.css';
 import {
@@ -286,6 +288,9 @@ const selectStreamedKey = (state) => {
   return quoted.length > 0 ? quoted.join(',') : null;
 };
 
+// Only unconfigured LP symbols can be bulk configured.
+const isConfigurable = (row) => !row.configured && !row.detailsPending;
+
 // ─── Main Tab ──────────────────────────────────────────────────────────────────
 const SymbolsTab = ({ toolbarTarget }) => {
   const [initial] = useState(() => initialSymbolManagementState(useSymbolStore.getState()));
@@ -301,12 +306,16 @@ const SymbolsTab = ({ toolbarTarget }) => {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterEnabled, setFilterEnabled] = useState('');
-  const [modal, setModal] = useState(null); // null | 'add' | 'edit' | 'configure' | 'clone' (bulk wizard) | 'clone-single'
+  const [modal, setModal] = useState(null); // null | 'add' | 'edit' | 'configure' | 'clone' (bulk wizard) | 'clone-single' | 'bulk-configure'
+  // LP symbols selected for bulk "Configure selected" (unconfigured rows only).
+  const [selectedSymbols, setSelectedSymbols] = useState(() => new Set());
   const [editTarget, setEditTarget] = useState(null);
   const [configureSymbol, setConfigureSymbol] = useState('');
   const [togglingSymbol, setTogglingSymbol] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [savedNotice, setSavedNotice] = useState('');
+  // G2 catalogue flags of the last load (false = the sender catalog or the bridge could not be read).
+  const [catalogueFlags, setCatalogueFlags] = useState(() => getCatalogueFlags());
   const streamedKey = useSymbolStore(selectStreamedKey);
   const streamedNames = useMemo(
     () => (streamedKey === null ? null : new Set(streamedKey ? streamedKey.split(',').map((name) => name.trim().toUpperCase()) : [])),
@@ -332,6 +341,7 @@ const SymbolsTab = ({ toolbarTarget }) => {
         loadLpSymbols(InstrumentsService, { force }),
       ]);
       if (!current()) return;
+      setCatalogueFlags(getCatalogueFlags());
       const failures = [];
       const nextSymbols = symsResult.status === 'fulfilled'
         ? normalizeSymbolManagementRows(symsResult.value)
@@ -430,6 +440,26 @@ const SymbolsTab = ({ toolbarTarget }) => {
 
   const closeForm = () => { setModal(null); setEditTarget(null); setConfigureSymbol(''); };
 
+  // A selection that is no longer listed as configurable (configured
+  // meanwhile) drops out automatically.
+  const configurableNames = useMemo(() => new Set(rows.filter(isConfigurable).map((row) => row.symbol)), [rows]);
+  const selectedList = useMemo(() => [...selectedSymbols].filter((name) => configurableNames.has(name)).sort(), [selectedSymbols, configurableNames]);
+  const shownConfigurable = filtered.filter(isConfigurable).map((row) => row.symbol);
+  const allShownSelected = shownConfigurable.length > 0 && shownConfigurable.every((name) => selectedSymbols.has(name));
+  const toggleSelected = (name) => setSelectedSymbols((previous) => {
+    const next = new Set(previous);
+    if (next.has(name)) next.delete(name); else next.add(name);
+    return next;
+  });
+  const toggleAllShown = () => setSelectedSymbols((previous) => {
+    const next = new Set(previous);
+    shownConfigurable.forEach((name) => (allShownSelected ? next.delete(name) : next.add(name)));
+    return next;
+  });
+  const tooMany = selectedList.length > MAX_BULK_SYMBOLS;
+  const shownNames = new Set(filtered.map((row) => row.symbol));
+  const hiddenSelected = selectedList.filter((name) => !shownNames.has(name)).length;
+
   const toolbar = (
       <div className="symbols-management-toolbar">
         <div className="symbols-management-filters">
@@ -457,6 +487,14 @@ const SymbolsTab = ({ toolbarTarget }) => {
         )}
         </div>
         <div className="symbols-management-actions">
+        <button
+          onClick={() => setModal('bulk-configure')}
+          disabled={selectedList.length === 0 || tooMany}
+          className="ui-btn ui-btn-secondary ui-btn-sm"
+          title={tooMany ? `Configure at most ${MAX_BULK_SYMBOLS} symbols at a time; ${selectedList.length} are selected.` : selectedList.length === 0 ? 'Select unconfigured symbols in the list first.' : `Configure ${selectedList.length} selected symbols with one template`}
+        >
+          <Wrench size={13} /> Configure selected ({selectedList.length}{hiddenSelected > 0 ? `, ${hiddenSelected} hidden by filters` : ''})
+        </button>
         <button onClick={() => setModal('clone')} className="ui-btn ui-btn-secondary ui-btn-sm">
           <Copy size={13} /> Clone
         </button>
@@ -470,6 +508,16 @@ const SymbolsTab = ({ toolbarTarget }) => {
   return (
     <div className="symbols-management-panel">
       {toolbarTarget && createPortal(toolbar, toolbarTarget)}
+      {!loading && catalogueFlags.catalogAvailable === false && (
+        <p role="alert" className="symbols-management-notice" data-tone="warning">
+          The relay's authorized sender catalog could not be read, so relay symbols that are not quoted yet may be missing from this list. Check Admin → Gateways → feed configuration and reload.
+        </p>
+      )}
+      {!loading && catalogueFlags.bridgeAvailable === false && (
+        <p role="alert" className="symbols-management-notice" data-tone="warning">
+          The market data bridge could not be reached, so this list shows only the feed scope and configured instruments.
+        </p>
+      )}
       {loadError && (
         <ActionableErrorState state={loadError} onAction={() => load(true)} compact className="m-0 shrink-0" />
       )}
@@ -485,6 +533,16 @@ const SymbolsTab = ({ toolbarTarget }) => {
           <table className="ui-grid symbols-management-table" aria-label="Symbol instruments">
             <thead>
               <tr>
+                <th className="symbols-management-select">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all shown unconfigured symbols"
+                    title="Select all shown unconfigured symbols"
+                    checked={allShownSelected}
+                    disabled={shownConfigurable.length === 0}
+                    onChange={toggleAllShown}
+                  />
+                </th>
                 <th>Symbol</th>
                 <th>Feed</th>
                 <th>Type</th>
@@ -499,9 +557,10 @@ const SymbolsTab = ({ toolbarTarget }) => {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={10} className="symbols-management-empty">No symbols found.</td></tr>
+                <tr><td colSpan={11} className="symbols-management-empty">No symbols found.</td></tr>
               ) : filtered.map(s => s.configured ? (
                 <tr key={s.symbol}>
+                  <td className="symbols-management-select" />
                   <td className="symbols-management-code" title={s.parentSymbol ? `${s.symbol} · derived from ${s.parentSymbol}` : s.symbol}>
                     {s.symbol}
                     {s.symbolType === 'derived' && s.parentSymbol && (
@@ -549,8 +608,21 @@ const SymbolsTab = ({ toolbarTarget }) => {
                 </tr>
               ) : (
                 <tr key={s.symbol}>
+                  <td className="symbols-management-select">
+                    {isConfigurable(s) && (
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${s.symbol} for bulk configure`}
+                        checked={selectedSymbols.has(s.symbol)}
+                        onChange={() => toggleSelected(s.symbol)}
+                      />
+                    )}
+                  </td>
                   <td className="symbols-management-code" title={s.symbol}>
                     {s.symbol}
+                    {s.inScope === false && (
+                      <span className="symbols-management-parent" title="Offered by the relay but outside the broker feed scope: add it to the feed symbols in Admin → Gateways to receive quotes">not in feed scope</span>
+                    )}
                   </td>
                   <td><StreamingIndicator state={streamingState(s.symbol, streamedNames)} /></td>
                   <td style={{ color: 'var(--muted)' }}>—</td>
@@ -608,6 +680,15 @@ const SymbolsTab = ({ toolbarTarget }) => {
           instruments={symbols}
           onClose={closeForm}
           onSuccess={(saved) => { setSavedNotice(`${saved.symbol}: saved and ${saved.enabled ? 'enabled' : 'disabled'}. ${saved.enabled ? 'The terminal updates automatically. Trading requires group permission, an open session and a fresh quote.' : 'Enable after reviewing specifications.'}`); closeForm(); reloadAfterChange(); }}
+        />
+      )}
+      {modal === 'bulk-configure' && (
+        <BulkConfigureModal
+          symbols={selectedList}
+          instruments={symbols}
+          categories={categories}
+          onClose={() => setModal(null)}
+          onDone={() => { setModal(null); setSelectedSymbols(new Set()); setSavedNotice('Bulk configuration finished. Configured symbols are listed with their status; refused ones stay Not configured.'); reloadAfterChange(); }}
         />
       )}
       {modal === 'clone' && (

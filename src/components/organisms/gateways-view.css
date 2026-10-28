@@ -128,6 +128,8 @@
 .gw-toggle input { width: 14px; height: 14px; flex: none; accent-color: var(--accent-500); }
 .gw-field-hint, .gw-save-help { color: var(--text-muted); font-size: 11px; line-height: 1.5; }
 .gw-save-help { padding: 10px; border-radius: 2px; background: var(--bg-app); }
+.gw-field-warning { grid-column: 1 / -1; margin: 0; color: var(--warning, #c48a2a); font-size: 11px; line-height: 1.5; }
+.gw-legacy-form textarea.ui-input { min-height: 64px; padding: 6px 8px; font-family: inherit; resize: vertical; }
 .gw-save-help strong { color: var(--text-secondary); font-weight: 600; }
 .gw-form-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border-default); }
 .gw-form-actions > button:first-child { margin-right: auto; }

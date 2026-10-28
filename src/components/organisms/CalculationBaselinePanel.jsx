@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
-import {previewCalculationBaseline,activateCalculationBaseline,calculationBaselineStatus,calculationBaselineSources} from '../../services/calculationBaselineApi.js';
-import {readBaselineSources,baselineAccountMarginBoundary,baselineAccountPricing,baselineLogin,parseBaselineDraft,readBaselinePreview,readBaselinePending,saveBaselinePending,readBaselineStatus,clearBaselinePending,withBaselineWriteLock} from '../../services/calculationBaseline.js';
+import {previewCalculationBaseline,activateCalculationBaseline,calculationBaselineStatus,calculationBaselineSources,generateCalculationBaseline} from '../../services/calculationBaselineApi.js';
+import {BASELINE_DRAFT_LIMIT_BYTES,BASELINE_DRAFT_LIMIT_TEXT,buildBaselineGenerateRequest,readBaselineGenerate,readBaselineSources,baselineAccountMarginBoundary,baselineAccountPricing,baselineLogin,parseBaselineDraft,readBaselinePreview,readBaselinePending,saveBaselinePending,readBaselineStatus,clearBaselinePending,withBaselineWriteLock} from '../../services/calculationBaseline.js';
 import {getManagerTradeScope} from '../../services/managerTradeApi.js';
 import './calculation-baseline.css';
 
@@ -9,9 +9,16 @@ export default function CalculationBaselinePanel({sessionKey}) {
  const [pending,setPending]=useState(null),[ack,setAck]=useState(false),[busy,setBusy]=useState(false);
  const [error,setError]=useState(''),[notice,setNotice]=useState('');
  const [sources,setSources]=useState(null);
+ // Generate draft from current settings: the request form and the last result.
+ const emptyGenerate={symbolGroups:'',acceptGroupCommissions:false,zeroCommissionReason:'',execution:'',risk:'',fx:'',calculationPolicyId:''};
+ const [generateForm,setGenerateForm]=useState(emptyGenerate),[generated,setGenerated]=useState(null);
+ // Any change to the request or to the Policy JSON makes the shown result stale.
+ // Enter in a generate field must not submit the surrounding review form.
+ const keepEnter=event=>{if(event.key==='Enter')event.preventDefault();};
+ const setGenerateField=key=>event=>{const value=event.target.type==='checkbox'?event.target.checked:event.target.value;setGenerateForm(form=>({...form,[key]:value}));setGenerated(null);};
  const generation=useRef(0),inFlight=useRef(false);
  useEffect(()=>{
-  ++generation.current;inFlight.current=false;setBusy(false);setReview(null);setAck(false);setError('');setNotice('');setText('');setSources(null);
+  ++generation.current;inFlight.current=false;setBusy(false);setReview(null);setAck(false);setError('');setNotice('');setText('');setSources(null);setGenerated(null);
   const scope=getManagerTradeScope();
   const discover=()=>{
    if(scope!==getManagerTradeScope())return;
@@ -44,6 +51,17 @@ export default function CalculationBaselinePanel({sessionKey}) {
    if(current())setReview({account,draft,value});
   });
  };
+ const generate=()=>{
+  if(text.trim()&&typeof globalThis.confirm==='function'&&!globalThis.confirm('Replace the Policy JSON already entered with a newly generated draft?'))return;
+  run(async current=>{
+  setGenerated(null);
+  const account=baselineLogin(login),request=buildBaselineGenerateRequest(generateForm);
+  const value=readBaselineGenerate(await generateCalculationBaseline(account,request));
+  if(!current())return;
+  invalidate();setGenerated(value);
+  if(value.text){setText(value.text);setNotice(`Draft filled into the Policy JSON (${new TextEncoder().encode(value.text).length} bytes). Review it, then select Review account baseline.`);}
+  });
+ };
  const loadSources=()=>run(async(current,scope)=>{
   setSources(null);
   const value=readBaselineSources(await calculationBaselineSources(baselineLogin(login)),scope);
@@ -71,8 +89,8 @@ export default function CalculationBaselinePanel({sessionKey}) {
  const recover=()=>{if(pending)run(async(current,scope)=>finish(scope,pending,await calculationBaselineStatus(pending.account_login,pending.fingerprint),current));};
  const loadFile=async event=>{
   const file=event.target.files?.[0];if(!file)return;
-  invalidate();
-  if(file.size>65536){setError('The reviewed policy file must be at most 64 KB.');return;}
+  invalidate();setGenerated(null);
+  if(file.size>BASELINE_DRAFT_LIMIT_BYTES){setError(BASELINE_DRAFT_LIMIT_TEXT);return;}
   await run(async current=>{const value=await file.text();parseBaselineDraft(value);if(current())setText(value);});
  };
  return <section className="calculation-baseline" aria-label="Initial accounting baseline">
@@ -82,12 +100,33 @@ export default function CalculationBaselinePanel({sessionKey}) {
   {error&&<p role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
   {pending?<div><p>Original activation awaiting confirmation: <code>{pending.fingerprint}</code></p><p>Broker {pending.broker_id}, account {pending.account_login}. Checking status does not submit another activation.</p><button disabled={busy} onClick={recover}>Check original activation</button></div>:
    <form onSubmit={inspect}><fieldset disabled={busy}><legend>Reviewed policy</legend>
-    <label>Account login in this broker<input inputMode="numeric" required value={login} onChange={e=>{setLogin(e.target.value);setSources(null);invalidate();}}/></label>
+    <label>Account login in this broker<input inputMode="numeric" required value={login} onChange={e=>{setLogin(e.target.value);setSources(null);setGenerated(null);invalidate();}}/></label>
     <button type="button" disabled={!login.trim()} onClick={loadSources}>Read current broker settings</button>
+    <details className="baseline-generate"><summary>Generate draft from current settings</summary>
+     <p>Builds a complete policy from the broker's current accounts, groups, instruments and commissions. Nothing is saved; the draft fills the Policy JSON for review.</p>
+     <label>Symbol groups (optional; one per line or comma separated; empty = all groups)<textarea rows="2" spellCheck="false" value={generateForm.symbolGroups} onChange={setGenerateField('symbolGroups')}/></label>
+     <label className="baseline-confirm"><input type="checkbox" checked={generateForm.acceptGroupCommissions} onChange={setGenerateField('acceptGroupCommissions')}/>Carry each group's current per-lot commission into the policy</label>
+     <label>Zero commission reason (optional)<input value={generateForm.zeroCommissionReason} onKeyDown={keepEnter} onChange={setGenerateField('zeroCommissionReason')}/></label>
+     <label>Execution policy attestation (required)<textarea rows="2" value={generateForm.execution} onChange={setGenerateField('execution')}/></label>
+     <label>Risk policy attestation (required)<textarea rows="2" value={generateForm.risk} onChange={setGenerateField('risk')}/></label>
+     <label>FX conversion policy attestation (required)<textarea rows="2" value={generateForm.fx} onChange={setGenerateField('fx')}/></label>
+     <label>Calculation policy ID (optional)<input value={generateForm.calculationPolicyId} onKeyDown={keepEnter} onChange={setGenerateField('calculationPolicyId')}/></label>
+     <button type="button" disabled={!login.trim()||!generateForm.execution.trim()||!generateForm.risk.trim()||!generateForm.fx.trim()} onClick={generate}>Generate draft from current settings</button>
+    </details>
     <label>Import reviewed policy file<input type="file" accept=".json,application/json" onChange={loadFile}/></label>
-    <details><summary>Review imported policy</summary><label>Policy JSON<textarea rows="10" spellCheck="false" value={text} onChange={e=>{setText(e.target.value);invalidate();}}/></label></details>
+    <details><summary>Review imported policy</summary><label>Policy JSON<textarea rows="10" spellCheck="false" value={text} onChange={e=>{setText(e.target.value);setGenerated(null);invalidate();}}/></label></details>
     <button type="submit" disabled={!text.trim()}>Review account baseline</button>
    </fieldset></form>}
+  {generated&&<div className="baseline-generated" aria-label="Generated draft">
+   {generated.draftError&&<p role="alert">{generated.draftError}</p>}
+   {!generated.text&&!generated.draftError&&<p role="alert">No draft could be built from the current settings. Resolve the blockers below and generate again.</p>}
+   {Object.keys(generated.summary).length>0&&<p>Draft summary: {Object.entries(generated.summary).map(([key,value])=>`${key.replaceAll('_',' ')} ${value}`).join(' · ')}</p>}
+   {generated.blockers.length>0&&<div className="baseline-blockers"><h3>Blockers ({generated.blockers.length}): activation is refused until each one is resolved</h3>
+    <ul>{generated.blockers.map((item,index)=><li key={index}><code>{item.code}</code>{item.subject&&<> · <strong>{item.subject}</strong></>}: {item.message}</li>)}</ul></div>}
+   {generated.warnings.length>0&&<div className="baseline-warnings"><h3>Warnings ({generated.warnings.length})</h3>
+    <ul>{generated.warnings.map((item,index)=><li key={index}><code>{item.code}</code>{item.subject&&<> · <strong>{item.subject}</strong></>}: {item.message}</li>)}</ul></div>}
+   {generated.text&&!generated.blockers.length&&<p role="status">No blockers. Review the Policy JSON, then select Review account baseline.</p>}
+  </div>}
   {sources&&<div aria-label="Current broker settings">
    <p>Current settings for {sources.broker_id}, observed {sources.observed_at}. These values need a reviewed policy before they can be imported.</p>
    <p>Source reference: <code>{sources.source_snapshot_hash}</code></p>

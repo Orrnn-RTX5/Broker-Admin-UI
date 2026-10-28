@@ -324,6 +324,33 @@ export const parseFeedConfigImport = (raw) => {
   return out;
 };
 
+// Authorized sender catalog (cserver.catalog_symbols): the relay operator's
+// full symbol list, stored once per broker. In "Subscribe to all symbols" mode
+// the receiver subscribes to exactly this list (the relay's list cannot be
+// discovered). Explicit names only: never * or ALL, at most 2048, unique.
+export const MAX_CATALOG_SYMBOLS = 2048;
+
+/** Parses the catalog text into { symbols, error }; duplicates (any case) are dropped. */
+export const parseCatalogSymbols = (text) => {
+  const seen = new Set();
+  const symbols = [];
+  for (const raw of String(text ?? '').split(/[,;\s]+/)) {
+    const symbol = raw.trim();
+    if (!symbol) continue;
+    const key = symbol.toUpperCase();
+    if (key === '*' || key === 'ALL' || key === 'ALL_SYMBOLS') {
+      return { symbols: [], error: 'The authorized sender catalog must list explicit symbol names, not * or ALL.' };
+    }
+    if (seen.has(key)) continue;
+    seen.add(key);
+    symbols.push(symbol);
+  }
+  if (symbols.length > MAX_CATALOG_SYMBOLS) {
+    return { symbols: [], error: `The authorized sender catalog can hold at most ${MAX_CATALOG_SYMBOLS} symbols (${symbols.length} entered).` };
+  }
+  return { symbols, error: '' };
+};
+
 export const buildFeedConfigPayload = (form) => {
   const payload = {
     feed_provider: normalizeFeedProvider(form.feed_provider) || 'rtxmd',
@@ -339,6 +366,15 @@ export const buildFeedConfigPayload = (form) => {
       catalog_file: form.catalog_file.trim(),
     },
   };
+
+  // Sent only when the backend reported the field or the operator entered a
+  // value; omitted means "unchanged" (merge semantics on the manager).
+  const catalog = String(form.catalog_symbols ?? '');
+  if (form.catalog_symbols_known || catalog.trim()) {
+    const parsed = parseCatalogSymbols(catalog);
+    if (parsed.error) throw new Error(parsed.error);
+    payload.cserver.catalog_symbols = parsed.symbols.join(',');
+  }
 
   if (form.password) payload.password = form.password;
 

@@ -76,3 +76,22 @@ test('group picker offers only configured enabled instruments', () => {
   assert.deepEqual(groupSelectableSymbols(rows).map(entry => entry.symbol), ['CUSTOM1', 'EURUSD', 'XAUUSD']);
   assert.deepEqual(groupDisabledSymbols(rows), ['EURUSD.PRO']);
 });
+
+test('mergeLpSymbols carries the catalogue in_scope flag (G2); old catalogues count as in scope', () => {
+  const merged = mergeLpSymbols(
+    [
+      { symbol: 'AAA1', source: 'receiver_catalog', in_scope: false, has_instrument: false, enabled: false },
+      { symbol: 'BBB2', in_scope: true, has_instrument: true, enabled: true },
+      'CCC3',
+      { symbol: 'DDD4' },
+    ],
+    [{ symbol: 'BBB2', enabled: true }, { symbol: 'EEE5', enabled: true }],
+  );
+  assert.deepEqual(merged.map((e) => [e.symbol, e.inScope]), [
+    ['AAA1', false],
+    ['BBB2', true],
+    ['CCC3', true],
+    ['DDD4', true],
+    ['EEE5', true],
+  ]);
+});

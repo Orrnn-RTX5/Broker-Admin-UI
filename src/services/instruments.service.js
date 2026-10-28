@@ -243,6 +243,17 @@ const getManagerInstruments = async (params = {}) => {
   };
 };
 
+// Top-level flags of the last instrument-catalogue response (G2): false when the
+// server could not read the relay's sender catalog or reach the bridge, so the
+// list may be incomplete. null = not reported (older server) or not loaded yet.
+let catalogueFlags = {catalogAvailable: null, bridgeAvailable: null};
+const flagOf = value => (typeof value === 'boolean' ? value : null);
+export const readCatalogueFlags = (data) => ({
+  catalogAvailable: flagOf(data?.catalog_available),
+  bridgeAvailable: flagOf(data?.bridge_available),
+});
+export const getCatalogueFlags = () => ({...catalogueFlags});
+
 export const InstrumentsService = {
   // Management edits require complete gateway specifications, never manager fallbacks.
   getConfiguredInstruments: async (params = {}) => {
@@ -250,7 +261,9 @@ export const InstrumentsService = {
     return {...res.data, instruments: getRows(res.data).map(row => normalizeSymbolRow(row))};
   },
   getInstrumentCatalogue: async () => {
+    catalogueFlags = {catalogAvailable: null, bridgeAvailable: null}; // never keep flags of an earlier response
     const res = await api.get('/api/v2/admin/instrument-catalogue');
+    catalogueFlags = readCatalogueFlags(res.data);
     return getRows(res.data);
   },
   // Names only: Market Watch must not fetch full parameters for every symbol.
@@ -273,6 +286,13 @@ export const InstrumentsService = {
 
   createInstrument: async (data) => {
     const res = await api.post('/api/v2/admin/instruments', data);
+    return res.data;
+  },
+
+  // Bulk configure (G3): { dry_run, symbols, template, per_symbol } -> per-symbol
+  // results, HTTP 200 even with partial refusals; a whole-request error is 400.
+  bulkConfigureInstruments: async (body) => {
+    const res = await api.post('/api/v2/admin/instruments/bulk-configure', body);
     return res.data;
   },
 
