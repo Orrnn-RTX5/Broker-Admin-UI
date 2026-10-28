@@ -249,9 +249,15 @@ test('403 keeps the authority wording of the server', () => {
  assert.match(readAutoBootstrapRefusal({status: 403, data: ''}), /Current broker administrator authority is required/);
 });
 
-test('404 says the server does not have auto-bootstrap yet, whatever the body says', () => {
+test('404 without the ACCOUNT_NOT_FOUND code says the server does not have auto-bootstrap yet', () => {
  assert.equal(readAutoBootstrapRefusal({status: 404, data: '404 page not found'}), 'Auto-bootstrap is not available on this server yet (HTTP 404).');
- assert.equal(readAutoBootstrapRefusal({status: 404, data: {error: 'ACCOUNT_NOT_FOUND', message: 'no such account'}}), 'Auto-bootstrap is not available on this server yet (HTTP 404).');
+ assert.equal(readAutoBootstrapRefusal({status: 404, data: {error: 'SOMETHING_ELSE', message: 'no such route'}}), 'Auto-bootstrap is not available on this server yet (HTTP 404).');
+});
+
+test('404 ACCOUNT_NOT_FOUND says the login is not an account of this broker, not that the route is missing', () => {
+ assert.equal(readAutoBootstrapRefusal({status: 404, data: {error: 'ACCOUNT_NOT_FOUND', message: 'no such account'}}), 'no such account (ACCOUNT_NOT_FOUND, HTTP 404).');
+ assert.equal(readAutoBootstrapRefusal({status: 404, data: {error: 'ACCOUNT_NOT_FOUND'}}), 'The login is not an account of this broker (ACCOUNT_NOT_FOUND, HTTP 404).');
+ assert.doesNotMatch(readAutoBootstrapRefusal({status: 404, data: {error: 'ACCOUNT_NOT_FOUND', message: 'no such account'}}), /not available/);
 });
 
 test('409 busy says a run is already in progress', () => {

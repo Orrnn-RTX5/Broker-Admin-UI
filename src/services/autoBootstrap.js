@@ -7,6 +7,7 @@ const ATTESTATION_LIMIT = 2000;
 const ATTESTATIONS = [['execution','Execution policy'],['risk','Risk policy'],['fx','FX conversion policy']];
 const COUNTERPARTS = ['profit','swap','commission','fee'];
 const BUSY_CODE = 'AUTO_BOOTSTRAP_BUSY';
+const ACCOUNT_NOT_FOUND_CODE = 'ACCOUNT_NOT_FOUND';
 const BUSY_TEXT = 'A bootstrap run is already in progress.';
 const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const trimmed = value => typeof value === 'string' ? value.trim() : '';
@@ -109,12 +110,21 @@ export function readAutoBootstrapStatus(value) {
  };
 }
 
-// A refused request. A 403 keeps the server's authority reason; a 404 means
-// the route is missing on this server, whatever its body says.
+// A refused request. A 403 keeps the server's authority reason. A 404 with the
+// ACCOUNT_NOT_FOUND code means the {login} anchor is not an account of this
+// broker (contract section 5); any other 404 means the route is missing.
 export function readAutoBootstrapRefusal(response) {
  const status = Number(response?.status) || 0;
  if (status === 403) return readCalculationRefusal(response);
- if (status === 404) return 'Auto-bootstrap is not available on this server yet (HTTP 404).';
+ if (status === 404) {
+  const data = response?.data;
+  const code = isObject(data) ? refusalText(data.error) || refusalText(data.error_code) || refusalText(data.code) : '';
+  if (code !== ACCOUNT_NOT_FOUND_CODE) return 'Auto-bootstrap is not available on this server yet (HTTP 404).';
+  const message = refusalText(data.message);
+  return message
+   ? `${message.replace(/[\s.]+$/, '')} (${code}, HTTP 404).`
+   : `The login is not an account of this broker (${code}, HTTP 404).`;
+ }
  if (status === 413) return 'The automatic bootstrap request is larger than the 64 KiB limit (HTTP 413).';
  if (status === 503) return 'The automatic bootstrap service is unavailable (HTTP 503). Try again shortly.';
  const data = response?.data;
