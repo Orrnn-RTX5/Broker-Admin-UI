@@ -222,18 +222,25 @@
   color: var(--mw-text);
 }
 
+.admin-market-search-bar {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  border-top: 1px solid var(--mw-border);
+  background: var(--mw-bg-1);
+}
+
 .admin-market-search {
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 6px;
-  margin: 6px 8px;
+  gap: 5px;
+  height: 22px;
+  margin: 0;
   border: 1px solid var(--mw-border);
-  border-radius: var(--radius-sm, 3px);
-  padding: 4px 8px;
+  border-radius: 2px;
+  padding: 0 6px;
   color: var(--mw-text-muted);
   background: var(--bg-surface-1, #1e1e1e);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
   transition: border-color 0.15s ease;
 }
 
@@ -255,7 +262,26 @@
 
 .admin-market-search:focus-within {
   border-color: var(--mw-accent);
-  box-shadow: 0 0 0 1px var(--mw-accent), inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.admin-market-search-clear {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--mw-text-muted);
+  cursor: pointer;
+}
+
+.admin-market-search-clear:hover {
+  color: var(--mw-text);
+  background: var(--mw-bg-hover);
 }
 
 .admin-market-status {
@@ -333,9 +359,9 @@
   background: var(--mw-bg-2);
   color: var(--mw-text-secondary);
   font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
   user-select: none;
 }
 

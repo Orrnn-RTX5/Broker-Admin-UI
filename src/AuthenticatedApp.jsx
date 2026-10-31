@@ -960,11 +960,12 @@ const AuthenticatedAppInner = ({ navigate, globalTheme, setGlobalTheme, onResetL
         activeNode={activeNode}
         onNodeSelect={handleNodeSelect}
         onReportBug={() => setBugReportOpen(true)}
+        onResetLayout={onResetLayout}
       />
       </MenuBar>
 
       <WorkspaceDataProvider key={groupIdentity} refreshTrigger={refreshKey}>
-      <div className="admin-workspace-body">
+      <div className="admin-workspace-body is-terminal-full-width">
       <div className="admin-workspace-upper">
         <MarketWatchDock>
         <SidebarNavTree

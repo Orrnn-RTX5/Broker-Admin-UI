@@ -76,7 +76,7 @@ const MenuBar = ({
       <nav className="admin-menu-bar" aria-label="Admin navigation">
       <button type="button" className="admin-menu-brand" onClick={onAbout} aria-label={`About ${productName}`}>
         <img
-          src={logoUrl && !logoFailed ? logoUrl : fallbackSymbol}
+          src={!logoFailed ? fallbackSymbol : (logoUrl || fallbackSymbol)}
           alt=""
           onError={() => setLogoFailed(true)}
         />

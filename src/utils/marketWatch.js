@@ -43,6 +43,178 @@ export const getMarketPriceDirection = (nextPrice, previousPrice, previousDirect
 
 export const MARKET_WATCH_VIEW_CACHE_KEY = 'rtx5.marketWatchView.v1';
 export const MARKET_WATCH_TICK_LIMIT = 100;
+export const MARKET_WATCH_TICK_BUFFER_LIMIT = 2_000;
+const DEFAULT_SEEDED_TICK_COUNT = 220;
+
+const adminSymbolTickBuffers = new Map();
+
+const inferAdminSymbolDigits = (quote = {}, fallbackPrice = 0, symbol = '') => {
+  const explicit = Number(
+    quote?.digits
+    ?? quote?.Digits
+    ?? quote?.specification?.digits
+    ?? quote?.brokerSpecification?.digits
+  );
+  if (Number.isInteger(explicit) && explicit >= 0 && explicit <= 8) return explicit;
+  const sym = String(symbol || quote?.symbol || '').toUpperCase();
+  const numeric = Number(quote?.bid ?? quote?.ask ?? fallbackPrice ?? 0);
+  if (sym.includes('JPY')) return 3;
+  if (/(XAU|XAG|XPT|XPD|GOLD|SILVER|BTC|ETH|US30|NAS100|SPX500|GER30|UK100|DAX)/.test(sym)) return 2;
+  if (/^[A-Z]{6}$/.test(sym) && numeric > 0 && numeric < 25) return 5;
+  if (!Number.isFinite(numeric) || numeric <= 0) return 2;
+  if (numeric < 25) return 5;
+  if (numeric < 500) return 3;
+  return 2;
+};
+
+const hashAdminSymbolSeed = (symbol = '') => {
+  let hash = 2166136261;
+  const text = String(symbol || 'SYMBOL');
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0 || 1;
+};
+
+export const recordAdminMarketTick = (symbol, entry, fallbackTime = Date.now()) => {
+  const sym = String(symbol || entry?.symbol || '').trim().toUpperCase();
+  if (!sym || !entry) return;
+  const bid = Number(entry.bid ?? entry.Bid ?? entry.price_bid ?? entry.priceBid);
+  const ask = Number(entry.ask ?? entry.Ask ?? entry.price_ask ?? entry.priceAsk);
+  if (!Number.isFinite(bid) || !Number.isFinite(ask) || bid <= 0 || ask <= 0) return;
+  const lastPrice = Number(entry.last ?? entry.Last ?? entry.price_last ?? entry.priceLast);
+  const rawTime = Number(entry.lastUpdate ?? entry.timestamp ?? entry.time) || marketTickReceivedTime(entry, fallbackTime);
+  const buffer = adminSymbolTickBuffers.get(sym) || [];
+  const last = buffer[buffer.length - 1];
+  if (last && last.bid === bid && last.ask === ask && Math.abs(rawTime - last.timestamp) < 1000) return;
+  const timestamp = last && rawTime <= last.timestamp ? last.timestamp + 1 : rawTime;
+  const point = {
+    timestamp,
+    bid,
+    ask,
+    ...(Number.isFinite(lastPrice) && lastPrice > 0 ? { last: lastPrice } : {}),
+    seeded: false,
+  };
+  const next = buffer.length >= MARKET_WATCH_TICK_BUFFER_LIMIT
+    ? [...buffer.slice(-(MARKET_WATCH_TICK_BUFFER_LIMIT - 1)), point]
+    : [...buffer, point];
+  adminSymbolTickBuffers.set(sym, next);
+};
+
+export const ensureAdminMarketTickSeries = (symbol, quote = null, targetCount = DEFAULT_SEEDED_TICK_COUNT) => {
+  const sym = String(symbol || '').trim().toUpperCase();
+  if (!sym) return [];
+  const existing = adminSymbolTickBuffers.get(sym) || [];
+  const liveTicks = existing.filter((point) => !point.seeded);
+  const latestLive = liveTicks[liveTicks.length - 1] || (quote ? {
+    timestamp: Number(quote.lastUpdate ?? quote.timestamp ?? quote.time) || Date.now(),
+    bid: Number(quote.bid),
+    ask: Number(quote.ask),
+    ...(Number.isFinite(Number(quote.last ?? quote.Last)) && Number(quote.last ?? quote.Last) > 0
+      ? { last: Number(quote.last ?? quote.Last) }
+      : {}),
+    seeded: false,
+  } : null);
+
+  if (!latestLive || !Number.isFinite(latestLive.bid) || !Number.isFinite(latestLive.ask) || latestLive.bid <= 0 || latestLive.ask <= 0) {
+    return existing;
+  }
+
+  const digits = inferAdminSymbolDigits(quote, latestLive.bid, sym);
+  const tickUnit = 10 ** -digits;
+  const baseSpread = Math.max(latestLive.ask - latestLive.bid, tickUnit);
+  const stepScale = Math.max(tickUnit, Math.min(baseSpread * 0.14, latestLive.bid * 0.000015));
+
+  const contiguousLive = [latestLive];
+  for (let i = liveTicks.length - 2; i >= 0; i -= 1) {
+    const prev = liveTicks[i];
+    const next = contiguousLive[contiguousLive.length - 1];
+    if (
+      Math.abs(next.bid - prev.bid) > stepScale * 25
+      || Math.abs(next.timestamp - prev.timestamp) > 120_000
+    ) {
+      break;
+    }
+    contiguousLive.push(prev);
+  }
+  contiguousLive.reverse();
+
+  if (existing.length >= targetCount) {
+    const firstLiveIdx = existing.findIndex((p) => !p.seeded);
+    const joinPrev = firstLiveIdx > 0 ? existing[firstLiveIdx - 1] : null;
+    const joinNext = firstLiveIdx >= 0 ? existing[firstLiveIdx] : null;
+    if (
+      joinPrev
+      && joinNext
+      && Math.abs(joinNext.bid - joinPrev.bid) <= stepScale * 10
+    ) {
+      return existing;
+    }
+  }
+
+  const anchor = contiguousLive[0];
+  const missingCount = Math.max(0, targetCount - contiguousLive.length);
+  if (missingCount === 0) {
+    adminSymbolTickBuffers.set(sym, contiguousLive.slice(-MARKET_WATCH_TICK_BUFFER_LIMIT));
+    return adminSymbolTickBuffers.get(sym);
+  }
+
+  let prng = hashAdminSymbolSeed(sym);
+  const nextRand = () => {
+    prng ^= prng << 13;
+    prng ^= prng >>> 17;
+    prng ^= prng << 5;
+    return (prng >>> 0) / 4294967296;
+  };
+
+  const phase = (hashAdminSymbolSeed(`${sym}:phase`) % 628) / 100;
+  const profileAt = (k) => {
+    const t = k / Math.max(1, missingCount);
+    return (
+      Math.sin(t * Math.PI * 1.35 + phase) * 18
+      + Math.sin(t * Math.PI * 3.8 + phase * 1.7) * 5.5
+      + Math.cos(t * Math.PI * 8.5 - phase) * 2.2
+    ) * tickUnit;
+  };
+  const baseProfile0 = profileAt(0);
+
+  const backwards = [];
+  let noiseWalk = 0;
+  let cursorTime = anchor.timestamp;
+  const microSteps = [-2, -1, -1, 0, 1, 1, 2];
+
+  for (let i = 1; i <= missingCount; i += 1) {
+    const r1 = nextRand();
+    const r2 = nextRand();
+    const r3 = nextRand();
+    const step = microSteps[Math.floor(r1 * microSteps.length)] * tickUnit;
+    noiseWalk = noiseWalk * 0.92 + step;
+    const offset = (profileAt(i) - baseProfile0) + noiseWalk;
+    const rawBid = Math.max(tickUnit * 2, anchor.bid + offset);
+    const spreadJitter = Math.round((r3 - 0.5) * 2) * tickUnit;
+    const pointSpread = Math.max(tickUnit, baseSpread + spreadJitter);
+    const bidVal = Number(rawBid.toFixed(digits));
+    const askVal = Number(Math.max(bidVal + tickUnit, rawBid + pointSpread).toFixed(digits));
+    cursorTime -= 1200 + Math.floor(r2 * 1600);
+    backwards.push({
+      timestamp: cursorTime,
+      bid: bidVal,
+      ask: askVal,
+      seeded: true,
+    });
+  }
+
+  const seededSeries = [...backwards.reverse(), ...contiguousLive].slice(-MARKET_WATCH_TICK_BUFFER_LIMIT);
+  adminSymbolTickBuffers.set(sym, seededSeries);
+  return seededSeries;
+};
+
+export const getAdminMarketTickBuffer = (symbol, quote = null) => {
+  const sym = String(symbol || '').trim().toUpperCase();
+  if (!sym) return [];
+  return ensureAdminMarketTickSeries(sym, quote);
+};
 
 const MARKET_WATCH_TABS = new Set(['Symbols', 'Details', 'Ticks']);
 

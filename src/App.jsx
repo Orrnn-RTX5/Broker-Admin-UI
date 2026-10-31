@@ -215,6 +215,18 @@ const AppRoutes = () => {
   }, [accessToken, isAuthenticated, journalSession]);
 
   const resetWorkspaceLayout = React.useCallback(() => {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        for (let i = localStorage.length - 1; i >= 0; i -= 1) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('rtx5-market-watch-view-v1')) {
+            localStorage.removeItem(key);
+          }
+        }
+      }
+    } catch {
+      // Ignore storage access errors when resetting layout
+    }
     setGlobalTheme(DEFAULT_WORKSPACE_LAYOUT.theme);
     setWorkspaceRevision((revision) => revision + 1);
   }, []);

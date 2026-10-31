@@ -4,10 +4,18 @@
 .admin-workspace-upper { display: flex; flex: 1; min-height: 220px; overflow: hidden; }
 .admin-workspace-main { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; background: var(--bg-app); }
 .admin-workspace .admin-market-dock { --workspace-dock-width: calc(var(--workspace-market-width) + var(--workspace-navigator-width)); flex-basis: var(--workspace-dock-width); width: var(--workspace-dock-width); }
+.admin-workspace .admin-market-dock.is-stacked-column { --workspace-dock-width: var(--workspace-market-width); }
 .admin-workspace .admin-dock-mobile-panel { flex-direction: row; }
-.admin-workspace .admin-market-watch { position: relative; width: var(--workspace-market-width); height: 100% !important; flex: 0 0 var(--workspace-market-width) !important; min-height: 0; border-right: 1px solid var(--border-default); }
-.admin-workspace .admin-navigator-dock { position: relative; flex: 1; min-width: 0; min-height: 0; }
+.admin-workspace .admin-market-dock.is-stacked-column .admin-dock-mobile-panel { flex-direction: column; }
+.admin-workspace .admin-market-watch:not(.is-floating) { position: relative; width: var(--workspace-market-width); height: 100% !important; flex: 0 0 var(--workspace-market-width) !important; min-height: 0; border-right: 1px solid var(--border-default); }
+.admin-workspace .admin-navigator-dock:not(.is-floating) { position: relative; flex: 1; min-width: 0; min-height: 0; }
+.admin-workspace .admin-market-dock.is-side-by-side.is-navigator-first .admin-navigator-dock:not(.is-floating) { width: var(--workspace-navigator-width); flex: 0 0 var(--workspace-navigator-width); border-right: 1px solid var(--border-default); }
+.admin-workspace .admin-market-dock.is-stacked-column .admin-market-watch:not(.is-floating) { width: 100%; height: auto !important; flex: none !important; border-right: none; }
+.admin-workspace .admin-market-dock.is-stacked-column .admin-navigator-dock:not(.is-floating) { width: 100%; border-right: none; }
+.admin-workspace .admin-market-watch.is-floating,
+.admin-workspace .admin-navigator-dock.is-floating { background: var(--bg-surface-1, #131316); border-radius: 3px; overflow: hidden; }
 .admin-workspace .admin-dock-resizer { display: none; }
+.admin-workspace .admin-market-dock.is-stacked-column .admin-dock-resizer { display: flex; }
 .admin-workspace .admin-dock-heading { height: 32px; text-transform: none; letter-spacing: 0; font-weight: 500; }
 .admin-workspace .admin-navigator-content > div { padding-block: 6px; background: var(--bg-surface-1); box-shadow: none; }
 .admin-workspace .market-watch-restore,
@@ -17,6 +25,31 @@
 
 .workspace-column-resizer { display: none; }
 @media (min-width: 641px) {
+  .admin-workspace-body {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: minmax(220px, 1fr) auto;
+  }
+  .admin-workspace-upper {
+    display: contents;
+  }
+  /* Default & Reset Layout: Market Watch + Navigator in upper-left, Operations Terminal spans full width across bottom */
+  .admin-workspace-body > .admin-workspace-upper > .admin-market-dock,
+  .admin-workspace-body.is-terminal-full-width > .admin-workspace-upper > .admin-market-dock {
+    grid-column: 1;
+    grid-row: 1;
+    height: 100%;
+  }
+  .admin-workspace-body > .admin-workspace-upper > .admin-workspace-main,
+  .admin-workspace-body.is-terminal-full-width > .admin-workspace-upper > .admin-workspace-main {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .admin-workspace-body > .operations-terminal,
+  .admin-workspace-body.is-terminal-full-width > .operations-terminal {
+    grid-column: 1 / span 2;
+    grid-row: 2;
+  }
   .admin-workspace .workspace-column-resizer { display: block; position: absolute; inset: 0 0 0 auto; width: 6px; z-index: 6; cursor: col-resize; touch-action: none; user-select: none; }
   .admin-workspace .workspace-column-resizer:hover,
   .admin-workspace .workspace-column-resizer:focus-visible,

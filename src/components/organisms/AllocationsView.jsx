@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import * as Menu from '@radix-ui/react-dropdown-menu';
-import { Pencil, Search, Plus, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
+import { Pencil, Search, Plus, ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
 import './AllocationsView.css';
 import { useAuthStore } from '../../store/authStore';
 import { hasPermission, PERMISSION_KEYS } from '../../utils/permissions';
@@ -181,8 +181,8 @@ function AllocationTable({ identity, currentUser }) {
                     <th key={column.key} className={columnClass(column)} aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}>
                       <button type="button" className="alloc-sort" onClick={() => toggleSort(column.key)}>
                         {column.label}
-                        <span className="alloc-sort-icon" data-active={active || undefined} aria-hidden="true">
-                          {active && sort.direction === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+                        <span className="alloc-sort-icon" data-active={active || undefined} aria-hidden="true" style={{ display: 'none' }}>
+
                         </span>
                       </button>
                     </th>

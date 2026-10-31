@@ -38,6 +38,7 @@ export function normalizeAdminEnv(raw) {
     return url;
   };
   requireUrl('API_HOST', 'https:');
+  if (effective('API_HOST_EXT')) requireUrl('API_HOST_EXT', 'https:');
   const ws = requireUrl('FEED_WS_URL', 'wss:');
   const status = requireUrl('FEED_STATUS_URL', 'https:');
   if (ws.pathname !== '/ws/feed' || status.pathname !== '/ws/feed/status' || ws.host !== status.host) {

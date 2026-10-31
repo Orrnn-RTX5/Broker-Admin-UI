@@ -1,4 +1,5 @@
 import http from 'node:http';
+import https from 'node:https';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,6 +10,150 @@ const __dirname = path.dirname(__filename);
 const PORT = parseInt(process.env.PORT || '80', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 const DIST_DIR = path.resolve(process.env.DIST_DIR || path.join(__dirname, 'dist'));
+
+const EXT_API_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD']);
+const HOP_BY_HOP_HEADERS = new Set([
+  'connection',
+  'keep-alive',
+  'proxy-authenticate',
+  'proxy-authorization',
+  'te',
+  'trailer',
+  'transfer-encoding',
+  'upgrade'
+]);
+
+export const resolveExtApiUpstream = (env = process.env) => {
+  const raw = String(
+    env.API_HOST_EXT ||
+      env.VITE_API_HOST_EXT ||
+      env.API_HOST ||
+      env.VITE_API_HOST ||
+      ''
+  )
+    .trim()
+    .replace(/\/+$/, '');
+  if (!raw) return null;
+
+  try {
+    const candidate = /^[a-z][a-z\d+.-]*:\/\//i.test(raw)
+      ? raw
+      : `${/:8091(?:\/|$)/.test(raw) ? 'http' : 'https'}://${raw}`;
+    const url = new URL(candidate);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    if (!url.hostname) return null;
+    return url;
+  } catch {
+    return null;
+  }
+};
+
+export const isExtApiRequest = (reqUrl = '') =>
+  reqUrl === '/ext-api' || reqUrl.startsWith('/ext-api/') || reqUrl.startsWith('/ext-api?');
+
+export const rewriteExtApiPath = (reqUrl = '', basePathname = '/') => {
+  const stripped = String(reqUrl || '').slice('/ext-api'.length);
+  const suffix = (!stripped
+    ? '/'
+    : stripped.startsWith('/')
+      ? stripped
+      : `/${stripped}`).replace(/^\/+/, '/');
+  const basePath = String(basePathname || '').replace(/\/+$/, '');
+  return `${basePath}${suffix}`;
+};
+
+const proxyExtApiRequest = (req, res) => {
+  if (!EXT_API_METHODS.has(req.method || '')) {
+    res.writeHead(405, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
+      Allow: 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD'
+    });
+    return res.end(JSON.stringify({ error: 'Method Not Allowed' }));
+  }
+
+  const upstream = resolveExtApiUpstream(process.env);
+  if (!upstream) {
+    res.writeHead(503, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff'
+    });
+    return res.end(
+      req.method === 'HEAD'
+        ? undefined
+        : JSON.stringify({
+            error: 'Service Unavailable',
+            message: 'Upstream ext-api host is not configured (set API_HOST_EXT or API_HOST).'
+          })
+    );
+  }
+
+  const proxyHeaders = {};
+  for (const [key, value] of Object.entries(req.headers || {})) {
+    if (value === undefined) continue;
+    const lower = key.toLowerCase();
+    if (HOP_BY_HOP_HEADERS.has(lower) || lower === 'host') continue;
+    proxyHeaders[key] = value;
+  }
+  proxyHeaders.host = upstream.host;
+
+  const transport = upstream.protocol === 'https:' ? https : http;
+  const targetPath = rewriteExtApiPath(req.url, upstream.pathname);
+
+  const proxyReq = transport.request(
+    {
+      protocol: upstream.protocol,
+      hostname: upstream.hostname,
+      port: upstream.port || (upstream.protocol === 'https:' ? 443 : 80),
+      method: req.method,
+      path: targetPath,
+      headers: proxyHeaders
+    },
+    (proxyRes) => {
+      const responseHeaders = {};
+      for (const [key, value] of Object.entries(proxyRes.headers || {})) {
+        if (value === undefined) continue;
+        if (HOP_BY_HOP_HEADERS.has(key.toLowerCase())) continue;
+        responseHeaders[key] = value;
+      }
+      res.writeHead(proxyRes.statusCode || 502, responseHeaders);
+      if (req.method === 'HEAD') {
+        proxyRes.resume();
+        res.end();
+        return;
+      }
+      proxyRes.pipe(res);
+    }
+  );
+
+  proxyReq.on('error', (err) => {
+    if (!res.headersSent) {
+      res.writeHead(502, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'X-Content-Type-Options': 'nosniff'
+      });
+      res.end(
+        req.method === 'HEAD'
+          ? undefined
+          : JSON.stringify({ error: 'Bad Gateway', message: err.message })
+      );
+    } else if (!res.writableEnded) {
+      res.destroy();
+    }
+  });
+
+  req.on('error', () => proxyReq.destroy());
+  res.on('close', () => {
+    if (!res.writableEnded) {
+      proxyReq.destroy();
+    }
+  });
+
+  req.pipe(proxyReq);
+};
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -34,6 +179,10 @@ const MIME_TYPES = {
 };
 
 const server = http.createServer((req, res) => {
+  if (isExtApiRequest(req.url || '')) {
+    return proxyExtApiRequest(req, res);
+  }
+
   // Only handle GET and HEAD
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.writeHead(405, { 'Content-Type': 'text/plain' });
@@ -135,10 +284,12 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, HOST, () => {
-  console.log(`[Broker-Admin-UI] React frontend server listening on http://${HOST}:${server.address().port}`);
-  console.log(`[Broker-Admin-UI] Serving static build from: ${DIST_DIR}`);
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  server.listen(PORT, HOST, () => {
+    console.log(`[Broker-Admin-UI] React frontend server listening on http://${HOST}:${server.address().port}`);
+    console.log(`[Broker-Admin-UI] Serving static build from: ${DIST_DIR}`);
+  });
+}
 
 // Graceful shutdown
 const shutdown = () => {

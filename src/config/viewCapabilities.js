@@ -317,7 +317,7 @@ export const hasReachableViewInSubtree = (node, user) => {
     const candidate = stack.pop();
     if (!candidate || typeof candidate.label !== 'string') continue;
     if (
-      requiredPermissionForView(candidate.label) !== null &&
+      (candidate.label === 'Bug Reports' || requiredPermissionForView(candidate.label) !== null) &&
       canAccessView(user, candidate.label) &&
       !shouldBlockViewNavigation(candidate.label, user)
     ) {

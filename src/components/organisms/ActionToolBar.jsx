@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   ExternalLink, Plus, Pencil, X,
-  IdCard, Wallet, RefreshCcw, Search, FileSpreadsheet, Download,
+  IdCard, Wallet, RefreshCcw, RotateCcw, Search, FileSpreadsheet, Download,
   Folder, ArrowUpDown, BarChart3, Server, Bug, BookOpen,
 } from 'lucide-react';
 import { Tooltip } from '../ui/Tooltip';
@@ -48,7 +48,7 @@ const ActionToolBar = ({
   onEditClick, canEdit = false, onDeleteClick, canDelete = false, deleting = false,
   onNativePending, canViewNativePending = false,
   searchQuery = '', onSearchChange, searchInputRef,
-  activeNode = 'Groups', onNodeSelect, onReportBug,
+  activeNode = 'Groups', onNodeSelect, onReportBug, onResetLayout,
 }) => {
   const isTradeView = ['Orders', 'Positions', 'Deals'].includes(activeNode);
   const showRecordActions = ['Groups', 'Clients', 'Trading Accounts'].includes(activeNode) || isTradeView;
@@ -161,6 +161,18 @@ const ActionToolBar = ({
             <kbd className="mt5-search-kbd" aria-hidden="true">Ctrl+F</kbd>
           )}
         </div>
+        {onResetLayout && (
+          <button
+            type="button"
+            className="mt5-toolbar-reset"
+            aria-label="Reset workspace layout"
+            title="Reset workspace layout"
+            onClick={onResetLayout}
+          >
+            <RotateCcw size={13} strokeWidth={1.75} aria-hidden="true" />
+            <span>Reset</span>
+          </button>
+        )}
       </div>
     </div>
   );

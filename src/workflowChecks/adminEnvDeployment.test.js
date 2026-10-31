@@ -102,6 +102,36 @@ test('runtime entrypoint preserves the dedicated browser feed credential when co
   assert.equal(result.status, 0, result.stderr);
   assert.match(readFileSync(path.join(dir, 'runtime-config.js'), 'utf8'), /FEED_BROKER_TOKEN: "browser-feed-fixture"/);
   assert.throws(() => normalizeAdminEnv(`${valid}\nFEED_BROKER_TOKEN=one\nVITE_FEED_BROKER_TOKEN=two`), /conflicting FEED_BROKER_TOKEN/);
+  assert.throws(() => normalizeAdminEnv(`${valid}\nAPI_HOST_EXT=http://insecure.example.com`), /plain https:\/\/ URL/);
+  const extResult = spawnSync(
+    bash,
+    [
+      path.join(root, 'docker-entrypoint.sh').replaceAll('\\', '/'),
+      process.execPath.replaceAll('\\', '/'),
+      '-e',
+      'console.log(JSON.stringify({ API_HOST: process.env.API_HOST, API_HOST_EXT: process.env.API_HOST_EXT }))',
+    ],
+    {
+      cwd: root,
+      env: {
+        ...process.env,
+        DIST_DIR: dir.replaceAll('\\', '/'),
+        API_HOST: '',
+        API_HOST_EXT: '',
+        VITE_API_HOST_EXT: '',
+        VITE_API_HOST: 'https://service.orrnn.com',
+      },
+      encoding: 'utf8',
+    }
+  );
+  assert.equal(extResult.status, 0, extResult.stderr);
+  assert.deepEqual(JSON.parse(extResult.stdout.trim()), {
+    API_HOST: 'https://service.orrnn.com',
+    API_HOST_EXT: 'https://service.orrnn.com',
+  });
+  const runtimeConfig = readFileSync(path.join(dir, 'runtime-config.js'), 'utf8');
+  assert.match(runtimeConfig, /API_HOST: "https:\/\/service\.orrnn\.com"/);
+  assert.match(runtimeConfig, /API_HOST_EXT: "https:\/\/service\.orrnn\.com"/);
 });
 
 function deploymentScript() {

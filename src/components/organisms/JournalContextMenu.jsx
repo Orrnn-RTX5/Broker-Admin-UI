@@ -1,8 +1,9 @@
 import { createElement } from 'react';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import { Check, ChevronRight, Copy, FolderOpen, Search, X } from 'lucide-react';
-import { SERVER_JOURNAL_COLUMNS } from '../../utils/serverJournal.js';
 import './JournalMenu.css';
+
+const JOURNAL_MENU_TOGGLEABLE_COLUMNS = ['Time', 'Source'];
 
 function MenuAction({ icon, label, shortcut, disabled, onSelect, title, tone = '', command }) {
   return (
@@ -34,7 +35,7 @@ function MenuSetting({ label, checked, shortcut, onCheckedChange, disabled, stay
 export default function JournalContextMenu({
   children, selectedEntry, canClear, autoScroll, autoArrange, grid, columns,
   onOpen, onCopy, onViewer, onClear, onAutoScrollChange, onAutoArrangeChange, onGridChange,
-  onColumnToggle, onRestoreColumns,
+  onColumnToggle,
 }) {
   return (
     <ContextMenu.Root>
@@ -72,16 +73,11 @@ export default function JournalContextMenu({
             </ContextMenu.SubTrigger>
             <ContextMenu.Portal>
               <ContextMenu.SubContent className="journal-menu journal-menu-columns" sideOffset={3} alignOffset={-4} collisionPadding={8} aria-label="Journal columns">
-                {SERVER_JOURNAL_COLUMNS.map(column => (
+                {JOURNAL_MENU_TOGGLEABLE_COLUMNS.map(column => (
                   <MenuSetting key={column} label={column} checked={columns.includes(column)}
                     disabled={columns.length === 1 && columns.includes(column)}
                     onCheckedChange={() => onColumnToggle(column)} stayOpen />
                 ))}
-                <ContextMenu.Separator className="journal-menu-separator" />
-                <ContextMenu.Item className="journal-menu-item" onSelect={onRestoreColumns}>
-                  <span className="journal-menu-icon" />
-                  <span>Restore columns</span>
-                </ContextMenu.Item>
               </ContextMenu.SubContent>
             </ContextMenu.Portal>
           </ContextMenu.Sub>

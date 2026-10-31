@@ -257,6 +257,35 @@
   color: var(--text-primary);
 }
 
+.mt5-toolbar-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: var(--tb-btn);
+  padding: 0 9px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-default, #333333);
+  border-radius: var(--radius-sm, 3px);
+  background: var(--bg-surface-2, #292929);
+  color: var(--text-primary, #e4e4e4);
+  font-family: inherit;
+  font-size: var(--header-type, 12px);
+  font-weight: var(--header-weight, 500);
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.mt5-toolbar-reset:hover {
+  background: var(--bg-surface-3, #333333);
+  border-color: var(--border-strong, #575757);
+  color: var(--text-primary, #ffffff);
+}
+
+.mt5-toolbar-reset:active {
+  background: var(--tb-pressed);
+}
+
 /* ---------- Focus ---------- */
 .admin-action-toolbar button:focus-visible {
   outline: 2px solid var(--accent-500, #2196f3);

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { flushSync } from 'react-dom';
 import { persist } from 'zustand/middleware';
 import { buildFeedWsUrl, buildFeedStatusUrl, shouldUseFeedDevProxy } from '../config/endpoints';
-import { extractMarketTicks, extractStreamedSymbols, getMarketPriceDirection, mapFeedStatusRows, marketTickReceivedTime, validMarketPrice } from '../utils/marketWatch';
+import { extractMarketTicks, extractStreamedSymbols, getMarketPriceDirection, mapFeedStatusRows, marketTickReceivedTime, recordAdminMarketTick, validMarketPrice } from '../utils/marketWatch';
 import { createBrowserDeferredPersistStorage } from './deferredPersistStorage';
 import { getFeedOriginError, getFeedReconnectDelayMs } from './feedConnectionPolicy';
 
@@ -11,6 +11,27 @@ const STATUS_REQUEST_TIMEOUT_MS = 3000;
 // Re-read the streamed symbol inventory so SuperAdmin changes appear without a reload.
 const STATUS_POLL_MS = 15000;
 const symbolPersistStorage = createBrowserDeferredPersistStorage();
+
+const SYMBOL_DETAIL_FIELDS = [
+  'session',
+  'daily_open', 'dailyOpen', 'open', 'open_price', 'openPrice',
+  'previous_close', 'previousClose', 'close', 'close_price', 'closePrice',
+  'settlement_price', 'settlementPrice',
+  'daily_change_price', 'dailyChangePrice',
+  'daily_change_pct', 'dailyChangePct', 'dailyChange',
+  'high', 'low',
+  'bidHigh', 'bidLow', 'askHigh', 'askLow',
+  'high_bid', 'low_bid', 'high_ask', 'low_ask',
+  'last', 'rawBid', 'rawAsk', 'raw_bid', 'raw_ask',
+  'digits', 'Digits',
+  'tick_size', 'tickSize', 'trade_tick_size', 'tradeTickSize',
+  'point_size', 'pointSize', 'point',
+  'tick_value', 'tickValue', 'trade_tick_value', 'tradeTickValue',
+  'description', 'Description',
+  'specification', 'spec', 'contract', 'brokerSpecification',
+  'trading_conditions', 'tradingConditions',
+  'server_time', 'serverTime',
+];
 
 const getCurrentBrokerScope = () => {
   try {
@@ -121,8 +142,17 @@ const useSymbolStore = create(
               ? (prev?.live ? prev.askDir : null) ?? null
               : getMarketPriceDirection(numAsk, prev?.live ? prev.ask : null, prev?.askDir);
 
+            const receivedAt = marketTickReceivedTime(data, now);
+            recordAdminMarketTick(sym, {
+              ...data,
+              bid: numBid !== null ? numBid : prev?.bid,
+              ask: numAsk !== null ? numAsk : prev?.ask,
+              lastUpdate: receivedAt,
+            }, now);
+
             nextSymbols[sym] = {
               ...(prev || {}),
+              ...Object.fromEntries(SYMBOL_DETAIL_FIELDS.filter((key) => data[key] !== undefined).map((key) => [key, data[key]])),
               symbol: sym,
               bid: numBid !== null ? numBid.toFixed(5) : (prev?.bid || null),
               ask: numAsk !== null ? numAsk.toFixed(5) : (prev?.ask || null),
@@ -132,7 +162,7 @@ const useSymbolStore = create(
               // A server snapshot can contain an old or explicitly stale
               // quote. Receiving it now must not make that price look live.
               live: data.fresh !== false && data.stale !== true,
-              lastUpdate: marketTickReceivedTime(data, now),
+              lastUpdate: receivedAt,
               category,
             };
           });
@@ -420,6 +450,7 @@ const useSymbolStore = create(
                 }
                 const item = statusRows.get(sym) || {};
                 nextSymbols[sym] = {
+                  ...Object.fromEntries(SYMBOL_DETAIL_FIELDS.filter((key) => item[key] !== undefined).map((key) => [key, item[key]])),
                   symbol: sym,
                   bid: validMarketPrice(item.bid) ? Number(item.bid).toFixed(5) : null,
                   ask: validMarketPrice(item.ask) ? Number(item.ask).toFixed(5) : null,

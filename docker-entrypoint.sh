@@ -9,7 +9,9 @@ js_escape() {
 
 api_host="${API_HOST:-${VITE_API_HOST:-}}"
 ws_host="${WS_HOST:-${VITE_WS_HOST:-}}"
-api_host_ext="${API_HOST_EXT:-${VITE_API_HOST_EXT:-}}"
+api_host_ext="${API_HOST_EXT:-${VITE_API_HOST_EXT:-$api_host}}"
+export API_HOST="$api_host"
+export API_HOST_EXT="$api_host_ext"
 default_mt5_server="${DEFAULT_MT5_SERVER:-${VITE_DEFAULT_MT5_SERVER:-}}"
 # No compiled platform defaults: an unset discovery or Super Admin host stays
 # empty and the UI fails closed with a clear error, unless API_HOST/BROKER_ID

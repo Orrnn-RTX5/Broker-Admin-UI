@@ -13,7 +13,7 @@ const name = args.at(-1);
 const config = (text) => Object.fromEntries(text.split('\n').filter((line) => line && !line.startsWith('#')).map((line) => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]));
 const runtimeEnv = (text, dist) => {
   const clean = { ...process.env };
-  for (const field of ['BROKER_ID', 'BROKER_NAME', 'API_HOST', 'FEED_WS_URL', 'FEED_STATUS_URL']) {
+  for (const field of ['BROKER_ID', 'BROKER_NAME', 'API_HOST', 'API_HOST_EXT', 'FEED_WS_URL', 'FEED_STATUS_URL']) {
     delete clean[field];
     delete clean[`VITE_${field}`];
   }

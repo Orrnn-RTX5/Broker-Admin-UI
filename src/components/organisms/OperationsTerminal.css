@@ -151,7 +151,7 @@
 .operations-journal-expander:hover { background: var(--accent-soft); color: var(--text-primary); }
 .operations-journal-expander:focus-visible { outline: 1px solid var(--accent-500); outline-offset: -1px; }
 .operations-journal-severity { display: inline-flex; align-items: center; gap: 6px; color: var(--info-500); font-size: 11px; }
-.operations-journal-severity::before { content: ''; width: 4px; height: 4px; flex-shrink: 0; border-radius: 50%; background: currentColor; }
+
 .operations-journal-severity.is-warn { color: var(--warning-500); }
 .operations-journal-severity.is-error { color: var(--danger-500); }
 .operations-terminal .operations-journal-table .operations-journal-detail td {
@@ -219,3 +219,59 @@
   .is-journal .operations-terminal-tools { flex: 0 0 auto; width: auto; }
 }
 @media(max-width: 360px) { .operations-journal-filter { width: 98px; max-width: 98px; } }
+
+/* MT5 Symbol Summary Table — equal 9-column widths and uniform left alignment */
+.operations-terminal .operations-summary-table { width: 100%; min-width: 960px; table-layout: fixed; border-collapse: collapse; }
+.operations-terminal .operations-summary-col { width: calc(100% / 9); }
+.operations-terminal .operations-summary-table :is(th, td) { width: calc(100% / 9); text-align: left; padding: 3px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.operations-terminal .operations-summary-table :is(th, td):last-child { border-right: 0; }
+.operations-terminal .operations-summary-table th { cursor: pointer; user-select: none; }
+.operations-terminal .operations-summary-table th:hover { color: var(--text-primary); }
+.operations-terminal .operations-summary-scroll.is-no-grid .operations-summary-table tbody td { border-right-color: transparent; border-bottom-color: transparent; }
+.operations-terminal .operations-summary-scroll.is-manual-arrange .operations-summary-table { width: max-content; min-width: 100%; table-layout: auto; }
+.operations-terminal .operations-summary-scroll.is-manual-arrange .operations-summary-col,
+.operations-terminal .operations-summary-scroll.is-manual-arrange .operations-summary-table :is(th, td) { width: auto; padding-right: 18px; }
+.operations-terminal .operations-summary-table tbody tr { cursor: default; user-select: none; }
+.operations-terminal .operations-summary-table tbody tr.is-selected,
+.operations-terminal .operations-summary-table tbody tr.is-selected:hover { background: var(--accent-soft); }
+.operations-terminal .operations-summary-table tbody tr.is-selected > td:first-child { box-shadow: inset 2px 0 var(--accent-500); }
+
+.operations-terminal-body-row { display: flex; flex-direction: row; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
+.operations-terminal-main-col { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
+.operations-terminal-toolbox-strip {
+  width: 18px;
+  flex: 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0 6px;
+  background: var(--bg-surface-2, #1b1b1f);
+  border-right: 1px solid var(--border-default, #2e2e36);
+  color: var(--text-muted, #9da1ab);
+  user-select: none;
+}
+.operations-terminal-toolbox-close {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.operations-terminal-toolbox-close:hover { color: var(--text-primary, #ffffff); }
+.operations-terminal-toolbox-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
