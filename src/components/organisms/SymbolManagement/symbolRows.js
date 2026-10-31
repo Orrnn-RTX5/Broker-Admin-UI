@@ -11,6 +11,9 @@ export const STATUS_FILTERS = [
   { value: 'disabled', label: 'Disabled' },
   { value: 'configured', label: 'Configured' },
   { value: 'not_configured', label: 'Not configured' },
+  // The to-do list before a symbol can join a group: LP symbols without an
+  // instrument plus configured instruments that are still disabled.
+  { value: 'needs_setup', label: 'Quoted but not configured' },
 ];
 
 /**
@@ -36,6 +39,7 @@ export const buildSymbolRows = (configuredRows = [], lpEntries = []) => {
       enabled: false,
       configured: false,
       detailsPending: Boolean(entry.detailsPending),
+      inScope: entry.inScope !== false,
     });
   }
   return [...configured, ...unconfigured];
@@ -52,6 +56,7 @@ export const filterSymbolRows = (rows = [], { search = '', category = '', type =
     if (status === 'disabled' && !(row.configured && !row.enabled)) return false;
     if (status === 'configured' && !row.configured) return false;
     if (status === 'not_configured' && (row.configured || row.detailsPending)) return false;
+    if (status === 'needs_setup' && (row.configured ? row.enabled : row.detailsPending)) return false;
     return true;
   });
 };

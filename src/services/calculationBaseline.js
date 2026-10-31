@@ -6,8 +6,12 @@ export function baselineLogin(value) {
  if (!/^[1-9][0-9]{0,18}$/.test(login) || BigInt(login) > 9223372036854775807n) throw new Error('Enter a valid account login for this broker.');
  return login;
 }
+// Preview/activate/generate request bodies are bounded at 1 MiB by the
+// manager and gateway; the panel refuses anything larger before sending.
+export const BASELINE_DRAFT_LIMIT_BYTES = 1048576;
+export const BASELINE_DRAFT_LIMIT_TEXT = 'The reviewed policy file must be at most 1 MB.';
 export function parseBaselineDraft(text) {
- if (typeof text !== 'string' || new TextEncoder().encode(text).length > 65536) throw new Error('The reviewed policy file must be at most 64 KB.');
+ if (typeof text !== 'string' || new TextEncoder().encode(text).length > BASELINE_DRAFT_LIMIT_BYTES) throw new Error(BASELINE_DRAFT_LIMIT_TEXT);
  let draft;
  try { draft = JSON.parse(text); } catch { throw new Error('Select a valid policy JSON file.'); }
  if (!draft || typeof draft !== 'object' || Array.isArray(draft) || !Array.isArray(draft.accounts) || !draft.accounts.length) throw new Error('The policy must include the broker accounts.');
@@ -133,4 +137,67 @@ export function readCalculationRefusal(response) {
  const reason = message || REFUSAL_REASONS[code] || '';
  if (!reason) return code ? `Current broker administrator authority is required (${code}).` : 'Current broker administrator authority is required.';
  return code && !reason.includes(code) ? `${reason.replace(/[\s.]+$/, '')} (${code}).` : reason;
+}
+
+// "Generate draft from current settings": POST calculation-baseline/generate.
+// The owner's three attestation texts are required; every other field is
+// optional and omitted when blank (server defaults: all groups, no commission
+// carry-over). Symbol groups are entered one per line or comma separated.
+export function buildBaselineGenerateRequest(form) {
+ const text = value => typeof value === 'string' ? value.trim() : '';
+ const attestation = {execution:text(form?.execution),risk:text(form?.risk),fx:text(form?.fx)};
+ const missing = [['execution','Execution policy'],['risk','Risk policy'],['fx','FX conversion policy']].filter(([key])=>!attestation[key]).map(([,label])=>label);
+ if (missing.length) throw new Error(`Enter the ${missing.join(', ')} attestation before generating a draft.`);
+ const request = {attestation};
+ const groups = [...new Set(String(form?.symbolGroups ?? '').split(/[\n,]+/).map(value=>value.trim()).filter(Boolean))];
+ if (groups.length) request.symbol_groups = groups;
+ if (form?.acceptGroupCommissions === true) request.accept_group_commissions = true;
+ if (text(form?.zeroCommissionReason)) request.zero_commission_reason = text(form.zeroCommissionReason);
+ if (text(form?.calculationPolicyId)) request.calculation_policy_id = text(form.calculationPolicyId);
+ return request;
+}
+const findings = (list, kind) => {
+ if (list === null || list === undefined) return [];
+ if (!Array.isArray(list)) throw new Error(`The generated draft has no ${kind} list.`);
+ return list.map(item=>{
+  if (!item || typeof item !== 'object' || typeof item.code !== 'string' || typeof item.message !== 'string') throw new Error(`A generated draft ${kind.slice(0,-1)} is unreadable.`);
+  return {code:item.code,subject:typeof item.subject === 'string' ? item.subject : '',message:item.message};
+ });
+};
+// Checks the generate response. The draft (null when none could be built) is
+// returned as the exact policy text for the Policy JSON field: pretty-printed
+// when that fits the 1 MiB limit, compact otherwise.
+export function readBaselineGenerate(value) {
+ if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('The generated draft response is unreadable.');
+ if (value.draft !== null && (typeof value.draft !== 'object' || Array.isArray(value.draft))) throw new Error('The generated draft is not a policy object.');
+ const blockers = findings(value.blockers,'blockers'), warnings = findings(value.warnings,'warnings');
+ const summary = value.summary && typeof value.summary === 'object' && !Array.isArray(value.summary) ? value.summary : {};
+ // A draft the panel cannot use (over the limit, inexact numbers) is reported
+ // as draftError; the blockers and warnings are still shown.
+ let text = '', draftError = '';
+ if (value.draft) {
+  const size = candidate => new TextEncoder().encode(candidate).length;
+  text = JSON.stringify(value.draft,null,2);
+  if (size(text) > BASELINE_DRAFT_LIMIT_BYTES) text = JSON.stringify(value.draft);
+  try { parseBaselineDraft(text); } catch (error) { text = ''; draftError = `The generated draft cannot be used: ${error.message}`; }
+ }
+ return {text,draftError,blockers,warnings,summary};
+}
+// A refused generate request. Generating writes nothing, so the server's own
+// reason (e.g. a missing attestation, over_size) is shown; a 403 keeps the
+// authority wording of readCalculationRefusal.
+export function readBaselineGenerateRefusal(response) {
+ if (Number(response?.status) === 403) return readCalculationRefusal(response);
+ if (Number(response?.status) === 413) return 'The generated draft exceeds the 1 MB policy limit. Limit the symbol groups and generate again.';
+ const status = Number(response?.status) || 0;
+ // A 404 means the route is missing (a server without the generate endpoint),
+ // whatever its body says (e.g. a router's "404 page not found").
+ if (status === 404) return 'Draft generation is not available on this server yet (HTTP 404).';
+ const data = response?.data;
+ const message = typeof data === 'string' ? refusalText(data) : refusalText(data?.message);
+ const code = typeof data === 'object' && data ? refusalText(data.error_code) || refusalText(data.code) : '';
+ // Validation refusals (4xx) carry their own reason; anything else also names the HTTP status.
+ const tags = [code, status >= 500 || !status ? `HTTP ${status || 'error'}` : ''].filter(tag => tag && !message.includes(tag));
+ if (!message) return `The draft could not be generated (${tags.join(', ') || `HTTP ${status}`}).${code ? '' : ' Check the account login and try again.'}`;
+ return tags.length ? `${message.replace(/[\s.]+$/, '')} (${tags.join(', ')}).` : message;
 }

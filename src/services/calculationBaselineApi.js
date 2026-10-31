@@ -1,5 +1,5 @@
 import {api} from '../lib/api.js';
-import {readCalculationRefusal} from './calculationBaseline.js';
+import {readBaselineGenerateRefusal,readCalculationRefusal} from './calculationBaseline.js';
 const base='/api/v1/manager/calculation-baseline/';
 const reads=new Set(['status','sources','cutover/status']);
 async function call(action,login,data,query=''){
@@ -10,6 +10,11 @@ export const previewCalculationBaseline=(login,draft)=>call('preview',login,{dra
 export const activateCalculationBaseline=(login,draft,fingerprint)=>call('activate',login,{draft,fingerprint,acknowledge_broker_wide:true,acknowledge_settings_review:true});
 export const calculationBaselineStatus=(login,fingerprint)=>call('status',login,null,'?fingerprint='+encodeURIComponent(fingerprint));
 export const calculationBaselineSources=login=>call('sources',login);
+// Builds a draft policy from the broker's current settings; writes nothing.
+export async function generateCalculationBaseline(login,request){
+ try {const response=await api.request({url:base+'generate/'+login,method:'POST',data:request,_noRetry:true});return response.data;}
+ catch(error){if(error.response)throw new Error(readBaselineGenerateRefusal(error.response));throw error;}
+}
 // Separate additive cutover under the active policy; never retried automatically.
 export const previewCalculationCutover=(login,cutover)=>call('cutover/preview',login,{cutover});
 export const applyCalculationCutover=(login,cutover,fingerprint)=>call('cutover/apply',login,{cutover,fingerprint,acknowledge_cutover_scope:true});

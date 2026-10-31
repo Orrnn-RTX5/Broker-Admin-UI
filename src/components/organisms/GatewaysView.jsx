@@ -25,7 +25,7 @@ import {
   gatewayGetFeedConfig,
   gatewaySaveFeedConfig,
 } from '../../services/gateway.service';
-import { buildFeedConfigPayload, normalizeFeedProvider } from '../../lib/feedConfigPayload';
+import { buildFeedConfigPayload, normalizeFeedProvider, parseCatalogSymbols } from '../../lib/feedConfigPayload';
 import { isFixRelayEnabled, resolveGatewayTools } from '../../lib/fixRelayCapability';
 import { useToast } from '../ui/useToast';
 import NamedLPConnectionsPanel from './NamedLPConnectionsPanel';
@@ -180,6 +180,8 @@ const DEFAULT_FORM = {
   use_ssl: true,
   all_symbols: true,
   symbols: '',
+  catalog_symbols: '',
+  catalog_symbols_known: false,
   catalog_file: '',
 };
 
@@ -205,6 +207,8 @@ const formFromSavedConfig = (config) => {
     use_ssl: typeof cserver.use_ssl === 'boolean' ? cserver.use_ssl : DEFAULT_FORM.use_ssl,
     all_symbols: symbols === '',
     symbols,
+    catalog_symbols: String(cserver.catalog_symbols || '').split(',').map((symbol) => symbol.trim()).filter(Boolean).join(', '),
+    catalog_symbols_known: Object.prototype.hasOwnProperty.call(cserver, 'catalog_symbols'),
     catalog_file: String(cserver.catalog_file || ''),
   };
 };
@@ -384,6 +388,9 @@ const GatewaysView = () => {
     if (form.enabled && !form.all_symbols && !form.symbols.trim()) {
       return 'Enter at least one symbol, or turn on “Subscribe to all symbols”.';
     }
+
+    const catalogError = parseCatalogSymbols(form.catalog_symbols).error;
+    if (catalogError) return catalogError;
 
     return '';
   };
@@ -680,6 +687,28 @@ const GatewaysView = () => {
               <Field label="Selected symbols" hint="Turn off “all symbols” to enter a comma-separated list.">
                 <GatewaySymbolPicker value={form.symbols} onChange={(symbols) => setForm((current) => ({ ...current, symbols }))} disabled={disabled || form.all_symbols} allSymbols={form.all_symbols} />
               </Field>
+
+              <Field
+                label="Authorized sender catalog"
+                inputId="gw-feed-catalog-symbols"
+                hint={`Required for Subscribe to all symbols on a relay receiver feed: the relay's complete symbol list, exactly as the relay spells it (comma or new line separated). ${parseCatalogSymbols(form.catalog_symbols).symbols.length} symbols.`}
+              >
+                <textarea
+                  id="gw-feed-catalog-symbols"
+                  className="ui-input"
+                  rows={3}
+                  value={form.catalog_symbols}
+                  onChange={setField('catalog_symbols')}
+                  placeholder="SYMBOL1, SYMBOL2, …"
+                  spellCheck={false}
+                  disabled={disabled}
+                />
+              </Field>
+              {form.all_symbols && !parseCatalogSymbols(form.catalog_symbols).symbols.length && (
+                <p className="gw-field-warning" role="status">
+                  With “Subscribe to all symbols”, a relay receiver feed subscribes to the authorized sender catalog. Save the catalog before choosing All Symbols, or Apply is refused.
+                </p>
+              )}
 
               <Field label="Catalog file (optional)">
                 <Input value={form.catalog_file} onChange={setField('catalog_file')} placeholder="Optional catalog file path" disabled={disabled} />

@@ -51,12 +51,13 @@ test('buildSymbolRows never duplicates a configured symbol listed by the LP in a
 test('filterSymbolRows covers search, category, type and every status filter', () => {
   const rows = buildSymbolRows(configured, entries);
   const names = (filters) => filterSymbolRows(rows, filters).map((row) => row.symbol);
-  assert.deepEqual(STATUS_FILTERS.map((option) => option.value), ['', 'enabled', 'disabled', 'configured', 'not_configured']);
+  assert.deepEqual(STATUS_FILTERS.map((option) => option.value), ['', 'enabled', 'disabled', 'configured', 'not_configured', 'needs_setup']);
   assert.deepEqual(names({ search: 'us3' }), ['US30']);
   assert.deepEqual(names({ status: 'enabled' }), ['EURUSD']);
   assert.deepEqual(names({ status: 'disabled' }), ['EURUSDpro', 'XAUUSD']);
   assert.deepEqual(names({ status: 'configured' }), ['EURUSD', 'EURUSDpro', 'XAUUSD']);
   assert.deepEqual(names({ status: 'not_configured' }), ['BTCUSD', 'GBPUSD', 'US30']);
+  assert.deepEqual(names({ status: 'needs_setup' }), ['EURUSDpro', 'XAUUSD', 'BTCUSD', 'GBPUSD', 'US30'], 'disabled instruments plus LP symbols without one');
   assert.deepEqual(names({ type: 'derived' }), ['EURUSDpro']);
   assert.deepEqual(names({ type: 'base' }), ['EURUSD', 'XAUUSD'], 'unconfigured symbols have no type');
   const gbpCategory = rows.find((row) => row.symbol === 'GBPUSD').category;
@@ -83,6 +84,7 @@ test('dynamic feed rows stay pending until instrument specifications arrive', ()
   assert.equal(rows[0].detailsPending, true);
   assert.equal(symbolCountSummary(rows), '1 live symbols');
   assert.deepEqual(filterSymbolRows(rows, { status: 'not_configured' }), []);
+  assert.deepEqual(filterSymbolRows(rows, { status: 'needs_setup' }), [], 'still-loading rows are not on the to-do list');
 });
 
 test('streamingState is unknown until the feed inventory is known', () => {
