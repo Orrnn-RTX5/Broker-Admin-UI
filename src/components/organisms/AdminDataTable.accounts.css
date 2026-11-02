@@ -59,7 +59,11 @@
 .admin-trading-cell { font-size: 11px; line-height: 1.4; }
 .admin-trading-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .admin-trading-name { color: var(--text-primary); font-weight: 500; }
-.admin-trading-login { color: var(--text-primary); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.admin-trading-login { color: var(--text-primary); font-family: var(--font-mono); font-variant-numeric: tabular-nums; gap: 6px; }
+.admin-trading-login-icon { width: 13px; height: 13px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.35; stroke-linecap: round; stroke-linejoin: round; }
+.admin-trading-login-icon.is-demo { color: #22c55e; }
+.admin-trading-login-icon.is-real { color: #facc15; }
+.admin-trading-login-icon.is-contest { color: #3b82f6; }
 .admin-trading-number { justify-content: flex-end; text-align: right; font-variant-numeric: tabular-nums; }
 .admin-trading-cell.admin-trading-number { font-family: var(--font-mono); }
 .admin-trading-cell .admin-client-status { font-size: 11px; }

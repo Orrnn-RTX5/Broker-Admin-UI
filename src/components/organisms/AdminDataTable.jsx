@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 
 import AdminContextMenu from './AdminContextMenu';
+import TradingAccountsContextMenu from './TradingAccountsContextMenu';
 import OrderDateTimePicker from './OrderDateTimePicker';
 import PositionSymbolPicker from './PositionSymbolPicker';
 import './AdminDataTable.clients.css';
@@ -355,6 +356,47 @@ const formatTradeTimestamp = (value) => {
   if (Number.isFinite(parsed)) return new Date(parsed).toLocaleString();
 
   return String(value);
+};
+
+const getAdminAccountVisualType = (group, row) => {
+  const candidates = [
+    row?.accountType,
+    row?.type,
+    row?.mode,
+    row?.raw?.accountType,
+    row?.raw?.type,
+    row?.raw?.mode,
+    group,
+  ];
+  for (const val of candidates) {
+    const g = String(val ?? '').trim().toLowerCase();
+    if (!g) continue;
+    if (g.includes('contest') || g.includes('tournament') || g.includes('championship')) return 'contest';
+    if (g.includes('demo') || g.startsWith('demo\\') || g.startsWith('demo/') || g.includes('\\demo') || g.includes('/demo')) return 'demo';
+    if (g.includes('real') || g.includes('live')) return 'real';
+  }
+  return 'real';
+};
+
+const TradingAccountTypeIcon = ({ group, row }) => {
+  const visualType = getAdminAccountVisualType(group, row);
+  const typeClass = visualType === 'contest'
+    ? 'is-contest'
+    : visualType === 'demo'
+      ? 'is-demo'
+      : 'is-real';
+  return (
+    <svg
+      className={`admin-trading-login-icon ${typeClass}`}
+      viewBox="0 0 16 16"
+      width="13"
+      height="13"
+      aria-hidden="true"
+    >
+      <circle cx="8" cy="4.75" r="2.25" />
+      <path d="M3.25 13.25c.65-2.35 2.35-3.5 4.75-3.5s4.1 1.15 4.75 3.5Z" />
+    </svg>
+  );
 };
 
 const getTradeSideLabel = (value) => {
@@ -957,7 +999,7 @@ const AdminDataTableContent = ({
   }, [viewType]);
 
   const handleContextMenu = (e, rowData) => {
-    if (viewType === 'Groups') {
+    if (viewType === 'Groups' || viewType === 'Trading Accounts' || viewType === 'Clients') {
       e.preventDefault();
       setContextMenu({
         x: e.clientX,
@@ -2002,7 +2044,7 @@ const AdminDataTableContent = ({
               </>
             ) : isAccountsView ? (
               <>
-                <div className="admin-trading-cell admin-trading-login" title={String(row.login ?? '')}><span className="admin-trading-value">{renderClientField(row.login)}</span></div>
+                <div className="admin-trading-cell admin-trading-login" title={String(row.login ?? '')}><TradingAccountTypeIcon group={row.group} row={row} /><span className="admin-trading-value">{renderClientField(row.login)}</span></div>
                 <div className="admin-trading-cell admin-trading-name" title={String(row.name ?? '')}><span className="admin-trading-value">{renderClientField(row.name)}</span></div>
                 <div className="admin-trading-cell" title={String(row.group ?? '')}><span className="admin-trading-value">{renderClientField(row.group)}</span></div>
                 {['balance', 'equity'].map(key => (
@@ -2251,6 +2293,17 @@ const AdminDataTableContent = ({
           onAdd={onAddClick}
           onEdit={() => { setEditingGroup(contextMenu.selectedGroup); setContextMenu({ ...contextMenu, visible: false }); }}
           onDelete={handleDeleteGroup}
+        />
+      )}
+      {contextMenu.visible && (viewType === 'Trading Accounts' || viewType === 'Clients') && (
+        <TradingAccountsContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          selectedRow={contextMenu.selectedGroup}
+          rows={data}
+          onClose={() => setContextMenu({ ...contextMenu, visible: false })}
+          onAdd={onAddClick}
+          onEdit={(row) => { if (row && onRowDoubleClick) onRowDoubleClick(row); setContextMenu({ ...contextMenu, visible: false }); }}
         />
       )}
       {editingGroup && (
