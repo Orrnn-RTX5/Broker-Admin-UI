@@ -23,7 +23,10 @@ import {
   getServerGroupCount,
   getServerGroupFolderNodes,
   getServerGroupParentPath,
+  explorerBranchNames,
+  explorerFolderGroupName,
   loadGroupsExplorerNodes,
+  resolveExplorerAccountGroup,
 } from '../../utils/groupsExplorerData';
 
 const EMPTY_NODES = [];
@@ -125,9 +128,7 @@ const ServerGroupsExplorer = ({
   const groupList = groupData ?? snapshot;
   const groupNodes = useMemo(() => (groupList ? groupList.map(group => ({ ...group, type: 'group' })) : EMPTY_NODES), [groupList]);
   // An opened folder that is itself a server group (every main group) also holds accounts.
-  const folderGroupName = location.type === 'server-folder'
-    ? groupNodes.find(group => group.groupName.toLowerCase() === location.path.toLowerCase())?.groupName || ''
-    : '';
+  const folderGroupName = explorerFolderGroupName(groupNodes, location);
   const accountGroupName = isAccountFolder ? location.groupName : folderGroupName;
   const loadsAccounts = canLoadAccounts && Boolean(accountGroupName);
   // Account rows are tagged with their group so a previous folder's rows never show under a new one.
@@ -192,19 +193,8 @@ const ServerGroupsExplorer = ({
     onNavigate?.(node);
   };
   const select = (node) => setSelection({ id: node.id, sidebarId: selectedNodeId });
-  const resolveAccountGroupNode = (node) => {
-    const groupName = node?.account?.group || node?.groupName || accountGroupName || '';
-    if (!groupName) return null;
-    const record = groupNodes.find(group => group.groupName.toLowerCase() === String(groupName).toLowerCase());
-    const name = record?.groupName || groupName;
-    return record || {
-      type: 'group',
-      id: `group:${name}`,
-      label: name,
-      groupName: name,
-      group: { name, group: name },
-    };
-  };
+  // Exact names only: a case or space twin is a different group and is never opened, edited or deleted instead.
+  const resolveAccountGroupNode = (node) => resolveExplorerAccountGroup(groupNodes, node, accountGroupName);
   const canOpenSettings = (node) => Boolean(node) && (
     (node.type === 'group' && !node.group?._allocationSummary) ||
     (node.type === 'group-account' && Boolean(resolveAccountGroupNode(node)) && !resolveAccountGroupNode(node)?.group?._allocationSummary)
@@ -242,9 +232,7 @@ const ServerGroupsExplorer = ({
   const containerOf = (node) => (node.type === 'server-folder' ? node.path : node.type === 'group' ? node.groupName : '');
   const canContain = (node) => Boolean(node) && node.type !== 'group-account';
   const addGroup = (parent = currentContainer) => onGroupCreate?.(parent ? { name: `${parent}${SEPARATOR}` } : undefined);
-  const branchNames = (path) => groupNodes
-    .filter(group => group.groupName.toLowerCase() === path.toLowerCase() || group.groupName.toLowerCase().startsWith(`${path.toLowerCase()}${SEPARATOR}`))
-    .map(group => group.groupName);
+  const branchNames = (path) => explorerBranchNames(groupNodes, path, SEPARATOR);
   const canDelete = (node) => canLifecycle && Boolean(node) && (
     node.type === 'group' ||
     node.type === 'server-folder' ||

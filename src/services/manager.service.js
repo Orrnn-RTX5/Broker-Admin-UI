@@ -50,7 +50,9 @@ export const ManagerService = {
   // The broker retired mutating GETs (410) but has not published the POST successor
   // yet. Try the POST shape used by GroupCreate/GroupUpdate first, and fall back to
   // the legacy GET so the server's own message still reaches the UI.
-  deleteGroup: async (groupName) => {
+  // Gated: the caller passes the typed line DELETE <group> (byte-exact). Without it no request is sent.
+  deleteGroup: async (groupName, { confirmation } = {}) => {
+    if (confirmation !== `DELETE ${String(groupName ?? '')}`) throw new Error('Group deletion needs the typed confirmation line DELETE <group>.');
     const identity = getStoredCacheIdentity();
     try {
       const res = await api.post('/manager/GroupDelete', { group_name: groupName, group: groupName }, {
@@ -147,6 +149,18 @@ export const ManagerService = {
       // 404 is the expected "no such parent group" result for the availability
       // lookup; suppress the API response-error console entry.
       _expectedStatuses: [404],
+    });
+    return res.data;
+  },
+
+  // Best-effort name check for a NEW group (GroupGet?availability=1). A readable name gets 200 with the availability answer.
+  // Any failure (a 404, a network or server error) is no answer: the caller treats it as "no conflict known", and GroupCreate
+  // stays the authoritative check. A failure must not mark the global connection as down.
+  getGroupNameAvailability: async (groupName) => {
+    const res = await api.get('/manager/GroupGet', {
+      params: { group: groupName, availability: 1 },
+      _expectedStatuses: [404],
+      _isolatedConnectionStatus: true,
     });
     return res.data;
   },

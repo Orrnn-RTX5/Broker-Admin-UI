@@ -19,31 +19,52 @@ const fieldText = (row, keys) => {
   return '';
 };
 
-const normalizedName = (value) => scalarText(value).toLowerCase();
 const compareLabels = (left, right) => (
   left.label.localeCompare(right.label, undefined, { numeric: true, sensitivity: 'base' })
   || left.label.localeCompare(right.label)
 );
 
+// Group names are exact identities: letter case and surrounding spaces both make a different group (case twins),
+// so names are kept as the server sent them. Blank values still count as missing.
+const exactText = (value) => {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return '';
+};
+
+const exactField = (row, keys) => {
+  if (!row || typeof row !== 'object' || Array.isArray(row)) return '';
+  for (const key of keys) {
+    const value = exactText(row[key]);
+    if (value.trim()) return value;
+  }
+  return '';
+};
+
+/** The navigation group named exactly `name`, or null. A case or space twin is a different group and is never returned. */
+export const findNavigationGroupByName = (groups, name) => {
+  const wanted = exactText(name);
+  if (!wanted.trim() || !Array.isArray(groups)) return null;
+  return groups.find((group) => group?.groupName === wanted) ?? null;
+};
+
 export const normalizeNavigationGroups = (rows) => {
   const groups = new Map();
   for (const row of Array.isArray(rows) ? rows : []) {
-    const groupName = typeof row === 'string' ? row.trim() : fieldText(row, GROUP_NAME_KEYS);
-    const key = normalizedName(groupName);
-    if (!key || groups.has(key)) continue;
-    groups.set(key, { id: `group:${groupName}`, groupName, label: groupName, group: row });
+    const groupName = typeof row === 'string' ? row : exactField(row, GROUP_NAME_KEYS);
+    if (!groupName.trim() || groups.has(groupName)) continue;
+    groups.set(groupName, { id: `group:${groupName}`, groupName, label: groupName, group: row });
   }
   return [...groups.values()].sort(compareLabels);
 };
 
 export const normalizeNavigationAccounts = (rows, groupName) => {
-  const fullGroupName = scalarText(groupName);
-  const expectedGroup = normalizedName(fullGroupName);
-  if (!expectedGroup) return [];
+  const fullGroupName = exactText(groupName);
+  if (!fullGroupName.trim()) return [];
 
   const accounts = new Map();
   for (const row of Array.isArray(rows) ? rows : []) {
-    if (normalizedName(fieldText(row, ACCOUNT_GROUP_KEYS)) !== expectedGroup) continue;
+    if (exactField(row, ACCOUNT_GROUP_KEYS) !== fullGroupName) continue;
     const login = fieldText(row, ACCOUNT_LOGIN_KEYS);
     if (!login || accounts.has(login)) continue;
     accounts.set(login, {

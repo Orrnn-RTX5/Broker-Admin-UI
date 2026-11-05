@@ -48,6 +48,33 @@ beforeEach(() => {
   signIn();
 });
 
+test('case and space twin groups are saved and restored as separate rows, each with its own count', () => {
+  const twin = (name, accounts) => ({ ...sampleRows(1)[0], id: name, name, accounts });
+  writeAllocationCache({ rows: [twin('Arijit', 2), twin('arijit', 0), twin('Arijit ', 1)], accountsKnown: true });
+  forgetAllocationMemory();
+  const state = initialAllocationState();
+  assert.equal(state.loading, false, 'the twin snapshot is accepted, not refused as a duplicate');
+  assert.deepEqual(state.rows.map(row => [row.name, row.accounts]), [['Arijit', 2], ['arijit', 0], ['Arijit ', 1]]);
+});
+
+test('a version-2 allocation snapshot from the folded code is rejected, so the live list loads at once', () => {
+  writeAllocationCache({ rows: [{ ...sampleRows(1)[0], id: 'Arijit', name: 'Arijit', accounts: 2 }], accountsKnown: true });
+  const [key, serialized] = savedEntry();
+  assert.equal(JSON.parse(serialized).version, ALLOCATION_CACHE_VERSION);
+  assert.equal(ALLOCATION_CACHE_VERSION, 3);
+  browserStorage.set(key, JSON.stringify({ ...JSON.parse(serialized), version: 2 }));
+  forgetAllocationMemory();
+  assert.equal(readAllocationCache(), null, 'the version-2 snapshot is not read');
+  const state = initialAllocationState();
+  assert.equal(state.loading, true, 'no snapshot: the live list is requested');
+  assert.equal(state.rows.length, 0);
+});
+
+test('countsFromAllocationRows keys each count by the exact group name', () => {
+  const counts = countsFromAllocationRows([{ name: 'Arijit', accounts: 2 }, { name: 'arijit', accounts: 0 }, { name: 'Arijit ', accounts: 1 }]);
+  assert.deepEqual([...counts.entries()], [['Arijit', 2], ['arijit', 0], ['Arijit ', 1]]);
+});
+
 test('a hard reload restores 12 allocation rows in under 20ms with complete display metadata', () => {
   writeAllocationCache({ rows: sampleRows(), accountsKnown: true });
   const [key, serialized] = savedEntry();
@@ -147,7 +174,7 @@ test('version, timestamp and malformed row validation reject unsafe snapshots', 
     { rows: [{ ...valid.rows[0], leverage: '100' }] },
     { rows: [{ ...valid.rows[0], name: '' }] },
     { rows: [{ ...valid.rows[0], tradeAllowed: 'true' }] },
-    { rows: [valid.rows[0], { ...valid.rows[0], name: 'group 0' }] },
+    { rows: [valid.rows[0], { ...valid.rows[0] }] },
   ];
   for (const change of corruptions) {
     browserStorage.set(key, JSON.stringify({ ...valid, ...change }));
@@ -203,7 +230,8 @@ test('account counts already on screen are reused by group name only when valid'
   const counts = countsFromAllocationRows([
     { name: 'Orrnn/demo-std', accounts: 9 }, { name: 'Arijit', accounts: 1 },
   ]);
-  assert.equal(counts.get('orrnn/demo-std'), 9);
+  assert.equal(counts.get('Orrnn/demo-std'), 9);
+  assert.equal(counts.get('orrnn/demo-std'), undefined, 'a case twin has no carried count');
   for (const accounts of [null, NaN, -1, 0.5, Infinity]) {
     assert.equal(countsFromAllocationRows([{ name: 'Arijit', accounts }]), null);
   }

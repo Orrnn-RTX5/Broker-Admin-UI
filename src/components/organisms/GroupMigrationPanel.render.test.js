@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { loadJsxModule } from '../../test/jsxRender.helper.js';
+import { migrationAttemptKey } from '../../utils/groupMigrationWarning.js';
 
 const { default: GroupMigrationPanel } = await loadJsxModule('src/components/organisms/GroupMigrationPanel.jsx');
 const popupCss = readFileSync(new URL('../RIGHTCLICKJPOPUPS/GroupPropertiesPopup.css', import.meta.url), 'utf8');
@@ -71,4 +72,105 @@ test('without group-management permission the controls are disabled and the reas
 test('with permission the explanatory note is not shown', () => {
   const html = render({ canManage: true });
   assert.ok(!html.includes(NO_PERMISSION_NOTE));
+});
+
+test('while the group list loads, the destination is not judged: the loading line shows and Preview is disabled', () => {
+  const html = render({ canManage: true, groupRows: [{ name: 'Real\\New' }], groupRowsStatus: 'loading' });
+  assert.ok(html.includes('Group list loading…'));
+  assert.equal(html.includes('not found'), false, 'a loading list is never reported as a missing group');
+  assert.match(html, /<button[^>]*disabled=""[^>]*>Preview migration<\/button>/);
+});
+
+test('a failed group list says so, offers a working Retry, and never reports "not found"', () => {
+  const html = render({ canManage: true, groupRows: [], groupRowsStatus: 'failed', onRetryGroupRows: () => {} });
+  assert.ok(html.includes('Group list failed: Retry'));
+  assert.match(html, /<button[^>]*>Retry<\/button>/);
+  assert.equal(html.includes('not found'), false);
+});
+
+test('a ready list with no destination typed shows no list line and no Retry', () => {
+  const html = render({ canManage: true, groupRows: [{ name: 'Real\\New' }], groupRowsStatus: 'ready', onRetryGroupRows: () => {} });
+  assert.equal(html.includes('Group list'), false);
+  assert.equal(html.includes('>Retry<'), false);
+});
+
+test('before any preview the panel shows no confirm, lock or server-report text', () => {
+  const html = render({ canManage: true, groupRows: [{ name: 'Real\\New' }] });
+  assert.equal(html.includes('will be emptied'), false);
+  assert.equal(html.includes('Server broker'), false);
+  assert.equal(html.includes('Migration outcome unknown'), false);
+});
+
+test('a fresh panel shows no attempt lock, no count and no typed-delete field', () => {
+  const html = render({ canManage: true, groupRows: [{ name: 'Real\\New' }] });
+  assert.equal(html.includes('Migration attempted at'), false);
+  assert.equal(html.includes('all-login members'), false);
+  assert.equal(html.includes('aria-label="Type the delete confirmation"'), false);
+});
+
+// Ordering wiring for the migrate and count reads. The decisions themselves are behaviour-tested in groupMigrationWarning.test.js.
+const panelSource = readFileSync(new URL('./GroupMigrationPanel.jsx', import.meta.url), 'utf8');
+test('T6-1 wiring: the panel calls the guard before the move and subscribes to storage; removing either fails here', () => {
+  const guardAt = panelSource.indexOf('const begun = beginMigrationAttempt(globalThis.localStorage, currentBrokerId(), source);');
+  const migrateAt = panelSource.indexOf('value = await api.migrate(source, destination);');
+  assert.ok(guardAt > 0 && migrateAt > guardAt, 'the guard runs before the move is sent');
+  assert.match(panelSource, /if \(!begun\.ok\) \{ setError\(begun\.reason\)/, 'a locked source is refused, not sent');
+  assert.match(panelSource, /useEffect\(\(\) => subscribeMigrationLock\(window, \(\) => setAttemptTick/, 'an open panel re-reads the lock on another tab write');
+  assert.match(panelSource, /destination === destination\.trim\(\) && typeof api\.destinationCount === 'function'/);
+});
+
+test('space-only and case-only spellings stay separate destination options, exactly as the server named them', () => {
+  const html = render({ canManage: true, groupRows: [{ name: 'Real\\New' }, { name: 'Real\\New ' }, { name: 'real\\new' }, { name: ' ' }] });
+  const values = [...html.matchAll(/<option value="([^"]*)"/g)].map(match => match[1]);
+  assert.deepEqual(values, ['Real\\New', 'Real\\New ', 'real\\new']);
+});
+
+// Round 5: a stored migrate attempt (another tab, or before a reload) locks the panel as soon as it opens.
+test('a stored migrate attempt locks the panel on open: the attempt line, the lock note, the typed clear, and Preview, Migrate and the field disabled', () => {
+  const store = new Map([['brokerId', 'broker-a'], [migrationAttemptKey('Real\\Old', 'broker-a'), new Date().toISOString()]]);
+  const saved = globalThis.localStorage;
+  globalThis.localStorage = { getItem: key => (store.has(key) ? store.get(key) : null), setItem: (key, value) => store.set(key, String(value)), removeItem: key => store.delete(key) };
+  try {
+    const html = render({ canManage: true, groupRows: [{ name: 'Real\\New' }] });
+    assert.ok(html.includes('Migration attempted at '), 'the attempt line is shown');
+    assert.ok(html.includes('survives reloads and other tabs'), 'the lock note says a reload does not clear it');
+    assert.match(html, /aria-label="Type the clear line"/);
+    assert.match(html, /<button[^>]*disabled=""[^>]*>Clear lock<\/button>/, 'the clear is closed until the line is typed');
+    assert.match(html, /<button[^>]*disabled=""[^>]*>Preview migration<\/button>/);
+    assert.match(html, /<input[^>]*aria-label="Migration destination group"[^>]*disabled=""/);
+    assert.match(html, /<button[^>]*>Check result<\/button>/, 'the read-only Check result is offered while locked');
+  } finally {
+    globalThis.localStorage = saved;
+  }
+});
+
+test('Delete is closed on a fresh panel: no verified result, no typed delete line', () => {
+  const html = render({ canManage: true, groupRows: [{ name: 'Real\\New' }] });
+  assert.match(html, /<button[^>]*disabled=""[^>]*>Delete verified source group<\/button>/);
+  assert.equal(html.includes('aria-label="Type the delete confirmation"'), false);
+});
+
+
+// Round 7 wiring pins: the re-checks inside run() (A-R6-2, A-R6-6), the Clear guard, the source-change reset (A-R6-4), and the
+// delete call that carries the typed line. A removed or bypassed check fails here.
+test('R7 wiring: padded destinations and the typed delete are re-checked inside run(); Clear is guarded; a new source resets Check result', () => {
+  assert.match(panelSource, /if \(action !== 'delete' && isPaddedDestination\(destination\)\) return;/);
+  assert.match(panelSource, /if \(action === 'delete' && !controls\.deleteEnabled\) return;/);
+  assert.match(panelSource, /api\.remove\(source, deleteConfirmLine\(source\)\)/);
+  assert.match(panelSource, /if \(!controls\.clearEnabled\) return; clearMigrationAttempt\(source\);/);
+  assert.match(panelSource, /setDestinationCount\(null\); setResultCheck\(null\);/);
+});
+
+// Round 8 wiring pins: the guards that the behaviour tests cannot reach from a server-rendered panel.
+test('T7-1 wiring: Check result asks for a source or destination only when it is readable; removing the guard fails here', () => {
+  assert.match(panelSource, /import \{[^}]*countTargetsReadable/, 'the guard comes from the tested helper');
+  assert.match(panelSource, /const readable = countTargetsReadable\(source, destination\);/);
+  assert.match(panelSource, /readable\.source \? api\.destinationCount\(source\)/, 'a padded source is never counted');
+  assert.match(panelSource, /readable\.destination \? api\.destinationCount\(destination\)/, 'a padded destination is never counted');
+});
+
+test('A-R7-4 wiring: every line that sets the result also clears the typed DELETE line', () => {
+  const resultLines = panelSource.split('\n').filter(line => line.includes('setResult('));
+  assert.ok(resultLines.length >= 6, 'the result is set on each path that sets it');
+  assert.deepEqual(resultLines.filter(line => !line.includes("setDeleteTyped('')")), [], 'a result change must clear the typed DELETE line');
 });

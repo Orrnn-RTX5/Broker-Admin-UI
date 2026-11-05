@@ -73,6 +73,15 @@ test('corrupt or foreign snapshots are ignored instead of breaking the tree', ()
   assert.equal(readGroupListSnapshot(), null);
 });
 
+test('a version-2 snapshot written by the folded code is rejected, so navigation refetches its dropped twins at once', () => {
+  signIn();
+  writeGroupListSnapshot([{ groupName: 'Real', group: { name: 'Real' } }, { groupName: 'real', group: { name: 'real' } }], getStoredCacheIdentity());
+  assert.equal(readGroupListSnapshot().length, 2, 'a current snapshot keeps both twins');
+  const saved = JSON.parse(browserStorage.get(savedKey()));
+  browserStorage.set(savedKey(), JSON.stringify({ ...saved, version: 2 }));
+  assert.equal(readGroupListSnapshot(), null, 'the version-2 snapshot is not read');
+});
+
 test('empty successful lists remain cacheable and snapshots expire after five minutes', async () => {
   let calls = 0;
   const fetchRows = () => { calls += 1; return []; };

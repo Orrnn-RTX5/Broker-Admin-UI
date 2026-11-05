@@ -32,10 +32,11 @@ export const createAllocationLoader = ({ fetchGroups, fetchCounts, readInitial, 
     let records = null, counts = null, countsReady = false, groupsFailed = false;
     const publish = () => {
       if (!relevant() || !records || groupsFailed) return;
-      const previous = new Map(entry.state.rows.map(row => [row.name.toLowerCase(), row.accounts]));
+      // Exact names: a carried count belongs to the same group, never to its case or space twin.
+      const previous = new Map(entry.state.rows.map(row => [row.name, row.accounts]));
       const rows = normalizeAllocationGroups(records, counts);
       // A newly created group has an unknown count until the full census answers.
-      if (!counts) rows.forEach(row => { row.accounts = previous.get(row.name.toLowerCase()) ?? null; });
+      if (!counts) rows.forEach(row => { row.accounts = previous.get(row.name) ?? null; });
       const accountsKnown = rows.every(row => Number.isFinite(row.accounts));
       const at = now();
       patch({ rows, accountsKnown, updatedAt: at, loading: false });

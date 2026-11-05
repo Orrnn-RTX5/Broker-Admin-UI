@@ -7,7 +7,7 @@ import { createAllocationLoader } from '../utils/allocationLoader.js';
 import { countAccountsByGroup } from '../utils/allocations.js';
 import { clearAllocationCache, initialAllocationState, writeAllocationCache } from '../utils/allocationCache.js';
 import { GROUP_LIST_ARRAY_KEYS, invalidateGroupListCache, loadGroupList, peekGroupList } from '../utils/groupListCache.js';
-import { loadGroupTreePages } from '../utils/groupTreeData.js';
+import { findNavigationGroupByName, loadGroupTreePages } from '../utils/groupTreeData.js';
 
 export const getAllocationIdentity = () => createCacheIdentity(useAuthStore.getState());
 const loader = createAllocationLoader({
@@ -43,7 +43,8 @@ export const getAllocationGroupRecord = async name => {
     arrayKeys: GROUP_LIST_ARRAY_KEYS, limit: 500,
   }), { identity });
   if (identity !== getAllocationIdentity()) throw new Error('Group access changed while loading.');
-  const record = groups.find(group => group.groupName.toLowerCase() === name.toLowerCase())?.group;
+  // Exact name first: a case twin of the clicked group must never supply its record to the editor.
+  const record = findNavigationGroupByName(groups, name)?.group;
   if (!record || typeof record !== 'object') throw new Error(`Group "${name}" could not be loaded.`);
   return record;
 };

@@ -13,7 +13,7 @@ const setup = (overrides = {}) => {
   const saved = [], cleared = [];
   const loader = createAllocationLoader({
     fetchGroups: async () => navigation(['Real', 'Demo']),
-    fetchCounts: async () => new Map([['real', 3]]),
+    fetchCounts: async () => new Map([['Real', 3]]),
     readInitial: empty, save: snapshot => saved.push(snapshot), clearSaved: identity => cleared.push(identity),
     ...overrides,
   });
@@ -33,7 +33,7 @@ test('groups and census start together, columns publish before the census comple
   assert.equal(loader.peek('broker').rows[0].name, 'Real');
   assert.equal(loader.peek('broker').rows[0].accounts, null);
   assert.equal(loader.peek('broker').syncing, true);
-  counts.resolve(new Map([['real', 3]]));
+  counts.resolve(new Map([['Real', 3]]));
   await task;
   assert.equal(loader.peek('broker').rows[0].accounts, 3);
   assert.equal(loader.peek('broker').syncing, false);
@@ -88,7 +88,7 @@ test('saved totals remain visible, but new groups have unknown totals until the 
   assert.equal(loader.peek('broker').rows[0].accounts, 7);
   assert.equal(loader.peek('broker').rows[1].accounts, null);
   assert.equal(loader.peek('broker').accountsKnown, false);
-  counts.resolve(new Map([['real', 8]]));
+  counts.resolve(new Map([['Real', 8]]));
   await task;
   assert.equal(loader.peek('broker').rows[1].accounts, 0);
   assert.equal(loader.peek('broker').accountsKnown, true);
@@ -130,4 +130,17 @@ test('counts that arrive first are included in the first published table', async
   await task;
   assert.deepEqual(loader.peek('broker').rows.map(row => row.accounts), [3, 0]);
   assert.equal(loader.peek('broker').accountsKnown, true);
+});
+
+test('a carried count belongs to its exact group: a case twin on screen does not supply it', async () => {
+  const loader = setup({
+    readInitial: () => ({ ...empty(), loading: false, rows: [{ name: 'Real', accounts: 7 }] }),
+    fetchGroups: async () => navigation(['real']),
+    fetchCounts: () => new Promise(() => {}),
+  });
+  loader.read('broker');
+  await tick();
+  await tick();
+  assert.equal(loader.peek('broker').rows[0].name, 'real');
+  assert.equal(loader.peek('broker').rows[0].accounts, null, 'the count of Real is not carried to real');
 });

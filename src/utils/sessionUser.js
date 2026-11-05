@@ -27,6 +27,8 @@ export const buildUserFromAuthPayload = (payload = {}) => {
     role: firstValue(payload.role, payload.role_name, isAdmin ? 'admin' : 'manager'),
     is_admin: isAdmin,
     group_config_admin: payload.is_admin === true,
+    // The backend's own admin claim, never derived from the role name. The backend scopes account data by this flag alone.
+    backend_is_admin: payload.is_admin === true,
     authorization_version: Number(payload.authorization_version || 1),
     operational_ready: payload.operational_ready !== false,
     group_access_mode: payload.group_access_mode || 'none',

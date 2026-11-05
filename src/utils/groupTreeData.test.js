@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadGroupTreePages, normalizeNavigationAccounts, normalizeNavigationGroups } from './groupTreeData.js';
+import { findNavigationGroupByName, loadGroupTreePages, normalizeNavigationAccounts, normalizeNavigationGroups } from './groupTreeData.js';
 
 test('group folders come from backend names and preserve full paths, without duplicates', () => {
   const original = { name: 'real\\standard', currency: 'USD' };
@@ -9,27 +9,54 @@ test('group folders come from backend names and preserve full paths, without dup
     { group_name: 'ecn' }, { groupName: 'vip' }, { name: ' REAL\\STANDARD ' },
     {}, null, '', { name: false }, { name: {} },
   ]);
-  assert.deepEqual(result.map((item) => item.label), ['contest', 'demo', 'ecn', 'Group 2', 'Group 10', 'real\\standard', 'vip']);
+  // Names are exact: the space-padded and upper-case spellings are separate groups, not duplicates.
+  assert.deepEqual(result.map((item) => item.label).sort(), [' REAL\\STANDARD ', 'Group 10', 'Group 2', 'contest', 'demo', 'ecn', 'real\\standard', 'vip']);
   assert.deepEqual(result.find((item) => item.label === 'real\\standard'), {
     id: 'group:real\\standard', groupName: 'real\\standard', label: 'real\\standard', group: original,
+  });
+  assert.deepEqual(result.find((item) => item.label === ' REAL\\STANDARD '), {
+    id: 'group: REAL\\STANDARD ', groupName: ' REAL\\STANDARD ', label: ' REAL\\STANDARD ', group: { name: ' REAL\\STANDARD ' },
   });
   assert.deepEqual(normalizeNavigationGroups(null), []);
 });
 
+test('case and space twins stay separate groups, and an exact duplicate still collapses', () => {
+  const rows = [{ name: 'Orrnn/demo-std' }, { name: 'orrnn/demo-std' }, { name: 'Orrnn/demo-std ' }, { name: 'Orrnn/demo-std' }];
+  assert.deepEqual(normalizeNavigationGroups(rows).map((item) => item.groupName).sort(), ['Orrnn/demo-std', 'Orrnn/demo-std ', 'orrnn/demo-std']);
+});
+
+test('a group is found only by its exact name; case and space twins are never returned for another spelling', () => {
+  const groups = normalizeNavigationGroups([{ name: 'Arijit' }, { name: 'ARIJIT' }, { name: 'Foo ' }, { name: 'Bar' }, { name: ' Bar' }]);
+  assert.equal(findNavigationGroupByName(groups, 'ARIJIT').groupName, 'ARIJIT');
+  assert.equal(findNavigationGroupByName(groups, 'Foo ').groupName, 'Foo ');
+  assert.equal(findNavigationGroupByName(groups, 'Bar'), groups.find((group) => group.groupName === 'Bar'));
+  assert.equal(findNavigationGroupByName(groups, 'Foo'), null, 'a space-only twin is not the trimmed match');
+  assert.equal(findNavigationGroupByName(groups, 'arijit'), null, 'a case twin is never returned for another spelling');
+  assert.equal(findNavigationGroupByName(groups, 'aRIJIT'), null, 'no case-folded match');
+  assert.equal(findNavigationGroupByName(groups, ' Bar '), null, 'no trimmed match for a padded name');
+  assert.equal(findNavigationGroupByName(normalizeNavigationGroups([{ name: 'Baz ' }]), 'Baz'), null, 'a single space twin is still no match');
+  assert.equal(findNavigationGroupByName(groups, ''), null);
+  assert.equal(findNavigationGroupByName(null, 'Bar'), null);
+});
+
 test('accounts require exact explicit group membership and preserve login strings', () => {
-  const raw = { Login: '0002', Group: ' REAL ', Name: 'Alice' };
+  const raw = { Login: '0002', Group: 'real', Name: 'Alice' };
   const rows = [
     raw, { login: 10, group: 'real' }, { account_login: '3', group_name: 'real' },
-    { accountLogin: '4', groupName: 'Real' }, { login: 5, account_group: 'real' },
+    { accountLogin: '4', groupName: 'real' }, { login: 5, account_group: 'real' },
     { login: 6, accountGroup: 'real' }, { login: 7, accountGroupName: 'real' },
     { login: 8, AccountGroup: 'real' }, { login: '0002', group: 'real' },
     { login: 1, group: 'demo' }, { login: 11, group: 'real-pro' },
     { login: 12, group: 'real\\standard' }, { login: 13 },
     { group: 'real' }, { login: null, group: 'real' }, { login: {}, group: 'real' },
     { login: false, group: 'real' }, { login: ' ', group: 'real' }, null,
+    { login: 14, group: 'Real' }, { login: 15, group: ' real' }, { login: 16, group: 'REAL' },
   ];
   const result = normalizeNavigationAccounts(rows, 'real');
   assert.deepEqual(result.map((item) => item.label), ['0002', '3', '4', '5', '6', '7', '8', '10']);
+  assert.deepEqual(normalizeNavigationAccounts(rows, 'Real').map((item) => item.label), ['14'], 'a case twin keeps only its own accounts');
+  assert.deepEqual(normalizeNavigationAccounts(rows, ' real').map((item) => item.label), ['15'], 'a space twin keeps only its own accounts');
+  assert.deepEqual(normalizeNavigationAccounts(rows, 'REAL').map((item) => item.label), ['16'], 'an upper-case twin keeps only its own accounts');
   assert.deepEqual(result[0].account, { ...raw, login: '0002', group: 'real', raw });
   assert.equal(result[0].groupName, 'real');
   assert.equal(new Set(result.map((item) => item.id)).size, result.length);

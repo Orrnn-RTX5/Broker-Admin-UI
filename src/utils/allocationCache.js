@@ -5,7 +5,9 @@ import { getStoredCacheIdentity, identitySnapshotKey } from './cacheIdentity.js'
 // Persist only the table columns. Full group settings stay in memory and are
 // loaded from the backend before editing a restored summary.
 const SNAPSHOT_PREFIX = 'rtx5-admin-allocations:';
-export const ALLOCATION_CACHE_VERSION = 2;
+// Version 3: version-2 snapshots were built by the folded code, which dropped case and space twins and merged their counts.
+// They are rejected on read, so the live list loads at once. Rolling back is safe: the older code rejects version 3 too.
+export const ALLOCATION_CACHE_VERSION = 3;
 export const ALLOCATION_CACHE_TTL_MS = 5 * 60 * 1000;
 export const ALLOCATION_CACHE_ROW_LIMIT = 5000;
 export const ALLOCATION_CACHE_SIZE_LIMIT = 2 * 1024 * 1024;
@@ -24,13 +26,15 @@ const validRows = (rows, accountsKnown) => {
   if (!Array.isArray(rows) || rows.length > ALLOCATION_CACHE_ROW_LIMIT) return false;
   const names = new Set();
   for (const row of rows) {
-    if (!row || !validString(row.name, 512) || !row.name.trim() || row.name !== row.name.trim()
+    // Names are exact identities: a surrounding space is part of the name (a space twin), so it is kept, not refused.
+    if (!row || !validString(row.name, 512) || !row.name.trim()
       || !validString(row.description, 4096) || !['Real', 'Demo'].includes(row.type)
       || !validString(row.currency, 32) || (row.execution !== undefined && !validString(row.execution, 64))
       || !nullableNumber(row.leverage) || !nullableNumber(row.marginCall) || !nullableNumber(row.stopOut)
       || (row.tradeAllowed !== null && typeof row.tradeAllowed !== 'boolean') || !validAccounts(row.accounts)
       || (accountsKnown && row.accounts === null)) return false;
-    const name = row.name.toLowerCase();
+    // Exact names: case twins are separate groups and may both be saved.
+    const name = row.name;
     if (names.has(name)) return false;
     names.add(name);
   }
@@ -126,7 +130,7 @@ export const countsFromAllocationRows = (rows) => {
   const counts = new Map();
   for (const row of rows) {
     if (!validAccounts(row?.accounts) || row.accounts === null || typeof row?.name !== 'string' || !row.name) return null;
-    counts.set(row.name.toLowerCase(), row.accounts);
+    counts.set(row.name, row.accounts);
   }
   return counts;
 };

@@ -6,7 +6,9 @@ export const GROUP_LIST_CACHE_TTL_MS = 5 * 60 * 1000;
 export const GROUP_LIST_FETCH_OPTIONS = Object.freeze({ requestKey: 'groups:list', cacheTtlMs: GROUP_LIST_CACHE_TTL_MS });
 
 const SNAPSHOT_PREFIX = 'rtx5-admin-group-list:';
-const SNAPSHOT_VERSION = 2;
+// Version 3: version-2 snapshots were built by the folded code, which dropped case and space twins. They are rejected on
+// read, so the live list loads at once. Rolling back is safe: the older code rejects version 3 too.
+const SNAPSHOT_VERSION = 3;
 const SNAPSHOT_LIMIT = 5000;
 const SNAPSHOT_MAX_CHARS = 512 * 1024;
 const RECORD_FIELDS = new Set([

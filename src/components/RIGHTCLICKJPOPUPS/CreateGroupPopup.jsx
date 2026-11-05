@@ -9,7 +9,9 @@ import { BrokerGroupDefaultsApi } from '../../services/brokerGroupDefaults.servi
 import { GROUP_LEVERAGE_MAX, GROUP_LEVERAGE_MIN, applyBrokerDefaultLeverage, createGroupLeverageHint, groupCreateLeverageError } from '../../utils/brokerGroupDefaults';
 import { buildGroupRiskPayload, parseCsvList } from '../../utils/adminValidation';
 import { getApiErrorMessage } from '../../utils/apiShapes';
-import { validateGroupForm, validateGroupSection } from '../../utils/groupFormSteps';
+import { createGuardRefusal, exactParentGroup, groupCreateConflictFromError, groupNameCaseConflictMessage, isPaddedParent, paddedNewNameRefusal, parentLookupPending, parentRecordMatches, resolveParentGroup, validateGroupForm, validateGroupSection } from '../../utils/groupFormSteps';
+import { GROUP_LIST_ARRAY_KEYS, loadGroupList } from '../../utils/groupListCache';
+import { loadGroupTreePages } from '../../utils/groupTreeData';
 import GroupSymbolPicker from './GroupSymbolPicker';
 import GroupSymbolCategories from './GroupSymbolCategories';
 import { useLpSymbols } from '../../hooks/useLpSymbols';
@@ -107,14 +109,34 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData, copySymb
     return () => { disposed = true; };
   }, [initialData]);
   useEffect(() => {
-    if (initialData || !parentGroup.trim()) return;
+    // The exact parent name is looked up. The answer fills the form only when it is that exact record (parentRecordMatches).
+    if (initialData || !exactParentGroup(parentGroup) || isPaddedParent(parentGroup)) return;
     let disposed = false;
     const timer = setTimeout(() => {
       setParentLoading(true);
-      ManagerService.getGroup(parentGroup.trim()).then(fresh => { if (!disposed) setFormData(current => ({ ...current, ...Object.fromEntries(Object.entries(fresh).filter(([key]) => key !== 'name' && key !== 'parentGroup' && key !== 'overriddenFields' && !changedFields.current.has(key))), ...(changedFields.current.has('symbolsAllowed') ? {} : { symbolsAllowed: Array.isArray(fresh.symbolsAllowed) ? fresh.symbolsAllowed.join(', ') : fresh.symbolsAllowed || '' }), ...(changedFields.current.has('symbolsBlocked') ? {} : { symbolsBlocked: Array.isArray(fresh.symbolsBlocked) ? fresh.symbolsBlocked.join(', ') : fresh.symbolsBlocked || '' }) })); }).catch(e => { if (!disposed && !isGroupLookupNotFound(e)) setError(e.message); }).finally(() => { if (!disposed) setParentLoading(false); });
+      ManagerService.getGroup(exactParentGroup(parentGroup)).then(fresh => { if (!disposed && parentRecordMatches(fresh, parentGroup)) setFormData(current => ({ ...current, ...Object.fromEntries(Object.entries(fresh).filter(([key]) => key !== 'name' && key !== 'parentGroup' && key !== 'overriddenFields' && !changedFields.current.has(key))), ...(changedFields.current.has('symbolsAllowed') ? {} : { symbolsAllowed: Array.isArray(fresh.symbolsAllowed) ? fresh.symbolsAllowed.join(', ') : fresh.symbolsAllowed || '' }), ...(changedFields.current.has('symbolsBlocked') ? {} : { symbolsBlocked: Array.isArray(fresh.symbolsBlocked) ? fresh.symbolsBlocked.join(', ') : fresh.symbolsBlocked || '' }) })); }).catch(e => { if (!disposed && !isGroupLookupNotFound(e)) setError(e.message); }).finally(() => { if (!disposed) setParentLoading(false); });
     }, GROUP_PARENT_LOOKUP_DEBOUNCE_MS);
     return () => { disposed = true; clearTimeout(timer); };
   }, [parentGroup, initialData]);
+  // Names of the groups GroupCreate would compare against (same list as the explorer). A case or space twin is refused
+  // here before the request; if the list is not loaded the server still refuses it (GROUP_NAME_CASE_CONFLICT).
+  // groupListStatus tells "loaded" from "not loaded": a parent is accepted only from a loaded list (fail closed).
+  // A failed name load still leaves the server's GroupCreate check in place; Retry runs the load again.
+  const [existingGroupNames, setExistingGroupNames] = useState([]);
+  const [groupListStatus, setGroupListStatus] = useState(initialData ? 'ready' : 'loading');
+  const [groupListAttempt, setGroupListAttempt] = useState(0);
+  useEffect(() => {
+    if (initialData) return;
+    let disposed = false;
+    setGroupListStatus('loading');
+    loadGroupList(() => loadGroupTreePages(ManagerService.getGroupList, { arrayKeys: GROUP_LIST_ARRAY_KEYS }), { force: groupListAttempt > 0 })
+      .then((groups) => { if (!disposed) { setExistingGroupNames(groups.map((group) => group.groupName)); setGroupListStatus('ready'); } })
+      .catch(() => { if (!disposed) { setExistingGroupNames([]); setGroupListStatus('failed'); } });
+    return () => { disposed = true; };
+  }, [initialData, groupListAttempt]);
+  const retryGroupList = () => setGroupListAttempt(attempt => attempt + 1);
+  // The typed parent judged against the loaded list (create only; an edit does not change its parent here).
+  const parentState = resolveParentGroup(parentGroup, existingGroupNames, groupListStatus);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [errorField, setErrorField] = useState(null);
@@ -146,7 +168,7 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData, copySymb
     window.requestAnimationFrame(() => { dialogRef.current?.querySelector('.group-create-body')?.scrollTo({ top: 0 }); });
   };
   const handleNext = () => {
-    const validation = validateGroupSection(formData, activeSection);
+    const validation = (initialData ? null : paddedNewNameRefusal(formData.name)) || validateGroupSection(formData, activeSection, existingGroupNames, initialData ? null : parentState);
     if (validation) { showValidation(validation); return; }
     const next = activeStep + 1;
     setFurthestStep(step => Math.max(step, next));
@@ -156,12 +178,16 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData, copySymb
 
   const handleSubmit = async () => {
     if (isLoading || parentLoading || !isLastStep || furthestStep < FORM_SECTIONS.length - 1) return;
-    const validation = validateGroupForm(formData);
-    if (validation) { showValidation(validation); return; }
 
     setIsLoading(true);
     setError(null);
     try {
+      // Every pre-request guard runs here, in order: the form, the exact-parent rule (fail closed while the list loads or
+      // has failed) and, for a create, the best-effort name probe. GroupCreate below stays authoritative.
+      const refusal = initialData
+        ? validateGroupForm(formData, existingGroupNames)
+        : await createGuardRefusal({ form: formData, existingGroupNames, parentGroup, parentStatus: groupListStatus, probe: () => ManagerService.getGroupNameAvailability(formData.name.trim()) });
+      if (refusal) { showValidation(refusal); return; }
       const validated = buildGroupRiskPayload({ ...formData, name: formData.name.trim(), currency: formData.currency.trim() });
 
       let termsWarning = '';
@@ -179,7 +205,7 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData, copySymb
         // The body never carries symbolSettings or overriddenFields (groupCreateBody -> groupWriteBody).
         // A duplicate (root or subgroup) keeps the source's own routingMode when it is not the derived value (duplicateRoutingOverride).
         const routingOverride = duplicateRoutingOverride(draftData, validated);
-        await ManagerService.createGroup(groupCreateBody({ ...validated, ...(routingOverride ? { routingMode: routingOverride } : {}) }, parentGroup.trim(), changed));
+        await ManagerService.createGroup(groupCreateBody({ ...validated, ...(routingOverride ? { routingMode: routingOverride } : {}) }, exactParentGroup(parentGroup), changed));
         if (copySymbolTermsFrom) {
           // The group exists at this point; a failed copy is reported, never undone by deleting the group.
           try {
@@ -202,9 +228,12 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData, copySymb
     } catch (err) {
       // Axios puts the backend's reason in response.data; err.message is only "Request failed with status code 400".
       const leverageMessage = groupCreateLeverageError(err);
-      const message = leverageMessage || getApiErrorMessage(err, 'Error creating group');
+      // The server names the existing spelling in its message; the form shows the same wording as the client check.
+      const conflict = leverageMessage ? null : groupCreateConflictFromError(err);
+      const message = leverageMessage || (conflict?.existing ? groupNameCaseConflictMessage(conflict.existing) : getApiErrorMessage(err, 'Error creating group'));
       if (leverageMessage) setErrorField('leverage');
-      if (/commission|leverage|spread markup/i.test(message)) setActiveSection('trading');
+      if (conflict) { setActiveSection('details'); setErrorField('name'); }
+      else if (/commission|leverage|spread markup/i.test(message)) setActiveSection('trading');
       else if (/margin call|stop out/i.test(message)) setActiveSection('risk');
       setError(message);
     } finally {
@@ -265,7 +294,8 @@ const CreateGroupPopup = ({ onClose, onCreated, initialData, draftData, copySymb
                 <header><h2 id="group-details-title">General settings</h2><p>Define the group identity and base account currency.</p></header>
                 <div className="group-create-grid">
                   {!initialData && <>
-                    <GroupField label="Parent group" hint="Parent settings stay current until overridden."><input aria-label="New group parent" value={parentGroup} disabled={isLoading} onChange={event => { setParentGroup(event.target.value); setParentLoading(Boolean(event.target.value.trim())); }} placeholder="No parent" /></GroupField>
+                    <GroupField label="Parent group" hint="Parent settings stay current until overridden."><input name="parentGroup" aria-label="New group parent" value={parentGroup} disabled={isLoading} onChange={event => { setParentGroup(event.target.value); setParentLoading(parentLookupPending(event.target.value)); }} placeholder="No parent" /></GroupField>
+                    {parentState.message && <p role="alert" className="group-create-error">{parentState.message}{groupListStatus === 'failed' && <> <button type="button" className="ui-btn ui-btn-secondary" disabled={isLoading} onClick={retryGroupList}>Retry</button></>}</p>}
                     <GroupField label="Purpose for new accounts">{select('groupPurpose', [['customer', 'Customer'], ['coverage', 'Coverage']])}</GroupField>
                   </>}
                   <GroupField label="Group name *" hint="Use a clear name, such as Broker/real-standard." className="group-create-field-wide">{input('name', 'text', { required: true, autoComplete: 'off', placeholder: 'Broker/real-standard' })}</GroupField>

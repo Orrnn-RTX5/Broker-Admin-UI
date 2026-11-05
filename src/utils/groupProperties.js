@@ -39,14 +39,15 @@ export const getGroupName = (group) => String(group?.group || group?.name || '')
 const GROUP_RECORD_NAME_KEYS = ['group', 'name', 'Group', 'Name', 'group_name', 'groupName'];
 
 /**
- * The server's record for `groupName` in GroupList rows. Names compare
- * case-insensitively because account group names can differ in case.
+ * The server's record for exactly `groupName` in GroupList rows. Names are
+ * exact identities: a record that differs by letter case or by surrounding
+ * spaces is a different group (a case or space twin) and is never returned.
  */
 export const findGroupRecord = (rows, groupName) => {
-  const wanted = String(groupName ?? '').trim().toLowerCase();
-  if (!wanted || !Array.isArray(rows)) return null;
+  const wanted = String(groupName ?? '');
+  if (!wanted.trim() || !Array.isArray(rows)) return null;
   return rows.find((row) => row && typeof row === 'object'
-    && GROUP_RECORD_NAME_KEYS.some((key) => String(row[key] ?? '').trim().toLowerCase() === wanted)) ?? null;
+    && GROUP_RECORD_NAME_KEYS.some((key) => String(row[key] ?? '') === wanted)) ?? null;
 };
 
 // ---------------------------------------------------------------------------

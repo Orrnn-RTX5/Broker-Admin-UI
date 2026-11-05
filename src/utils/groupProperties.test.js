@@ -412,14 +412,25 @@ test('addGroupSymbolRows appends only symbols that are not listed yet', async ()
   assert.deepEqual(rows.map((r) => [r.symbol, r.configured]), [['EURUSD', true], ['GBPUSD', true], ['US30', false]]);
 });
 
-test('findGroupRecord matches the server group by any name key, ignoring case', () => {
+test('findGroupRecord matches the server group by any name key, exactly', () => {
   const rows = [
     { name: 'dipannita', marginCallLevel: 100 },
     { group: 'Orrnn/demo-std', marginCallLevel: 80, stopOutLevel: 50 },
   ];
-  assert.equal(findGroupRecord(rows, 'orrnn/demo-std'), rows[1]);
-  assert.equal(findGroupRecord(rows, ' Dipannita '), rows[0]);
+  assert.equal(findGroupRecord(rows, 'Orrnn/demo-std'), rows[1]);
+  assert.equal(findGroupRecord(rows, 'dipannita'), rows[0]);
+  assert.equal(findGroupRecord(rows, 'orrnn/demo-std'), null, 'a case twin is a different group');
+  assert.equal(findGroupRecord(rows, 'Dipannita'), null, 'a case twin is a different group');
+  assert.equal(findGroupRecord(rows, ' dipannita '), null, 'a space twin is a different group: no trimmed pick');
   assert.equal(findGroupRecord(rows, 'missing'), null);
   assert.equal(findGroupRecord(rows, ''), null);
   assert.equal(findGroupRecord(null, 'dipannita'), null);
+});
+
+test('findGroupRecord returns the exact spelling and never a space-only twin, even when it is the only record', () => {
+  const rows = [{ name: 'Foo ', marginCallLevel: 1 }, { name: 'Foo', marginCallLevel: 2 }];
+  assert.equal(findGroupRecord(rows, 'Foo'), rows[1]);
+  assert.equal(findGroupRecord(rows, 'Foo '), rows[0]);
+  assert.equal(findGroupRecord([{ name: 'Bar ' }], 'Bar'), null, 'the only record is a space twin: no pick');
+  assert.equal(findGroupRecord([{ name: 'Bar ' }, { name: ' Bar' }], 'Bar'), null, 'two space twins: no pick');
 });

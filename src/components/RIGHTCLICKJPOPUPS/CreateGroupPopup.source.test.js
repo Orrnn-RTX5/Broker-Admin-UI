@@ -17,13 +17,13 @@ test('edit sends only the diffed fields (groupUpdateBody); no change makes no ca
 });
 
 test('create body is built through groupCreateBody with the changed set; nothing else reaches createGroup', () => {
-  assert.match(popup, /await ManagerService\.createGroup\(groupCreateBody\(\{ \.\.\.validated, \.\.\.\(routingOverride \? \{ routingMode: routingOverride \} : \{\}\) \}, parentGroup\.trim\(\), changed\)\);/);
+  assert.match(popup, /await ManagerService\.createGroup\(groupCreateBody\(\{ \.\.\.validated, \.\.\.\(routingOverride \? \{ routingMode: routingOverride \} : \{\}\) \}, exactParentGroup\(parentGroup\), changed\)\);/);
   assert.doesNotMatch(popup, /ManagerService\.createGroup\(validated\)/);
 });
 
 test('a subgroup duplicate keeps the source routingMode override, and edits diff against the touched fields', () => {
   assert.match(popup, /const routingOverride = duplicateRoutingOverride\(draftData, validated\);/);
-  assert.match(popup, /groupCreateBody\(\{ \.\.\.validated, \.\.\.\(routingOverride \? \{ routingMode: routingOverride \} : \{\}\) \}, parentGroup\.trim\(\), changed\)/);
+  assert.match(popup, /groupCreateBody\(\{ \.\.\.validated, \.\.\.\(routingOverride \? \{ routingMode: routingOverride \} : \{\}\) \}, exactParentGroup\(parentGroup\), changed\)/);
 });
 
 test('a subgroup duplicate starts with the source overrides as changed fields (kept, and not overwritten by the parent lookup)', () => {
@@ -51,4 +51,48 @@ test('duplicate reads the source per-symbol terms from GroupSymbolsGet and does 
   assert.match(allocations, /catch \(error\) \{ setActionError\(getApiErrorMessage\(error, 'The group could not be duplicated\.'\)\); return; \}/);
   assert.match(allocations, /copySymbolTermsFrom=\{groupEditor\.copySymbolTermsFrom\}/);
   assert.match(allocations, /const \{ id: _id, \.\.\.copy \} = record;/);
+});
+
+test('a new group is checked for case and space twins against the loaded group list before the request', () => {
+  assert.match(popup, /loadGroupList\(\(\) => loadGroupTreePages\(ManagerService\.getGroupList, \{ arrayKeys: GROUP_LIST_ARRAY_KEYS \}\), \{ force: groupListAttempt > 0 \}\)/);
+  assert.match(popup, /if \(initialData\) return;\s*let disposed = false;\s*setGroupListStatus\('loading'\);\s*loadGroupList/);
+  assert.match(popup, /validateGroupSection\(formData, activeSection, existingGroupNames, initialData \? null : parentState\);/);
+  assert.match(popup, /paddedNewNameRefusal\(formData\.name\)/, 'a padded new name is refused on the General step');
+  assert.match(popup, /\? validateGroupForm\(formData, existingGroupNames\)/);
+});
+
+test('a server GROUP_NAME_CASE_CONFLICT is shown with the client wording on the name field, not as a trading or risk error', () => {
+  // The mapping itself is behaviour-tested on groupCreateConflictFromError (groupFormSteps.test.js); this checks it is wired.
+  assert.match(popup, /const conflict = leverageMessage \? null : groupCreateConflictFromError\(err\);/);
+  assert.match(popup, /conflict\?\.existing \? groupNameCaseConflictMessage\(conflict\.existing\) : getApiErrorMessage\(err, 'Error creating group'\)/);
+  assert.match(popup, /if \(conflict\) \{ setActiveSection\('details'\); setErrorField\('name'\); \}\s*else if \(\/commission/);
+});
+
+test('the create guard runs before any request: the form and parent rules, then the name probe; a refusal stops the create', () => {
+  // The decision is behaviour-tested on createGuardRefusal (groupFormSteps.test.js). This checks the popup runs it before createGroup and stops on a refusal.
+  const guardAt = popup.indexOf('await createGuardRefusal({');
+  const createAt = popup.indexOf('await ManagerService.createGroup(');
+  assert.ok(guardAt > 0 && createAt > guardAt, 'the guard runs before the create');
+  assert.match(popup, /probe: \(\) => ManagerService\.getGroupNameAvailability\(formData\.name\.trim\(\)\)/);
+  assert.match(popup, /if \(refusal\) \{ showValidation\(refusal\); return; \}/);
+  assert.match(managerService, /getGroupNameAvailability: async \(groupName\) => \{[\s\S]*?_isolatedConnectionStatus: true,/);
+});
+
+test('the parent field is named for focus and shows the list state, with a Retry while the list has failed', () => {
+  assert.match(popup, /<input name="parentGroup" aria-label="New group parent"/);
+  assert.match(popup, /groupListStatus === 'failed' && <> <button type="button" className="ui-btn ui-btn-secondary" disabled=\{isLoading\} onClick=\{retryGroupList\}>Retry<\/button>/);
+});
+
+test('the parent is looked up and created with its exact name; a lookup fills the form only from that exact record', () => {
+  assert.match(popup, /ManagerService\.getGroup\(exactParentGroup\(parentGroup\)\)\.then\(fresh => \{ if \(!disposed && parentRecordMatches\(fresh, parentGroup\)\) setFormData/);
+  assert.match(popup, /exactParentGroup\(parentGroup\), changed\)\);/);
+  assert.doesNotMatch(popup, /parentGroup\.trim\(\)/, 'no trimmed parent reaches the lookup or the create');
+});
+
+
+// T6-3 (wiring): the parent field's pending flag comes from parentLookupPending, so a padded entry never holds the submit (A-R5-11).
+test('T6-3: the parent field sets its pending flag from parentLookupPending, and a padded new name is refused on the General step', () => {
+  assert.match(popup, /setParentLoading\(parentLookupPending\(event\.target\.value\)\)/);
+  assert.match(popup, /parentLookupPending,/);
+  assert.match(popup, /paddedNewNameRefusal,/);
 });

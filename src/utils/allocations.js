@@ -18,11 +18,15 @@ const pick = (record, keys) => {
 const GROUP_NAME_KEYS = ['name', 'Name', 'group', 'Group', 'group_name', 'groupName'];
 const ACCOUNT_GROUP_KEYS = ['group', 'Group', 'group_name', 'groupName', 'account_group', 'accountGroup', 'accountGroupName'];
 
-/** Account totals per group; group names compare case-insensitively. */
+// Group names are exact identities: letter case and surrounding spaces make a different group (a case or space twin).
+// Blank names still count as missing; a non-blank name is kept exactly as the server sent it.
+const exactName = (value) => (typeof value === 'string' && value.trim() ? value : '');
+
+/** Account totals per group, keyed by the exact group name. */
 export const countAccountsByGroup = (accounts) => {
   const counts = new Map();
   for (const account of Array.isArray(accounts) ? accounts : []) {
-    const group = text(pick(account, ACCOUNT_GROUP_KEYS)).toLowerCase();
+    const group = exactName(pick(account, ACCOUNT_GROUP_KEYS));
     if (group) counts.set(group, (counts.get(group) || 0) + 1);
   }
   return counts;
@@ -53,7 +57,8 @@ const isDemoGroup = (record, name) => {
 
 /** A GroupList record flattened into the columns the page shows. */
 export const normalizeAllocationGroup = (record, accountCounts) => {
-  const name = text(pick(record, GROUP_NAME_KEYS));
+  // The exact stored name: the editors and the account counts use it to target this group, not a case or space twin.
+  const name = exactName(pick(record, GROUP_NAME_KEYS));
   const execution = text(pick(record, ['executionMode', 'execution_mode', 'risk'])).toLowerCase();
   return {
     id: name,
@@ -66,7 +71,7 @@ export const normalizeAllocationGroup = (record, accountCounts) => {
     marginCall: toNumber(pick(record, ['marginCallLevel', 'margin_call', 'MarginCall', 'margin_call_level'])),
     stopOut: toNumber(pick(record, ['stopOutLevel', 'stop_out', 'MarginStopOut', 'stop_out_level'])),
     tradeAllowed: toBoolean(pick(record, ['tradeAllowed', 'trade_allowed', 'enabled', 'Enabled'])),
-    accounts: accountCounts ? (accountCounts.get(name.toLowerCase()) || 0) : null,
+    accounts: accountCounts ? (accountCounts.get(name) || 0) : null,
     record,
   };
 };
@@ -76,7 +81,7 @@ export const normalizeAllocationGroups = (records, accountCounts) => {
   const groups = [];
   for (const record of Array.isArray(records) ? records : []) {
     const group = normalizeAllocationGroup(record, accountCounts);
-    const key = group.name.toLowerCase();
+    const key = group.name;
     if (!key || seen.has(key)) continue;
     seen.add(key);
     groups.push(group);

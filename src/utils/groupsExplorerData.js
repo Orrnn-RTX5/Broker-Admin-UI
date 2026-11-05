@@ -115,8 +115,9 @@ export const getGroupsExplorerEditTarget = (node) => {
 };
 
 const GROUP_PATH_SEPARATOR = '\\';
-const equalPath = (left, right) => left.toLowerCase() === right.toLowerCase();
-const belowPath = (candidate, parent) => candidate.toLowerCase().startsWith(`${parent.toLowerCase()}${GROUP_PATH_SEPARATOR}`);
+// Paths are case-exact: "Orrnn\demo" and "orrnn\demo" are different folders and different groups.
+const equalPath = (left, right) => left === right;
+const belowPath = (candidate, parent) => candidate.startsWith(`${parent}${GROUP_PATH_SEPARATOR}`);
 
 export const getServerGroupCount = (groups, path = '') => groups.filter(group => !path || equalPath(group.groupName, path) || belowPath(group.groupName, path)).length;
 
@@ -136,11 +137,10 @@ export const getServerGroupFolderNodes = (groups, path = '') => {
     const parts = name.split(GROUP_PATH_SEPARATOR);
     if (parts.length <= depth) continue;
     const childPath = parts.slice(0, depth + 1).join(GROUP_PATH_SEPARATOR);
-    const key = childPath.toLowerCase();
-    const node = nodes.get(key) || { id: `server-folder:${childPath}`, type: 'server-folder', label: parts[depth], path: childPath, count: 0 };
+    const node = nodes.get(childPath) || { id: `server-folder:${childPath}`, type: 'server-folder', label: parts[depth], path: childPath, count: 0 };
     if (parts.length === depth + 1) Object.assign(node, group, { type: 'group', label: group.label, count: node.count });
     else node.count += 1;
-    nodes.set(key, node);
+    nodes.set(childPath, node);
   }
   return [...nodes.values()].sort((left, right) => (left.type === right.type ? 0 : left.type === 'server-folder' ? -1 : 1)
     || left.label.localeCompare(right.label, undefined, { numeric: true, sensitivity: 'base' }));
@@ -154,8 +154,37 @@ export const listServerGroupContainerPaths = (groups) => {
     for (let depth = 1; depth <= parts.length; depth += 1) {
       const candidate = parts.slice(0, depth).join(GROUP_PATH_SEPARATOR);
       // A real group's spelling wins over a folder merely implied by a nested name.
-      if (depth === parts.length || !paths.has(candidate.toLowerCase())) paths.set(candidate.toLowerCase(), candidate);
+      if (depth === parts.length || !paths.has(candidate)) paths.set(candidate, candidate);
     }
   }
   return [...paths.values()].sort((left, right) => left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' }));
 };
+
+// Explorer lookups by exact group name. A case or space twin is a different group, so none of these folds or trims.
+/** The group an opened folder is itself (every main group also holds accounts), matched by exact path; '' when none. */
+export const explorerFolderGroupName = (groupNodes, location) => (location?.type === 'server-folder'
+  ? groupNodes.find(group => group.groupName === location.path)?.groupName || ''
+  : '');
+
+/** The listed group with exactly this name, or null. */
+export const findExplorerGroupNode = (groupNodes, groupName) => groupNodes.find(group => group.groupName === String(groupName)) ?? null;
+
+/** The exact group name a row belongs to: an account row's group, else the row's own group name. */
+export const explorerRowGroupName = (node, fallback = '') => node?.account?.group || node?.groupName || fallback || '';
+
+/**
+ * The group an account row opens: the listed record with the exact name, or a synthetic group node carrying that exact
+ * name when the list has none. Null when no group name is known.
+ */
+export const resolveExplorerAccountGroup = (groupNodes, node, fallbackGroupName = '') => {
+  const groupName = explorerRowGroupName(node, fallbackGroupName);
+  if (!groupName) return null;
+  const record = findExplorerGroupNode(groupNodes, groupName);
+  if (record) return record;
+  return { type: 'group', id: `group:${groupName}`, label: groupName, groupName, group: { name: groupName, group: groupName } };
+};
+
+/** The exact names of a group and of every subgroup under it, for a branch delete. */
+export const explorerBranchNames = (groupNodes, path, separator = GROUP_PATH_SEPARATOR) => groupNodes
+  .filter(group => group.groupName === path || group.groupName.startsWith(`${path}${separator}`))
+  .map(group => group.groupName);

@@ -99,6 +99,12 @@ test("Double-clicking an account opens its group's Margin / Symbols / Commission
   assert.match(src, /findGroupRecord\(rows, currentGroupName\)/);
 });
 
+test('Migration: the group-list status reaches the panel, and Retry runs the same load again', () => {
+  assert.match(src, /<GroupMigrationPanel[^>]*groupRows=\{groupRows\} groupRowsStatus=\{groupRowsStatus\} onRetryGroupRows=\{\(\) => setGroupRowsAttempt\(attempt => attempt \+ 1\)\}/);
+  assert.match(src, /\}, \[currentGroupName, groupRowsAttempt\]\);/, 'a retry re-runs the load effect');
+  assert.match(src, /if \(!listLoaded\) setGroupRowsStatus\('failed'\);/, 'a later failure after a loaded list is not reported as a failed list');
+});
+
 test('Migration: destination suggestions reuse the same group-list load (no extra request)', () => {
   assert.match(src, /setGroupRows\(Array\.isArray\(rows\) \? rows : \[\]\);/);
   assert.match(src, /<GroupMigrationPanel[^>]*groupRows=\{groupRows\}/);

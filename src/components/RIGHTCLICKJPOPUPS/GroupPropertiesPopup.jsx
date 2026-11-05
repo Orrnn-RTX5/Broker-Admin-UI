@@ -1,4 +1,5 @@
 import GroupMigrationPanel from '../organisms/GroupMigrationPanel.jsx';
+import { sessionAccountScope } from '../../utils/groupMigrationWarning.js';
 import { groupMigration } from '../../services/groupMigration.js';
 import GroupAuthorityPanel from '../organisms/GroupAuthorityPanel.jsx';
 import { useAuthStore } from '../../store/authStore';
@@ -407,16 +408,23 @@ const GroupPropertiesPopup = ({
   const [marginLoading, setMarginLoading] = useState(true);
   const [marginLoadError, setMarginLoadError] = useState('');
   const [syncedAt, setSyncedAt] = useState(null);
-  // Rows from the same group-list load, used to suggest migration destinations.
+  // Rows from the same group-list load, used to judge migration destinations. The status tells a loading or failed list
+  // apart from a real "not found"; Retry runs this load again.
   const [groupRows, setGroupRows] = useState([]);
+  const [groupRowsStatus, setGroupRowsStatus] = useState('loading');
+  const [groupRowsAttempt, setGroupRowsAttempt] = useState(0);
   useEffect(() => {
     let cancelled = false;
+    let listLoaded = false;
     setMarginLoading(true);
     setMarginLoadError('');
+    setGroupRowsStatus('loading');
     loadGroupTreePages(ManagerService.getGroupList, { arrayKeys: GROUP_LIST_ARRAY_KEYS })
       .then((rows) => {
         if (cancelled) return;
         setGroupRows(Array.isArray(rows) ? rows : []);
+        listLoaded = true;
+        setGroupRowsStatus('ready');
         const record = findGroupRecord(rows, currentGroupName);
         if (!record) {
           setMarginLoadError(`Group "${currentGroupName}" was not found on the server.`);
@@ -439,13 +447,16 @@ const GroupPropertiesPopup = ({
         setSyncedAt(new Date());
       })
       .catch((error) => {
-        if (!cancelled) setMarginLoadError(getApiErrorMessage(error, 'Failed to load the current group settings.'));
+        if (!cancelled) {
+          if (!listLoaded) setGroupRowsStatus('failed');
+          setMarginLoadError(getApiErrorMessage(error, 'Failed to load the current group settings.'));
+        }
       })
       .finally(() => {
         if (!cancelled) setMarginLoading(false);
       });
     return () => { cancelled = true; };
-  }, [currentGroupName]);
+  }, [currentGroupName, groupRowsAttempt]);
 
   // --- Symbols (staged, saved on OK) ---
   const [symbolsBaseline, setSymbolsBaseline] = useState(null);
@@ -901,7 +912,7 @@ const GroupPropertiesPopup = ({
                 <GroupAccountsTab groupName={currentGroupName} onOpenAccount={onOpenAccount} />
               )}
 
-              {activeTab === 'Migration' && <GroupMigrationPanel source={currentGroupName} api={groupMigration} canManage={!readOnly && canManageGroupLifecycle(user)} groupRows={groupRows} disabled={isSaving || marginDirty || symbolsDirty || overridesDirty} onMigrated={value => { persistedRef.current = true; onSaved?.({ action: 'migrated', ...value }); }} onDeleted={value => { onSaved?.({ action: 'deleted', ...value }); onClose(); }} />}
+              {activeTab === 'Migration' && <GroupMigrationPanel source={currentGroupName} api={groupMigration} canManage={!readOnly && canManageGroupLifecycle(user)} groupRows={groupRows} groupRowsStatus={groupRowsStatus} onRetryGroupRows={() => setGroupRowsAttempt(attempt => attempt + 1)} accountScope={sessionAccountScope(user)} disabled={isSaving || marginDirty || symbolsDirty || overridesDirty} onMigrated={value => { persistedRef.current = true; onSaved?.({ action: 'migrated', ...value }); }} onDeleted={value => { onSaved?.({ action: 'deleted', ...value }); onClose(); }} />}
               {activeTab === 'Inheritance' && <GroupAuthorityPanel name={currentGroupName} readGroup={ManagerService.getGroup} updateGroup={(name, payload) => ManagerService.updateGroup({ ...payload, originalName: name })} canManage={!readOnly} disabled={isSaving || marginDirty || symbolsDirty || overridesDirty} onSaved={fresh => { persistedRef.current = true; setGroupRevision(readRevision(fresh)); setInitialLeverage(String(fresh.leverage ?? '')); setLeverage(String(fresh.leverage ?? '')); const next = buildMarginForm(fresh); setInitialMargin(next); setMarginForm(next); onSaved?.(); }} />}
               {/* --- MARGIN TAB --- */}
               {activeTab === 'Margin' && (
