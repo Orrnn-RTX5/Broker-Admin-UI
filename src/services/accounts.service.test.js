@@ -105,6 +105,7 @@ test('Trading Accounts list uses broker manager account details and does not exp
     search: 'main',
     group: 'real\\standard',
     status: 'active',
+    metricsNullable: '1',
   });
   assert.deepEqual(response.answer, [
     {
@@ -137,6 +138,7 @@ test('AccountDetailsMany legacy full-array responses are paged before reaching R
     page: 2,
     limit: 100,
     offset: 100,
+    metricsNullable: '1',
   });
   assert.equal(pageTwo.answer.length, 100);
   assert.equal(pageTwo.answer[0].Login, 990100);
@@ -414,6 +416,48 @@ test('reload display summaries never satisfy live requests and token rotation pr
     mockAdapter = async () => { const error = new Error('Permission denied'); error.response = { status: 403 }; throw error; };
     await assert.rejects(AccountsService.getAccounts({ page: 1, limit: 100 }), /Permission denied/);
     assert.equal(AccountsService.peekAccounts({ page: 1, limit: 100 }, { allowStale: true }), null);
+  } finally {
+    mockAdapter = null;
+    AccountsService.invalidateCache();
+  }
+});
+
+test('getAccounts always includes metricsNullable 1 and prevents caller override', async () => {
+  AccountsService.invalidateCache();
+  mockResponseData = { answer: [{ Login: 12345 }] };
+
+  await AccountsService.getAccounts({ page: 1, limit: 50 });
+  assert.equal(requestedParams.metricsNullable, '1');
+
+  await AccountsService.getAccounts({ page: 1, limit: 50, metricsNullable: '0' });
+  assert.equal(requestedParams.metricsNullable, '1');
+  AccountsService.invalidateCache();
+});
+
+test('getAllAccounts passes through real api.get path with metricsNullable 1', async () => {
+  AccountsService.invalidateCache();
+  useAuthStore.setState({ accessToken: 'session-token', user: { role: 'admin', is_admin: true }, isAuthenticated: true });
+
+  const capturedParams = [];
+  mockAdapter = async (requestConfig) => {
+    capturedParams.push(requestConfig.params);
+    return {
+      data: { accounts: [{ login: 1001 }], total: 1 },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: requestConfig,
+      request: {},
+    };
+  };
+
+  try {
+    const accounts = await AccountsService.getAllAccounts();
+    assert.equal(accounts.length, 1);
+    assert.ok(capturedParams.length > 0);
+    for (const params of capturedParams) {
+      assert.equal(params.metricsNullable, '1');
+    }
   } finally {
     mockAdapter = null;
     AccountsService.invalidateCache();

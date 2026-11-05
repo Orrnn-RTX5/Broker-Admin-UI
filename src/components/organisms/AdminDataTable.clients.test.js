@@ -35,3 +35,8 @@ test('Groups and group lookup tabs preserve selected rows for the previous group
   assert.match(src, /if \(isGroupEditView && row\.iconType === 'group'\) return 'group';/);
   assert.match(src, /selectedEditableTargetType === getRowEditTargetType\(row\)/);
 });
+test('Trading Accounts row maps equity via pickDefined and formats cell with formatAccountAmount', () => {
+  assert.match(src, /const getAccountRow =/);
+  assert.match(src, /equity:\s*pickDefined\(account,\s*\[\'equity\',\s*\'Equity\'\]\)/);
+  assert.match(src, /formatAccountAmount\(row\[key\],/);
+});

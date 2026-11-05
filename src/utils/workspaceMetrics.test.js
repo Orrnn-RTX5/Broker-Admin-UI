@@ -39,3 +39,11 @@ test('position exposure counts and directional volumes use actual sides', () => 
   ]);
   assert.deepEqual(symbols[0], { symbol: 'EURUSD', positions: 2, buy: 0.1, sell: 0.25 });
 });
+test('cold account with null equity and margin results in null total equity and margin', () => {
+  const normalAccount = { login: 1, Group: 'Broker/real', Currency: 'USD', balance: 100, equity: 100, margin: 10 };
+  const coldAccount = { login: 2, Group: 'Broker/real', Currency: 'USD', balance: 50, equity: null, margin: null };
+  const metrics = buildWorkspaceMetrics([normalAccount, coldAccount], []);
+  assert.equal(metrics.equity, null);
+  assert.equal(metrics.margin, null);
+  assert.equal(metrics.balance, 150);
+});

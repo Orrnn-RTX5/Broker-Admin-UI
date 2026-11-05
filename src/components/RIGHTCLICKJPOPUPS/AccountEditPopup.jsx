@@ -75,7 +75,7 @@ const buildFormState = (row) => {
     leverage: normalizeText(pickDefined(source, ['leverage', 'Leverage'], '')),
     accountMode: normalizeText(pickDefined(source, ['account_mode', 'accountMode', 'AccountMode'], 'hedging')).toLowerCase() || 'hedging',
     balance: pickDefined(source, ['balance', 'Balance'], row?.balance ?? 0),
-    equity: pickDefined(source, ['equity', 'Equity'], row?.equity ?? 0),
+    equity: pickDefined(source, ['equity', 'Equity'], row?.equity ?? ''),
     reason: 'Account updated from admin UI',
   };
 };
@@ -271,7 +271,7 @@ const AccountEditForm = ({ account, onClose, onSaved }) => {
               <input value={form.balance} disabled className={inputClassName} />
             </Field>
             <Field label="Equity:">
-              <input value={form.equity} disabled className={inputClassName} />
+              <input value={form.equity === '' || form.equity === null || form.equity === undefined ? '—' : form.equity} disabled className={inputClassName} />
             </Field>
           </div>
 

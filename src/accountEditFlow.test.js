@@ -47,3 +47,12 @@ test('account editor saves through account update and existing status actions', 
   assert.match(popupSrc, /Balance:/);
   assert.match(popupSrc, /Equity:/);
 });
+
+test('account edit popup renders dash for empty or null equity and never submits equity in payload', () => {
+  const popupSrc = readFileSync(new URL('./components/RIGHTCLICKJPOPUPS/AccountEditPopup.jsx', import.meta.url), 'utf8');
+  assert.match(popupSrc, /equity:\s*pickDefined\(source,\s*\['equity',\s*'Equity'\],\s*row\?\.equity\s*\?\?\s*''\)/);
+  assert.match(popupSrc, /<Field label="Equity:">\r?\n\s*<input value=\{form\.equity === '' \|\| form\.equity === null \|\| form\.equity === undefined \? '—' : form\.equity\} disabled/);
+  assert.match(popupSrc, /balance:\s*pickDefined\(source,\s*\['balance',\s*'Balance'\],\s*row\?\.balance\s*\?\?\s*0\)/);
+  assert.match(popupSrc, /const PROFILE_FIELDS = \['name', 'email', 'phone'\];/);
+  assert.match(popupSrc, /const GUARDED_PROFILE_FIELDS = \['group', 'currency'\];/);
+});

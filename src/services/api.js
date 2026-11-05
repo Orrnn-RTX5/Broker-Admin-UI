@@ -47,7 +47,7 @@ export const getAccountsOnline = async () => {
 
 // ─── Clients ───────────────────────────────────────────────────────────────────
 export const getClients = async () => {
-  const data = await apiClient.get('/AccountDetailsMany');
+  const data = await apiClient.get('/AccountDetailsMany?metricsNullable=1');
   const records = Array.isArray(data) ? data : data.answer || [];
 
   return records.map(p => ({
@@ -66,7 +66,7 @@ export const getClients = async () => {
 
 // ─── Trading Accounts ──────────────────────────────────────────────────────────
 export const getTradingAccounts = async () => {
-  const data = await apiClient.get('/AccountDetailsMany');
+  const data = await apiClient.get('/AccountDetailsMany?metricsNullable=1');
   const records = Array.isArray(data) ? data : data.answer || [];
 
   return records.map(p => ({
@@ -84,9 +84,9 @@ export const getTradingAccounts = async () => {
     leverage: p.leverage || p.Leverage || 100,
     credit: p.credit || p.Credit || 0,
     status: p.status || p.Status || 'active',
-    margin: p.margin || p.Margin || 0,
-    marginFree: p.marginFree || p.MarginFree || 0,
-    marginLevel: p.marginLevel || p.MarginLevel || 0,
+    margin: p.margin ?? p.Margin ?? null,
+    marginFree: p.marginFree ?? p.MarginFree ?? null,
+    marginLevel: p.marginLevel ?? p.MarginLevel ?? null,
     email: p.email || p.Email || '',
     firstName: p.firstName || p.FirstName || '',
     lastName: p.lastName || p.LastName || '',

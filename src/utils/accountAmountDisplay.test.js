@@ -22,3 +22,18 @@ test('missing and invalid amounts remain unknown rather than looking like a zero
   for (const amount of [null, undefined, '', ' ', NaN, Infinity, 'invalid']) assert.equal(formatAccountAmount(amount, 'USD'), '—');
   assert.equal(formatAccountAmount(12.34, ''), '12.34');
 });
+test('cold-account row renders dash for null equity through table mapping steps', () => {
+  const row = { login: 1, balance: 100, equity: null, metricsAvailable: false, metricsUnavailableReason: 'METRICS_CACHE_MISS' };
+  const pickDefined = (source, keys, fallback = '') => {
+    for (const key of keys) {
+      const value = source?.[key];
+      if (value !== undefined && value !== null && value !== '') return value;
+    }
+    return fallback;
+  };
+  const mappedEquity = pickDefined(row, ['equity', 'Equity']);
+  assert.equal(mappedEquity, '');
+  assert.equal(formatAccountAmount(mappedEquity, 'USD'), '—');
+  assert.equal(formatAccountAmount(null), '—');
+  assert.equal(formatAccountAmount(''), '—');
+});

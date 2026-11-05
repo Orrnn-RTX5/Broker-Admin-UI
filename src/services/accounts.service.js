@@ -73,6 +73,7 @@ const buildAccountParams = (params = {}) => {
     page,
     limit,
     offset,
+    metricsNullable: '1',
   });
 };
 

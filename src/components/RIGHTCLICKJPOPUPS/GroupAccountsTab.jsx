@@ -5,6 +5,7 @@ import { useAuthStore } from '../../store/authStore';
 import { AccountsService } from '../../services/accounts.service';
 import { canAccessView } from '../../utils/permissions';
 import { getGroupsExplorerRow, loadGroupsExplorerNodes } from '../../utils/groupsExplorerData';
+import { money } from '../../utils/groupAccountsMoney.js';
 
 const COLUMNS = [
   { key: 'login', label: 'Login' },
@@ -14,13 +15,6 @@ const COLUMNS = [
   { key: 'currency', label: 'Currency' },
   { key: 'status', label: 'Status' },
 ];
-
-const money = (value) => {
-  const number = Number(value);
-  return value === '' || !Number.isFinite(number)
-    ? String(value ?? '')
-    : number.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-};
 
 const cellText = (column, row) => (column.numeric ? money(row[column.key]) : String(row[column.key] ?? ''));
 
