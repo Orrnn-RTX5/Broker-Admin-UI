@@ -19,6 +19,12 @@ import {
   buildDemoGroupOptions,
   initialDemoGroupSelection,
   isDemoGroupSelectionChanged,
+  NETTING_DEMO_CONTRACT,
+  NETTING_DEMO_OFF_LABEL,
+  buildNettingDemoGroupOptions,
+  buildNettingDemoGroupStatus,
+  initialNettingDemoGroupSelection,
+  isNettingDemoGroupSelectionChanged,
 } from './demoAccountGroup.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -220,4 +226,159 @@ test('service and view are wired to the DemoAccountGroup endpoints', () => {
     DEMO_DISABLE_CONFIRM_MESSAGE,
     'Disable demo signup? Guests in the web terminal will no longer be able to create demo accounts.',
   );
+});
+
+// ─── Netting demo group (setting public_demo_netting_group) ──────────────────
+const C = NETTING_DEMO_CONTRACT;
+const nettingResponse = (overrides = {}) => response({
+  [C.responseGroupKey]: '',
+  demo_groups: [
+    { name: 'demo\\hedge', currency: 'USD', leverage: 100, margin_mode: 'hedging' },
+    { name: 'demo\\net', currency: 'USD', leverage: 100, margin_mode: 'netting' },
+    { name: 'demo\\unknown', currency: 'USD', leverage: 100 },
+    { name: 'demo\\net-pro', currency: 'EUR', leverage: 500, marginMode: ' NETTING ' },
+  ],
+  ...overrides,
+});
+
+test('netting: only netting demo groups are listed (no margin mode is never listed)', () => {
+  const s = normalizeDemoAccountGroupState(nettingResponse());
+  assert.deepEqual(s.nettingDemoGroups.map((g) => g.name), ['demo\\net', 'demo\\net-pro']);
+  // The regular demo group list is unchanged.
+  assert.deepEqual(s.demoGroups.map((g) => g.name), ['demo\\hedge', 'demo\\net', 'demo\\unknown', 'demo\\net-pro']);
+});
+
+test('netting: a server netting-only list wins over filtering demo_groups', () => {
+  const s = normalizeDemoAccountGroupState(nettingResponse({
+    [C.responseListKey]: [{ name: 'demo\\server-net', currency: 'USD', leverage: 50 }, null, { name: ' ' }],
+  }));
+  assert.deepEqual(s.nettingDemoGroups, [{ name: 'demo\\server-net', description: '', currency: 'USD', leverage: 50 }]);
+  assert.deepEqual(normalizeDemoAccountGroupState(nettingResponse({ [C.responseListKey]: [] })).nettingDemoGroups, []);
+  // A server entry that names another margin mode is still dropped.
+  const mixed = normalizeDemoAccountGroupState(nettingResponse({
+    [C.responseListKey]: [
+      { name: 'demo\\srv-net', margin_mode: 'netting' },
+      { name: 'demo\\srv-hedge', margin_mode: 'hedging' },
+      { name: 'demo\\srv-plain' },
+    ],
+  }));
+  assert.deepEqual(mixed.nettingDemoGroups.map((g) => g.name), ['demo\\srv-net', 'demo\\srv-plain']);
+  // A list key that is not an array falls back to filtering demo_groups.
+  assert.deepEqual(normalizeDemoAccountGroupState(nettingResponse({ [C.responseListKey]: 'oops' })).nettingDemoGroups.map((g) => g.name),
+    ['demo\\net', 'demo\\net-pro']);
+});
+
+test('netting: a stored group the server reports valid stays selectable even if not listed', () => {
+  const s = normalizeDemoAccountGroupState(nettingResponse({ [C.responseGroupKey]: 'demo\\elsewhere', [C.responseValidKey]: true }));
+  assert.deepEqual(buildNettingDemoGroupOptions(s).at(-1), { value: 'demo\\elsewhere', label: 'demo\\elsewhere', disabled: false });
+});
+
+test('netting: Off is the first option, then netting groups only', () => {
+  const options = buildNettingDemoGroupOptions(normalizeDemoAccountGroupState(nettingResponse()));
+  assert.deepEqual(options, [
+    { value: '', label: NETTING_DEMO_OFF_LABEL, disabled: false },
+    { value: 'demo\\net', label: 'demo\\net (USD, 1:100)', disabled: false },
+    { value: 'demo\\net-pro', label: 'demo\\net-pro (EUR, 1:500)', disabled: false },
+  ]);
+  assert.equal(NETTING_DEMO_OFF_LABEL, 'Off (no netting demo accounts)');
+  // No netting group at all: only the Off option.
+  assert.deepEqual(buildNettingDemoGroupOptions(normalizeDemoAccountGroupState(response({ [C.responseGroupKey]: '' }))),
+    [{ value: '', label: NETTING_DEMO_OFF_LABEL, disabled: false }]);
+});
+
+test('netting: a stored group that is not a netting demo group stays as a disabled option', () => {
+  const s = normalizeDemoAccountGroupState(nettingResponse({ [C.responseGroupKey]: 'demo\\hedge', [C.responseValidKey]: false }));
+  const options = buildNettingDemoGroupOptions(s);
+  assert.deepEqual(options.at(-1), { value: 'demo\\hedge', label: 'demo\\hedge (unavailable)', disabled: true });
+  assert.equal(options.filter((o) => o.value === 'demo\\hedge').length, 1);
+});
+
+test('netting: state mapping, supported flag and validity', () => {
+  const valid = normalizeDemoAccountGroupState(nettingResponse({ [C.responseGroupKey]: ' demo\\net ', [C.responseValidKey]: true }));
+  assert.equal(valid.nettingSupported, true);
+  assert.equal(valid.nettingGroup, 'demo\\net');
+  assert.equal(valid.nettingValid, true);
+  // Validity needs an explicit true and a stored group.
+  assert.equal(normalizeDemoAccountGroupState(nettingResponse({ [C.responseGroupKey]: 'demo\\net', [C.responseValidKey]: 'yes' })).nettingValid, false);
+  assert.equal(normalizeDemoAccountGroupState(nettingResponse({ [C.responseValidKey]: true })).nettingValid, false);
+  // A null stored value from the backend still means "supported, off".
+  const off = normalizeDemoAccountGroupState(response({ [C.responseGroupKey]: null }));
+  assert.equal(off.nettingSupported, true);
+  assert.equal(off.nettingGroup, '');
+  // An older backend without the setting: not supported, nothing listed.
+  for (const raw of [response(), null, {}, 'oops']) {
+    const old = normalizeDemoAccountGroupState(raw);
+    assert.equal(old.nettingSupported, false);
+    assert.equal(old.nettingGroup, '');
+    assert.deepEqual(old.nettingDemoGroups, []);
+  }
+});
+
+test('netting: status texts for off, valid, invalid and none available', () => {
+  assert.deepEqual(buildNettingDemoGroupStatus(normalizeDemoAccountGroupState(nettingResponse())),
+    { tone: 'info', message: 'Netting demo accounts are off.' });
+  assert.deepEqual(buildNettingDemoGroupStatus(normalizeDemoAccountGroupState(response({ [C.responseGroupKey]: '' }))),
+    { tone: 'info', message: "Netting demo accounts are off. No netting demo group can be selected — a demo group with margin mode 'Netting' is needed to offer them." });
+  assert.deepEqual(buildNettingDemoGroupStatus(normalizeDemoAccountGroupState(nettingResponse({ [C.responseGroupKey]: 'demo\\net', [C.responseValidKey]: true }))),
+    { tone: 'ok', message: 'Netting demo group: demo\\net' });
+  const invalid = buildNettingDemoGroupStatus(normalizeDemoAccountGroupState(nettingResponse({ [C.responseGroupKey]: 'demo\\gone', [C.responseValidKey]: false })));
+  assert.equal(invalid.tone, 'error');
+  assert.match(invalid.message, /The netting demo group demo\\gone is missing, disabled or no longer a netting demo group/);
+  assert.match(invalid.message, /blocked until you pick a valid group or switch it off\./);
+});
+
+test('netting: selection helpers', () => {
+  const stored = normalizeDemoAccountGroupState(nettingResponse({ [C.responseGroupKey]: 'demo\\net', [C.responseValidKey]: true }));
+  assert.equal(initialNettingDemoGroupSelection(stored), 'demo\\net');
+  assert.equal(isNettingDemoGroupSelectionChanged(stored, 'demo\\net'), false);
+  assert.equal(isNettingDemoGroupSelectionChanged(stored, ''), true);
+  const off = normalizeDemoAccountGroupState(nettingResponse());
+  assert.equal(initialNettingDemoGroupSelection(off), '');
+  assert.equal(isNettingDemoGroupSelectionChanged(off, ''), false);
+  assert.equal(isNettingDemoGroupSelectionChanged(off, 'demo\\net-pro'), true);
+  assert.equal(initialNettingDemoGroupSelection(null), '');
+});
+
+test('netting: Set body sends only the netting key; empty switches it off', () => {
+  assert.deepEqual(buildDemoAccountGroupSetBody({ nettingGroup: 'demo\\net' }), { [C.requestKey]: 'demo\\net' });
+  assert.deepEqual(buildDemoAccountGroupSetBody({ nettingGroup: '' }), { [C.requestKey]: '' });
+  assert.deepEqual(buildDemoAccountGroupSetBody({ nettingGroup: null }), { [C.requestKey]: '' });
+  assert.deepEqual(buildDemoAccountGroupSetBody({ nettingGroup: ' demo\\net ' }), { [C.requestKey]: 'demo\\net' });
+  // Existing callers are unchanged: no netting key unless asked.
+  assert.deepEqual(buildDemoAccountGroupSetBody({ group: 'demo\\pro' }), { group: 'demo\\pro' });
+  assert.equal(Object.hasOwn(buildDemoAccountGroupSetBody({ signupEnabled: true }), C.requestKey), false);
+});
+
+test('netting: view shows the netting block only when supported and saves only the netting key', () => {
+  const view = readFileSync(resolve(__dirname, '../components/organisms/ServerConfigDemoAccounts.jsx'), 'utf8');
+  assert.match(view, /\{state\.nettingSupported && \(/);
+  assert.match(view, /id="netting-demo-group-select"/);
+  assert.match(view, /buildNettingDemoGroupOptions\(state\)/);
+  assert.match(view, /setDemoAccountGroup\(\{ nettingGroup: nettingSelected \}\)/);
+  assert.match(view, /setNettingSelected\(initialNettingDemoGroupSelection\(next\)\)/);
+  assert.match(view, /disabled=\{busy \|\| !nettingChanged\}/);
+  // The existing group Save still sends only the group.
+  assert.match(view, /setDemoAccountGroup\(\{ group: selected \}\)/);
+});
+
+test('netting: backend r2 contract payload (DemoAccountGroupGet) maps to a selectable netting group', () => {
+  // Shape from DESIGN-DEMO-NETTING.md section 6 r2: netting_demo_groups items carry no margin_mode,
+  // and demo_groups now lists hedging groups only.
+  const s = normalizeDemoAccountGroupState({
+    broker_id: 'b1', group: '', configured: false, valid: false, effective_group: 'demo\\hedge',
+    demo_groups: [{ name: 'demo\\hedge', description: '', currency: 'USD', leverage: 100 }],
+    signup_enabled: true, server_enabled: true, signup_available: true,
+    netting_group: 'demo\\net-a', netting_configured: true, netting_valid: true,
+    netting_demo_groups: [{ name: 'demo\\net-a', description: '', currency: 'USD', leverage: 100 }],
+    netting_signup_available: true,
+  });
+  assert.equal(s.nettingSupported, true);
+  assert.equal(s.nettingValid, true);
+  assert.deepEqual(buildNettingDemoGroupOptions(s).map((o) => [o.value, o.disabled]), [['', false], ['demo\\net-a', false]]);
+  assert.equal(buildNettingDemoGroupStatus(s).tone, 'ok');
+  // Unset is "" on this backend: still supported, Off selected.
+  const off = normalizeDemoAccountGroupState({ netting_group: '', netting_valid: false, netting_demo_groups: null, demo_groups: [] });
+  assert.equal(off.nettingSupported, true);
+  assert.equal(initialNettingDemoGroupSelection(off), '');
+  assert.deepEqual(buildNettingDemoGroupOptions(off).map((o) => o.value), ['']);
 });

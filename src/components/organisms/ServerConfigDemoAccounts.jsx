@@ -11,6 +11,10 @@ import {
   buildDemoGroupOptions,
   initialDemoGroupSelection,
   isDemoGroupSelectionChanged,
+  buildNettingDemoGroupOptions,
+  buildNettingDemoGroupStatus,
+  initialNettingDemoGroupSelection,
+  isNettingDemoGroupSelectionChanged,
 } from '../../utils/demoAccountGroup';
 
 // ─── Demo Accounts ────────────────────────────────────────────────────────────
@@ -31,6 +35,10 @@ const DemoAccountsTab = () => {
   const [saved, setSaved] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [toggleError, setToggleError] = useState('');
+  const [nettingSelected, setNettingSelected] = useState('');
+  const [nettingSaving, setNettingSaving] = useState(false);
+  const [nettingSaveError, setNettingSaveError] = useState('');
+  const [nettingSaved, setNettingSaved] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -39,6 +47,7 @@ const DemoAccountsTab = () => {
       const next = normalizeDemoAccountGroupState(await ServerConfigService.getDemoAccountGroup());
       setState(next);
       setSelected(initialDemoGroupSelection(next));
+      setNettingSelected(initialNettingDemoGroupSelection(next));
     } catch (err) {
       setError(getApiErrorMessage(err, 'Demo account group failed to load.'));
     } finally { setLoading(false); }
@@ -57,6 +66,20 @@ const DemoAccountsTab = () => {
     } catch (err) {
       setSaveError(getApiErrorMessage(err, 'Failed to save the demo account group.'));
     } finally { setSaving(false); }
+  };
+
+  // Netting demo group Save sends only the netting key; '' switches netting demo accounts off.
+  const handleNettingSave = async () => {
+    setNettingSaving(true);
+    setNettingSaveError('');
+    setNettingSaved(false);
+    try {
+      await ServerConfigService.setDemoAccountGroup({ nettingGroup: nettingSelected });
+      setNettingSaved(true);
+      await load();
+    } catch (err) {
+      setNettingSaveError(getApiErrorMessage(err, 'Failed to save the netting demo group.'));
+    } finally { setNettingSaving(false); }
   };
 
   // The admin switch saves immediately; disabling asks for confirmation first.
@@ -84,7 +107,11 @@ const DemoAccountsTab = () => {
   const changed = isDemoGroupSelectionChanged(state, selected);
   const serverWarning = buildDemoServerWarning(state);
   const signupOn = state.signupEnabled;
-  const busy = saving || toggling;
+  const busy = saving || toggling || nettingSaving;
+  const nettingStatus = buildNettingDemoGroupStatus(state);
+  const nettingTone = DEMO_STATUS_TONE[nettingStatus.tone] || DEMO_STATUS_TONE.info;
+  const nettingOptions = buildNettingDemoGroupOptions(state);
+  const nettingChanged = isNettingDemoGroupSelectionChanged(state, nettingSelected);
 
   return (
     <div className="flex-1 overflow-auto p-5">
@@ -175,6 +202,44 @@ const DemoAccountsTab = () => {
             <p>Only this broker's enabled groups with "Demo Account" checked can be selected.</p>
           </div>
         </div>
+
+        {/* Netting demo group: shown only when the backend reports the setting. */}
+        {state.nettingSupported && (
+          <div className={`flex flex-col gap-4 border-t border-[color:var(--bg-surface-2)] pt-4 transition-opacity ${signupOn ? '' : 'opacity-60'}`}>
+            <div className="flex flex-col gap-1">
+              <span className="text-[12px] font-semibold text-[#9cdcfe]">Netting Demo Group</span>
+              <p className="text-[11px] text-[#888]">Netting demo accounts created from the web terminal login are opened in this group.</p>
+            </div>
+
+            <div role="status" className={`bg-[color:var(--bg-surface-1)] border rounded-[3px] px-4 py-3 flex items-start gap-2 ${nettingTone.border}`}>
+              {(nettingStatus.tone === 'error' || nettingStatus.tone === 'warning') && <AlertTriangle size={13} className={`${nettingTone.text} shrink-0 mt-0.5`} />}
+              <span className={`text-[11px] font-semibold break-words ${nettingTone.text}`}>{nettingStatus.message}</span>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label htmlFor="netting-demo-group-select" className="text-[10px] text-[#888] uppercase tracking-wider">Netting demo group</label>
+              <select id="netting-demo-group-select" value={nettingSelected} disabled={busy}
+                onChange={e => { setNettingSelected(e.target.value); setNettingSaved(false); setNettingSaveError(''); }}
+                className="bg-[color:var(--bg-app)] border border-[#555] text-[color:var(--text-primary)] text-[11px] h-[26px] px-2 rounded-[2px] outline-none focus:border-[color:var(--accent-500)] font-mono disabled:opacity-50">
+                {nettingOptions.map(o => (
+                  <option key={o.value || '__off__'} value={o.value} disabled={o.disabled}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button onClick={handleNettingSave} disabled={busy || !nettingChanged}
+                className="flex items-center gap-1.5 h-[28px] px-4 bg-[color:var(--accent-500)] hover:bg-[color:var(--accent-500)] text-white text-[11px] rounded-[2px] disabled:opacity-50">
+                <Save size={12} /> {nettingSaving ? 'Saving…' : 'Save'}
+              </button>
+              {nettingSaved && !nettingSaveError && <span className="text-[11px] text-[#4ec9b0]">Saved</span>}
+            </div>
+
+            {nettingSaveError && <ActionableErrorState title="Save failed" message={nettingSaveError} compact />}
+
+            <p className="text-[10px] text-[#555]">Only this broker's enabled demo groups with margin mode Netting can be selected. Off: the terminal offers no netting demo account.</p>
+          </div>
+        )}
       </div>
     </div>
   );
